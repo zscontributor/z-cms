@@ -122,7 +122,7 @@
         "type": "string",
         "title": "Documentation URL",
         "format": "url",
-        "default": "https://docs.z-cms.org"
+        "default": "https://docs.z-cms.org/en/"
       },
       "downloadUrl": {
         "type": "string",
@@ -150,7 +150,7 @@
       "footerText": {
         "type": "string",
         "title": "Footer text",
-        "default": "© 2026 Z-SOFT Co., Ltd. Released under GPL-2.0-or-later."
+        "default": "© 2026 Z-SOFT Co., Ltd. Released under the MIT License."
       },
       "ogImage": {
         "type": "string",
@@ -211,7 +211,7 @@
       "tagline": "Open source. Developer first.",
       "announcement": "Z-CMS is being built in the open on GitHub.",
       "githubUrl": "https://github.com/zscontributor/z-cms",
-      "docsUrl": "https://docs.z-cms.org",
+      "docsUrl": "https://docs.z-cms.org/en/",
       "downloadUrl": "https://github.com/zscontributor/z-cms/releases"
     },
     "contentTypes": [
@@ -258,7 +258,7 @@
             "id": "home-welcome-en",
             "type": "core/richtext",
             "props": {
-              "html": "<h2>Welcome to Z-CMS</h2><p>You are looking at the <strong>Z Default</strong> theme, running on a real Z-CMS site. Everything below this line is ordinary content — pages, posts, menus and settings you can edit in the admin — while the landing sections above it are what the theme itself draws.</p><p>To carry on: read the <a href=\"https://docs.z-cms.org\">documentation</a>, browse the <a href=\"https://github.com/zscontributor/z-cms\">source on GitHub</a>, or open the Appearance screen and make this theme your own.</p>"
+              "html": "<h2>Welcome to Z-CMS</h2><p>You are looking at the <strong>Z Default</strong> theme, running on a real Z-CMS site. Everything below this line is ordinary content — pages, posts, menus and settings you can edit in the admin — while the landing sections above it are what the theme itself draws.</p><p>To carry on: read the <a href=\"https://docs.z-cms.org/en/\">documentation</a>, browse the <a href=\"https://github.com/zscontributor/z-cms\">source on GitHub</a>, or open the Appearance screen and make this theme your own.</p>"
             }
           },
           {
@@ -289,7 +289,7 @@
               "heading": "Read the documentation",
               "body": "Installation, the Theme SDK, the Plugin SDK and the deployment guide.",
               "ctaLabel": "docs.z-cms.org",
-              "ctaHref": "https://docs.z-cms.org"
+              "ctaHref": "https://docs.z-cms.org/en/"
             }
           }
         ]
@@ -310,7 +310,7 @@
             "id": "home-welcome-ja",
             "type": "core/richtext",
             "props": {
-              "html": "<h2>Z-CMS へようこそ</h2><p>ご覧いただいているのは、実際の Z-CMS サイトで動作している <strong>Z Default</strong> テーマです。この行から下は管理画面で編集できる通常のコンテンツ（ページ・記事・メニュー・設定）で、上のランディング部分はテーマ自身が描画しています。</p><p>次のステップ: <a href=\"https://docs.z-cms.org\">ドキュメント</a>を読む、<a href=\"https://github.com/zscontributor/z-cms\">GitHub のソース</a>を見る、あるいは「外観」画面からこのテーマを自分のものにする。</p>"
+              "html": "<h2>Z-CMS へようこそ</h2><p>ご覧いただいているのは、実際の Z-CMS サイトで動作している <strong>Z Default</strong> テーマです。この行から下は管理画面で編集できる通常のコンテンツ（ページ・記事・メニュー・設定）で、上のランディング部分はテーマ自身が描画しています。</p><p>次のステップ: <a href=\"https://docs.z-cms.org/ja/\">ドキュメント</a>を読む、<a href=\"https://github.com/zscontributor/z-cms\">GitHub のソース</a>を見る、あるいは「外観」画面からこのテーマを自分のものにする。</p>"
             }
           },
           {
@@ -341,7 +341,7 @@
               "heading": "ドキュメントを読む",
               "body": "インストール、Theme SDK、Plugin SDK、デプロイガイド。",
               "ctaLabel": "docs.z-cms.org",
-              "ctaHref": "https://docs.z-cms.org"
+              "ctaHref": "https://docs.z-cms.org/ja/"
             }
           }
         ]
@@ -362,7 +362,7 @@
             "id": "home-welcome-vi",
             "type": "core/richtext",
             "props": {
-              "html": "<h2>Chào mừng đến với Z-CMS</h2><p>Bạn đang xem theme <strong>Z Default</strong> chạy trên một site Z-CMS thật. Mọi thứ bên dưới dòng này là nội dung thông thường — trang, bài viết, menu và cấu hình bạn có thể sửa trong trang quản trị — còn các phần landing phía trên là do chính theme vẽ ra.</p><p>Tiếp theo: đọc <a href=\"https://docs.z-cms.org\">tài liệu</a>, xem <a href=\"https://github.com/zscontributor/z-cms\">mã nguồn trên GitHub</a>, hoặc mở màn hình Giao diện để tùy biến theme theo ý bạn.</p>"
+              "html": "<h2>Chào mừng đến với Z-CMS</h2><p>Bạn đang xem theme <strong>Z Default</strong> chạy trên một site Z-CMS thật. Mọi thứ bên dưới dòng này là nội dung thông thường — trang, bài viết, menu và cấu hình bạn có thể sửa trong trang quản trị — còn các phần landing phía trên là do chính theme vẽ ra.</p><p>Tiếp theo: đọc <a href=\"https://docs.z-cms.org/vi/\">tài liệu</a>, xem <a href=\"https://github.com/zscontributor/z-cms\">mã nguồn trên GitHub</a>, hoặc mở màn hình Giao diện để tùy biến theme theo ý bạn.</p>"
             }
           },
           {
@@ -393,7 +393,7 @@
               "heading": "Đọc tài liệu",
               "body": "Hướng dẫn cài đặt, Theme SDK, Plugin SDK và tài liệu triển khai.",
               "ctaLabel": "docs.z-cms.org",
-              "ctaHref": "https://docs.z-cms.org"
+              "ctaHref": "https://docs.z-cms.org/vi/"
             }
           }
         ]
@@ -410,7 +410,7 @@
             "id": "about-body-en",
             "type": "core/richtext",
             "props": {
-              "html": "<p>Z-CMS is an open-source content management platform built by <a href=\"https://z-soft.com.vn\">Z-SOFT</a> and released under GPL-2.0-or-later. It is for teams who want the editing experience of a traditional CMS without giving up a modern stack — or their independence.</p><h2>Why another CMS</h2><p>Most content platforms make you choose. Either you get a friendly admin and an ecosystem of themes and plugins, but the architecture underneath is twenty years old; or you get a clean headless API on a modern stack, but every content change now goes through a developer.</p><p>Z-CMS refuses the choice. Editors get a block-based page builder, a marketplace, and a theme they can configure without touching code. Developers get TypeScript from top to bottom, a signed package system, a sandboxed plugin runtime, and an API they can build anything on.</p><h2>The architecture</h2><p>Next.js renders the public site and the admin. NestJS serves the API. PostgreSQL stores the content, with row-level isolation between tenants. Redis carries the cache and the job queue. Themes and plugins are signed packages the runtime verifies before it will load them.</p><h2>Open, and staying open</h2><p>Development happens in the open on <a href=\"https://github.com/zscontributor/z-cms\">GitHub</a>: the roadmap, the issues, the discussions and every line of code. Contributions are welcome — and so is a fork.</p>"
+              "html": "<p>Z-CMS is an open-source content management platform built by <a href=\"https://z-soft.com.vn\">Z-SOFT</a> and released under the MIT License. It is for teams who want the editing experience of a traditional CMS without giving up a modern stack — or their independence.</p><h2>Why another CMS</h2><p>Most content platforms make you choose. Either you get a friendly admin and an ecosystem of themes and plugins, but the architecture underneath is twenty years old; or you get a clean headless API on a modern stack, but every content change now goes through a developer.</p><p>Z-CMS refuses the choice. Editors get a block-based page builder, a marketplace, and a theme they can configure without touching code. Developers get TypeScript from top to bottom, a signed package system, a sandboxed plugin runtime, and an API they can build anything on.</p><h2>The architecture</h2><p>Next.js renders the public site and the admin. NestJS serves the API. PostgreSQL stores the content, with row-level isolation between tenants. Redis carries the cache and the job queue. Themes and plugins are signed packages the runtime verifies before it will load them.</p><h2>Open, and staying open</h2><p>Development happens in the open on <a href=\"https://github.com/zscontributor/z-cms\">GitHub</a>: the roadmap, the issues, the discussions and every line of code. Contributions are welcome — and so is a fork.</p>"
             }
           }
         ]
@@ -427,7 +427,7 @@
             "id": "about-body-ja",
             "type": "core/richtext",
             "props": {
-              "html": "<p>Z-CMS は <a href=\"https://z-soft.com.vn\">Z-SOFT</a> が開発し、GPL-2.0-or-later で公開しているオープンソースのコンテンツ管理基盤です。従来の CMS の編集しやすさを保ちながら、モダンな技術スタックと独立性を手放したくないチームのために作られています。</p><h2>なぜ新しい CMS なのか</h2><p>多くのプラットフォームは二者択一を迫ります。使いやすい管理画面とテーマ・プラグインの生態系はあるが土台のアーキテクチャは 20 年前のもの。あるいはモダンな構成のヘッドレス API はあるが、コンテンツを変えるたびに開発者の手が必要になる。</p><p>Z-CMS はその選択を拒みます。編集者にはブロックベースのページビルダー、マーケットプレイス、コードに触れずに設定できるテーマを。開発者には全面的な TypeScript、署名付きパッケージ、サンドボックス化されたプラグイン実行環境、そして何でも作れる API を。</p><h2>アーキテクチャ</h2><p>公開サイトと管理画面は Next.js、API は NestJS。コンテンツは PostgreSQL に保存され、テナント間は行単位で分離されます。キャッシュとジョブキューは Redis。テーマとプラグインは署名付きパッケージであり、ランタイムは検証に成功したものだけを読み込みます。</p><h2>オープンであり続ける</h2><p>ロードマップ、イシュー、議論、そしてすべてのコードが <a href=\"https://github.com/zscontributor/z-cms\">GitHub</a> で公開されています。コントリビュートも、フォークも歓迎です。</p>"
+              "html": "<p>Z-CMS は <a href=\"https://z-soft.com.vn\">Z-SOFT</a> が開発し、MIT ライセンスで公開しているオープンソースのコンテンツ管理基盤です。従来の CMS の編集しやすさを保ちながら、モダンな技術スタックと独立性を手放したくないチームのために作られています。</p><h2>なぜ新しい CMS なのか</h2><p>多くのプラットフォームは二者択一を迫ります。使いやすい管理画面とテーマ・プラグインの生態系はあるが土台のアーキテクチャは 20 年前のもの。あるいはモダンな構成のヘッドレス API はあるが、コンテンツを変えるたびに開発者の手が必要になる。</p><p>Z-CMS はその選択を拒みます。編集者にはブロックベースのページビルダー、マーケットプレイス、コードに触れずに設定できるテーマを。開発者には全面的な TypeScript、署名付きパッケージ、サンドボックス化されたプラグイン実行環境、そして何でも作れる API を。</p><h2>アーキテクチャ</h2><p>公開サイトと管理画面は Next.js、API は NestJS。コンテンツは PostgreSQL に保存され、テナント間は行単位で分離されます。キャッシュとジョブキューは Redis。テーマとプラグインは署名付きパッケージであり、ランタイムは検証に成功したものだけを読み込みます。</p><h2>オープンであり続ける</h2><p>ロードマップ、イシュー、議論、そしてすべてのコードが <a href=\"https://github.com/zscontributor/z-cms\">GitHub</a> で公開されています。コントリビュートも、フォークも歓迎です。</p>"
             }
           }
         ]
@@ -444,7 +444,7 @@
             "id": "about-body-vi",
             "type": "core/richtext",
             "props": {
-              "html": "<p>Z-CMS là nền tảng quản trị nội dung mã nguồn mở do <a href=\"https://z-soft.com.vn\">Z-SOFT</a> phát triển và phát hành theo giấy phép GPL-2.0-or-later. Nó dành cho những đội ngũ muốn giữ trải nghiệm biên tập quen thuộc của một CMS truyền thống mà không phải đánh đổi kiến trúc hiện đại — hay sự độc lập của mình.</p><h2>Vì sao lại thêm một CMS nữa</h2><p>Phần lớn nền tảng nội dung bắt bạn phải chọn. Hoặc là trang quản trị dễ dùng cùng hệ sinh thái theme và plugin, nhưng kiến trúc bên dưới đã hai mươi năm tuổi; hoặc là API headless gọn gàng trên nền công nghệ mới, nhưng mỗi lần đổi nội dung lại phải nhờ tới developer.</p><p>Z-CMS từ chối phải chọn. Người biên tập có page builder theo block, có marketplace, có theme cấu hình được mà không cần đụng tới code. Developer có TypeScript xuyên suốt, hệ thống package có chữ ký, plugin chạy trong sandbox, và một API đủ để xây bất cứ thứ gì.</p><h2>Kiến trúc</h2><p>Next.js render site công khai và trang quản trị. NestJS phục vụ API. PostgreSQL lưu nội dung, cô lập giữa các tenant ở mức từng dòng dữ liệu. Redis đảm nhiệm cache và job queue. Theme và plugin là các package có chữ ký số mà runtime phải xác minh trước khi nạp.</p><h2>Mở, và tiếp tục mở</h2><p>Mọi thứ diễn ra công khai trên <a href=\"https://github.com/zscontributor/z-cms\">GitHub</a>: roadmap, issue, thảo luận và từng dòng code. Chúng tôi hoan nghênh đóng góp — và cả việc bạn fork dự án.</p>"
+              "html": "<p>Z-CMS là nền tảng quản trị nội dung mã nguồn mở do <a href=\"https://z-soft.com.vn\">Z-SOFT</a> phát triển và phát hành theo giấy phép MIT. Nó dành cho những đội ngũ muốn giữ trải nghiệm biên tập quen thuộc của một CMS truyền thống mà không phải đánh đổi kiến trúc hiện đại — hay sự độc lập của mình.</p><h2>Vì sao lại thêm một CMS nữa</h2><p>Phần lớn nền tảng nội dung bắt bạn phải chọn. Hoặc là trang quản trị dễ dùng cùng hệ sinh thái theme và plugin, nhưng kiến trúc bên dưới đã hai mươi năm tuổi; hoặc là API headless gọn gàng trên nền công nghệ mới, nhưng mỗi lần đổi nội dung lại phải nhờ tới developer.</p><p>Z-CMS từ chối phải chọn. Người biên tập có page builder theo block, có marketplace, có theme cấu hình được mà không cần đụng tới code. Developer có TypeScript xuyên suốt, hệ thống package có chữ ký, plugin chạy trong sandbox, và một API đủ để xây bất cứ thứ gì.</p><h2>Kiến trúc</h2><p>Next.js render site công khai và trang quản trị. NestJS phục vụ API. PostgreSQL lưu nội dung, cô lập giữa các tenant ở mức từng dòng dữ liệu. Redis đảm nhiệm cache và job queue. Theme và plugin là các package có chữ ký số mà runtime phải xác minh trước khi nạp.</p><h2>Mở, và tiếp tục mở</h2><p>Mọi thứ diễn ra công khai trên <a href=\"https://github.com/zscontributor/z-cms\">GitHub</a>: roadmap, issue, thảo luận và từng dòng code. Chúng tôi hoan nghênh đóng góp — và cả việc bạn fork dự án.</p>"
             }
           }
         ]
@@ -471,7 +471,7 @@
               "heading": "See it in the docs",
               "body": "Every feature here has a page explaining how to use it.",
               "ctaLabel": "Read the documentation",
-              "ctaHref": "https://docs.z-cms.org"
+              "ctaHref": "https://docs.z-cms.org/en/"
             }
           }
         ]
@@ -498,7 +498,7 @@
               "heading": "ドキュメントで詳しく",
               "body": "ここにあるすべての機能に、使い方を説明したページがあります。",
               "ctaLabel": "ドキュメントを読む",
-              "ctaHref": "https://docs.z-cms.org"
+              "ctaHref": "https://docs.z-cms.org/ja/"
             }
           }
         ]
@@ -525,7 +525,7 @@
               "heading": "Xem chi tiết trong tài liệu",
               "body": "Mỗi tính năng ở đây đều có một trang hướng dẫn cách sử dụng.",
               "ctaLabel": "Đọc tài liệu",
-              "ctaHref": "https://docs.z-cms.org"
+              "ctaHref": "https://docs.z-cms.org/vi/"
             }
           }
         ]
@@ -542,7 +542,7 @@
             "id": "start-body-en",
             "type": "core/richtext",
             "props": {
-              "html": "<h2>Run it locally</h2><p>Clone the repository, install the dependencies and bring the infrastructure up. Node 22 and Docker are the only prerequisites.</p><p><code>git clone https://github.com/zscontributor/z-cms</code></p><p><code>pnpm bootstrap &amp;&amp; pnpm dev</code></p><p>The admin comes up on port 3300, the public site on 3000. The seed creates a first tenant with this theme already active — which is how you got here.</p><h2>Then</h2><p>Open <strong>Content → Pages</strong> and edit the page you are reading. Open <strong>Appearance</strong> to change the colour, the logo and the announcement bar. Open <strong>Marketplace</strong> to install a different theme: it is fetched, its signature is checked against a key pinned in the runtime, and it is live without a redeploy.</p><h2>Going further</h2><p>The <a href=\"https://docs.z-cms.org\">documentation</a> covers deployment, the Theme SDK, the Plugin SDK and the API. The <a href=\"https://github.com/zscontributor/z-cms\">repository</a> has the roadmap and the issues — and a good first issue is a good place to start.</p>"
+              "html": "<h2>Run it locally</h2><p>Clone the repository, install the dependencies and bring the infrastructure up. Node 22 and Docker are the only prerequisites.</p><p><code>git clone https://github.com/zscontributor/z-cms</code></p><p><code>pnpm bootstrap &amp;&amp; pnpm dev</code></p><p>The admin comes up on port 3300, the public site on 3000. The seed creates a first tenant with this theme already active — which is how you got here.</p><h2>Then</h2><p>Open <strong>Content → Pages</strong> and edit the page you are reading. Open <strong>Appearance</strong> to change the colour, the logo and the announcement bar. Open <strong>Marketplace</strong> to install a different theme: it is fetched, its signature is checked against a key pinned in the runtime, and it is live without a redeploy.</p><h2>Going further</h2><p>The <a href=\"https://docs.z-cms.org/en/\">documentation</a> covers deployment, the Theme SDK, the Plugin SDK and the API. The <a href=\"https://github.com/zscontributor/z-cms\">repository</a> has the roadmap and the issues — and a good first issue is a good place to start.</p>"
             }
           }
         ]
@@ -559,7 +559,7 @@
             "id": "start-body-ja",
             "type": "core/richtext",
             "props": {
-              "html": "<h2>ローカルで動かす</h2><p>リポジトリをクローンし、依存関係をインストールし、インフラを起動します。必要なのは Node 22 と Docker だけです。</p><p><code>git clone https://github.com/zscontributor/z-cms</code></p><p><code>pnpm bootstrap &amp;&amp; pnpm dev</code></p><p>管理画面はポート 3300、公開サイトは 3000 で起動します。シードによって、このテーマがすでに有効な最初のテナントが作られます。いまご覧になっているのがそれです。</p><h2>次に</h2><p><strong>コンテンツ → ページ</strong> を開き、いま読んでいるこのページを編集してみてください。<strong>外観</strong> では色・ロゴ・お知らせバーを変更できます。<strong>マーケットプレイス</strong> から別のテーマをインストールすると、パッケージが取得され、ランタイムに固定された鍵で署名が検証され、再デプロイなしで反映されます。</p><h2>さらに先へ</h2><p><a href=\"https://docs.z-cms.org\">ドキュメント</a>ではデプロイ、Theme SDK、Plugin SDK、API を扱っています。<a href=\"https://github.com/zscontributor/z-cms\">リポジトリ</a>にはロードマップとイシューがあります。good first issue から始めるのがおすすめです。</p>"
+              "html": "<h2>ローカルで動かす</h2><p>リポジトリをクローンし、依存関係をインストールし、インフラを起動します。必要なのは Node 22 と Docker だけです。</p><p><code>git clone https://github.com/zscontributor/z-cms</code></p><p><code>pnpm bootstrap &amp;&amp; pnpm dev</code></p><p>管理画面はポート 3300、公開サイトは 3000 で起動します。シードによって、このテーマがすでに有効な最初のテナントが作られます。いまご覧になっているのがそれです。</p><h2>次に</h2><p><strong>コンテンツ → ページ</strong> を開き、いま読んでいるこのページを編集してみてください。<strong>外観</strong> では色・ロゴ・お知らせバーを変更できます。<strong>マーケットプレイス</strong> から別のテーマをインストールすると、パッケージが取得され、ランタイムに固定された鍵で署名が検証され、再デプロイなしで反映されます。</p><h2>さらに先へ</h2><p><a href=\"https://docs.z-cms.org/ja/\">ドキュメント</a>ではデプロイ、Theme SDK、Plugin SDK、API を扱っています。<a href=\"https://github.com/zscontributor/z-cms\">リポジトリ</a>にはロードマップとイシューがあります。good first issue から始めるのがおすすめです。</p>"
             }
           }
         ]
@@ -576,7 +576,7 @@
             "id": "start-body-vi",
             "type": "core/richtext",
             "props": {
-              "html": "<h2>Chạy trên máy của bạn</h2><p>Clone repository, cài dependency và khởi động hạ tầng. Bạn chỉ cần Node 22 và Docker.</p><p><code>git clone https://github.com/zscontributor/z-cms</code></p><p><code>pnpm bootstrap &amp;&amp; pnpm dev</code></p><p>Trang quản trị chạy ở cổng 3300, site công khai ở cổng 3000. Dữ liệu seed tạo sẵn một tenant đầu tiên với theme này đang active — chính là trang bạn đang xem.</p><h2>Sau đó</h2><p>Mở <strong>Nội dung → Trang</strong> và sửa thử chính trang này. Mở <strong>Giao diện</strong> để đổi màu, logo và thanh thông báo. Mở <strong>Marketplace</strong> để cài một theme khác: hệ thống tải package về, kiểm tra chữ ký bằng khóa được ghim sẵn trong runtime, và theme mới hoạt động ngay mà không cần deploy lại.</p><h2>Đi xa hơn</h2><p><a href=\"https://docs.z-cms.org\">Tài liệu</a> hướng dẫn triển khai, Theme SDK, Plugin SDK và API. <a href=\"https://github.com/zscontributor/z-cms\">Repository</a> có roadmap và danh sách issue — một issue gắn nhãn good first issue là chỗ bắt đầu rất tốt.</p>"
+              "html": "<h2>Chạy trên máy của bạn</h2><p>Clone repository, cài dependency và khởi động hạ tầng. Bạn chỉ cần Node 22 và Docker.</p><p><code>git clone https://github.com/zscontributor/z-cms</code></p><p><code>pnpm bootstrap &amp;&amp; pnpm dev</code></p><p>Trang quản trị chạy ở cổng 3300, site công khai ở cổng 3000. Dữ liệu seed tạo sẵn một tenant đầu tiên với theme này đang active — chính là trang bạn đang xem.</p><h2>Sau đó</h2><p>Mở <strong>Nội dung → Trang</strong> và sửa thử chính trang này. Mở <strong>Giao diện</strong> để đổi màu, logo và thanh thông báo. Mở <strong>Marketplace</strong> để cài một theme khác: hệ thống tải package về, kiểm tra chữ ký bằng khóa được ghim sẵn trong runtime, và theme mới hoạt động ngay mà không cần deploy lại.</p><h2>Đi xa hơn</h2><p><a href=\"https://docs.z-cms.org/vi/\">Tài liệu</a> hướng dẫn triển khai, Theme SDK, Plugin SDK và API. <a href=\"https://github.com/zscontributor/z-cms\">Repository</a> có roadmap và danh sách issue — một issue gắn nhãn good first issue là chỗ bắt đầu rất tốt.</p>"
             }
           }
         ]
@@ -785,7 +785,7 @@
           },
           {
             "label": "Docs",
-            "url": "https://docs.z-cms.org",
+            "url": "https://docs.z-cms.org/en/",
             "target": "_blank"
           }
         ]

@@ -99,6 +99,15 @@ function itemHref(ctx: Ctx, item: MenuItemDto): string {
     : ctx.url(item.url);
 }
 
+/**
+ * A page inside the documentation site, whose root is a setting and may or may not
+ * carry a trailing slash — and a locale segment, since the docs are per-language and
+ * their bare root only redirects to one of them.
+ */
+function docsHref(docsUrl: string, path: string): string {
+  return `${docsUrl.replace(/\/+$/, "")}/${path}/`;
+}
+
 /** "vi" -> "Tiếng Việt": the only name a reader looking for their language recognises. */
 function localeName(locale: string): string {
   try {
@@ -304,13 +313,13 @@ function Layout({ ctx, children }: LayoutProps<DefaultThemeSettings>) {
             <h4>{ctx.t("footer.product")}</h4>
             <ul>
               <li>
-                <a href={ctx.url("/about")}>{ctx.t("nav.about")}</a>
+                <a href={ctx.url("/#about")}>{ctx.t("nav.about")}</a>
               </li>
               <li>
-                <a href={ctx.url("/features")}>{ctx.t("nav.features")}</a>
+                <a href={ctx.url("/#features")}>{ctx.t("nav.features")}</a>
               </li>
               <li>
-                <a href={ctx.url("/ecosystem")}>{ctx.t("nav.ecosystem")}</a>
+                <a href={ctx.url("/#ecosystem")}>{ctx.t("nav.ecosystem")}</a>
               </li>
               <li>
                 <a href={settings.downloadUrl || settings.githubUrl}>
@@ -327,13 +336,19 @@ function Layout({ ctx, children }: LayoutProps<DefaultThemeSettings>) {
                 <a href={settings.docsUrl}>{ctx.t("footer.documentation")}</a>
               </li>
               <li>
-                <a href={`${settings.docsUrl}/theme-sdk`}>Theme SDK</a>
+                <a href={docsHref(settings.docsUrl, "developers/theme-handbook/getting-started")}>
+                  Theme SDK
+                </a>
               </li>
               <li>
-                <a href={`${settings.docsUrl}/plugin-sdk`}>Plugin SDK</a>
+                <a href={docsHref(settings.docsUrl, "developers/plugin-handbook/getting-started")}>
+                  Plugin SDK
+                </a>
               </li>
               <li>
-                <a href={`${settings.docsUrl}/api`}>API Reference</a>
+                <a href={docsHref(settings.docsUrl, "developers/api-reference")}>
+                  API Reference
+                </a>
               </li>
             </ul>
           </div>
@@ -464,7 +479,7 @@ function HomeTemplate({ ctx, content }: PageTemplateProps<DefaultThemeSettings>)
             </div>
 
             <div className="zdefault__hero-meta">
-              <span>GPL-2.0-or-later</span>
+              <span>MIT License</span>
               <span>Theme Engine</span>
               <span>Plugin Marketplace</span>
             </div>
