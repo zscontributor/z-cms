@@ -31,5 +31,22 @@
     "missingKey": "テーマキーがありません。",
     "activateDenied": "テーマをアクティブ化する権限がありません。",
     "activateFailed": "{name}をアクティブ化できませんでした。"
+  },
+  "sideload": {
+    "heading": "ファイルからインストール",
+    "hint": "オペレーターが署名した .zcms をアップロードします。オペレーター鍵で検証・スキャンされ、承認されるまで実行されません。",
+    "upload": ".zcms をアップロード",
+    "uploading": "アップロード中…",
+    "noFile": "先に .zcms ファイルを選択してください。",
+    "uploaded": "{name} v{version} をアップロードしました。承認するまで隔離されます。",
+    "uploadFailed": "パッケージをインストールできませんでした。",
+    "denied": "パッケージをサイドロードする権限がありません。",
+    "unverified": "未検証",
+    "pending": "承認待ち",
+    "approve": "承認",
+    "uninstall": "アンインストール",
+    "approved": "{name} を承認しました。",
+    "removed": "{name} を削除しました。",
+    "actionFailed": "この操作を完了できませんでした。"
   }
 }

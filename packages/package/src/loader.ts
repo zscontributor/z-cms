@@ -1,12 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import { installPayload, openPackage } from "./build";
-import { sha256, verifyFirstParty, verifyPackage } from "./signing";
+import { sha256, verifyFirstParty, verifyOperator, verifyPackage } from "./signing";
 import {
   PackageError,
   type PackageEnvelope,
   type PackageKind,
   type PackageManifest,
+  type PackageTrust,
 } from "./types";
 
 /**
@@ -34,6 +35,13 @@ export interface LoaderConfig {
   internalToken: string;
   /** Marketplace Ed25519 public key, SPKI PEM. PINNED — never fetched. */
   marketplacePublicKey: string;
+  /**
+   * Operator Ed25519 public key, SPKI PEM. PINNED — never fetched. Present only on
+   * instances that allow sideloading; a package on the "operator" trust route is
+   * checked against this and nothing else. Empty on instances that do not sideload,
+   * in which case any attempt on the operator route is refused by `verifyOperator`.
+   */
+  operatorPublicKey?: string;
 }
 
 export interface InstalledBundle {
@@ -66,6 +74,7 @@ const MARKER = ".zcms-verified";
  */
 export async function ensureBundle(
   cfg: LoaderConfig,
+  trust: PackageTrust,
   kind: PackageKind,
   key: string,
   version: string,
@@ -102,7 +111,18 @@ export async function ensureBundle(
 
   // Nothing has been written to the cache yet, and nothing will be until this
   // passes. A package that fails verification never lands on disk at all.
-  verifyPackage(pkg.envelope, pkg.payload, cfg.marketplacePublicKey);
+  //
+  // WHICH key checks it is decided by `trust` — a discrete argument the caller
+  // passed — never by inspecting the envelope. If routing keyed off "does this
+  // envelope have a marketplaceSignature?", an attacker could downgrade a package
+  // onto whichever route has the weaker key by stripping one field and adding
+  // another. There is no `else` and no retry: a package handed the wrong route
+  // fails here, which is the intended outcome, not a bug to paper over.
+  if (trust === "operator") {
+    verifyOperator(pkg.envelope, pkg.payload, cfg.operatorPublicKey ?? "");
+  } else {
+    verifyPackage(pkg.envelope, pkg.payload, cfg.marketplacePublicKey);
+  }
 
   if (expectedChecksum && pkg.envelope.checksum !== expectedChecksum) {
     throw new PackageError(

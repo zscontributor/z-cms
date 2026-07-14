@@ -98,6 +98,16 @@
     "noPinnedKey": "MARKETPLACE_PUBLIC_KEY is not configured. Without a pinned key there is nothing to verify a package against, so nothing can be installed.",
     "scanRejected": "This package failed this instance's own security scan and was not installed: {findings}"
   },
+  "sideload": {
+    "notEnabled": "Sideloading is not enabled on this instance. Set OPERATOR_PUBLIC_KEY to the operator key that signs local packages.",
+    "themeDisabled": "Sideloading a theme is disabled. A theme runs unsandboxed in site-runtime, so it must be turned on deliberately with ALLOW_THEME_SIDELOAD=true.",
+    "unverified": "This package was not signed by this instance's operator key, so it was not installed: {reason}",
+    "kindMismatch": "This endpoint installs a {asked}, but the file is a {got}.",
+    "scanRejected": "This package failed the security scan and was not installed: {findings}",
+    "reservedNamespace": "\"{key}\" uses the reserved namespace \"{prefix}\", which belongs to the platform's own packages. Choose a different id.",
+    "keyTaken": "\"{key}\" is already the id of a built-in or marketplace package. A sideload cannot take a name that is not its own.",
+    "notSideload": "{key}@{version} was not sideloaded, so it cannot be approved or removed through this path."
+  },
   "docs": {
     "title": "API documentation is off",
     "body": "This instance does not serve the API documentation. That is a deliberate setting, not a fault — the API itself is running normally.",

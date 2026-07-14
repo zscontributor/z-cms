@@ -98,6 +98,16 @@
     "noPinnedKey": "Chưa cấu hình MARKETPLACE_PUBLIC_KEY. Không có khoá đã ghim thì không có gì để đối chiếu, nên không cài được gói nào.",
     "scanRejected": "Gói này không qua được quét bảo mật cục bộ của máy chủ này, nên không được cài: {findings}"
   },
+  "sideload": {
+    "notEnabled": "Máy chủ này chưa bật cài từ file. Đặt OPERATOR_PUBLIC_KEY là khóa của người vận hành dùng để ký các gói cục bộ.",
+    "themeDisabled": "Cài theme từ file đang bị tắt. Theme chạy không sandbox trong site-runtime, nên phải bật có chủ đích bằng ALLOW_THEME_SIDELOAD=true.",
+    "unverified": "Gói này không được ký bằng khóa người vận hành của máy chủ này, nên không được cài: {reason}",
+    "kindMismatch": "Endpoint này cài {asked}, nhưng file lại là {got}.",
+    "scanRejected": "Gói này không qua được quét bảo mật nên không được cài: {findings}",
+    "reservedNamespace": "\"{key}\" dùng namespace dành riêng \"{prefix}\" thuộc về các gói của nền tảng. Hãy chọn id khác.",
+    "keyTaken": "\"{key}\" đã là id của một gói dựng sẵn hoặc gói marketplace. Gói cài từ file không được lấy tên không phải của nó.",
+    "notSideload": "{key}@{version} không phải gói cài từ file, nên không thể duyệt hay gỡ qua đường này."
+  },
   "docs": {
     "title": "Tài liệu API đang tắt",
     "body": "Máy chủ này không phục vụ tài liệu API. Đây là thiết lập có chủ đích, không phải lỗi — bản thân API vẫn chạy bình thường.",

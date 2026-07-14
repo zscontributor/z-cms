@@ -50,6 +50,19 @@ export const PERMISSIONS = [
   "theme:install",
   "theme:activate",
   "theme:configure",
+  /**
+   * Install a theme or plugin FROM A FILE, bypassing the marketplace review queue.
+   *
+   * A tier above `theme:install`/`plugin:install`, and deliberately so: those pull
+   * code the marketplace already reviewed and counter-signed; this introduces code
+   * that NOTHING outside this instance vouched for. For a theme it is graver still —
+   * a theme runs unsandboxed inside site-runtime — which is why the theme variant is
+   * additionally gated behind an env flag the operator must set on purpose. Belongs
+   * to OWNER only, next to `package:review`: on a self-hosted instance the owner IS
+   * the reviewer, and sideloading is them exercising exactly that authority.
+   */
+  "theme:sideload",
+  "plugin:sideload",
   "plugin:read",
   "plugin:install",
   "plugin:activate",
@@ -159,6 +172,10 @@ const OWNER: Permission[] = [
   "site:delete",
   "user:manage",
   "package:review",
+  // Introducing unreviewed code is the owner's call, and the owner's alone — the
+  // same reasoning as package:review, which sits right above.
+  "theme:sideload",
+  "plugin:sideload",
 ];
 
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {

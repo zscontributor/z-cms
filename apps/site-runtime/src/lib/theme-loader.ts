@@ -167,6 +167,10 @@ function loaderConfig() {
     /\\n/g,
     "\n",
   );
+  const operatorPublicKey = (process.env.OPERATOR_PUBLIC_KEY ?? "").replace(
+    /\\n/g,
+    "\n",
+  );
 
   return {
     cacheDir:
@@ -174,6 +178,7 @@ function loaderConfig() {
     apiUrl: process.env.CMS_API_URL ?? "http://localhost:4100",
     internalToken: process.env.CMS_INTERNAL_TOKEN ?? "",
     marketplacePublicKey,
+    operatorPublicKey,
   };
 }
 
@@ -188,9 +193,12 @@ function loaderConfig() {
  */
 const inFlight = new Map<string, Promise<LoadedTheme>>();
 
+export type ThemeOrigin = "BUILTIN" | "MARKETPLACE" | "SIDELOAD";
+
 export async function loadTheme(
   key: string,
   version: string,
+  origin?: ThemeOrigin,
   checksum?: string,
 ): Promise<LoadedTheme> {
   const cacheKey = `${key}@${version}`;
@@ -200,7 +208,7 @@ export async function loadTheme(
   const pending = inFlight.get(cacheKey);
   if (pending) return pending;
 
-  const load = loadUncached(key, version, cacheKey, checksum).finally(() => {
+  const load = loadUncached(key, version, cacheKey, origin, checksum).finally(() => {
     inFlight.delete(cacheKey);
   });
   inFlight.set(cacheKey, load);
@@ -211,18 +219,29 @@ async function loadUncached(
   key: string,
   version: string,
   cacheKey: string,
+  origin?: ThemeOrigin,
   checksum?: string,
 ): Promise<LoadedTheme> {
-  const builtIn = builtinThemeKeys().includes(key);
+  // THE GUARD. A key this runtime knows as built-in — one it ships and verifies
+  // against the first-party key — ALWAYS takes the built-in path, whatever origin
+  // cms-api claimed for it. This is what stops a sideload or a compromised cms-api
+  // from naming a package `vn.zsoft.theme.default` (or any shipped key) and having it
+  // verified against the operator or marketplace key instead. The safe-harbour
+  // fallback in particular must never be resolvable by any route but its own.
+  const builtIn = key === DEFAULT_KEY || builtinThemeKeys().includes(key);
 
   try {
-    // Both branches end the same way — a VERIFIED bundle unpacked into the same cache
-    // layout, then imported. Only the key they are checked against differs, because
-    // only the question differs: "did the marketplace review this stranger's code?"
-    // versus "is the code we ship the code we signed?".
+    // Each route ends the same way — a VERIFIED bundle unpacked into the same cache
+    // layout, then imported. Only the pinned key they are checked against differs,
+    // because only the question differs: "did the marketplace review this stranger's
+    // code?" / "did this instance's operator sign it?" / "is the code we ship the
+    // code we signed?". The route is chosen HERE, from the guard and the origin
+    // cms-api reported — never from anything inside the package.
     const bundle = builtIn
       ? await loadBuiltinBundle(key)
-      : await loadMarketplaceBundle(key, version, checksum);
+      : origin === "SIDELOAD"
+        ? await loadOperatorBundle(key, version, checksum)
+        : await loadMarketplaceBundle(key, version, checksum);
 
     const theme = await importTheme(bundle);
 
@@ -300,7 +319,33 @@ async function loadMarketplaceBundle(
     );
   }
 
-  return ensureBundle(cfg, "theme", key, version, checksum);
+  return ensureBundle(cfg, "marketplace", "theme", key, version, checksum);
+}
+
+/**
+ * A theme this instance's operator sideloaded. Downloaded, verified against the
+ * OPERATOR key — never the marketplace key, and with no fallback to it.
+ *
+ * An air-gapped instance has no marketplace key at all, so this route must not touch
+ * `loadMarketplaceBundle`, and it does not. An instance that did not opt into
+ * sideloading has no operator key pinned, and `ensureBundle` (via `verifyOperator`)
+ * refuses the theme rather than importing it — degrading to the compiled-in default,
+ * which is the right outcome for a theme it cannot vouch for.
+ */
+async function loadOperatorBundle(
+  key: string,
+  version: string,
+  checksum?: string,
+): Promise<InstalledBundle> {
+  const cfg = loaderConfig();
+  if (!cfg.operatorPublicKey) {
+    throw new Error(
+      "OPERATOR_PUBLIC_KEY is not configured. This sideloaded theme cannot be " +
+        "verified — refusing to load unverified code.",
+    );
+  }
+
+  return ensureBundle(cfg, "operator", "theme", key, version, checksum);
 }
 
 /**

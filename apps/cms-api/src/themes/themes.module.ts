@@ -53,7 +53,7 @@ export interface CatalogTheme {
   description: string | null;
   author: string;
   isCore: boolean;
-  versions: { version: string }[];
+  versions: { version: string; origin: string; reviewStatus: string }[];
 }
 
 export interface InstalledTheme {
@@ -61,6 +61,10 @@ export interface InstalledTheme {
   name: string;
   version: string;
   status: string;
+  /** Where this version came from — BUILTIN/MARKETPLACE = verified, SIDELOAD = not. */
+  origin: string;
+  /** APPROVED versions render; a sideload is QUARANTINED until the operator approves. */
+  reviewStatus: string;
   settings: Record<string, unknown>;
   settingsSchema: unknown;
   demoAvailable: boolean;
@@ -133,7 +137,12 @@ export class ThemesController {
   @RequirePermissions("theme:read")
   async catalog(): Promise<CatalogTheme[]> {
     const themes = await getSystemDb().theme.findMany({
-      include: { versions: { select: { version: true }, orderBy: { createdAt: "desc" } } },
+      include: {
+        versions: {
+          select: { version: true, origin: true, reviewStatus: true },
+          orderBy: { createdAt: "desc" },
+        },
+      },
       orderBy: { name: "asc" },
     });
 
@@ -188,6 +197,8 @@ export class ThemesController {
         name: row.theme.name,
         version: row.version.version,
         status: row.status,
+        origin: row.version.origin,
+        reviewStatus: row.version.reviewStatus,
         settings: (row.settings ?? {}) as Record<string, unknown>,
         // The admin renders the settings form straight from this schema, so a
         // theme can add an option without any change to admin-web.

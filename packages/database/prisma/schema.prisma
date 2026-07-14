@@ -729,8 +729,12 @@ model ThemeVersion {
   engine  String @default(">=0.1.0")
   // Full theme.json: templates, features, menu locations, settings schema.
   manifest Json
-  // Storage key of the signed .zcms package. NULL only for the built-in default
-  // theme, which ships inside site-runtime and therefore needs no distribution.
+  // Where this version came from. Decides which pinned key verifies it and how the
+  // admin classifies it — see the Origin enum. No default: register* and the seed
+  // each state it explicitly.
+  origin Origin
+  // Storage key of the signed .zcms package. NULL only for BUILTIN versions, which
+  // ship inside site-runtime and therefore need no distribution.
   bundleUrl String? @map("bundle_url")
   /** SHA-256 of the package payload. Re-checked on disk before every load. */
   checksum  String?
@@ -822,6 +826,8 @@ model PluginVersion {
   manifest    Json
   // Permissions the plugin requests; the admin approves these at install time.
   permissions String[] @default([])
+  // Where this version came from — see the Origin enum. No default; set on insert.
+  origin      Origin
   bundleUrl   String?  @map("bundle_url")
   checksum    String?
   publisherSignature   String? @map("publisher_signature")
@@ -988,4 +994,28 @@ enum InstallStatus {
   FAILED
   DISABLED
   QUARANTINED
+}
+
+/**
+ * Where a package version came from — the single source of truth for how a runtime
+ * verifies it and how the admin UI classifies it.
+ *
+ * It replaces two fragile proxies the code used to infer origin from: `bundleUrl IS
+ * NULL` (meant "built-in") and `isCore` (seed-only). Both were binary and could not
+ * express a third, genuinely different source. A runtime picks WHICH pinned key to
+ * verify a version against from this column, and the admin groups Verified (BUILTIN,
+ * MARKETPLACE) apart from Unverified (SIDELOAD) from it. Deliberately has NO default:
+ * every insert must state the origin, so a new code path cannot let a package fall
+ * into the wrong trust class by omission.
+ */
+enum Origin {
+  // Ships inside the runtime image, signed by the first party, verified against
+  // FIRST_PARTY_PUBLIC_KEY. Has no bundleUrl — read from THEME_DIR/PLUGIN_DIR.
+  BUILTIN
+  // Downloaded from the marketplace, counter-signed by it, verified against
+  // MARKETPLACE_PUBLIC_KEY. The reviewed, community-visible path.
+  MARKETPLACE
+  // Sideloaded by this instance's operator, signed by them, verified against
+  // OPERATOR_PUBLIC_KEY. Local to this instance; never surfaced to the community.
+  SIDELOAD
 }

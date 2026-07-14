@@ -109,6 +109,7 @@ export async function generateMetadata(props: RouteProps): Promise<Metadata> {
   const { theme, assetBase } = await resolveTheme(
     payload.theme.key,
     payload.theme.version,
+    payload.theme.origin,
   );
   const ctx = buildThemeContext(theme, payload, assetBase);
 
@@ -198,6 +199,7 @@ export default async function CatchAllPage(props: RouteProps) {
   const { theme, stylesheet, assetBase } = await resolveTheme(
     payload.theme.key,
     payload.theme.version,
+    payload.theme.origin,
   );
   const ctx = buildThemeContext(theme, payload, assetBase);
   const { Layout, templates } = theme;

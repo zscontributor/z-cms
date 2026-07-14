@@ -442,6 +442,8 @@ const CatalogPluginSchema = z.object({
   publisher: z.string(),
   isCore: z.boolean(),
   latestVersion: z.string().nullable(),
+  origin: z.string().nullable(),
+  reviewStatus: z.string().nullable(),
   permissions: z.array(PermissionSchema).describe("What the plugin asks the admin to approve."),
   capabilities: z.array(z.string()),
   networkHosts: z
@@ -464,7 +466,9 @@ const CatalogThemeSchema = z.object({
   description: z.string().nullable(),
   author: z.string(),
   isCore: z.boolean(),
-  versions: z.array(z.object({ version: z.string() })),
+  versions: z.array(
+    z.object({ version: z.string(), origin: z.string(), reviewStatus: z.string() }),
+  ),
 });
 
 const InstalledThemeSchema = z.object({
@@ -472,6 +476,8 @@ const InstalledThemeSchema = z.object({
   name: z.string(),
   version: z.string(),
   status: z.string(),
+  origin: z.string(),
+  reviewStatus: z.string(),
   settings: z.record(z.string(), z.unknown()),
   settingsSchema: z.unknown(),
   demoAvailable: z.boolean(),

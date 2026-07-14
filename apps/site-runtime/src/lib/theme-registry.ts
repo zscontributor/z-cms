@@ -72,6 +72,7 @@ export function withPlatformIcons(icons: ThemeIcons): ThemeIcons {
 export async function resolveTheme(
   key: string | null | undefined,
   version: string | null | undefined,
+  origin?: "BUILTIN" | "MARKETPLACE" | "SIDELOAD",
 ): Promise<LoadedTheme> {
   if (!key) {
     return {
@@ -82,7 +83,7 @@ export async function resolveTheme(
     };
   }
 
-  return loadTheme(key, version ?? "0.0.0");
+  return loadTheme(key, version ?? "0.0.0", origin);
 }
 
 /**

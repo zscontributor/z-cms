@@ -214,6 +214,16 @@
     "package:review": {
       "label": "Duyệt package bị cách ly",
       "detail": "Chấp nhận hoặc từ chối theme/plugin bị trình quét mã độc gắn cờ — tức là quyết định cho code đáng ngờ được chạy."
+    },
+    "theme:sideload": {
+      "label": "Cài theme từ file",
+      "detail": "Thêm mã theme chưa qua kiểm duyệt marketplace — và theme chạy không sandbox."
+    },
+    "plugin:sideload": {
+      "label": "Cài plugin từ file",
+      "detail": "Thêm mã plugin chưa qua kiểm duyệt marketplace. Nó vẫn chạy trong sandbox."
     }
-  }
+  },
+  "sideloadHint": "Các plugin bạn cài từ file. Sau khi duyệt, chúng chạy trong sandbox như mọi plugin khác.",
+  "sideloadApprovedHint": "Đã duyệt. Cài nó lên site từ danh mục ở trên để cấp quyền cho nó."
 }

@@ -46,14 +46,20 @@ describe("resolveTheme", () => {
   it("delegates a real key to the loader", async () => {
     const result = await resolveTheme("vn.zsoft.theme.corp", "1.2.3");
 
-    expect(loadTheme).toHaveBeenCalledWith("vn.zsoft.theme.corp", "1.2.3");
+    expect(loadTheme).toHaveBeenCalledWith("vn.zsoft.theme.corp", "1.2.3", undefined);
     expect(result.theme).toEqual({ marker: "loaded" });
   });
 
   it("defaults a missing version to 0.0.0 rather than passing undefined to the loader", async () => {
     await resolveTheme("vn.zsoft.theme.corp", null);
 
-    expect(loadTheme).toHaveBeenCalledWith("vn.zsoft.theme.corp", "0.0.0");
+    expect(loadTheme).toHaveBeenCalledWith("vn.zsoft.theme.corp", "0.0.0", undefined);
+  });
+
+  it("threads the origin through so the loader can pick the right trust route", async () => {
+    await resolveTheme("vn.zsoft.theme.corp", "1.2.3", "SIDELOAD");
+
+    expect(loadTheme).toHaveBeenCalledWith("vn.zsoft.theme.corp", "1.2.3", "SIDELOAD");
   });
 });
 

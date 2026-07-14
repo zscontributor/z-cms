@@ -233,7 +233,79 @@ describe("loadTheme", () => {
 
     // Two distinct versions => two real loads; the 1.0.0 entry never answers 2.0.0.
     expect(ensureBundle).toHaveBeenCalledTimes(2);
-    expect(ensureBundle).toHaveBeenNthCalledWith(2, expect.anything(), "theme", key, "2.0.0", undefined);
+    expect(ensureBundle).toHaveBeenNthCalledWith(2, expect.anything(), "marketplace", "theme", key, "2.0.0", undefined);
+  });
+});
+
+describe("loadTheme — the operator (sideload) route", () => {
+  it("verifies a SIDELOAD theme against the OPERATOR key, on the operator route", async () => {
+    // A sideload is checked against the operator key pinned in THIS process — never
+    // the marketplace key, and the route is named explicitly, not inferred.
+    const key = "acme.theme.inhouse";
+    vi.stubEnv("OPERATOR_PUBLIC_KEY", "-----BEGIN PUBLIC KEY-----\\noperator\\n-----END PUBLIC KEY-----");
+    ensureBundle.mockResolvedValue(bundleFor(key, "1.0.0"));
+
+    const loaded = await loadTheme(key, "1.0.0", "SIDELOAD");
+
+    expect(ensureBundle).toHaveBeenCalledWith(
+      expect.objectContaining({ operatorPublicKey: expect.stringContaining("operator") }),
+      "operator",
+      "theme",
+      key,
+      "1.0.0",
+      undefined,
+    );
+    expect(loaded.degraded).toBe(false);
+  });
+
+  it("REFUSES a sideload when no operator key is pinned, and does not fetch", async () => {
+    // An instance that never opted into sideloading has no operator key. A theme on
+    // the operator route must then degrade to the default, not be trusted.
+    const key = "acme.theme.unpinned";
+    vi.stubEnv("OPERATOR_PUBLIC_KEY", "");
+
+    const loaded = await loadTheme(key, "1.0.0", "SIDELOAD");
+
+    expect(ensureBundle).not.toHaveBeenCalled();
+    expect(loaded.degraded).toBe(true);
+    expect(loaded.theme).toBe(defaultTheme);
+  });
+
+  it("THE GUARD: a built-in key claimed as SIDELOAD still takes the first-party path", async () => {
+    // The confusion attack: a sideload (or a compromised cms-api) reports origin
+    // SIDELOAD for a key the runtime ships as built-in, hoping to have it verified
+    // against the operator key instead of the first-party one. The guard forces the
+    // built-in path regardless of the claimed origin, so the operator route is never
+    // even consulted for a built-in key. A key of its own — the module-level cache
+    // would otherwise answer from an earlier test's successful load.
+    const key = "vn.zsoft.theme.guardbuiltin";
+    vi.stubEnv("THEME_DIR", themeDirWith(key));
+    vi.stubEnv("OPERATOR_PUBLIC_KEY", "-----BEGIN PUBLIC KEY-----\\noperator\\n-----END PUBLIC KEY-----");
+    ensureBuiltinBundle.mockResolvedValue(bundleFor(key, "1.1.0"));
+
+    const loaded = await loadTheme(key, "1.1.0", "SIDELOAD");
+
+    expect(ensureBuiltinBundle).toHaveBeenCalledWith(
+      expect.objectContaining({ firstPartyPublicKey: expect.stringContaining("firstparty") }),
+      "theme",
+      key,
+    );
+    expect(ensureBundle).not.toHaveBeenCalled();
+    expect(loaded.degraded).toBe(false);
+  });
+
+  it("THE GUARD: the default key claimed as SIDELOAD never leaves the first-party path", async () => {
+    // The safe-harbour fallback is the highest-value confusion target. Even claimed
+    // as a sideload, vn.zsoft.theme.default resolves only as a built-in. A fresh
+    // version so the module cache does not answer from another test's load.
+    vi.stubEnv("OPERATOR_PUBLIC_KEY", "-----BEGIN PUBLIC KEY-----\\noperator\\n-----END PUBLIC KEY-----");
+    ensureBuiltinBundle.mockResolvedValue(bundleFor(REAL_KEY, "9.9.9"));
+
+    const loaded = await loadTheme(REAL_KEY, "9.9.9", "SIDELOAD");
+
+    expect(ensureBuiltinBundle).toHaveBeenCalled();
+    expect(ensureBundle).not.toHaveBeenCalled();
+    expect(loaded.degraded).toBe(false);
   });
 });
 

@@ -237,7 +237,11 @@ Gated on `settings:update`: retrying a job re-runs work with the platform's own
 credentials, so it is an operator action, not an editor one. Both retry and
 discard are audited.
 
-## Not done yet
+## Current limitation: schedules are code-owned
 
-- **No per-job scheduling UI.** The crons are in code (`SCHEDULED_JOBS`), not
-  configurable per instance.
+There is still no per-job scheduling UI or API. The three cron expressions are
+fixed in `packages/queue/src/jobs.ts` (`SCHEDULED_JOBS`), and the worker registers
+them on boot in `apps/worker/src/main.ts`. The `/jobs` API and admin screen operate
+the failed-job queue only; they do not read or update repeatable schedules. Changing
+a schedule therefore requires a code change and worker restart, and cannot be done
+per instance from the admin UI.

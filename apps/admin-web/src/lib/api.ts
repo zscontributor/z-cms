@@ -391,11 +391,17 @@ export async function listMediaFolders(): Promise<MediaFolderDto[]> {
 // Themes
 // ---------------------------------------------------------------------------
 
+/** BUILTIN/MARKETPLACE render as "verified"; SIDELOAD as "unverified" (operator's own). */
+export type PackageOrigin = "BUILTIN" | "MARKETPLACE" | "SIDELOAD";
+
 export interface InstalledThemeDto {
   key: string;
   name: string;
   version: string;
   status: string;
+  origin: PackageOrigin;
+  /** A sideload is QUARANTINED until the operator approves it; APPROVED ones render. */
+  reviewStatus: string;
   settings: Record<string, unknown>;
   settingsSchema: ThemeSettingsSchema | null;
   demoAvailable: boolean;
@@ -407,7 +413,7 @@ export interface ThemeCatalogEntry {
   name: string;
   description: string;
   author: string;
-  versions: { version: string }[];
+  versions: { version: string; origin: PackageOrigin; reviewStatus: string }[];
 }
 
 export const listInstalledThemes = cache(
@@ -438,6 +444,10 @@ export interface CatalogPluginDto {
   publisher: string;
   isCore: boolean;
   latestVersion: string | null;
+  /** Origin of the latest version — SIDELOAD means the operator installed it from a file. */
+  origin?: PackageOrigin | null;
+  /** A sideload is QUARANTINED until the operator approves it. */
+  reviewStatus?: string | null;
   permissions: Permission[];
   capabilities: string[];
   /** The hosts the manifest declared. What `network:fetch` actually grants. */

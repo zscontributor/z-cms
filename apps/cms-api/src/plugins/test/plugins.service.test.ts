@@ -12,7 +12,7 @@ function activeRow(over: Record<string, unknown> = {}) {
     plugin: { key: "zsoft-seo", id: "plugin-1" },
     version: {
       version: "1.0.0",
-      bundleUrl: null,
+      origin: "BUILTIN",
       manifest: { capabilities: ["seo.metadata"], settingsSchema: { properties: {} } },
     },
     settings: {},

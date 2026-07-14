@@ -240,6 +240,11 @@ export class RenderService {
       theme: {
         key: themeRow.theme.key,
         version: themeRow.version.version,
+        // Which trust route site-runtime verifies this theme against. Carried
+        // explicitly so the runtime never has to guess it from the key — a built-in
+        // is checked against the first-party key, a marketplace theme against the
+        // marketplace key, a sideload against the operator key.
+        origin: themeRow.version.origin,
         settings: (themeRow.settings ?? {}) as Record<string, unknown>,
       },
       menus,

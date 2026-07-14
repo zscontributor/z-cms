@@ -89,11 +89,13 @@ async function main() {
           manifest: manifest as never,
           checksum: envelope.checksum,
           publisherSignature: envelope.publisherSignature,
-          // Explicitly null, for the same reason. A row that already carried a
-          // bundleUrl from a marketplace install would otherwise keep it, and
-          // site-runtime would send this key down the MARKETPLACE path — trying to
-          // download a theme that is sitting on its own disk, and verifying it against
-          // the wrong key. Two truths about one theme is one truth too many.
+          // Reset to BUILTIN, and null out the marketplace fields, for the same
+          // reason. A row that already carried a bundleUrl and origin=MARKETPLACE
+          // from an earlier install would otherwise keep them, and site-runtime would
+          // send this key down the MARKETPLACE path — trying to download a theme that
+          // is sitting on its own disk, verified against the wrong key. Two truths
+          // about one theme is one truth too many.
+          origin: "BUILTIN",
           bundleUrl: null,
           marketplaceSignature: null,
         },
@@ -104,8 +106,9 @@ async function main() {
           manifest: manifest as never,
           checksum: envelope.checksum,
           publisherSignature: envelope.publisherSignature,
-          // NOT bundleUrl. A null bundle is what tells site-runtime this is a built-in
-          // — which now means "verified against the first-party key", not "trusted".
+          // BUILTIN, and no bundleUrl: this ships inside site-runtime and is verified
+          // against the first-party key, not downloaded and not trusted-by-location.
+          origin: "BUILTIN",
         },
       });
 

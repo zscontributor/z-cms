@@ -101,6 +101,10 @@ describe("permissionsForRole", () => {
     expect(perms).not.toContain("site:delete");
     expect(perms).not.toContain("user:manage");
     expect(perms).not.toContain("package:review");
+    // Sideloading introduces unreviewed code; an ADMIN who can install reviewed
+    // packages still must not be able to bypass review.
+    expect(perms).not.toContain("theme:sideload");
+    expect(perms).not.toContain("plugin:sideload");
   });
 
   it("gives OWNER the owner-only capabilities that ADMIN lacks", () => {
@@ -109,6 +113,8 @@ describe("permissionsForRole", () => {
     expect(perms).toContain("site:delete");
     expect(perms).toContain("user:manage");
     expect(perms).toContain("package:review");
+    expect(perms).toContain("theme:sideload");
+    expect(perms).toContain("plugin:sideload");
   });
 
   it("makes each higher role a strict superset of the one below it", () => {

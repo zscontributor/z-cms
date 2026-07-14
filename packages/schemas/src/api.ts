@@ -746,6 +746,16 @@ export interface RenderPayload {
   theme: {
     key: string;
     version: string;
+    /**
+     * Which trust route site-runtime verifies this theme against — the version's
+     * stored origin. Carried so the runtime never infers it from the key: BUILTIN is
+     * checked against the first-party key, MARKETPLACE against the marketplace key,
+     * SIDELOAD against the operator key. Optional so an older cms-api that omits it
+     * still parses; site-runtime treats a missing value as the marketplace route,
+     * and independently refuses to send a built-in key down anything but the
+     * built-in path.
+     */
+    origin?: "BUILTIN" | "MARKETPLACE" | "SIDELOAD";
     /** Values for the theme's declared settings schema. */
     settings: Record<string, unknown>;
   };

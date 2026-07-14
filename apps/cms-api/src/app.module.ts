@@ -25,6 +25,7 @@ import { MediaModule } from "./media/media.module";
 import { MenusModule } from "./menus/menus.module";
 import { MarketplaceModule } from "./marketplace/marketplace.module";
 import { PackagesModule } from "./packages/packages.module";
+import { SideloadModule } from "./sideload/sideload.module";
 import { PluginsModule } from "./plugins/plugins.module";
 import { QueueModule } from "./queue/queue.module";
 import { RedisModule } from "./redis/redis.module";
@@ -82,6 +83,7 @@ class HealthController {
     PluginsModule,
     PackagesModule,
     MarketplaceModule,
+    SideloadModule,
     ThemesModule,
     RenderModule,
   ],

@@ -64,6 +64,7 @@ export default async function NotFound() {
   const { theme, assetBase } = await resolveTheme(
     payload.theme.key,
     payload.theme.version,
+    payload.theme.origin,
   );
   const ctx = buildThemeContext(theme, payload, assetBase);
   const translate = t(payload.site.locale);

@@ -41,12 +41,32 @@ function resolveSandboxSettings(
   return merged;
 }
 
+/**
+ * How plugin-runtime should load a plugin: which pinned key verifies it, or that it
+ * is read from PLUGIN_DIR. Mirrors the version's `origin`, mapped to the runtime's
+ * vocabulary — the routing decision travels as this explicit value, never inferred
+ * on the far side from whether a bundle happens to exist.
+ */
+export type PluginTrust = "builtin" | "marketplace" | "operator";
+
+/** Maps a version's stored origin to the runtime's load route. */
+export function originToTrust(origin: string): PluginTrust {
+  switch (origin) {
+    case "BUILTIN":
+      return "builtin";
+    case "SIDELOAD":
+      return "operator";
+    default:
+      return "marketplace";
+  }
+}
+
 export interface DispatchTarget {
   pluginKey: string;
   pluginId: string;
   version: string;
-  /** True when the plugin came from a signed marketplace package (has a bundle). */
-  signed: boolean;
+  /** Which trust route loads this plugin — see PluginTrust. */
+  trust: PluginTrust;
   /** What it provides, e.g. "ai.assistant". How `callCapability` finds it. */
   capabilities: string[];
   /** Platform-controlled catalogue data, not manifest data. A package cannot claim it. */
@@ -370,7 +390,7 @@ export class PluginsService {
    */
   private toTarget(row: {
     plugin: { key: string; id: string; isCore: boolean };
-    version: { version: string; manifest: unknown; bundleUrl: string | null };
+    version: { version: string; manifest: unknown; origin: string };
     settings: unknown;
     grantedPermissions: string[] | null;
   }): DispatchTarget {
@@ -396,9 +416,9 @@ export class PluginsService {
       version: row.version.version,
       capabilities: manifest?.capabilities ?? [],
       isCore: row.plugin.isCore,
-      // A seeded first-party plugin has no bundle and is read from PLUGIN_DIR;
-      // anything uploaded to the marketplace has one and takes the signed path.
-      signed: Boolean(row.version.bundleUrl),
+      // Which trust route plugin-runtime uses to load this — read from `origin`, the
+      // column of record, not inferred from whether a bundleUrl happens to be set.
+      trust: originToTrust(row.version.origin),
       // Stored settings merged over the manifest's defaults, at read time, with
       // every password-format setting withheld. A freshly installed plugin has `{}`
       // in the database, so without the merge every default its author declared
@@ -459,7 +479,7 @@ export class PluginsService {
         body: JSON.stringify({
           pluginKey: target.pluginKey,
           version: target.version,
-          signed: target.signed,
+          trust: target.trust,
           invocation,
           settings: target.settings,
           secrets: target.secrets,

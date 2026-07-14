@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/ui/table";
 import { getT } from "@/lib/locale";
+import { SideloadActions, SideloadUpload } from "@/components/sideload-controls";
 import { ActivateButton } from "./activate-button";
 import { SeedDemoButton } from "./seed-demo-button";
 import { ThemeSettingsForm } from "./theme-settings-form";
@@ -42,8 +43,14 @@ export default async function AppearancePage() {
   const installedKeys = new Set(installed.map((theme) => theme.key));
   const available = catalog.filter((entry) => !installedKeys.has(entry.key));
 
+  // Verified (built-in + marketplace) versus unverified (the operator's own
+  // sideloads). Kept apart on screen so "installed" never blurs "reviewed".
+  const verified = installed.filter((theme) => theme.origin !== "SIDELOAD");
+  const sideloaded = installed.filter((theme) => theme.origin === "SIDELOAD");
+
   const canActivate = can(user, "theme:activate");
   const canConfigure = can(user, "theme:configure");
+  const canSideload = can(user, "theme:sideload");
 
   return (
     <>
@@ -58,7 +65,7 @@ export default async function AppearancePage() {
         </div>
       ) : (
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {installed.map((theme) => {
+          {verified.map((theme) => {
             const isActive = theme.key === activeKey;
             return (
               <article
@@ -93,6 +100,63 @@ export default async function AppearancePage() {
           })}
         </section>
       )}
+
+      {canSideload || sideloaded.length > 0 ? (
+        <section className="mt-5">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="text-sm font-semibold">{t("appearance.sideload.heading")}</h2>
+              <p className="mt-0.5 text-[11px] z-muted">{t("appearance.sideload.hint")}</p>
+            </div>
+            {canSideload ? <SideloadUpload kind="theme" /> : null}
+          </div>
+
+          {sideloaded.length > 0 ? (
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {sideloaded.map((theme) => {
+                const isActive = theme.key === activeKey;
+                const approved = theme.reviewStatus === "APPROVED";
+                return (
+                  <article key={theme.key} className="z-card border-amber-300/60 p-4 dark:border-amber-800/60">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h3 className="truncate text-sm font-semibold">{theme.name}</h3>
+                        <p className="mt-0.5 text-[11px] z-muted">
+                          <code>{theme.key}</code> · v{theme.version}
+                        </p>
+                      </div>
+                      <Badge tone={approved ? "warning" : "danger"}>
+                        {approved
+                          ? t("appearance.sideload.unverified")
+                          : t("appearance.sideload.pending")}
+                      </Badge>
+                    </div>
+
+                    {isActive ? (
+                      <p className="mt-2 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                        {t("appearance.active")}
+                      </p>
+                    ) : approved && canActivate ? (
+                      <div className="mt-3">
+                        <ActivateButton themeKey={theme.key} name={theme.name} />
+                      </div>
+                    ) : null}
+
+                    {canSideload ? (
+                      <SideloadActions
+                        kind="theme"
+                        itemKey={theme.key}
+                        version={theme.version}
+                        reviewStatus={theme.reviewStatus}
+                      />
+                    ) : null}
+                  </article>
+                );
+              })}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       {active ? (
         <section className="z-card mt-5 p-4">

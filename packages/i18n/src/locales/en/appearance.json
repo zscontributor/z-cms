@@ -31,5 +31,22 @@
     "missingKey": "The theme key is missing.",
     "activateDenied": "You do not have permission to activate a theme.",
     "activateFailed": "Could not activate {name}."
+  },
+  "sideload": {
+    "heading": "Install from file",
+    "hint": "Upload a signed .zcms your operator produced. It is verified against the operator key, scanned, and held for approval before it can run.",
+    "upload": "Upload .zcms",
+    "uploading": "Uploading…",
+    "noFile": "Choose a .zcms file first.",
+    "uploaded": "Uploaded {name} v{version}. It is quarantined until you approve it.",
+    "uploadFailed": "The package could not be installed.",
+    "denied": "You do not have permission to sideload packages.",
+    "unverified": "Unverified",
+    "pending": "Awaiting approval",
+    "approve": "Approve",
+    "uninstall": "Uninstall",
+    "approved": "Approved {name}.",
+    "removed": "Removed {name}.",
+    "actionFailed": "That action could not be completed."
   }
 }

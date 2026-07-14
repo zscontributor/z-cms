@@ -4,6 +4,7 @@ import {
   sha256,
   signChecksum,
   verifyChecksumSignature,
+  verifyOperator,
   verifyPackage,
   verifyPublisher,
 } from "../signing";
@@ -236,5 +237,151 @@ describe("verifyPublisher", () => {
     };
 
     expect(() => verifyPublisher(stolen, payload)).toThrow(/Invalid publisher signature/);
+  });
+});
+
+/**
+ * A sideloaded package: the operator is its own publisher, and they stamped an
+ * operator signature that this instance's runtimes verify against a pinned key.
+ */
+function operatorPackage(payload = Buffer.from("the operator's own theme")) {
+  const operator = generateKeyPair();
+  const checksum = sha256(payload);
+
+  const envelope: PackageEnvelope = {
+    checksum,
+    manifest: MANIFEST,
+    publisherSignature: signChecksum(checksum, operator.privateKey),
+    publisherKey: operator.publicKey,
+    operatorSignature: signChecksum(checksum, operator.privateKey),
+  };
+
+  return { envelope, payload, operator };
+}
+
+describe("verifyOperator", () => {
+  it("accepts a package the operator signed, checked against the pinned operator key", () => {
+    const { envelope, payload, operator } = operatorPackage();
+
+    expect(() => verifyOperator(envelope, payload, operator.publicKey)).not.toThrow();
+  });
+
+  it("refuses to run anything when no operator key is pinned", () => {
+    // An instance that never opted into sideloading has an empty operator key. A
+    // package on the operator route must then be refused outright, not waved through.
+    const { envelope, payload } = operatorPackage();
+
+    expect(() => verifyOperator(envelope, payload, "")).toThrow(
+      /No operator public key is pinned/,
+    );
+  });
+
+  it("rejects a payload that was modified after it was signed", () => {
+    const { envelope, operator } = operatorPackage();
+
+    expect(() =>
+      verifyOperator(envelope, Buffer.from("modified after signing"), operator.publicKey),
+    ).toThrow(/Checksum mismatch/);
+  });
+
+  it("rejects a package that carries no operator signature", () => {
+    // A marketplace or built-in package that wandered onto the operator route. It
+    // may be perfectly authentic on ITS route, and must still be refused here: the
+    // route is chosen by the caller, and this one demands an operator signature.
+    const { envelope, payload, operator } = operatorPackage();
+    delete envelope.operatorSignature;
+
+    expect(() => verifyOperator(envelope, payload, operator.publicKey)).toThrow(
+      /no operator signature/,
+    );
+  });
+
+  it("rejects a package signed by a key this instance does not pin", () => {
+    // THE ATTACK. Someone who can drop bytes in front of the sideload endpoint
+    // signs with a key they generated. The runtime pins the real operator key, so
+    // the forgery has nothing to hide behind — exactly as with the marketplace key.
+    const payload = Buffer.from("backdoored sideload");
+    const checksum = sha256(payload);
+    const attacker = generateKeyPair();
+    const realOperator = generateKeyPair();
+
+    const forged: PackageEnvelope = {
+      checksum,
+      manifest: MANIFEST,
+      publisherSignature: signChecksum(checksum, attacker.privateKey),
+      publisherKey: attacker.publicKey,
+      operatorSignature: signChecksum(checksum, attacker.privateKey),
+    };
+
+    expect(() => verifyOperator(forged, payload, realOperator.publicKey)).toThrow(
+      /not signed by the operator/,
+    );
+  });
+
+  it("ignores envelope.publisherKey — the pinned key is the only key", () => {
+    // The operator route must not trust a key that travelled inside the package,
+    // for the same reason the first-party route does not: an attacker would just
+    // ship the key that vouches for their own signature.
+    const payload = Buffer.from("hostile");
+    const checksum = sha256(payload);
+    const attacker = generateKeyPair();
+    const realOperator = generateKeyPair();
+
+    const forged: PackageEnvelope = {
+      checksum,
+      manifest: MANIFEST,
+      // Signature and the self-declared key agree with each other — and that is
+      // precisely what must NOT be enough.
+      publisherSignature: signChecksum(checksum, attacker.privateKey),
+      publisherKey: attacker.publicKey,
+      operatorSignature: signChecksum(checksum, attacker.privateKey),
+    };
+
+    expect(() => verifyOperator(forged, payload, realOperator.publicKey)).toThrow(
+      PackageError,
+    );
+  });
+});
+
+describe("trust routes do not fall back to one another", () => {
+  // The routing invariant, stated as tests: a package built for one route is
+  // refused on the other. There is no key that satisfies both, and no verifier that
+  // tries the second key when the first fails. This is what keeps three independent
+  // anchors from collapsing into "valid under ANY of the three".
+
+  it("an operator-only package fails the marketplace check", () => {
+    const { envelope, payload, operator } = operatorPackage();
+    // It has no marketplace signature at all...
+    expect(() => verifyPackage(envelope, payload, operator.publicKey)).toThrow(
+      /has not been signed by the marketplace/,
+    );
+  });
+
+  it("a marketplace package fails the operator check", () => {
+    const { envelope, payload, marketplace } = releasedPackage();
+    // ...and a released package has no operator signature.
+    expect(() => verifyOperator(envelope, payload, marketplace.publicKey)).toThrow(
+      /no operator signature/,
+    );
+  });
+
+  it("stapling an operator signature onto a marketplace package does not pass the marketplace check under the operator key", () => {
+    // The downgrade attempt: take a genuine marketplace release, add an operator
+    // signature made with a stolen/attacker operator key, and hope some verifier
+    // accepts it. Each verifier checks exactly one field against exactly one pinned
+    // key; neither is fooled.
+    const genuine = releasedPackage();
+    const attackerOperator = generateKeyPair();
+    const realOperator = generateKeyPair();
+
+    const spliced: PackageEnvelope = {
+      ...genuine.envelope,
+      operatorSignature: signChecksum(genuine.envelope.checksum, attackerOperator.privateKey),
+    };
+
+    // On the operator route, checked against the REAL operator key: refused.
+    expect(() => verifyOperator(spliced, genuine.payload, realOperator.publicKey)).toThrow(
+      /not signed by the operator/,
+    );
   });
 });

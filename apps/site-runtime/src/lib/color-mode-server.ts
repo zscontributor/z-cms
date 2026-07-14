@@ -31,7 +31,11 @@ export async function resolveDocumentColorMode(): Promise<ColorModeContext> {
     const payload = await resolveDocumentPayload();
     if (!payload) return DEFAULT_COLOR_MODE;
 
-    const { theme } = await resolveTheme(payload.theme.key, payload.theme.version);
+    const { theme } = await resolveTheme(
+      payload.theme.key,
+      payload.theme.version,
+      payload.theme.origin,
+    );
 
     // The owner's chosen starting mode lives in the theme's settings, so it has to
     // be merged against the schema defaults first — a site that has never opened the

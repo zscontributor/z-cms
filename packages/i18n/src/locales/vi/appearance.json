@@ -31,5 +31,22 @@
     "missingKey": "Thiếu mã giao diện.",
     "activateDenied": "Bạn không có quyền kích hoạt giao diện.",
     "activateFailed": "Không kích hoạt được {name}."
+  },
+  "sideload": {
+    "heading": "Cài từ file",
+    "hint": "Tải lên một file .zcms đã được người vận hành ký. File được xác minh bằng khóa người vận hành, quét bảo mật, và giữ chờ duyệt trước khi được chạy.",
+    "upload": "Tải .zcms",
+    "uploading": "Đang tải…",
+    "noFile": "Hãy chọn một file .zcms trước.",
+    "uploaded": "Đã tải {name} v{version}. Gói bị cách ly cho tới khi bạn duyệt.",
+    "uploadFailed": "Không thể cài gói này.",
+    "denied": "Bạn không có quyền cài gói từ file.",
+    "unverified": "Chưa kiểm chứng",
+    "pending": "Chờ duyệt",
+    "approve": "Duyệt",
+    "uninstall": "Gỡ",
+    "approved": "Đã duyệt {name}.",
+    "removed": "Đã gỡ {name}.",
+    "actionFailed": "Không thực hiện được thao tác này."
   }
 }

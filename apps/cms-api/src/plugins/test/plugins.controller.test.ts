@@ -125,7 +125,7 @@ describe("PluginsController", () => {
         versionId: "ver-1",
         settings: {},
         grantedPermissions: ["content:read"],
-        version: { version: "1.0.0", bundleUrl: null },
+        version: { version: "1.0.0", origin: "BUILTIN" },
       });
 
       const res = await makeController().activate(actor, "s1", "zsoft-seo");
@@ -144,7 +144,7 @@ describe("PluginsController", () => {
         versionId: "ver-1",
         settings: {},
         grantedPermissions: [],
-        version: { version: "1.0.0", bundleUrl: null },
+        version: { version: "1.0.0", origin: "BUILTIN" },
       });
       plugins.runSetup.mockRejectedValue(new Error("boom"));
 
@@ -164,7 +164,7 @@ describe("PluginsController", () => {
         id: "sp1",
         pluginId: "plugin-1",
         versionId: "ver-1",
-        version: { version: "1.0.0", bundleUrl: null },
+        version: { version: "1.0.0", origin: "BUILTIN" },
       });
       holder.systemDb.pluginVersion.findUnique.mockResolvedValue({
         manifest: { settingsSchema: { properties: { title: { type: "string" } } } },

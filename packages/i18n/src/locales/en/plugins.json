@@ -214,6 +214,16 @@
     "package:review": {
       "label": "Review quarantined packages",
       "detail": "Approve or reject a theme or plugin the malware scanner flagged — deciding that distrusted code may run."
+    },
+    "theme:sideload": {
+      "label": "Install themes from a file",
+      "detail": "Add theme code that no marketplace reviewed — and a theme runs unsandboxed."
+    },
+    "plugin:sideload": {
+      "label": "Install plugins from a file",
+      "detail": "Add plugin code that no marketplace reviewed. It still runs in the sandbox."
     }
-  }
+  },
+  "sideloadHint": "Plugins you installed from a file. They run in the sandbox like any other, once approved.",
+  "sideloadApprovedHint": "Approved. Install it onto a site from the catalogue above to grant it permissions."
 }

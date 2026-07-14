@@ -6,18 +6,40 @@
  * No source, no node_modules, no install scripts. A package is data, not a
  * program that runs on install.
  *
- * Two signatures travel with it, and they answer two different questions:
+ * Signatures travel with it, and they answer different questions:
  *
  *   publisher signature   — "who wrote this?"        (the author's private key)
  *   marketplace signature — "did we let this in?"    (Z-SOFT's private key)
+ *   operator signature    — "did THIS instance's operator vouch for this?"
+ *                                                     (the operator's private key)
  *
- * The runtimes verify the MARKETPLACE signature, against a public key pinned in
- * their own config — not one fetched from the API. That is what preserves the
- * property we already had when bundles lived on disk: a compromised cms-api
- * cannot make a runtime execute code, because it cannot forge the signature.
+ * The runtimes verify a signature against a public key pinned in their own config —
+ * not one fetched from the API. That is what preserves the property we already had
+ * when bundles lived on disk: a compromised cms-api cannot make a runtime execute
+ * code, because it cannot forge the signature. WHICH key is pinned depends on how
+ * the package reached the runtime, and that route is decided by the caller, never
+ * read off the envelope — see `verifyPackage`, `verifyFirstParty`, `verifyOperator`.
+ *
+ * The three signatures are mutually exclusive in practice: a built-in is signed by
+ * the first party, a marketplace package is counter-signed by the marketplace, and
+ * an operator sideload is signed by the operator. A package presenting the wrong
+ * signature for the track it arrives on is refused, not retried against another key.
  */
 
 export type PackageKind = "theme" | "plugin";
+
+/**
+ * Which pinned key a downloaded package is verified against — the trust route.
+ *
+ * The distinction exists so that a caller MUST name the route it is on, at the call
+ * site, rather than have the loader guess from what the envelope happens to contain.
+ * A marketplace package is checked against the marketplace key; an operator sideload
+ * against the operator key. There is no fallback from one to the other: a package
+ * that fails its route's check is refused, never retried against the other key.
+ * (Built-ins take neither route — they are verified separately by `verifyFirstParty`
+ * before they are ever downloaded.)
+ */
+export type PackageTrust = "marketplace" | "operator";
 
 export interface PackageManifest {
   /** Reverse-DNS id, e.g. "vn.zsoft.theme.corporate". */
@@ -48,6 +70,14 @@ export interface PackageEnvelope {
   publisherKey: string;
   /** Added by the marketplace on acceptance. Absent until then. */
   marketplaceSignature?: string;
+  /**
+   * Added when an operator sideloads a package into their own instance — either by
+   * signing it offline (`zcms pack --operator-key`) or by having cms-api sign it on
+   * their behalf. Ed25519 over `checksum`, base64. Absent on marketplace and
+   * first-party packages; a package never carries both this and a marketplace
+   * signature, because the two describe different, non-overlapping trust routes.
+   */
+  operatorSignature?: string;
 }
 
 export interface SignedPackage {

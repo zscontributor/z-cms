@@ -62,12 +62,21 @@ export function readManifest(dir: string, kind: PackageKind): PackageManifest {
  * The result is one file: a tar containing the envelope (manifest + checksum +
  * publisher signature) and the payload (the tar.gz of the actual files). One
  * file means one thing to upload, one thing to store, and one thing to verify.
+ *
+ * `opts.operatorPrivateKey`, when given, adds an `operatorSignature` over the same
+ * checksum — the sideload route (`verifyOperator`). This is how `zcms pack
+ * --operator-key` and cms-api's server-sign path stamp a package for an instance
+ * whose operator vouches for it. The operator is also the publisher of their own
+ * sideload, so pass their key as `publisherPrivateKey`/`publisherPublicKey` too; the
+ * runtime never checks the publisher signature on the operator track, but the
+ * envelope format requires the fields and the manifest identity still travels.
  */
 export async function buildPackage(
   dir: string,
   kind: PackageKind,
   publisherPrivateKey: string,
   publisherPublicKey: string,
+  opts: { operatorPrivateKey?: string } = {},
 ): Promise<{ file: Buffer; envelope: PackageEnvelope }> {
   const manifest = readManifest(dir, kind);
   const payload = await packDirectory(dir);
@@ -83,6 +92,10 @@ export async function buildPackage(
     // them looking for a problem that does not exist.
     publisherKey: publisherPublicKey.trim(),
   };
+
+  if (opts.operatorPrivateKey) {
+    envelope.operatorSignature = signChecksum(checksum, opts.operatorPrivateKey);
+  }
 
   return { file: await wrap(envelope, payload), envelope };
 }

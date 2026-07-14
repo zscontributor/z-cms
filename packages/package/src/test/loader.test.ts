@@ -113,7 +113,7 @@ describe("ensureBundle", () => {
     const { file, checksum } = await releasedFile();
     const fetchMock = stubDownload(file);
 
-    const bundle = await ensureBundle(cfg, "theme", KEY, VERSION, checksum);
+    const bundle = await ensureBundle(cfg, "marketplace", "theme", KEY, VERSION, checksum);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(bundle.checksum).toBe(checksum);
@@ -125,7 +125,7 @@ describe("ensureBundle", () => {
     const { file } = await releasedFile();
     const fetchMock = stubDownload(file);
 
-    await ensureBundle(cfg, "theme", KEY, VERSION);
+    await ensureBundle(cfg, "marketplace", "theme", KEY, VERSION);
 
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe(
@@ -140,7 +140,7 @@ describe("ensureBundle", () => {
     const { file, checksum } = await releasedFile();
     stubDownload(file);
 
-    await ensureBundle(cfg, "theme", KEY, VERSION);
+    await ensureBundle(cfg, "marketplace", "theme", KEY, VERSION);
 
     const marker = JSON.parse(
       fs.readFileSync(path.join(bundlePath(), MARKER), "utf8"),
@@ -154,10 +154,10 @@ describe("ensureBundle", () => {
     // self-inflicted DDoS on cms-api.
     const { file, checksum } = await releasedFile();
     const fetchMock = stubDownload(file);
-    await ensureBundle(cfg, "theme", KEY, VERSION, checksum);
+    await ensureBundle(cfg, "marketplace", "theme", KEY, VERSION, checksum);
     fetchMock.mockClear();
 
-    const bundle = await ensureBundle(cfg, "theme", KEY, VERSION, checksum);
+    const bundle = await ensureBundle(cfg, "marketplace", "theme", KEY, VERSION, checksum);
 
     expect(fetchMock).not.toHaveBeenCalled();
     expect(bundle.checksum).toBe(checksum);
@@ -177,7 +177,7 @@ describe("ensureBundle", () => {
     const { file, checksum } = await releasedFile();
     const fetchMock = stubDownload(file);
 
-    const bundle = await ensureBundle(cfg, "theme", KEY, VERSION, checksum);
+    const bundle = await ensureBundle(cfg, "marketplace", "theme", KEY, VERSION, checksum);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(bundle.checksum).toBe(checksum);
@@ -187,11 +187,11 @@ describe("ensureBundle", () => {
   it("re-fetches when the cached entry file has gone missing", async () => {
     const { file, checksum } = await releasedFile();
     const fetchMock = stubDownload(file);
-    await ensureBundle(cfg, "theme", KEY, VERSION, checksum);
+    await ensureBundle(cfg, "marketplace", "theme", KEY, VERSION, checksum);
     fs.rmSync(path.join(bundlePath(), "dist/index.js"));
     fetchMock.mockClear();
 
-    await ensureBundle(cfg, "theme", KEY, VERSION, checksum);
+    await ensureBundle(cfg, "marketplace", "theme", KEY, VERSION, checksum);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fs.existsSync(path.join(bundlePath(), "dist/index.js"))).toBe(true);
@@ -209,7 +209,7 @@ describe("ensureBundle", () => {
     });
     stubDownload(file);
 
-    await expect(ensureBundle(cfg, "theme", KEY, VERSION)).rejects.toThrow(
+    await expect(ensureBundle(cfg, "marketplace", "theme", KEY, VERSION)).rejects.toThrow(
       /not released by Z-CMS/,
     );
     expect(fs.existsSync(bundlePath())).toBe(false);
@@ -221,7 +221,7 @@ describe("ensureBundle", () => {
     const { file } = await releasedFile({ marketplaceSigned: false });
     stubDownload(file);
 
-    await expect(ensureBundle(cfg, "theme", KEY, VERSION)).rejects.toThrow(
+    await expect(ensureBundle(cfg, "marketplace", "theme", KEY, VERSION)).rejects.toThrow(
       /has not been signed by the marketplace/,
     );
     expect(fs.existsSync(bundlePath())).toBe(false);
@@ -234,7 +234,7 @@ describe("ensureBundle", () => {
     stubDownload(file);
 
     await expect(
-      ensureBundle(cfg, "theme", KEY, VERSION, "0".repeat(64)),
+      ensureBundle(cfg, "marketplace", "theme", KEY, VERSION, "0".repeat(64)),
     ).rejects.toThrow(/differs from the registered one/);
     expect(fs.existsSync(bundlePath())).toBe(false);
   });
@@ -246,7 +246,7 @@ describe("ensureBundle", () => {
     });
     stubDownload(file);
 
-    await expect(ensureBundle(cfg, "theme", KEY, VERSION)).rejects.toThrow(
+    await expect(ensureBundle(cfg, "marketplace", "theme", KEY, VERSION)).rejects.toThrow(
       /but "vn.zsoft.theme.corporate" was requested/,
     );
     expect(fs.existsSync(bundlePath())).toBe(false);
@@ -261,7 +261,7 @@ describe("ensureBundle", () => {
     });
     stubDownload(file);
 
-    await expect(ensureBundle(cfg, "theme", KEY, VERSION)).rejects.toThrow(
+    await expect(ensureBundle(cfg, "marketplace", "theme", KEY, VERSION)).rejects.toThrow(
       /points outside the package/,
     );
     expect(fs.existsSync(bundlePath())).toBe(false);
@@ -273,7 +273,7 @@ describe("ensureBundle", () => {
     });
     stubDownload(file);
 
-    await expect(ensureBundle(cfg, "theme", KEY, VERSION)).rejects.toThrow(
+    await expect(ensureBundle(cfg, "marketplace", "theme", KEY, VERSION)).rejects.toThrow(
       /is not in the package/,
     );
     expect(fs.existsSync(bundlePath())).toBe(false);
@@ -282,7 +282,7 @@ describe("ensureBundle", () => {
   it("refuses a bundle the API declines to serve", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("nope", { status: 404 })));
 
-    await expect(ensureBundle(cfg, "theme", KEY, VERSION)).rejects.toThrow(PackageError);
+    await expect(ensureBundle(cfg, "marketplace", "theme", KEY, VERSION)).rejects.toThrow(PackageError);
   });
 
   it("keeps a hostile key from shaping the cache path", async () => {
@@ -292,7 +292,7 @@ describe("ensureBundle", () => {
     const { file } = await releasedFile({ manifest: manifestFor({ id: key }) });
     stubDownload(file);
 
-    const bundle = await ensureBundle(cfg, "theme", key, VERSION);
+    const bundle = await ensureBundle(cfg, "marketplace", "theme", key, VERSION);
 
     // The sanitiser keeps dots but strips separators, so the whole hostile key
     // collapses into ONE path segment under the cache — it can never climb out.
@@ -308,7 +308,7 @@ describe("bundleChecksumOnDisk", () => {
   it("reports the checksum recorded when the bundle was verified", async () => {
     const { file, checksum } = await releasedFile();
     stubDownload(file);
-    await ensureBundle(cfg, "theme", KEY, VERSION);
+    await ensureBundle(cfg, "marketplace", "theme", KEY, VERSION);
 
     expect(bundleChecksumOnDisk(bundlePath())).toBe(checksum);
   });

@@ -9,6 +9,7 @@ import {
   forgetPlugin,
   listInstalledKeys,
   loadBuiltinPlugin,
+  loadOperatorPlugin,
   loadSignedPlugin,
 } from "./registry";
 import { runPlugin } from "./sandbox/runner";
@@ -76,12 +77,12 @@ app.post("/purge", (req, res) => {
 });
 
 app.post("/execute", async (req, res) => {
-  const { pluginKey, version, signed, invocation, settings, secrets, site, pluginToken } =
+  const { pluginKey, version, trust, invocation, settings, secrets, site, pluginToken } =
     req.body as {
       pluginKey?: string;
       version?: string;
-      /** True when this plugin was published as a marketplace package. */
-      signed?: boolean;
+      /** Which trust route loads this plugin — see PluginTrust in cms-api. */
+      trust?: "builtin" | "marketplace" | "operator";
       invocation?: { kind: "action" | "job" | "call" | "filter" | "setup"; name?: string };
       settings?: Record<string, unknown>;
       /** Which declared secrets are configured. Booleans; cms-api never sends values. */
@@ -97,16 +98,28 @@ app.post("/execute", async (req, res) => {
 
   let code: string;
   try {
-    // A marketplace plugin goes through the same signature-verified loader as a
-    // theme: fetched, checked against the pinned key, unpacked. A locally-seeded
-    // first-party plugin (bundleUrl null) is read from the trusted PLUGIN_DIR.
-    // Community code always takes the signed path.
-    // Two signed paths now, not one signed and one trusted. A marketplace plugin is
-    // verified against the pinned MARKETPLACE key; a built-in against the pinned
-    // FIRST-PARTY key. Neither reads a loose .js file off the volume.
-    code = signed
-      ? await loadSignedPlugin(pluginKey, version ?? "0.0.0")
-      : (await loadBuiltinPlugin(pluginKey)).code;
+    // Three trust routes, one per pinned key — and cms-api names the route, the
+    // runtime does not guess it from the bundle. Each downloads or reads bytes and
+    // verifies them against a DIFFERENT key held in THIS process's config:
+    //   marketplace → the pinned MARKETPLACE key (reviewed community code);
+    //   operator    → the pinned OPERATOR key (this instance's own sideload);
+    //   builtin     → the pinned FIRST-PARTY key, read from PLUGIN_DIR.
+    // None of them reads a loose .js file off the volume, and none falls back to
+    // another route's key. An unknown trust value is refused rather than defaulted.
+    switch (trust ?? "builtin") {
+      case "marketplace":
+        code = await loadSignedPlugin(pluginKey, version ?? "0.0.0");
+        break;
+      case "operator":
+        code = await loadOperatorPlugin(pluginKey, version ?? "0.0.0");
+        break;
+      case "builtin":
+        code = (await loadBuiltinPlugin(pluginKey)).code;
+        break;
+      default:
+        res.status(400).json({ message: `Unknown trust route "${trust}".` });
+        return;
+    }
   } catch (err) {
     res.status(404).json({ message: (err as Error).message });
     return;

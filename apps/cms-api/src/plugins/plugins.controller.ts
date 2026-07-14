@@ -36,6 +36,10 @@ export interface CatalogPlugin {
   publisher: string;
   isCore: boolean;
   latestVersion: string | null;
+  /** Where the latest version came from — BUILTIN/MARKETPLACE = verified, SIDELOAD = not. */
+  origin: string | null;
+  /** APPROVED plugins can run; a sideload is QUARANTINED until the operator approves. */
+  reviewStatus: string | null;
   /** What the plugin will ask the admin to approve. */
   permissions: Permission[];
   capabilities: string[];
@@ -176,6 +180,8 @@ export class PluginsController {
         publisher: plugin.publisher,
         isCore: plugin.isCore,
         latestVersion: latest?.version ?? null,
+        origin: latest?.origin ?? null,
+        reviewStatus: latest?.reviewStatus ?? null,
         permissions: (latest?.permissions ?? []) as Permission[],
         capabilities: manifest.capabilities ?? [],
         networkHosts: manifest.network?.hosts ?? [],

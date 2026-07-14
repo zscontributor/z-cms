@@ -57,6 +57,8 @@ zcms — the packaging tool for Z-CMS themes and plugins
 
   zcms pack <dir> --kind theme|plugin --key <private.pem> --pub <public.pem> [--out <file>]
       Packs a built directory into one signed .zcms file.
+      Add --operator-key <private.pem> to also stamp an operator signature for the
+      sideload route (a self-hosted instance that pins the matching public key).
 
   zcms verify <file.zcms> [--marketplace-key <public.pem>]
       Checks a package. Without --marketplace-key only the publisher signature is
@@ -253,11 +255,21 @@ async function packCmd(argv: string[]) {
   const pubPath = arg("pub", argv);
   if (!keyPath || !pubPath) die("--key <private.pem> and --pub <public.pem> are required. Run `zcms keygen` if you have neither.");
 
+  // --operator-key stamps an OPERATOR signature as well, for the sideload route: a
+  // self-hosted instance whose runtimes pin this key's public half will run the
+  // package without any marketplace round-trip. The operator is the publisher of
+  // their own sideload, so --key/--pub should be that same operator key pair.
+  const operatorKeyPath = arg("operator-key", argv);
+  const operatorPrivateKey = operatorKeyPath
+    ? fs.readFileSync(operatorKeyPath, "utf8")
+    : undefined;
+
   const { file, envelope } = await buildPackage(
     path.resolve(dir),
     kind,
     fs.readFileSync(keyPath, "utf8"),
     fs.readFileSync(pubPath, "utf8"),
+    { operatorPrivateKey },
   );
 
   const out =
@@ -272,7 +284,15 @@ async function packCmd(argv: string[]) {
     package  : ${envelope.manifest.id}@${envelope.manifest.version} (${kind})
     file     : ${out}  (${(file.length / 1024).toFixed(1)} KB)
     checksum : ${envelope.checksum}
-
+${
+  envelope.operatorSignature
+    ? `
+  The package carries an OPERATOR signature. An instance whose runtimes pin the
+  matching OPERATOR_PUBLIC_KEY will run it once an admin sideloads and approves it —
+  no marketplace involved, which is the point: it works fully offline. Do not submit
+  this to the marketplace; the operator route and the marketplace route are separate.
+`
+    : `
   The package carries a publisher signature and no marketplace counter-signature.
   What that means depends on where it is going:
 
@@ -282,7 +302,11 @@ async function packCmd(argv: string[]) {
     - a BUILT-IN package (one that ships inside the image, verified against the
       operator's pinned FIRST_PARTY_PUBLIC_KEY) is already complete. There is no
       marketplace in that path, which is the point: it works offline.
-`);
+
+    - an OPERATOR sideload: re-run with --operator-key to stamp the operator
+      signature this instance's runtimes verify.
+`
+}`);
 }
 
 async function verifyCmd(argv: string[]) {

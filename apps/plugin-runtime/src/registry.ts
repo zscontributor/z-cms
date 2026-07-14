@@ -126,6 +126,45 @@ export async function loadSignedPlugin(key: string, version: string): Promise<st
       internalToken: process.env.CMS_INTERNAL_TOKEN ?? "",
       marketplacePublicKey,
     },
+    "marketplace",
+    "plugin",
+    key,
+    version,
+  );
+
+  return fs.readFileSync(bundle.entryPath, "utf8");
+}
+
+/**
+ * Loads an OPERATOR-sideloaded plugin from its signed package.
+ *
+ * The same shape as `loadSignedPlugin`, one pinned key over: this instance's operator
+ * signed it, and it is verified against OPERATOR_PUBLIC_KEY held here — never the
+ * marketplace key, and with no fallback between the two. An instance that did not
+ * opt into sideloading has no operator key pinned, and `verifyOperator` refuses the
+ * package rather than run it. cms-api only ever routes a package here when its stored
+ * origin is SIDELOAD; the runtime still verifies, because cms-api's word is not the
+ * gate — the signature is.
+ */
+export async function loadOperatorPlugin(key: string, version: string): Promise<string> {
+  const operatorPublicKey = (process.env.OPERATOR_PUBLIC_KEY ?? "").replace(/\\n/g, "\n");
+  if (!operatorPublicKey) {
+    throw new Error(
+      "OPERATOR_PUBLIC_KEY is not configured — refusing to load a sideloaded plugin.",
+    );
+  }
+
+  const bundle = await ensureBundle(
+    {
+      cacheDir: process.env.PLUGIN_CACHE_DIR ?? path.resolve(__dirname, "../.zcms-plugins"),
+      apiUrl: process.env.CMS_API_URL ?? "http://localhost:4100",
+      internalToken: process.env.CMS_INTERNAL_TOKEN ?? "",
+      // Not used on the operator route, but the config shape requires it. The route,
+      // not this field, decides which key verifies — see ensureBundle.
+      marketplacePublicKey: "",
+      operatorPublicKey,
+    },
+    "operator",
     "plugin",
     key,
     version,

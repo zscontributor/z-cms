@@ -70,6 +70,10 @@ const SENSITIVE: Record<Permission, boolean> = {
   // Clearing a quarantined package is deciding that code the scanner distrusted
   // may run. There is no more sensitive permission in the system.
   "package:review": true,
+  // Introducing unreviewed code from a file — for a theme, code that runs
+  // unsandboxed. As grave as package:review, and for the same reason.
+  "theme:sideload": true,
+  "plugin:sideload": true,
 };
 
 const KNOWN = new Set<string>(PERMISSIONS);

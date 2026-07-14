@@ -161,6 +161,65 @@ export function verifyFirstParty(
   }
 }
 
+/**
+ * The gate a SIDELOADED package passes through: signed by this instance's operator.
+ *
+ * A self-hosted operator who cannot — or will not — reach the marketplace still
+ * needs a way to run code they wrote themselves. So there is a third trust anchor,
+ * pinned in the runtime's own config exactly like the first-party key: the operator
+ * key. A package the operator signed (offline with `zcms pack --operator-key`, or by
+ * cms-api on their behalf) carries `operatorSignature`, and this checks it against
+ * the pinned operator public key.
+ *
+ * It is a near-exact mirror of `verifyFirstParty`, and the symmetry is the point:
+ * both answer "did the holder of a key I pinned sign these exact bytes?", neither
+ * trusts anything that travelled inside the package. The ONLY differences are which
+ * field carries the signature (`operatorSignature`, not `publisherSignature`) and
+ * which pinned key checks it. Keeping them as two functions rather than one
+ * parameterised call is deliberate: the caller must state, at the call site, which
+ * trust anchor it is invoking — the routing decision is not allowed to hide inside a
+ * variable, and it is never read from the envelope. A package with only a
+ * marketplace signature reaching this function fails, and must: it arrived on the
+ * wrong track.
+ */
+export function verifyOperator(
+  envelope: PackageEnvelope,
+  payload: Buffer,
+  pinnedOperatorKeyPem: string,
+): void {
+  if (!pinnedOperatorKeyPem) {
+    throw new PackageError(
+      "No operator public key is pinned — refusing to run an unverified sideloaded package.",
+    );
+  }
+
+  const actual = sha256(payload);
+  if (actual !== envelope.checksum) {
+    throw new PackageError(
+      `Checksum mismatch — the sideloaded package has been modified.\n  declared: ${envelope.checksum}\n  actual  : ${actual}`,
+    );
+  }
+
+  if (!envelope.operatorSignature) {
+    throw new PackageError(
+      "This package carries no operator signature. It did not arrive by the sideload route and will not be run as one.",
+    );
+  }
+
+  // Deliberately NOT envelope.publisherKey — same reasoning as verifyFirstParty.
+  const ok = verifyChecksumSignature(
+    envelope.checksum,
+    envelope.operatorSignature,
+    pinnedOperatorKeyPem,
+  );
+
+  if (!ok) {
+    throw new PackageError(
+      "Invalid operator signature. This sideloaded package was not signed by the operator of this instance.",
+    );
+  }
+}
+
 /** What the marketplace does on accept: verify the author, then vouch for it. */
 export function verifyPublisher(envelope: PackageEnvelope, payload: Buffer): void {
   const actual = sha256(payload);

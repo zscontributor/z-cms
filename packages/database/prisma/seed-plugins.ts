@@ -88,6 +88,12 @@ async function main() {
           permissions: manifest.permissions ?? [],
           checksum: envelope.checksum,
           publisherSignature: envelope.publisherSignature,
+          // Reset to BUILTIN and drop any marketplace fields a prior install left, so
+          // a re-seed cannot leave this key claiming two origins at once — which would
+          // send plugin-runtime down the wrong verify path.
+          origin: "BUILTIN",
+          bundleUrl: null,
+          marketplaceSignature: null,
         },
         create: {
           pluginId: plugin.id,
@@ -99,9 +105,9 @@ async function main() {
           // the artefact it came from.
           checksum: envelope.checksum,
           publisherSignature: envelope.publisherSignature,
-          // NOT bundleUrl. A null bundle is what tells plugin-runtime to take the
-          // built-in path — which now verifies the .zcms against the first-party key,
-          // rather than trusting whatever dist/index.js happens to be on the volume.
+          // BUILTIN, no bundleUrl: plugin-runtime reads it from PLUGIN_DIR and verifies
+          // the .zcms against the first-party key, not whatever is on the volume.
+          origin: "BUILTIN",
         },
       });
 

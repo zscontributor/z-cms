@@ -165,9 +165,9 @@ export class PackagesService {
     // foreign "verified" travel into a table that gates our own upload endpoint.
     // The author's NAME still arrives — it is in the manifest.
     if (expected.kind === "theme") {
-      await this.registerTheme(manifest, null, storageKey, envelope, envelope.marketplaceSignature ?? "", "APPROVED", null);
+      await this.registerTheme(manifest, null, storageKey, envelope, envelope.marketplaceSignature ?? "", "APPROVED", null, "MARKETPLACE");
     } else {
-      await this.registerPlugin(manifest, null, storageKey, envelope, envelope.marketplaceSignature ?? "", "APPROVED", null);
+      await this.registerPlugin(manifest, null, storageKey, envelope, envelope.marketplaceSignature ?? "", "APPROVED", null, "MARKETPLACE");
     }
 
     return { key: expected.key, version: expected.version, checksum: envelope.checksum };
@@ -189,6 +189,7 @@ export class PackagesService {
     marketplaceSignature: string,
     reviewStatus: "APPROVED" | "QUARANTINED",
     scan: unknown,
+    origin: "MARKETPLACE" | "SIDELOAD",
   ) {
     const db = getSystemDb();
     const key = String(manifest.id);
@@ -231,6 +232,7 @@ export class PackagesService {
         version,
         engine: String(manifest.engine ?? ">=0.1.0"),
         manifest: manifest as never,
+        origin: origin as never,
         bundleUrl: storageKey,
         checksum: envelope.checksum,
         publisherSignature: envelope.publisherSignature,
@@ -249,6 +251,7 @@ export class PackagesService {
     marketplaceSignature: string,
     reviewStatus: "APPROVED" | "QUARANTINED",
     scan: unknown,
+    origin: "MARKETPLACE" | "SIDELOAD",
   ) {
     const db = getSystemDb();
     const key = String(manifest.id);
@@ -288,6 +291,7 @@ export class PackagesService {
         version,
         engine: String(manifest.engine ?? ">=0.1.0"),
         manifest: manifest as never,
+        origin: origin as never,
         permissions: (manifest.permissions ?? []) as string[],
         bundleUrl: storageKey,
         checksum: envelope.checksum,
@@ -414,13 +418,15 @@ export class PackagesService {
   }
 
   /**
-   * Tells the runtimes to forget a revoked bundle.
+   * Tells the runtimes to forget a bundle — the shared cache-drop primitive.
    *
    * Best effort, and LOUD when it fails: a runtime that never got the message
    * keeps executing the pulled code, which is the difference between a kill
-   * switch and a note.
+   * switch and a note. Public because both the marketplace revocation path
+   * (`applyRevocation`) and the operator's own sideload uninstall reuse it: one
+   * implementation of "make every runtime forget this", exercised by every caller.
    */
-  private async purgeRuntimes(
+  async purgeRuntimes(
     kind: "theme" | "plugin",
     key: string,
     version: string,
