@@ -9,6 +9,7 @@ import {
   validateManifestIdentity,
   type PackageManifest,
 } from "@zcmsorg/package";
+import { scanAst } from "./ast";
 import { SOURCE_RULES } from "./rules";
 import type { Finding, ScanReport, Verdict } from "./types";
 
@@ -150,6 +151,11 @@ function scanSource(file: string, source: string): Finding[] {
       file,
     });
   }
+
+  // Structural pass: catches what the text rules cannot (concatenated module
+  // names, computed process access, monkey-patched globals). Additive — its rule
+  // ids are distinct from the regex ones, so nothing is double-counted.
+  findings.push(...scanAst(file, source));
 
   return findings;
 }

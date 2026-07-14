@@ -539,3 +539,104 @@ describe("scanPackage", () => {
     expect(scannerDirs()).toBeLessThanOrEqual(before);
   });
 });
+
+/**
+ * The structural (AST) pass. Everything here is a bypass of the TEXT rules —
+ * the literal string the regex looks for never appears — so it proves the parse
+ * tree catches what line-matching structurally cannot.
+ */
+describe("scanPackage — structural (AST) pass", () => {
+  it("rejects child_process reached through a concatenated string", async () => {
+    // ATTACK: the exact bypass the regex `dynamic-require` rule cannot see — the
+    // literal "child_process" is never on any line, it is assembled at runtime.
+    const file = await buildZcms({
+      "dist/index.js": [
+        'const cp = require("child" + "_process");',
+        "export default function Layout() { return null; }",
+      ].join("\n"),
+    });
+
+    const report = await scanPackage(file);
+
+    expect(report.verdict).toBe("reject");
+    expect(finding(report, "dangerous-module-computed").severity).toBe("block");
+    expect(finding(report, "dangerous-module-computed").line).toBe(1);
+    // The literal module rule must NOT have fired — proving this is the AST pass.
+    expect(rules(report)).not.toContain("node-builtin:child_process");
+  });
+
+  it("rejects a dynamic import() of a concatenated builtin", async () => {
+    const file = await buildZcms({
+      "dist/index.js": 'export async function boot() { return import("n" + "et"); }',
+    });
+
+    const report = await scanPackage(file);
+
+    expect(report.verdict).toBe("reject");
+    expect(finding(report, "dangerous-module-computed").severity).toBe("block");
+  });
+
+  it("blocks monkey-patching a shared host global", async () => {
+    // ATTACK: in the render process every tenant shares, replacing globalThis.fetch
+    // lets a theme observe or rewrite requests made while OTHER sites render.
+    const file = await buildZcms({
+      "dist/index.js": [
+        "const realFetch = globalThis.fetch;",
+        "globalThis.fetch = async (...a) => realFetch(...a);",
+        "export default function Layout() { return null; }",
+      ].join("\n"),
+    });
+
+    const report = await scanPackage(file);
+
+    expect(report.verdict).toBe("reject");
+    expect(finding(report, "monkeypatch-sensitive-global").severity).toBe("block");
+    expect(finding(report, "monkeypatch-sensitive-global").line).toBe(2);
+  });
+
+  it("flags computed access to process, past the process.env text rule", async () => {
+    const file = await buildZcms({
+      "dist/index.js": 'export const k = process["e" + "nv"]["DATABASE_URL"];',
+    });
+
+    const report = await scanPackage(file);
+
+    expect(report.verdict).toBe("flag");
+    expect(finding(report, "process-computed-access").severity).toBe("warn");
+    // The text `process.env` rule cannot see `process["e"+"nv"]`.
+    expect(rules(report)).not.toContain("process-env");
+  });
+
+  it("leaves ordinary JavaScript untouched (no false positives)", async () => {
+    // The counterweight: real theme logic — property access, local assignment,
+    // literal string keys — must not trip any structural rule.
+    const file = await buildZcms({
+      "dist/index.js": [
+        "export default function Layout({ posts, settings }) {",
+        "  const opts = {};",
+        '  opts["title"] = settings.title;',
+        "  const sorted = [...posts].sort((a, b) => b.date - a.date);",
+        '  return sorted.map((p) => p.title).join(", ") + opts.title;',
+        "}",
+      ].join("\n"),
+    });
+
+    const report = await scanPackage(file);
+
+    expect(report.verdict).toBe("pass");
+    expect(report.findings).toEqual([]);
+  });
+
+  it("does not crash on an unparseable file — regex + heuristics still apply", async () => {
+    // A file the parser chokes on must fall back to the text rules, never throw.
+    const file = await buildZcms({
+      "dist/index.js": 'const broken = (( ;\nconst { execSync } = require("child_process");',
+    });
+
+    const report = await scanPackage(file);
+
+    // Unparseable → AST pass yields nothing, but the regex still catches the literal.
+    expect(report.verdict).toBe("reject");
+    expect(rules(report)).toContain("node-builtin:child_process");
+  });
+});

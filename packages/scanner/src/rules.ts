@@ -28,7 +28,7 @@ export interface SourceRule {
 // Node built-ins a sandboxed extension should never reach for. Matched as the
 // target of a require()/import so that a substring in a word ("fsync",
 // "requests") does not trip the rule.
-const DANGEROUS_MODULES = [
+export const DANGEROUS_MODULES = [
   "child_process",
   "node:child_process",
   "worker_threads",
@@ -62,7 +62,7 @@ const DANGEROUS_MODULES = [
 // Built-ins that are not escape vectors on their own but leak host detail or
 // signal a package doing something it should not. Flagged for a human, not blocked,
 // because a bundled library occasionally references one on a dead code path.
-const SUSPICIOUS_MODULES = ["os", "node:os", "process", "node:process"];
+export const SUSPICIOUS_MODULES = ["os", "node:os", "process", "node:process"];
 
 function suspiciousModuleRule(mod: string): SourceRule {
   const escaped = mod.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

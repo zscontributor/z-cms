@@ -13,6 +13,7 @@ import {
 import { ConfigService } from "@nestjs/config";
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { getSystemDb } from "@zcmsorg/database";
+import { scanPackage } from "@zcmsorg/scanner";
 import { ApiInternal, ApiNotFound } from "../openapi/decorators";
 import { openPackage, verifyPackage, type PackageEnvelope } from "@zcmsorg/package";
 import { CacheService } from "../redis/cache.service";
@@ -62,10 +63,17 @@ export class PackagesService {
    * for itself: **did the marketplace we pinned sign these exact bytes?**
    *
    * So there is no publisher lookup (the author is registered on the marketplace,
-   * not here) and no scan (the scan happened there; the counter-signature IS the
-   * statement that it passed). What there is, is `verifyPackage` against the
-   * pinned key — which is the same gate the runtimes apply, applied one step
-   * earlier so a forged bundle never reaches the database.
+   * not here). There is `verifyPackage` against the pinned key — the same gate the
+   * runtimes apply, one step earlier so a forged bundle never reaches the database.
+   *
+   * And there is a LOCAL re-scan. The counter-signature says "the marketplace
+   * signed this", not "this is safe" — a marketplace whose review missed something,
+   * or whose signing key was stolen, signs malware just as validly. Re-running the
+   * static scan here, on the instance that will actually run the code, is cheap
+   * defence-in-depth: a `reject` verdict (a shell, `fs`, a concatenated built-in, a
+   * patched global) refuses the install outright. A `flag` is left to the
+   * marketplace's own human review — re-blocking it here would reject packages a
+   * reviewer already cleared — but it is logged so an operator can see it.
    *
    * The (kind, key, version) we asked for is checked against the manifest we got.
    * A marketplace that answers a request for `analytics@0.1.0` with a package
@@ -114,6 +122,28 @@ export class PackagesService {
           asked: `${expected.kind}/${expected.key}@${expected.version}`,
           got: `${String(manifest.kind)}/${String(manifest.id)}@${String(manifest.version)}`,
         }),
+      );
+    }
+
+    // Local defence-in-depth scan (see the method comment). Signature-valid but
+    // malicious is exactly the case a compromised or fooled marketplace produces.
+    const scan = await scanPackage(file, { maxUnpackedBytes: MAX_PACKAGE_BYTES });
+    if (scan.verdict === "reject") {
+      const blockers = scan.findings
+        .filter((f) => f.severity === "block")
+        .map((f) => `${f.rule} (${f.file}${f.line ? `:${f.line}` : ""})`)
+        .join(", ");
+      this.logger.warn(
+        `Refused ${expected.kind} ${expected.key}@${expected.version}: local scan rejected it — ${blockers}`,
+      );
+      throw new BadRequestException(
+        t()("errors.marketplace.scanRejected", { findings: blockers }),
+      );
+    }
+    if (scan.verdict === "flag") {
+      const flags = scan.findings.map((f) => f.rule).join(", ");
+      this.logger.warn(
+        `Installed ${expected.kind} ${expected.key}@${expected.version} despite scan flags (already marketplace-reviewed): ${flags}`,
       );
     }
 

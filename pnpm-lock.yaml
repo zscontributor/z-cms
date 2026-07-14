@@ -558,6 +558,9 @@ importers:
       '@zcmsorg/package':
         specifier: workspace:*
         version: link:../package
+      acorn:
+        specifier: 8.17.0
+        version: 8.17.0
     devDependencies:
       '@types/node':
         specifier: 24.10.1

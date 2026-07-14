@@ -95,7 +95,8 @@
     "mismatch": "Đã yêu cầu marketplace gói {asked} nhưng nhận về {got}. Từ chối cài.",
     "bundleNotFound": "Marketplace không có bản {key}@{version} để phục vụ (HTTP {status}). Có thể nó đã bị thu hồi.",
     "notConfigured": "Chưa cấu hình marketplace. Đặt MARKETPLACE_URL trỏ tới registry mà máy chủ này sẽ cài đặt từ đó.",
-    "noPinnedKey": "Chưa cấu hình MARKETPLACE_PUBLIC_KEY. Không có khoá đã ghim thì không có gì để đối chiếu, nên không cài được gói nào."
+    "noPinnedKey": "Chưa cấu hình MARKETPLACE_PUBLIC_KEY. Không có khoá đã ghim thì không có gì để đối chiếu, nên không cài được gói nào.",
+    "scanRejected": "Gói này không qua được quét bảo mật cục bộ của máy chủ này, nên không được cài: {findings}"
   },
   "docs": {
     "title": "Tài liệu API đang tắt",

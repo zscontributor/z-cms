@@ -20,7 +20,8 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@zcmsorg/package": "workspace:*"
+    "@zcmsorg/package": "workspace:*",
+    "acorn": "8.17.0"
   },
   "devDependencies": {
     "@types/node": "24.10.1",

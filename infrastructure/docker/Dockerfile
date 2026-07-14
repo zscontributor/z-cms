@@ -58,6 +58,41 @@ RUN DATABASE_URL="postgresql://build:build@127.0.0.1:5432/build?schema=public" p
 FROM build AS prod-deps
 RUN pnpm prune --prod
 
+# ---------------------------------------------------------------------------
+# builtin-themes — the two files per theme that the loader actually reads:
+# `theme.json` (which keys are built in) and the signed `*.zcms` (the bytes).
+#
+# These already reach the image by accident. Next's standalone output copies each
+# workspace package wholesale, and `themes/*` are workspace packages, so `/app/themes`
+# arrives complete with `src/`, `screenshots/` and the `.zcms` — none of which Next
+# traced, and none of which it promises to keep copying. Depending on that is
+# depending on an implementation detail of the bundler to deliver a security-critical
+# artefact: the day it stops, THEME_DIR is empty, `builtinThemeKeys()` returns [], and
+# every site quietly renders the compiled-in fallback. That failure is silent by
+# design — the loader degrades rather than 500s — so it would ship.
+#
+# This stage makes the two files a guarantee instead of a side effect. It is a small
+# overlay on top of the standalone copy, not a replacement for it, and if the signing
+# step was skipped it fails the BUILD rather than shipping an image whose every site
+# serves the fallback. A directory with no `.zcms` is skipped rather than half-copied:
+# `theme.json` alone would advertise a built-in key whose package does not exist.
+# ---------------------------------------------------------------------------
+FROM build AS builtin-themes
+RUN set -eu; \
+    mkdir -p /builtin/themes; \
+    found=0; \
+    for dir in /repo/themes/*/; do \
+      name=$(basename "$dir"); \
+      [ -f "$dir/theme.json" ] || continue; \
+      ls "$dir"*.zcms >/dev/null 2>&1 || continue; \
+      mkdir -p "/builtin/themes/$name"; \
+      cp "$dir/theme.json" "/builtin/themes/$name/"; \
+      cp "$dir"*.zcms "/builtin/themes/$name/"; \
+      found=$((found + 1)); \
+    done; \
+    [ "$found" -gt 0 ] || { echo "no signed built-in themes found — run: pnpm sign:themes" >&2; exit 1; }; \
+    echo "staged $found built-in theme(s)"
+
 # ===========================================================================
 # cms-api — the NestJS API. Preserves the /repo layout so pnpm's node_modules
 # symlinks into packages/* still resolve at runtime.
@@ -140,6 +175,13 @@ WORKDIR /app
 COPY --from=build /repo/apps/site-runtime/.next/standalone ./
 COPY --from=build /repo/apps/site-runtime/.next/static ./apps/site-runtime/.next/static
 COPY --from=build /repo/apps/site-runtime/public ./apps/site-runtime/public
+# Pins the signed themes into THEME_DIR rather than trusting the standalone copy
+# above to keep bringing them (see the builtin-themes stage). The path is THEME_DIR's
+# default — Next's standalone server chdir()s to its own directory, so the loader's
+# `<cwd>/../../themes` resolves here. Owned by root and never written by the app:
+# site-runtime verifies these packages and unpacks them into THEME_CACHE_DIR, and a
+# process that can rewrite what it verifies verifies nothing.
+COPY --from=builtin-themes /builtin/themes ./themes
 USER node
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0

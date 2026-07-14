@@ -95,7 +95,8 @@
     "mismatch": "The marketplace was asked for {asked} and answered with {got}. Refusing to install it.",
     "bundleNotFound": "The marketplace has no servable bundle for {key}@{version} (HTTP {status}). It may have been revoked.",
     "notConfigured": "No marketplace is configured. Set MARKETPLACE_URL to the registry this instance should install from.",
-    "noPinnedKey": "MARKETPLACE_PUBLIC_KEY is not configured. Without a pinned key there is nothing to verify a package against, so nothing can be installed."
+    "noPinnedKey": "MARKETPLACE_PUBLIC_KEY is not configured. Without a pinned key there is nothing to verify a package against, so nothing can be installed.",
+    "scanRejected": "This package failed this instance's own security scan and was not installed: {findings}"
   },
   "docs": {
     "title": "API documentation is off",
