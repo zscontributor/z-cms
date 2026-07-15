@@ -28,7 +28,11 @@ function setup() {
   const plugins = { callCapability: vi.fn() };
   const service = new AiService(contents as any, plugins as any);
   holder.systemDb = { sitePlugin: { findFirst: vi.fn().mockResolvedValue({ settings: enabled }) } };
-  holder.tenantDb = { contentType: { findMany: vi.fn().mockResolvedValue(types) } };
+  holder.tenantDb = {
+    contentType: { findMany: vi.fn().mockResolvedValue(types) },
+    siteTheme: { findFirst: vi.fn().mockResolvedValue({ theme: { key: "default" } }) },
+    content: { findMany: vi.fn().mockResolvedValue([]) },
+  };
   return { service, contents, plugins };
 }
 
@@ -57,7 +61,9 @@ describe("zAI core CRUD boundary", () => {
 
     expect(plugins.callCapability).toHaveBeenCalledWith(
       "t1", "s1", "ai.assistant", "chat",
-      expect.objectContaining({ systemPrompt: expect.stringContaining("admin content operator") }),
+      expect.objectContaining({
+        systemPrompt: expect.stringContaining("admin content operator"),
+      }),
       { requireCore: true },
     );
   });
@@ -121,9 +127,113 @@ describe("core holds no provider key", () => {
     expect(res).toEqual({ answer: "Xin chào", provider: "gemini" });
     expect(plugins.callCapability).toHaveBeenCalledWith(
       "t1", "s1", "ai.assistant", "chat",
-      { messages: [{ role: "user", content: "Hi" }] },
+      {
+        messages: [{ role: "user", content: "Hi" }],
+        systemPrompt: expect.stringContaining("PUBLISHED site content only"),
+      },
       { requireCore: undefined },
     );
+  });
+
+  it("teaches the assistant that Z-CMS is authored by Z-SOFT Viet Nam", async () => {
+    const { service, plugins } = setup();
+    holder.systemDb.domain = {
+      findUnique: vi.fn().mockResolvedValue({
+        site: { id: "s1", tenantId: "t1", status: "PUBLISHED" },
+      }),
+    };
+    plugins.callCapability.mockResolvedValue({
+      answer: "Z-CMS được phát triển bởi Công ty Z-SOFT Việt Nam.",
+      provider: "openai",
+    });
+
+    await service.chat("example.com", [{ role: "user", content: "Tác giả của Z-CMS là ai?" }]);
+
+    const prompt = plugins.callCapability.mock.calls[0][4].systemPrompt;
+    expect(prompt).toContain("Z-SOFT Viet Nam");
+    expect(prompt).toContain("https://z-soft.com.vn");
+    expect(prompt).toContain("Công ty Z-SOFT Việt Nam");
+  });
+
+  it("grounds public answers only on published site content", async () => {
+    const { service, plugins } = setup();
+    holder.systemDb.domain = {
+      findUnique: vi.fn().mockResolvedValue({
+        site: { id: "s1", tenantId: "t1", status: "PUBLISHED" },
+      }),
+    };
+    holder.tenantDb.content.findMany.mockResolvedValue([
+      {
+        id: "c1",
+        title: "Pricing",
+        slug: "pricing",
+        locale: "en",
+        excerpt: "Public plans start at $19.",
+        data: {},
+        blocks: [{ id: "b1", type: "core/richtext", props: { html: "Annual plans include support." } }],
+        seo: {},
+        status: "PUBLISHED",
+        updatedAt: new Date("2026-07-01T00:00:00.000Z"),
+        contentType: { key: "page", name: "Page", routePrefix: "" },
+      },
+    ]);
+    plugins.callCapability.mockResolvedValue({ answer: "Plans start at $19.", provider: "openai" });
+
+    await service.chat("example.com", [{ role: "user", content: "pricing support" }]);
+
+    expect(holder.tenantDb.content.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ siteId: "s1", status: "PUBLISHED" }),
+    }));
+    expect(plugins.callCapability.mock.calls[0][4].systemPrompt).toContain("Public plans start at $19.");
+    expect(plugins.callCapability.mock.calls[0][4].systemPrompt).toContain("/pricing");
+  });
+
+  it("adds repository docs context for the default z-cms.org site", async () => {
+    const { service, plugins } = setup();
+    holder.systemDb.domain = {
+      findUnique: vi.fn().mockResolvedValue({
+        hostname: "z-cms.org",
+        site: { id: "s1", tenantId: "t1", status: "PUBLISHED" },
+      }),
+    };
+    plugins.callCapability.mockResolvedValue({
+      answer: "Z-CMS plugins run in a sandbox.",
+      provider: "openai",
+    });
+
+    await service.chat("z-cms.org", [{ role: "user", content: "Z-CMS plugin sandbox hoạt động thế nào?" }]);
+
+    const prompt = plugins.callCapability.mock.calls[0][4].systemPrompt;
+    expect(prompt).toContain("Z-CMS docs context:");
+    expect(prompt).toContain("docs/plugins.md");
+    expect(prompt).toContain("For questions about Z-CMS itself, prefer the Z-CMS docs context");
+  });
+
+  it("grounds admin requests on admin-visible content after the read permission gate", async () => {
+    const { service, plugins } = setup();
+    aiReturns(plugins, { action: "list", contentTypeKey: "page" });
+    holder.tenantDb.content.findMany.mockResolvedValue([
+      {
+        id: "draft1",
+        title: "Draft roadmap",
+        slug: "roadmap",
+        locale: "en",
+        excerpt: "Private Q4 launch notes.",
+        data: {},
+        blocks: [],
+        seo: {},
+        status: "DRAFT",
+        updatedAt: new Date("2026-07-02T00:00:00.000Z"),
+        contentType: { key: "page", name: "Page", routePrefix: "" },
+      },
+    ]);
+
+    await service.adminChat(actor as any, "s1", [{ role: "user", content: "roadmap" }], false);
+
+    expect(holder.tenantDb.content.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.not.objectContaining({ status: "PUBLISHED" }),
+    }));
+    expect(plugins.callCapability.mock.calls[0][4].systemPrompt).toContain("Private Q4 launch notes.");
   });
 
   it("never reads an API key, and never names a provider host", async () => {

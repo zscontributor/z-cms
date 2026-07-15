@@ -105,6 +105,7 @@ ENV NODE_ENV=production
 WORKDIR /repo
 COPY --from=prod-deps /repo/node_modules ./node_modules
 COPY --from=prod-deps /repo/packages ./packages
+COPY --from=build /repo/docs ./docs
 COPY --from=prod-deps /repo/apps/cms-api/node_modules ./apps/cms-api/node_modules
 COPY --from=build /repo/apps/cms-api/dist ./apps/cms-api/dist
 COPY --from=build /repo/apps/cms-api/package.json ./apps/cms-api/package.json

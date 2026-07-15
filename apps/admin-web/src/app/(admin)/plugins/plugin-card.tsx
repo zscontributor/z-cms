@@ -10,6 +10,7 @@ import {
 } from "@/app/actions/plugin";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import { SchemaSettingsForm } from "@/components/settings/schema-settings-form";
 import { Icon } from "@/components/shell/icon";
 import type { CatalogPluginDto } from "@/lib/api";
@@ -110,12 +111,24 @@ export function PluginCard({
     <article
       className={
         isActive
-          ? "z-card flex flex-col border-brand-500 p-4 ring-1 ring-brand-500/30"
-          : "z-card flex flex-col p-4"
+          ? "z-card relative flex flex-col border-brand-500 p-4 ring-1 ring-brand-500/30"
+          : "z-card relative flex flex-col p-4"
       }
     >
+      {canConfigure && plugin.installed && plugin.settingsSchema ? (
+        <Button
+          size="sm"
+          variant="ghost"
+          className="absolute right-2 top-2 h-8 w-8 px-0"
+          onClick={() => setSettingsOpen(true)}
+          aria-label={t("plugins.card.configure")}
+        >
+          <Icon name="settings" className="h-4 w-4" />
+        </Button>
+      ) : null}
+
       <header className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
+        <div className="min-w-0 pr-8">
           <h2 className="flex items-center gap-1.5 text-sm font-semibold">
             <span className="truncate">{plugin.name}</span>
             {plugin.isCore ? <Badge tone="info">{t("plugins.card.core")}</Badge> : null}
@@ -124,7 +137,9 @@ export function PluginCard({
             <code>{plugin.key}</code> · v{plugin.latestVersion ?? "—"} · {plugin.publisher}
           </p>
         </div>
-        <Badge tone={status.tone}>{status.label}</Badge>
+        <Badge tone={status.tone} className="mr-8">
+          {status.label}
+        </Badge>
       </header>
 
       <p className="mt-2 line-clamp-3 min-h-8 text-xs z-muted">
@@ -249,17 +264,6 @@ export function PluginCard({
               </Button>
             ) : null}
 
-            {canConfigure && plugin.settingsSchema ? (
-              <Button
-                size="sm"
-                onClick={() => setSettingsOpen((open) => !open)}
-                aria-expanded={settingsOpen}
-              >
-                {t("plugins.card.configure")}
-                <Icon name={settingsOpen ? "up" : "down"} size={18} />
-              </Button>
-            ) : null}
-
             {isActive && plugin.key === "vn.zsoft.plugin.zai" ? (
               <Link href="/zai" className="inline-flex h-8 items-center rounded-md bg-[var(--accent)] px-3 text-xs font-medium text-white">
                 Open zAI
@@ -287,9 +291,14 @@ export function PluginCard({
         <p className="mt-2 text-[11px] z-muted">{t("plugins.card.installDenied")}</p>
       ) : null}
 
-      {plugin.installed && settingsOpen && plugin.settingsSchema ? (
-        <div className="mt-4 border-t border-[var(--border)] pt-4">
-          <p className="mb-3 text-[11px] z-muted">{t("plugins.card.settingsGenerated")}</p>
+      <Dialog
+        open={plugin.installed && settingsOpen && Boolean(plugin.settingsSchema)}
+        onClose={() => setSettingsOpen(false)}
+        title={t("plugins.card.configure")}
+        description={t("plugins.card.settingsGenerated")}
+        className="w-[min(44rem,calc(100vw-2rem))]"
+      >
+        {plugin.settingsSchema ? (
           <SchemaSettingsForm
             idPrefix={`plugin-${plugin.key}`}
             schema={plugin.settingsSchema}
@@ -299,8 +308,8 @@ export function PluginCard({
             emptyText={t("plugins.settings.empty")}
             deniedText={t("plugins.settings.denied")}
           />
-        </div>
-      ) : null}
+        ) : null}
+      </Dialog>
 
       <ConsentDialog
         open={consentOpen}

@@ -116,10 +116,11 @@ export default definePlugin<ZaiSettings>({
      */
     async chat(payload, ctx) {
       const messages = (payload.messages ?? []) as ChatMessage[];
-      const system =
-        (payload.systemPrompt as string) ||
+      const system = [
         ctx.settings.systemPrompt ||
-        "You are a helpful assistant for this website. Answer in the visitor's language.";
+          "You are a helpful assistant for this website. Answer in the visitor's language.",
+        typeof payload.systemPrompt === "string" ? payload.systemPrompt : "",
+      ].filter(Boolean).join("\n\n");
 
       const provider = selectProvider(ctx.settings, ctx.secrets);
       const answer = await ask(provider, system, messages, ctx);

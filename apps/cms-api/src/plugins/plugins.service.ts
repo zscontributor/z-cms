@@ -104,7 +104,16 @@ export interface PluginRenderContributions {
 
 interface PublicIntegrationProjector {
   pluginKey: string;
+  isAvailable?: (settings: Record<string, unknown>) => boolean;
   project: (settings: Record<string, unknown>) => unknown;
+}
+
+function isZaiProviderConfigured(settings: Record<string, unknown>): boolean {
+  return (
+    (settings.openaiEnabled === true && Boolean(settings.openaiApiKey)) ||
+    (settings.claudeEnabled === true && Boolean(settings.claudeApiKey)) ||
+    (settings.geminiEnabled === true && Boolean(settings.geminiApiKey))
+  );
 }
 
 /**
@@ -114,6 +123,7 @@ interface PublicIntegrationProjector {
 const PUBLIC_INTEGRATION_PROJECTORS: Record<string, PublicIntegrationProjector> = {
   "ai.assistant": {
     pluginKey: "vn.zsoft.plugin.zai",
+    isAvailable: isZaiProviderConfigured,
     project: (settings) => ({
       name: typeof settings.assistantName === "string" && settings.assistantName
         ? settings.assistantName : "zAI Assistant",
@@ -188,11 +198,15 @@ export class PluginsService {
         if (!projector || projector.pluginKey !== row.plugin.key || integrations[capability]) {
           continue;
         }
+        const settings = (row.settings ?? {}) as Record<string, unknown>;
+        if (projector.isAvailable && !projector.isAvailable(settings)) {
+          continue;
+        }
 
         integrations[capability] = {
           capability,
           provider: { pluginKey: row.plugin.key, version: row.version.version },
-          data: projector.project((row.settings ?? {}) as Record<string, unknown>),
+          data: projector.project(settings),
         };
       }
     }
@@ -210,8 +224,12 @@ export class PluginsService {
       select: { settings: true },
     });
     if (!row) return undefined;
+    const settings = (row.settings ?? {}) as Record<string, unknown>;
+    if (!PUBLIC_INTEGRATION_PROJECTORS["ai.assistant"].isAvailable?.(settings)) {
+      return undefined;
+    }
     return PUBLIC_INTEGRATION_PROJECTORS["ai.assistant"].project(
-      (row.settings ?? {}) as Record<string, unknown>,
+      settings,
     ) as { name: string; welcomeMessage: string };
   }
 

@@ -123,6 +123,21 @@ describe("zAI chat", () => {
     expect(fetch.mock.calls[0][0].headers["x-goog-api-key"]).toBe("{{secret:geminiKey}}");
   });
 
+  it("keeps the admin-configured prompt while appending core grounding context", async () => {
+    const { ctx, fetch } = makeCtx({ systemPrompt: "Use a warm brand voice." });
+
+    await plugin.calls!.chat(
+      {
+        systemPrompt: "Use only the public context below.",
+        messages: [{ role: "user", content: "What plans are public?" }],
+      },
+      ctx,
+    );
+
+    expect(fetch.mock.calls[0][0].body.instructions).toContain("Use a warm brand voice.");
+    expect(fetch.mock.calls[0][0].body.instructions).toContain("Use only the public context below.");
+  });
+
   it("refuses a provider the admin enabled but never gave a key to", async () => {
     // Without ctx.secrets the plugin would have to fire a request at Claude and read
     // a 401 to discover the box was empty. It can answer that question locally.
@@ -153,7 +168,7 @@ describe("zAI chat", () => {
     ).rejects.toThrow("Incorrect API key provided.");
   });
 
-  it("lets the caller override the system prompt (the admin content operator does)", async () => {
+  it("lets the caller add stricter system instructions (the admin content operator does)", async () => {
     const { ctx, fetch } = makeCtx();
 
     await plugin.calls!.chat(
@@ -161,7 +176,8 @@ describe("zAI chat", () => {
       ctx,
     );
 
-    expect(fetch.mock.calls[0][0].body.instructions).toBe("You are an operator.");
+    expect(fetch.mock.calls[0][0].body.instructions).toContain("Be helpful.");
+    expect(fetch.mock.calls[0][0].body.instructions).toContain("You are an operator.");
   });
 });
 

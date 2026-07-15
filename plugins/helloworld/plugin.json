@@ -1,0 +1,34 @@
+{
+  "id": "vn.zsoft.plugin.helloworld",
+  "name": "HelloWorld",
+  "version": "0.1.0",
+  "description": "A review-ready sample plugin that records activation and greets published content.",
+  "author": {
+    "name": "Z-SOFT Co., Ltd",
+    "url": "https://z-soft.com.vn"
+  },
+  "engine": ">=0.1.0",
+  "entry": "dist/index.js",
+  "permissions": [
+    "content:read"
+  ],
+  "capabilities": [
+    "demo.hello"
+  ],
+  "settingsSchema": {
+    "type": "object",
+    "properties": {
+      "greeting": {
+        "type": "string",
+        "title": "Greeting",
+        "description": "Message written to plugin storage when content is published.",
+        "default": "Hello from Z-CMS"
+      },
+      "includeSiteName": {
+        "type": "boolean",
+        "title": "Include site name",
+        "default": true
+      }
+    }
+  }
+}

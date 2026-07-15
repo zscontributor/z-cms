@@ -8,6 +8,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/field";
 import { Icon } from "@/components/shell/icon";
 import { cn } from "@/lib/cn";
+import { adminAssetPath } from "@/lib/assets";
 import { useT } from "@/lib/i18n-provider";
 
 /**
@@ -114,7 +115,9 @@ export function MediaPickerDialog({
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/media?page=${target}`, { cache: "no-store" });
+        const res = await fetch(adminAssetPath(`/api/media?page=${target}`), {
+          cache: "no-store",
+        });
         if (!res.ok) throw new Error(t("media.picker.loadFailed"));
         const data = (await res.json()) as Paginated<MediaDto>;
         setItems(data.items);
@@ -205,7 +208,7 @@ export function MediaPickerDialog({
       open={open}
       onClose={onClose}
       title={t("media.picker.title")}
-      className="w-[min(48rem,calc(100vw-2rem))]"
+      className="z-[120] w-[min(48rem,calc(100vw-2rem))]"
       footer={
         <>
           <Button

@@ -12,6 +12,8 @@ import {
   UseGuards,
   ForbiddenException,
 } from "@nestjs/common";
+import fs from "node:fs/promises";
+import path from "node:path";
 import { db, getSystemDb } from "@zcmsorg/database";
 import { CreateContentSchema, UpdateContentSchema, type Permission } from "@zcmsorg/schemas";
 import { Actor, Internal, RequirePermissions, SiteId, SiteScoped } from "../auth/decorators";
@@ -42,8 +44,36 @@ import { PluginsService } from "../plugins/plugins.service";
  * not a patch.
  */
 const AI_CAPABILITY = "ai.assistant";
+const ZCMS_DOC_FILES = [
+  "api.md",
+  "architecture.md",
+  "distribution.md",
+  "i18n.md",
+  "jobs.md",
+  "plugins.md",
+  "security.md",
+  "testing.md",
+] as const;
+let zcmsDocsCache: Promise<DocsContextRow[]> | undefined;
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
+type ContentContextScope = "public" | "admin";
+
+type ContextContentRow = {
+  id: string;
+  title: string;
+  slug: string;
+  locale: string;
+  excerpt: string | null;
+  data: unknown;
+  blocks: unknown;
+  seo: unknown;
+  status: string;
+  updatedAt: Date;
+  contentType: { key: string; name: string; routePrefix: string };
+};
+
+type DocsContextRow = { title: string; source: string; text: string; score: number };
 
 /** The plugin's answer to a `chat` call. */
 interface ChatAnswer {
@@ -67,7 +97,14 @@ export class AiService {
       throw new NotFoundException("Site not found.");
     }
 
-    return this.ask(domain.site.tenantId, domain.site.id, this.sanitise(messages));
+    const clean = this.sanitise(messages);
+    const systemPrompt = await this.buildGroundedPrompt(
+      domain.site.id,
+      clean,
+      "public",
+      domain.hostname,
+    );
+    return this.ask(domain.site.tenantId, domain.site.id, clean, { systemPrompt });
   }
 
   async adminChat(
@@ -83,6 +120,7 @@ export class AiService {
       select: { id: true, key: true, name: true, fields: true },
     });
     const clean = this.sanitise(messages);
+    const siteContext = await this.buildGroundedPrompt(siteId, clean, "admin");
 
     const instruction = [
       "You are the Z-CMS admin content operator.",
@@ -92,6 +130,7 @@ export class AiService {
       "For create input use title, slug, optional locale/excerpt/data/blocks/seo/status. Never invent an id.",
       "For update put only changed fields in input. Use list first when an id is unknown.",
       `Available content types: ${JSON.stringify(contentTypes)}.`,
+      siteContext,
     ].join("\n");
     // requireCore: the admin operator turns the model's output into content CRUD
     // under the ACTOR's permissions. Letting any marketplace plugin that declared
@@ -147,6 +186,198 @@ export class AiService {
       throw new BadGatewayException("The AI provider returned an empty response.");
     }
     return result;
+  }
+
+  private async buildGroundedPrompt(
+    siteId: string,
+    messages: ChatMessage[],
+    scope: ContentContextScope,
+    hostname?: string,
+  ): Promise<string> {
+    const query = messages.at(-1)?.content ?? "";
+    const [rows, docsRows] = await Promise.all([
+      this.findRelevantContent(siteId, query, scope),
+      this.shouldIncludeZcmsDocs(hostname, query) ? this.findRelevantDocs(query) : Promise.resolve([]),
+    ]);
+    const sourceRule = scope === "public"
+      ? "Use only the public context below and the conversation. The context contains PUBLISHED site content only."
+      : "Use only the admin-visible context below and the conversation. Do not reveal or act on data outside this site.";
+
+    return [
+      "You are zAI Assistant for this Z-CMS site.",
+      "Product fact: if asked who authored, created, developed, owns, or maintains Z-CMS, answer that Z-CMS is by Z-SOFT Viet Nam (https://z-soft.com.vn). In Vietnamese, say Công ty Z-SOFT Việt Nam.",
+      sourceRule,
+      "When the answer depends on site facts, answer from the context. If the context does not contain the answer, say you do not have enough site data instead of inventing.",
+      docsRows.length
+        ? "For questions about Z-CMS itself, prefer the Z-CMS docs context below over generic knowledge."
+        : "",
+      "Answer in the user's language.",
+      docsRows.length
+        ? [
+            "Z-CMS docs context:",
+            docsRows.map((row, index) => this.formatDocsRow(row, index + 1)).join("\n\n"),
+          ].join("\n")
+        : "",
+      "Site context:",
+      rows.length
+        ? rows.map((row, index) => this.formatContextRow(row, index + 1)).join("\n\n")
+        : "(No matching site content was available for this question.)",
+    ].filter(Boolean).join("\n");
+  }
+
+  private shouldIncludeZcmsDocs(hostname: string | undefined, query: string): boolean {
+    const host = (hostname ?? "").toLowerCase();
+    if (host !== "z-cms.org" && host !== "www.z-cms.org") return false;
+    const q = query.toLowerCase();
+    return /\bz-?cms\b|theme|plugin|api|sdk|security|sandbox|deploy|deployment|marketplace|i18n|translation|job|queue|test|architecture|package|docs|documentation|tài liệu|bảo mật|kiến trúc|triển khai/.test(q);
+  }
+
+  private async findRelevantContent(
+    siteId: string,
+    query: string,
+    scope: ContentContextScope,
+  ): Promise<ContextContentRow[]> {
+    const terms = this.searchTerms(query);
+    const activeTheme = await db().siteTheme.findFirst({
+      where: { siteId, status: "ACTIVE" },
+      select: { theme: { select: { key: true } } },
+    });
+    const demoScope = [{ demoThemeKey: null }, { demoThemeKey: activeTheme?.theme.key ?? "" }];
+    const textFilters = terms.flatMap((term) => [
+      { title: { contains: term, mode: "insensitive" as const } },
+      { slug: { contains: term, mode: "insensitive" as const } },
+      { excerpt: { contains: term, mode: "insensitive" as const } },
+    ]);
+
+    return db().content.findMany({
+      where: {
+        siteId,
+        OR: demoScope,
+        ...(scope === "public" ? { status: "PUBLISHED" as const } : {}),
+        ...(textFilters.length ? { AND: [{ OR: textFilters }] } : {}),
+      },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        locale: true,
+        excerpt: true,
+        data: true,
+        blocks: true,
+        seo: true,
+        status: true,
+        updatedAt: true,
+        contentType: { select: { key: true, name: true, routePrefix: true } },
+      },
+      orderBy: scope === "public" ? { publishedAt: "desc" } : { updatedAt: "desc" },
+      take: 8,
+    });
+  }
+
+  private searchTerms(query: string): string[] {
+    const words = query
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s-]+/gu, " ")
+      .split(/\s+/)
+      .map((word) => word.trim())
+      .filter((word) => word.length >= 3);
+    return [...new Set(words)].slice(0, 6);
+  }
+
+  private formatContextRow(row: ContextContentRow, index: number): string {
+    const parts = [
+      row.excerpt,
+      this.extractText(row.data),
+      this.extractText(row.blocks),
+      this.extractText(row.seo),
+    ].filter(Boolean);
+    const routePrefix = row.contentType.routePrefix ? `/${row.contentType.routePrefix}` : "";
+    const path = row.slug ? `${routePrefix}/${row.slug}` : routePrefix || "/";
+    const body = parts.join("\n").replace(/\s+/g, " ").slice(0, 1_200);
+    return [
+      `[${index}] ${row.title}`,
+      `id: ${row.id}`,
+      `type: ${row.contentType.key}`,
+      `status: ${row.status}`,
+      `locale: ${row.locale}`,
+      `path: ${path}`,
+      `updatedAt: ${row.updatedAt.toISOString()}`,
+      `content: ${body || "(no text content)"}`,
+    ].join("\n");
+  }
+
+  private extractText(value: unknown): string {
+    const strings: string[] = [];
+    const visit = (item: unknown, depth: number) => {
+      if (strings.join(" ").length > 2_000 || depth > 8 || item == null) return;
+      if (typeof item === "string") {
+        strings.push(item);
+        return;
+      }
+      if (typeof item === "number" || typeof item === "boolean") {
+        strings.push(String(item));
+        return;
+      }
+      if (Array.isArray(item)) {
+        for (const child of item) visit(child, depth + 1);
+        return;
+      }
+      if (typeof item === "object") {
+        for (const [key, child] of Object.entries(item as Record<string, unknown>)) {
+          if (["id", "contentTypeId", "authorId", "translationGroupId"].includes(key)) continue;
+          visit(child, depth + 1);
+        }
+      }
+    };
+    visit(value, 0);
+    return strings.join(" ").trim();
+  }
+
+  private async findRelevantDocs(query: string): Promise<DocsContextRow[]> {
+    const docs = await this.loadZcmsDocs();
+    const terms = this.searchTerms(query);
+    if (!terms.length) return docs.slice(0, 5);
+
+    return docs
+      .map((row) => {
+        const haystack = `${row.title}\n${row.text}`.toLowerCase();
+        const score = terms.reduce((sum, term) => {
+          const matches = haystack.match(new RegExp(escapeRegExp(term), "g"))?.length ?? 0;
+          return sum + matches;
+        }, 0);
+        return { ...row, score };
+      })
+      .filter((row) => row.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 6);
+  }
+
+  private async loadZcmsDocs(): Promise<DocsContextRow[]> {
+    zcmsDocsCache ??= (async () => {
+      const docsDir = await findDocsDir();
+      const sections: DocsContextRow[] = [];
+
+      await Promise.all(ZCMS_DOC_FILES.map(async (file) => {
+        try {
+          const raw = await fs.readFile(path.join(docsDir, file), "utf8");
+          sections.push(...splitMarkdownDoc(file, raw));
+        } catch {
+          // A local API-only build can still answer from site content; production
+          // images copy docs into /repo/docs so the default site gets docs grounding.
+        }
+      }));
+
+      return sections;
+    })();
+    return zcmsDocsCache;
+  }
+
+  private formatDocsRow(row: DocsContextRow, index: number): string {
+    return [
+      `[D${index}] ${row.title}`,
+      `source: ${row.source}`,
+      `content: ${row.text.replace(/\s+/g, " ").slice(0, 1_400)}`,
+    ].join("\n");
   }
 
   /**
@@ -275,6 +506,64 @@ export class AiService {
     const item = result as { title?: string; id?: string; status?: string };
     return `Đã ${action} thành công: ${item.title ?? item.id ?? "content"}${item.status ? ` (${item.status})` : ""}.`;
   }
+}
+
+function splitMarkdownDoc(file: string, raw: string): DocsContextRow[] {
+  const title = raw.match(/^#\s+(.+)$/m)?.[1]?.trim() ?? file;
+  const chunks = raw
+    .split(/\n(?=##\s+)/g)
+    .map((chunk) => chunk.trim())
+    .filter(Boolean);
+
+  return chunks.map((chunk, index) => {
+    const heading = chunk.match(/^##\s+(.+)$/m)?.[1]?.trim();
+    const sectionTitle = heading ? `${title} / ${heading}` : title;
+    return {
+      title: sectionTitle,
+      source: `docs/${file}${heading ? `#${slugifyHeading(heading)}` : ""}`,
+      text: stripMarkdown(chunk),
+      score: index === 0 ? 1 : 0,
+    };
+  });
+}
+
+async function findDocsDir(): Promise<string> {
+  const candidates = [
+    path.resolve(process.cwd(), "docs"),
+    path.resolve(process.cwd(), "../..", "docs"),
+  ];
+  for (const candidate of candidates) {
+    try {
+      await fs.access(path.join(candidate, "architecture.md"));
+      return candidate;
+    } catch {
+      // Try the next runtime layout.
+    }
+  }
+  return candidates[0]!;
+}
+
+function stripMarkdown(value: string): string {
+  return value
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/^\s*[-*]\s+/gm, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function slugifyHeading(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]+/g, "")
+    .trim()
+    .replace(/\s+/g, "-");
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 @Controller("ai")

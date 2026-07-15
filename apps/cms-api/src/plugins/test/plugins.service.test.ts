@@ -82,6 +82,7 @@ describe("PluginsService", () => {
           assistantName: "Help bot",
           welcomeMessage: "Hello",
           openaiApiKey: "secret",
+          openaiEnabled: true,
         },
       });
 
@@ -99,6 +100,27 @@ describe("PluginsService", () => {
         }),
       );
     });
+
+    it("does not expose assistant chrome until a provider is enabled and keyed", async () => {
+      holder.systemDb.sitePlugin.findFirst.mockResolvedValue({
+        settings: {
+          assistantName: "Help bot",
+          welcomeMessage: "Hello",
+          openaiApiKey: "secret",
+          openaiEnabled: false,
+        },
+      });
+      await expect(makeService().aiAssistantFor("t1", "s1")).resolves.toBeUndefined();
+
+      holder.systemDb.sitePlugin.findFirst.mockResolvedValue({
+        settings: {
+          assistantName: "Help bot",
+          welcomeMessage: "Hello",
+          openaiEnabled: true,
+        },
+      });
+      await expect(makeService().aiAssistantFor("t1", "s1")).resolves.toBeUndefined();
+    });
   });
 
   describe("renderContributionsFor", () => {
@@ -111,6 +133,7 @@ describe("PluginsService", () => {
             assistantName: "Help bot",
             welcomeMessage: "Hello",
             openaiApiKey: "must-not-leak",
+            openaiEnabled: true,
           },
         },
       ]);
@@ -124,6 +147,36 @@ describe("PluginsService", () => {
         data: { name: "Help bot", welcomeMessage: "Hello" },
       });
       expect(JSON.stringify(result)).not.toContain("must-not-leak");
+    });
+
+    it("does not project the public AI integration until a provider is enabled and keyed", async () => {
+      holder.systemDb.sitePlugin.findMany.mockResolvedValue([
+        {
+          plugin: { key: "vn.zsoft.plugin.zai" },
+          version: { version: "0.3.0", manifest: { capabilities: ["ai.assistant"] } },
+          settings: { assistantName: "Help bot", openaiEnabled: true },
+        },
+      ]);
+
+      await expect(makeService().renderContributionsFor("t1", "s1"))
+        .resolves.toEqual({ capabilities: ["ai.assistant"], integrations: {} });
+
+      holder.systemDb.sitePlugin.findMany.mockResolvedValue([
+        {
+          plugin: { key: "vn.zsoft.plugin.zai" },
+          version: { version: "0.3.0", manifest: { capabilities: ["ai.assistant"] } },
+          settings: { assistantName: "Help bot", geminiEnabled: true, geminiApiKey: "configured" },
+        },
+      ]);
+
+      await expect(makeService().renderContributionsFor("t1", "s1"))
+        .resolves.toMatchObject({
+          integrations: {
+            "ai.assistant": {
+              data: { name: "Help bot" },
+            },
+          },
+        });
     });
 
     it("does not let an unrelated plugin impersonate a core-owned integration", async () => {
