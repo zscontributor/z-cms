@@ -41,6 +41,23 @@ describe("middleware", () => {
     expect(redirectUrl.searchParams.get("next")).toBe("/media");
   });
 
+  it("redirects to the admin base path when mounted under /admin", async () => {
+    vi.stubEnv("ADMIN_BASE_PATH", "/admin");
+
+    const response = await middleware(request("/admin/media"));
+
+    const redirectUrl = new URL(response.headers.get("location") as string);
+    expect(redirectUrl.pathname).toBe("/admin/login");
+    expect(redirectUrl.searchParams.get("next")).toBe("/media");
+  });
+
+  it("recognizes public auth pages under the admin base path", async () => {
+    vi.stubEnv("ADMIN_BASE_PATH", "/admin");
+
+    expect((await middleware(request("/admin/login"))).headers.get("location")).toBeNull();
+    expect((await middleware(request("/admin/accept-invite?token=abc"))).headers.get("location")).toBeNull();
+  });
+
   it("only ever redirects to a same-origin location, even for a crafted next query", async () => {
     // The gate records the *current* path as `next`, never a value from the query,
     // so a ?next=https://evil.com cannot turn the login bounce into an open

@@ -8,6 +8,7 @@ import {
   ChangePasswordSchema,
   ContentStatusSchema,
   ContentTypeFieldSchema,
+  CreateUserSchema,
   CreateContentSchema,
   BulkDeleteMediaSchema,
   BulkMoveMediaSchema,
@@ -52,6 +53,7 @@ import {
   type TotpSetupDto,
   type TranslationDto,
   type UserDto,
+  type UserCreatedDto,
 } from "@zcmsorg/schemas";
 import { z } from "zod";
 import type {
@@ -238,6 +240,7 @@ export const DeliverMailSchema = z.object({
 requests.add(LoginSchema, { id: "LoginInput" });
 requests.add(RefreshTokenSchema, { id: "RefreshTokenInput" });
 requests.add(AcceptInviteSchema, { id: "AcceptInviteInput" });
+requests.add(CreateUserSchema, { id: "CreateUserInput" });
 requests.add(InviteUserSchema, { id: "InviteUserInput" });
 requests.add(SetMembershipSchema, { id: "SetMembershipInput" });
 requests.add(UpdateProfileSchema, { id: "UpdateProfileInput" });
@@ -543,6 +546,13 @@ const InvitationCreatedSchema = z.object({
     .describe("Shown once. Only its hash is stored — there is no way to retrieve it again."),
 });
 
+const UserCreatedSchema = z.object({
+  user: UserDtoSchema,
+  password: z.string().describe("Shown once and included in the account-created email when mail is configured."),
+  loginUrl: z.url(),
+  emailQueued: z.boolean(),
+});
+
 const FailedJobSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -731,6 +741,7 @@ responses.add(MembershipDtoSchema, { id: "MembershipDto" });
 responses.add(UserDtoSchema, { id: "UserDto" });
 responses.add(InvitationDtoSchema, { id: "InvitationDto" });
 responses.add(InvitationCreatedSchema, { id: "InvitationCreated" });
+responses.add(UserCreatedSchema, { id: "UserCreated" });
 responses.add(RenderPayloadSchema, { id: "RenderPayload" });
 responses.add(CatalogPluginSchema, { id: "CatalogPlugin" });
 responses.add(CatalogThemeSchema, { id: "CatalogTheme" });
@@ -757,6 +768,7 @@ export type RequestSchemaId =
   | "LoginInput"
   | "RefreshTokenInput"
   | "AcceptInviteInput"
+  | "CreateUserInput"
   | "InviteUserInput"
   | "SetMembershipInput"
   | "UpdateProfileInput"
@@ -792,6 +804,7 @@ export type ResponseSchemaId =
   | "MembershipDto"
   | "InvitationDto"
   | "InvitationCreated"
+  | "UserCreated"
   | "SiteDto"
   | "ContentTypeDto"
   | "ContentDto"
@@ -876,6 +889,7 @@ const _noDrift: [
   Exact<z.infer<typeof UserDtoSchema>, UserDto>,
   Exact<z.infer<typeof InvitationDtoSchema>, InvitationDto>,
   Exact<z.infer<typeof InvitationCreatedSchema>, InvitationCreatedDto>,
+  Exact<z.infer<typeof UserCreatedSchema>, UserCreatedDto>,
   Exact<z.infer<typeof SiteDtoSchema>, SiteDto>,
   Exact<z.infer<typeof ContentTypeDtoSchema>, ContentTypeDto>,
   Exact<z.infer<typeof ContentDtoSchema>, ContentDto>,
@@ -896,5 +910,5 @@ const _noDrift: [
   Exact<z.infer<typeof MarketplaceStatusSchema>, MarketplaceStatus>,
   Exact<z.infer<typeof SignedRevocationListSchema>, SignedRevocationList>,
   Exact<z.infer<typeof MailSettingsDtoSchema>, MailSettingsDto>,
-] = [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true];
+] = [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true];
 void _noDrift;

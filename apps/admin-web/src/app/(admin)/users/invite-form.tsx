@@ -2,37 +2,44 @@
 
 import { useActionState, useState } from "react";
 import { ROLES, type SiteDto } from "@zcmsorg/schemas";
-import { inviteUserAction, type InviteState } from "@/app/actions/user";
+import { createUserAction, type CreateUserState } from "@/app/actions/user";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { Icon } from "@/components/shell/icon";
 import { useT } from "@/lib/i18n-provider";
 
-const INITIAL: InviteState = {};
+const INITIAL: CreateUserState = {};
 
 /**
- * Invite someone, and hand back the link.
+ * Creates a usable account immediately.
  *
- * Z-CMS ships no mailer, and this form does not pretend otherwise: it says so,
- * and gives the inviter a link to deliver themselves. The alternative — an admin
- * choosing a temporary password — means a password the admin knows, travelling
- * through whatever channel they happen to use.
- *
- * The link is shown exactly once. Only its hash is stored, so there is no
- * endpoint that could show it again, and the panel says that out loud rather than
- * letting someone discover it by navigating away.
+ * Email is a notification path, not an activation gate: the user row and
+ * membership exist before the message leaves the queue. The temporary password is
+ * shown once as a fallback for the ordinary reason mail fails: SMTP settings are
+ * not always ready on day one.
  */
 export function InviteForm({ sites }: { sites: SiteDto[] }) {
   const t = useT();
-  const [state, formAction] = useActionState(inviteUserAction, INITIAL);
+  const [state, formAction] = useActionState(createUserAction, INITIAL);
 
   if (state.created) {
-    return <InviteLink token={state.created.token} email={state.created.invitation.email} />;
+    return <CreatedAccount created={state.created} />;
   }
 
   return (
     <form action={formAction} className="z-card flex flex-col gap-4 p-4">
+      <Field label={t("admin.users.invite.name")} htmlFor="invite-name" required>
+        <Input
+          id="invite-name"
+          name="name"
+          type="text"
+          required
+          autoComplete="off"
+          placeholder={t("admin.users.invite.namePlaceholder")}
+        />
+      </Field>
+
       <Field label={t("admin.users.invite.email")} htmlFor="invite-email" required>
         <Input
           id="invite-email"
@@ -42,6 +49,21 @@ export function InviteForm({ sites }: { sites: SiteDto[] }) {
           autoComplete="off"
           spellCheck={false}
           placeholder={t("admin.users.invite.emailPlaceholder")}
+        />
+      </Field>
+
+      <Field
+        label={t("admin.users.invite.password")}
+        hint={t("admin.users.invite.passwordHint")}
+        htmlFor="invite-password"
+      >
+        <Input
+          id="invite-password"
+          name="password"
+          type="text"
+          autoComplete="off"
+          spellCheck={false}
+          placeholder={t("admin.users.invite.passwordPlaceholder")}
         />
       </Field>
 
@@ -90,25 +112,16 @@ export function InviteForm({ sites }: { sites: SiteDto[] }) {
   );
 }
 
-/**
- * The one-time link.
- *
- * The URL is built in the browser, from `window.location.origin`, because the API
- * has no business knowing where the admin is hosted — and a link minted against
- * the wrong origin is a link that does not work.
- */
-function InviteLink({ token, email }: { token: string; email: string }) {
+/** The one-time view of the generated login details. */
+function CreatedAccount({ created }: { created: NonNullable<CreateUserState["created"]> }) {
   const t = useT();
   const [copied, setCopied] = useState(false);
 
-  const url =
-    typeof window === "undefined"
-      ? ""
-      : `${window.location.origin}/accept-invite?token=${encodeURIComponent(token)}`;
+  const details = `${created.loginUrl}\n${created.user.email}\n${created.password}`;
 
   async function copy() {
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(details);
       setCopied(true);
     } catch {
       // Clipboard access can be refused (an insecure origin, a locked-down
@@ -122,27 +135,35 @@ function InviteLink({ token, email }: { token: string; email: string }) {
       <div>
         <h3 className="flex items-center gap-1.5 text-sm font-semibold">
           <Icon name="key" size={16} />
-          {t("admin.users.invite.linkHeading")}
+          {t("admin.users.invite.createdHeading")}
         </h3>
-        <p className="mt-0.5 text-[11px] z-muted">{email}</p>
+        <p className="mt-0.5 text-[11px] z-muted">{created.user.email}</p>
       </div>
 
       <p className="flex items-start gap-1.5 rounded-md border border-amber-200 bg-amber-50/70 px-2.5 py-2 text-[11px] leading-4 text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
         <Icon name="warning" size={16} className="mt-px shrink-0" />
-        <span>{t("admin.users.invite.linkBody")}</span>
+        <span>
+          {created.emailQueued
+            ? t("admin.users.invite.createdBodyQueued")
+            : t("admin.users.invite.createdBodyManual")}
+        </span>
       </p>
 
       <code className="block max-h-24 overflow-y-auto rounded-md border border-[var(--border)] bg-[var(--surface-sunken)] p-2 font-mono text-[11px] break-all">
-        {url}
+        {t("admin.users.invite.login")}: {created.loginUrl}
+        {"\n"}
+        {t("admin.users.invite.email")}: {created.user.email}
+        {"\n"}
+        {t("admin.users.invite.password")}: {created.password}
       </code>
 
       <div className="flex gap-2">
         <Button variant="primary" size="sm" onClick={copy}>
           <Icon name={copied ? "check" : "copy"} size={15} />
-          {copied ? t("admin.users.invite.copied") : t("admin.users.invite.copy")}
+          {copied ? t("admin.users.invite.copied") : t("admin.users.invite.copyDetails")}
         </Button>
-        {/* A reload drops the token from memory, which is the point: the panel
-            cannot become a place the link quietly lives on. */}
+        {/* A reload drops the temporary password from memory; the account itself
+            already exists and can sign in. */}
         <Button size="sm" onClick={() => window.location.reload()}>
           {t("admin.users.invite.done")}
         </Button>

@@ -228,6 +228,8 @@ services:
       # The admin talks to the API from the server side over the compose network.
       CMS_API_URL: http://cms-api:4100
       SITE_RUNTIME_URL: ${SITE_RUNTIME_URL:-http://localhost:3000}
+      # The admin lives under each public site's origin, e.g. https://z-cms.org/admin.
+      ADMIN_BASE_PATH: ${ADMIN_BASE_PATH:-/admin}
       # The origin media is served from, for the admin's own img-src. Without it
       # the CSP blocks every thumbnail in the media library.
       S3_PUBLIC_URL: ${S3_PUBLIC_URL:?set S3_PUBLIC_URL in the environment}

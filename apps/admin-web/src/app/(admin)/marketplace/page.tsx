@@ -32,7 +32,7 @@ export const dynamic = "force-dynamic";
 export default async function MarketplacePage({
   searchParams,
 }: {
-  searchParams: Promise<{ kind?: string; q?: string }>;
+  searchParams: Promise<{ q?: string }>;
 }) {
   const t = await getT();
   const locale = await getLocale();
@@ -42,11 +42,10 @@ export default async function MarketplacePage({
     return <div className="z-card p-10 text-center text-sm">{t("admin.marketplace.browse.denied")}</div>;
   }
 
-  const { kind: kindParam, q } = await searchParams;
-  const kind = kindParam === "theme" || kindParam === "plugin" ? kindParam : undefined;
+  const { q } = await searchParams;
 
   const [packages, status] = await Promise.all([
-    safe<BrowsePackageDto[]>(() => browseMarketplace(kind, q), []),
+    safe<BrowsePackageDto[]>(() => browseMarketplace(undefined, q), []),
     safe<MarketplaceStatusDto | null>(getMarketplaceStatus, null),
   ]);
 

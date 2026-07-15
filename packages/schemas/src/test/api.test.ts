@@ -5,6 +5,7 @@ import {
   BulkDeleteMediaSchema,
   BulkMoveMediaSchema,
   ChangePasswordSchema,
+  CreateUserSchema,
   CreateMediaFolderSchema,
   FOLDER_NAME_MAX,
   HOSTNAME_RE,
@@ -123,6 +124,42 @@ describe("InviteUserSchema", () => {
 
   it("rejects a malformed email", () => {
     expect(InviteUserSchema.safeParse({ email: "nope", role: "EDITOR" }).success).toBe(false);
+  });
+});
+
+describe("CreateUserSchema", () => {
+  it("defaults siteId to null and allows the server to generate a password", () => {
+    const parsed = CreateUserSchema.parse({
+      email: "a@b.com",
+      name: "  A User  ",
+      role: "EDITOR",
+    });
+
+    expect(parsed).toEqual({ email: "a@b.com", name: "A User", role: "EDITOR", siteId: null });
+  });
+
+  it("accepts an explicit temporary password and site scope", () => {
+    const parsed = CreateUserSchema.parse({
+      email: "a@b.com",
+      name: "A User",
+      password: okPassword,
+      role: "EDITOR",
+      siteId: UUID,
+    });
+
+    expect(parsed.password).toBe(okPassword);
+    expect(parsed.siteId).toBe(UUID);
+  });
+
+  it("rejects a too-short temporary password", () => {
+    expect(
+      CreateUserSchema.safeParse({
+        email: "a@b.com",
+        name: "A User",
+        password: "short",
+        role: "EDITOR",
+      }).success,
+    ).toBe(false);
   });
 });
 

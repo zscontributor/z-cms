@@ -61,6 +61,8 @@ pnpm --filter @zcmsorg/worker dev           # バックグラウンドジョブ
 
 `http://localhost:3101` で **`admin@z-cms.org` / `admin123`** を使用して
 ログインできます。
+本番環境では admin-web を各サイトの同一オリジン配下の `/admin`
+（例: `https://z-cms.org/admin`）に配置し、`admin.*` の別ホスト名は使いません。
 
 > 開発環境のポートは 3100 / 3101 / 4100 です。`domains` テーブルの hostname は
 > site-runtime のポート（`localhost:3100`）と一致させてください。

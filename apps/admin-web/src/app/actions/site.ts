@@ -23,8 +23,9 @@ function toMessage(error: unknown, fallback: string): string {
  * layout's data is stale afterwards. The client does the follow-up navigation
  * after this action returns, once the Set-Cookie response has landed.
  */
-export async function switchSiteAction(formData: FormData): Promise<void> {
-  const siteId = String(formData.get("siteId") ?? "");
+export async function switchSiteAction(input: FormData | string): Promise<void> {
+  const siteId =
+    typeof input === "string" ? input : String(input.get("siteId") ?? "");
   if (!siteId) return;
 
   const sites = await listSites();

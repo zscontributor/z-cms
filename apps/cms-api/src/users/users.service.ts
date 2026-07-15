@@ -8,21 +8,26 @@ import {
 import { db, getSystemDb } from "@zcmsorg/database";
 import {
   canGrantRole,
+  PASSWORD_MIN,
   ROLE_RANK,
+  type CreateUserInput,
   type InvitationCreatedDto,
   type InvitationDto,
   type InviteUserInput,
   type Role,
   type SetMembershipInput,
+  type UserCreatedDto,
   type UpdateProfileInput,
   type UserDto,
 } from "@zcmsorg/schemas";
 import { createHash, randomBytes } from "node:crypto";
+import bcrypt from "bcryptjs";
 import { AuditService } from "../audit/audit.module";
 import { AuthService } from "../auth/auth.service";
 import { MfaService } from "../auth/mfa.service";
 import { t } from "../common/i18n";
 import type { RequestActor } from "../common/request-context";
+import { MailService } from "../mail/mail.service";
 import { toInvitationDto, toUserDto } from "./users.mappers";
 
 /** Long enough that guessing is hopeless; short enough to paste into a chat. */
@@ -54,6 +59,7 @@ export class UsersService {
     private readonly audit: AuditService,
     private readonly auth: AuthService,
     private readonly mfa: MfaService,
+    private readonly mail: MailService,
   ) {}
 
   // -------------------------------------------------------------------------
@@ -111,9 +117,84 @@ export class UsersService {
     return toUserDto(updated);
   }
 
+  async update(actor: RequestActor, userId: string, input: UpdateProfileInput): Promise<UserDto> {
+    const target = await this.loadTarget(actor, userId);
+
+    const updated = await db().user.update({
+      where: { id: userId },
+      data: {
+        ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.avatarUrl !== undefined ? { avatarUrl: input.avatarUrl } : {}),
+      },
+      include: { memberships: { include: { site: { select: { name: true } } } } },
+    });
+
+    await this.audit.record(actor, "user.updated", "user", userId, {
+      email: target.email,
+      fields: Object.keys(input),
+    });
+
+    return toUserDto(updated);
+  }
+
   // -------------------------------------------------------------------------
   // Invitations
   // -------------------------------------------------------------------------
+
+  async create(actor: RequestActor, input: CreateUserInput): Promise<UserCreatedDto> {
+    const email = input.email.toLowerCase();
+    const password = input.password ?? randomPassword();
+
+    this.assertMayGrant(actor, input.role);
+    await this.assertMayActOnSite(actor, input.siteId);
+
+    const existing = await getSystemDb().user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (existing) throw new ConflictException(t()("errors.users.emailTaken", { email }));
+
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    const created = await getSystemDb().$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          tenantId: actor.tenantId,
+          email,
+          name: input.name,
+          passwordHash,
+        },
+      });
+
+      await tx.membership.create({
+        data: {
+          tenantId: actor.tenantId,
+          userId: user.id,
+          siteId: input.siteId,
+          role: input.role,
+        },
+      });
+
+      return user;
+    });
+
+    await this.audit.record(actor, "user.created", "user", created.id, {
+      email,
+      role: input.role,
+      siteId: input.siteId,
+    });
+
+    const user = await this.findOne(created.id);
+    const loginPageUrl = accountLoginUrl();
+    const emailQueued = await this.queueAccountCreatedMail(actor, input.siteId, {
+      email,
+      name: input.name,
+      password,
+      loginUrl: loginPageUrl,
+    });
+
+    return { user, password, loginUrl: loginPageUrl, emailQueued };
+  }
 
   /**
    * Creates an invitation and returns its token — once.
@@ -442,6 +523,46 @@ export class UsersService {
     });
     if (others === 0) throw new BadRequestException(t()("errors.users.lastOwner"));
   }
+
+  private async queueAccountCreatedMail(
+    actor: RequestActor,
+    siteId: string | null,
+    account: { email: string; name: string; password: string; loginUrl: string },
+  ): Promise<boolean> {
+    const mailSiteId = siteId ?? (await this.firstSiteId());
+    if (!mailSiteId) return false;
+
+    try {
+      await this.mail.enqueue(actor.tenantId, mailSiteId, null, {
+        to: [account.email],
+        subject: "Your Z-CMS account has been created",
+        text:
+          `Hello ${account.name},\n\n` +
+          "An administrator created a Z-CMS account for you.\n\n" +
+          `Login: ${account.loginUrl}\n` +
+          `Email: ${account.email}\n` +
+          `Temporary password: ${account.password}\n\n` +
+          "Please sign in and change your password from your profile.",
+        html:
+          `<p>Hello ${escapeHtml(account.name)},</p>` +
+          "<p>An administrator created a Z-CMS account for you.</p>" +
+          "<p>" +
+          `<strong>Login:</strong> <a href="${escapeAttr(account.loginUrl)}">${escapeHtml(account.loginUrl)}</a><br>` +
+          `<strong>Email:</strong> ${escapeHtml(account.email)}<br>` +
+          `<strong>Temporary password:</strong> <code>${escapeHtml(account.password)}</code>` +
+          "</p>" +
+          "<p>Please sign in and change your password from your profile.</p>",
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private async firstSiteId(): Promise<string | null> {
+    const site = await db().site.findFirst({ select: { id: true }, orderBy: { createdAt: "asc" } });
+    return site?.id ?? null;
+  }
 }
 
 /** The same SHA-256 AuthService matches on redemption. The raw token is never stored. */
@@ -451,4 +572,35 @@ function hashToken(token: string): string {
 
 function isDemotion(from: Role, to: Role): boolean {
   return ROLE_RANK[to] < ROLE_RANK[from];
+}
+
+function randomPassword(): string {
+  const password = randomBytes(18).toString("base64url");
+  return password.length >= PASSWORD_MIN ? password : `${password}x`.padEnd(PASSWORD_MIN, "x");
+}
+
+function accountLoginUrl(): string {
+  const base = process.env.ADMIN_WEB_URL ?? process.env.NEXT_PUBLIC_ADMIN_URL ?? "http://localhost:3300";
+  return `${base.replace(/\/+$/, "")}/login`;
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (ch) => {
+    switch (ch) {
+      case "&":
+        return "&amp;";
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      case '"':
+        return "&quot;";
+      default:
+        return "&#39;";
+    }
+  });
+}
+
+function escapeAttr(value: string): string {
+  return escapeHtml(value);
 }

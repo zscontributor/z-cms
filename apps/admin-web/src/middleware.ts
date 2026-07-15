@@ -18,6 +18,8 @@ const API_BASE = `${process.env.CMS_API_URL ?? "http://localhost:4000"}/api/v1`;
  */
 export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+  const basePath = adminBasePath();
+  const appPathname = stripBasePath(pathname, basePath);
 
   // A per-request nonce for the CSP. Admin pages are per-user and never
   // full-page cached, so a nonce is both safe and the way to keep script-src
@@ -31,7 +33,7 @@ export async function middleware(request: NextRequest) {
 
   const accessToken = request.cookies.get(ACCESS_TOKEN_COOKIE)?.value;
   const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE)?.value;
-  const isLoginPage = pathname === "/login";
+  const isLoginPage = appPathname === "/login";
 
   if (isLoginPage) {
     // Cookie presence is not proof of authentication. An expired or otherwise
@@ -47,7 +49,7 @@ export async function middleware(request: NextRequest) {
   // person, and accepting it signs the browser in as them. Sending an already
   // signed-in user to the dashboard instead would leave the link unusable on the
   // machine they are actually sitting at.
-  if (pathname === "/accept-invite") {
+  if (appPathname === "/accept-invite") {
     return secure(NextResponse.next(forward), nonce);
   }
 
@@ -73,13 +75,25 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  const loginUrl = new URL("/login", request.url);
-  if (pathname !== "/") loginUrl.searchParams.set("next", `${pathname}${search}`);
+  const loginUrl = new URL(`${basePath}/login`, request.url);
+  if (appPathname !== "/") loginUrl.searchParams.set("next", `${appPathname}${search}`);
 
   const response = secure(NextResponse.redirect(loginUrl), nonce);
   response.cookies.delete(ACCESS_TOKEN_COOKIE);
   response.cookies.delete(REFRESH_TOKEN_COOKIE);
   return response;
+}
+
+function adminBasePath(): string {
+  const value = process.env.ADMIN_BASE_PATH ?? (process.env.NODE_ENV === "production" ? "/admin" : "");
+  if (!value || value === "/") return "";
+  return value.startsWith("/") ? value.replace(/\/+$/, "") : `/${value.replace(/\/+$/, "")}`;
+}
+
+function stripBasePath(pathname: string, basePath: string): string {
+  if (!basePath) return pathname;
+  if (pathname === basePath) return "/";
+  return pathname.startsWith(`${basePath}/`) ? pathname.slice(basePath.length) : pathname;
 }
 
 /** Builds the admin CSP. Stricter than the public site: no third-party anything. */

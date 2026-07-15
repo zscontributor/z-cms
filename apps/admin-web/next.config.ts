@@ -7,6 +7,9 @@ loadEnv({ path: path.resolve(import.meta.dirname, "../../.env"), quiet: true });
 
 import type { NextConfig } from "next";
 
+const adminBasePath =
+  process.env.ADMIN_BASE_PATH ?? (process.env.NODE_ENV === "production" ? "/admin" : "");
+
 /**
  * @zcmsorg/schemas is published from source (its package `exports` points at
  * `src/index.ts`), so Next has to compile it rather than treat it as a
@@ -14,6 +17,7 @@ import type { NextConfig } from "next";
  */
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  ...(adminBasePath ? { basePath: adminBasePath } : {}),
   transpilePackages: ["@zcmsorg/schemas"],
   typedRoutes: false,
 

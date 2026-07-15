@@ -43,7 +43,7 @@ code is loaded only by `plugin-runtime` and then only inside a V8 isolate.
                                                         |
   +-------------------+     +---------------------+     v
   | Administrator     |     | admin-web           |   +---------------------------+
-  | admin.example.com |---->| administrative UI   |-->| cms-api                   |
+  | example.com/admin |---->| administrative UI   |-->| cms-api                   |
   +-------------------+     +---------------------+   | NestJS control/data plane |
                               authenticated JSON API | - auth + permissions      |
                                                      | - content/media/menus      |

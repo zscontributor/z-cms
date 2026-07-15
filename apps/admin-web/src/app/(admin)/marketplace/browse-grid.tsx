@@ -12,6 +12,78 @@ import { formatDateTime } from "@/lib/format";
 import { useT } from "@/lib/i18n-provider";
 import { describePermission } from "@/lib/plugin-permissions";
 
+type MarketplaceTab = "plugin" | "theme";
+
+type CategoryDefinition = {
+  key: string;
+  keywords: string[];
+  permissions?: string[];
+};
+
+type PackageWithTaxonomy = BrowsePackageDto & {
+  category?: string | null;
+  categories?: string[] | null;
+  tags?: string[] | null;
+};
+
+const PLUGIN_CATEGORIES: CategoryDefinition[] = [
+  {
+    key: "seo",
+    keywords: ["seo", "search", "sitemap", "schema", "metadata", "redirect"],
+  },
+  {
+    key: "security",
+    keywords: ["security", "firewall", "malware", "audit", "spam", "captcha", "2fa", "mfa"],
+  },
+  {
+    key: "performance",
+    keywords: ["performance", "cache", "speed", "optimize", "cdn", "image optimization"],
+  },
+  {
+    key: "ecommerce",
+    keywords: ["shop", "store", "cart", "checkout", "payment", "commerce", "product"],
+  },
+  {
+    key: "forms",
+    keywords: ["form", "contact", "survey", "lead", "submission", "booking"],
+  },
+  {
+    key: "analytics",
+    keywords: ["analytics", "tracking", "metrics", "report", "google analytics"],
+  },
+  {
+    key: "marketing",
+    keywords: ["marketing", "email", "newsletter", "campaign", "crm", "social", "popup"],
+  },
+  {
+    key: "media",
+    keywords: ["media", "gallery", "image", "video", "slider", "embed"],
+  },
+  {
+    key: "membership",
+    keywords: ["membership", "member", "subscription", "paywall", "course", "lms", "forum"],
+  },
+  {
+    key: "developer",
+    keywords: ["developer", "api", "webhook", "custom field", "migration", "debug", "code"],
+  },
+  { key: "other", keywords: [] },
+];
+
+const THEME_CATEGORIES: CategoryDefinition[] = [
+  { key: "blog", keywords: ["blog", "journal", "personal", "writer"] },
+  { key: "business", keywords: ["business", "company", "corporate", "agency", "saas"] },
+  { key: "ecommerce", keywords: ["shop", "store", "commerce", "product", "market"] },
+  { key: "portfolio", keywords: ["portfolio", "creative", "designer", "agency", "showcase"] },
+  { key: "news", keywords: ["news", "magazine", "publisher", "editorial"] },
+  { key: "education", keywords: ["education", "school", "course", "learning", "lms"] },
+  { key: "entertainment", keywords: ["entertainment", "music", "event", "movie", "game"] },
+  { key: "food", keywords: ["food", "restaurant", "cafe", "recipe", "drink"] },
+  { key: "photography", keywords: ["photo", "photography", "gallery", "image", "visual"] },
+  { key: "community", keywords: ["community", "forum", "nonprofit", "membership", "directory"] },
+  { key: "other", keywords: [] },
+];
+
 /**
  * The catalogue, as a grid of cards a site owner installs from.
  *
@@ -35,12 +107,15 @@ export function BrowseGrid({
 }) {
   const t = useT();
   const [query, setQuery] = useState("");
-  const [kind, setKind] = useState<"all" | "theme" | "plugin">("all");
+  const [tab, setTab] = useState<MarketplaceTab>("plugin");
+  const [category, setCategory] = useState("all");
+  const categories = tab === "plugin" ? PLUGIN_CATEGORIES : THEME_CATEGORIES;
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return packages.filter((pkg) => {
-      if (kind !== "all" && pkg.kind !== kind) return false;
+      if (pkg.kind !== tab) return false;
+      if (category !== "all" && packageCategory(pkg) !== category) return false;
       if (!needle) return true;
       return (
         pkg.name.toLowerCase().includes(needle) ||
@@ -48,11 +123,58 @@ export function BrowseGrid({
         (pkg.description ?? "").toLowerCase().includes(needle)
       );
     });
-  }, [packages, query, kind]);
+  }, [packages, query, tab, category]);
+
+  const tabCounts = useMemo(
+    () => ({
+      plugin: packages.filter((pkg) => pkg.kind === "plugin").length,
+      theme: packages.filter((pkg) => pkg.kind === "theme").length,
+    }),
+    [packages],
+  );
+
+  const categoryCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    let total = 0;
+    for (const pkg of packages) {
+      if (pkg.kind !== tab) continue;
+      total += 1;
+      const key = packageCategory(pkg);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    counts.set("all", total);
+    return counts;
+  }, [packages, tab]);
+
+  function selectTab(next: MarketplaceTab) {
+    setTab(next);
+    setCategory("all");
+  }
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex gap-1" role="tablist" aria-label={t("admin.marketplace.browse.tabsLabel")}>
+          {(["plugin", "theme"] as const).map((option) => (
+            <button
+              key={option}
+              type="button"
+              role="tab"
+              aria-selected={tab === option}
+              onClick={() => selectTab(option)}
+              className={cn(
+                "rounded-md px-3 py-1.5 text-xs font-medium transition",
+                tab === option
+                  ? "bg-[var(--surface-raised)] text-[var(--text)] shadow-sm ring-1 ring-[var(--border-strong)]"
+                  : "text-[var(--text-muted)] hover:bg-[var(--surface-sunken)] hover:text-[var(--text)]",
+              )}
+            >
+              {t(`admin.marketplace.browse.tabs.${option}`)}
+              <span className="ml-1.5 text-[10px] z-muted">{tabCounts[option]}</span>
+            </button>
+          ))}
+        </div>
+
         <div className="relative min-w-56 flex-1">
           <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
             <Icon name="search" className="h-4 w-4" />
@@ -66,25 +188,30 @@ export function BrowseGrid({
             aria-label={t("admin.marketplace.browse.searchPlaceholder")}
           />
         </div>
-        <div className="flex gap-1" role="tablist">
-          {(["all", "theme", "plugin"] as const).map((option) => (
+      </div>
+
+      <div className="flex flex-wrap gap-1.5" aria-label={t("admin.marketplace.browse.categoriesLabel")}>
+        {["all", ...categories.map((item) => item.key)].map((option) => {
+          const count = categoryCounts.get(option) ?? 0;
+          return (
             <button
               key={option}
               type="button"
-              role="tab"
-              aria-selected={kind === option}
-              onClick={() => setKind(option)}
+              onClick={() => setCategory(option)}
+              disabled={option !== "all" && count === 0}
               className={cn(
-                "rounded-md px-3 py-1.5 text-xs font-medium transition",
-                kind === option
+                "rounded-full border px-2.5 py-1 text-[11px] font-medium transition",
+                category === option
                   ? "bg-[var(--surface-raised)] text-[var(--text)] shadow-sm ring-1 ring-[var(--border-strong)]"
-                  : "text-[var(--text-muted)] hover:text-[var(--text)]",
+                  : "border-[var(--border)] text-[var(--text-muted)] hover:bg-[var(--surface-sunken)] hover:text-[var(--text)]",
+                option !== "all" && count === 0 && "opacity-40 hover:bg-transparent",
               )}
             >
-              {t(`admin.marketplace.browse.filter.${option}`)}
+              {t(`admin.marketplace.browse.categories.${tab}.${option}`)}
+              <span className="ml-1 text-[10px]">{count}</span>
             </button>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
       {filtered.length === 0 ? (
@@ -105,6 +232,37 @@ export function BrowseGrid({
       )}
     </div>
   );
+}
+
+function packageCategory(pkg: BrowsePackageDto): string {
+  const declared = declaredCategories(pkg).find((value) =>
+    categoryDefinitions(pkg.kind).some((category) => category.key === value),
+  );
+  if (declared) return declared;
+
+  const haystack = [pkg.key, pkg.name, pkg.description ?? ""].join(" ").toLowerCase();
+  const matched = categoryDefinitions(pkg.kind).find((category) =>
+    category.keywords.some((keyword) => haystack.includes(keyword)),
+  );
+
+  return matched?.key ?? "other";
+}
+
+function declaredCategories(pkg: BrowsePackageDto): string[] {
+  const withTaxonomy = pkg as PackageWithTaxonomy;
+  const values = [
+    withTaxonomy.category,
+    ...(Array.isArray(withTaxonomy.categories) ? withTaxonomy.categories : []),
+    ...(Array.isArray(withTaxonomy.tags) ? withTaxonomy.tags : []),
+  ];
+  return values
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function categoryDefinitions(kind: BrowsePackageDto["kind"]): CategoryDefinition[] {
+  return kind === "plugin" ? PLUGIN_CATEGORIES : THEME_CATEGORIES;
 }
 
 function PackageCard({

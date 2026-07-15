@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useTransition } from "react";
+import { useEffect, useState } from "react";
+import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { SiteDto } from "@zcmsorg/schemas";
 import { switchSiteAction } from "@/app/actions/site";
@@ -21,34 +22,37 @@ export function SiteSwitcher({
 }) {
   const t = useT();
   const router = useRouter();
-  const formRef = useRef<HTMLFormElement>(null);
   const [pending, startTransition] = useTransition();
+  const fallbackSiteId = currentSiteId ?? sites[0]?.id ?? "";
+  const [selectedSiteId, setSelectedSiteId] = useState(fallbackSiteId);
+
+  useEffect(() => {
+    setSelectedSiteId(fallbackSiteId);
+  }, [fallbackSiteId]);
 
   if (sites.length === 0) {
     return <span className="text-xs z-muted">{t("admin.siteSwitcher.empty")}</span>;
   }
 
   return (
-    <form
-      ref={formRef}
-      action={(formData) =>
-        startTransition(async () => {
-          await switchSiteAction(formData);
-          router.replace("/");
-          router.refresh();
-        })
-      }
-      className="flex items-center gap-2"
-    >
+    <div className="flex items-center gap-2">
       <label htmlFor="site-switcher" className="text-[11px] uppercase tracking-wider z-muted">
         {t("admin.siteSwitcher.label")}
       </label>
       <Select
         id="site-switcher"
         name="siteId"
-        defaultValue={currentSiteId ?? sites[0]?.id}
+        value={selectedSiteId}
         disabled={pending || sites.length === 1}
-        onChange={() => formRef.current?.requestSubmit()}
+        onChange={(event) => {
+          const siteId = event.currentTarget.value;
+          setSelectedSiteId(siteId);
+          startTransition(async () => {
+            await switchSiteAction(siteId);
+            router.replace("/");
+            router.refresh();
+          });
+        }}
         className="h-8 w-52 py-1 text-xs"
       >
         {sites.map((site) => (
@@ -57,6 +61,6 @@ export function SiteSwitcher({
           </option>
         ))}
       </Select>
-    </form>
+    </div>
   );
 }

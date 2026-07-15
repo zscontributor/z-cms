@@ -206,6 +206,15 @@ export const InviteUserSchema = z.object({
 });
 export type InviteUserInput = z.infer<typeof InviteUserSchema>;
 
+export const CreateUserSchema = z.object({
+  email: z.email(),
+  name: z.string().trim().min(1).max(120),
+  password: PasswordSchema.optional(),
+  role: RoleSchema,
+  siteId: MembershipScopeSchema,
+});
+export type CreateUserInput = z.infer<typeof CreateUserSchema>;
+
 /**
  * Accepting an invitation is where the account is actually created: the invite
  * carries the email and the role, the invitee supplies the name and the password.
@@ -300,6 +309,13 @@ export interface InvitationDto {
 export interface InvitationCreatedDto {
   invitation: InvitationDto;
   token: string;
+}
+
+export interface UserCreatedDto {
+  user: UserDto;
+  password: string;
+  loginUrl: string;
+  emailQueued: boolean;
 }
 
 // ---------------------------------------------------------------------------

@@ -11,6 +11,7 @@ import {
   type RecoveryCodesDto,
   type Role,
   type TotpSetupDto,
+  type UserCreatedDto,
   type UserDto,
 } from "@zcmsorg/schemas";
 import { ApiError, apiFetch, can, getSession } from "@/lib/api";
@@ -37,6 +38,11 @@ export interface InviteState {
   error?: string;
   /** Present exactly once, on the response that created the invitation. */
   created?: InvitationCreatedDto;
+}
+
+export interface CreateUserState {
+  error?: string;
+  created?: UserCreatedDto;
 }
 
 export interface ProfileState {
@@ -69,6 +75,45 @@ function toSiteId(raw: FormDataEntryValue | null): string | null {
 // ---------------------------------------------------------------------------
 // Invitations
 // ---------------------------------------------------------------------------
+
+export async function createUserAction(
+  _prev: CreateUserState,
+  formData: FormData,
+): Promise<CreateUserState> {
+  const t = await getT();
+
+  const denied = await guard("user:invite");
+  if (denied) return { error: denied };
+
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const name = String(formData.get("name") ?? "").trim();
+  const password = String(formData.get("password") ?? "").trim();
+
+  if (!email.includes("@")) return { error: t("admin.users.invite.emailInvalid") };
+  if (!name) return { error: t("auth.acceptInvite.nameRequired") };
+  if (password && password.length < PASSWORD_MIN) {
+    return { error: t("auth.acceptInvite.passwordHint", { min: PASSWORD_MIN }) };
+  }
+
+  try {
+    const created = await apiFetch<UserCreatedDto>("/users", {
+      method: "POST",
+      siteScoped: false,
+      body: {
+        email,
+        name,
+        ...(password ? { password } : {}),
+        role: String(formData.get("role") ?? "VIEWER") as Role,
+        siteId: toSiteId(formData.get("siteId")),
+      },
+    });
+
+    revalidatePath("/users");
+    return { created };
+  } catch (error) {
+    return { error: toMessage(error, t("admin.users.invite.failed")) };
+  }
+}
 
 export async function inviteUserAction(
   _prev: InviteState,
@@ -151,6 +196,31 @@ export async function setMembershipAction(
     };
   } catch (error) {
     return { ok: false, error: toMessage(error, t("admin.users.role.failed")) };
+  }
+}
+
+export async function updateUserAction(
+  userId: string,
+  input: { name: string; avatarUrl: string },
+): Promise<UserActionResult> {
+  const t = await getT();
+
+  const denied = await guard("user:manage");
+  if (denied) return { ok: false, error: denied };
+
+  const name = input.name.trim();
+  if (!name) return { ok: false, error: t("auth.acceptInvite.nameRequired") };
+
+  try {
+    const user = await apiFetch<UserDto>(`/users/${encodeURIComponent(userId)}`, {
+      method: "PATCH",
+      siteScoped: false,
+      body: { name, avatarUrl: input.avatarUrl.trim() || null },
+    });
+    revalidatePath("/users");
+    return { ok: true, message: t("admin.users.edit.success", { name: user.name }) };
+  } catch (error) {
+    return { ok: false, error: toMessage(error, t("admin.users.edit.failed")) };
   }
 }
 

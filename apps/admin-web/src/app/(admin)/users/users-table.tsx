@@ -7,11 +7,12 @@ import {
   removeUserAction,
   resetTwoFactorAction,
   setMembershipAction,
+  updateUserAction,
 } from "@/app/actions/user";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { Field, Select } from "@/components/ui/field";
+import { Field, Input, Select } from "@/components/ui/field";
 import { EmptyState, Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { Icon } from "@/components/shell/icon";
 import { formatDateTime } from "@/lib/format";
@@ -32,6 +33,7 @@ const ROLE_TONES: Record<Role, BadgeTone> = {
 };
 
 type Pending =
+  | { kind: "edit"; user: UserDto }
   | { kind: "role"; user: UserDto }
   | { kind: "removeUser"; user: UserDto }
   | { kind: "removeRole"; user: UserDto; membership: MembershipDto }
@@ -61,10 +63,16 @@ export function UsersTable({
   // different user does not carry the previous one's answers over.
   const [role, setRole] = useState<Role>("VIEWER");
   const [scope, setScope] = useState<string>("");
+  const [editName, setEditName] = useState("");
+  const [editAvatarUrl, setEditAvatarUrl] = useState("");
 
   function open(next: Pending) {
     setError(null);
     setNotice(null);
+    if (next?.kind === "edit") {
+      setEditName(next.user.name);
+      setEditAvatarUrl(next.user.avatarUrl ?? "");
+    }
     if (next?.kind === "role") {
       const existing = next.user.memberships[0];
       setRole((existing?.role as Role) ?? "VIEWER");
@@ -206,6 +214,15 @@ export function UsersTable({
                 <TD>
                   {actionable ? (
                     <div className="flex justify-end gap-1.5">
+                      <Button
+                        size="sm"
+                        disabled={busy}
+                        title={t("admin.users.edit.button")}
+                        aria-label={t("admin.users.edit.button")}
+                        onClick={() => open({ kind: "edit", user })}
+                      >
+                        <Icon name="edit" size={15} />
+                      </Button>
                       {user.twoFactorEnabled ? (
                         <Button
                           size="sm"
@@ -239,6 +256,58 @@ export function UsersTable({
           })}
         </TBody>
       </Table>
+
+      <Dialog
+        open={pending?.kind === "edit"}
+        onClose={busy ? () => undefined : () => setPending(null)}
+        title={t("admin.users.edit.title", { name: pending?.user.name ?? "" })}
+        footer={
+          <>
+            <Button type="button" disabled={busy} onClick={() => setPending(null)}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              disabled={busy}
+              onClick={() =>
+                pending?.kind === "edit" &&
+                run(() =>
+                  updateUserAction(pending.user.id, {
+                    name: editName,
+                    avatarUrl: editAvatarUrl,
+                  }),
+                )
+              }
+            >
+              {busy ? t("common.working") : t("admin.users.edit.submit")}
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          <Field label={t("admin.users.edit.name")} htmlFor="edit-user-name" required>
+            <Input
+              id="edit-user-name"
+              value={editName}
+              disabled={busy}
+              onChange={(event) => setEditName(event.target.value)}
+            />
+          </Field>
+
+          <Field label={t("admin.users.edit.avatarUrl")} htmlFor="edit-user-avatar">
+            <Input
+              id="edit-user-avatar"
+              value={editAvatarUrl}
+              disabled={busy}
+              onChange={(event) => setEditAvatarUrl(event.target.value)}
+              placeholder="https://..."
+            />
+          </Field>
+
+          {error ? <DialogError message={error} /> : null}
+        </div>
+      </Dialog>
 
       <Dialog
         open={pending?.kind === "role"}

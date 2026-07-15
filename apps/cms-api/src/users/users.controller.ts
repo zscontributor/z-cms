@@ -11,6 +11,7 @@ import {
 import { ApiOperation, ApiParam, ApiTags } from "@nestjs/swagger";
 import {
   ChangePasswordSchema,
+  CreateUserSchema,
   DisableTotpSchema,
   EnableTotpSchema,
   InviteUserSchema,
@@ -18,6 +19,7 @@ import {
   SetMembershipSchema,
   UpdateProfileSchema,
   type ChangePasswordInput,
+  type CreateUserInput,
   type DisableTotpInput,
   type EnableTotpInput,
   type InvitationCreatedDto,
@@ -29,6 +31,7 @@ import {
   type TotpSetupDto,
   type UpdateProfileInput,
   type UserDto,
+  type UserCreatedDto,
 } from "@zcmsorg/schemas";
 import { Actor, RequirePermissions } from "../auth/decorators";
 import { AuthService } from "../auth/auth.service";
@@ -76,6 +79,30 @@ export class UsersController {
   @RequirePermissions("user:read")
   list(): Promise<UserDto[]> {
     return this.users.list();
+  }
+
+  @Post()
+  @HttpCode(201)
+  @ApiOperation({
+    summary: "Create a user",
+    description:
+      "Creates the account immediately, grants the requested role, and queues a " +
+      "notification email with the login link and temporary password. The user " +
+      "can sign in as soon as this returns; no email activation step is required.",
+  })
+  @ApiAuthed("user:invite")
+  @ApiZodBody("CreateUserInput")
+  @ApiZodResponse("UserCreated", {
+    status: 201,
+    description: "The created user, the temporary password, login URL, and whether email was queued.",
+  })
+  @ApiZodResponse("Error", { status: 409, description: "That address already has an account." })
+  @RequirePermissions("user:invite")
+  create(
+    @Actor() actor: RequestActor,
+    @Body(new ZodValidationPipe(CreateUserSchema)) body: CreateUserInput,
+  ): Promise<UserCreatedDto> {
+    return this.users.create(actor, body);
   }
 
   // ---------------------------------------------------------------------------
@@ -270,6 +297,22 @@ export class UsersController {
   @RequirePermissions("user:read")
   findOne(@Param("id") id: string): Promise<UserDto> {
     return this.users.findOne(id);
+  }
+
+  @Patch(":id")
+  @ApiOperation({ summary: "Update a user's profile fields" })
+  @ApiParam({ name: "id", description: "User id." })
+  @ApiAuthed("user:manage")
+  @ApiZodBody("UpdateProfileInput")
+  @ApiZodResponse("UserDto")
+  @ApiNotFound("No such user in this tenant.")
+  @RequirePermissions("user:manage")
+  update(
+    @Actor() actor: RequestActor,
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(UpdateProfileSchema)) body: UpdateProfileInput,
+  ): Promise<UserDto> {
+    return this.users.update(actor, id, body);
   }
 
   @Patch(":id/membership")

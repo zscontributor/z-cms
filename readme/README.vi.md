@@ -60,6 +60,8 @@ pnpm --filter @zcmsorg/worker dev           # xử lý background job
 
 Đăng nhập tại `http://localhost:3101` bằng
 **`admin@z-cms.org` / `admin123`**.
+Production nên mount admin-web dưới origin của từng site tại `/admin`
+(ví dụ `https://z-cms.org/admin`), không dùng hostname riêng kiểu `admin.*`.
 
 > Trong môi trường development, các port là 3100 / 3101 / 4100. Hostname trong
 > bảng `domains` phải khớp với port của site-runtime (`localhost:3100`).

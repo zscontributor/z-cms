@@ -17,10 +17,12 @@ vi.mock("@zcmsorg/database", () => ({
 import { UsersService } from "../users.service";
 
 function makeDb() {
-  return {
+  const database: any = {
+    $transaction: vi.fn((fn: any) => fn(database)),
     user: {
       findMany: vi.fn().mockResolvedValue([]),
       findUnique: vi.fn().mockResolvedValue(null),
+      create: vi.fn(),
       update: vi.fn(),
       delete: vi.fn().mockResolvedValue({}),
     },
@@ -38,16 +40,21 @@ function makeDb() {
       update: vi.fn().mockResolvedValue({}),
       delete: vi.fn().mockResolvedValue({}),
     },
-    site: { findUnique: vi.fn().mockResolvedValue({ id: "s1" }) },
+    site: {
+      findFirst: vi.fn().mockResolvedValue({ id: "s1" }),
+      findUnique: vi.fn().mockResolvedValue({ id: "s1" }),
+    },
   };
+  return database;
 }
 
 const audit = { record: vi.fn().mockResolvedValue(undefined) };
 const auth = { revokeAllSessions: vi.fn().mockResolvedValue(undefined) };
 const mfa = { reset: vi.fn().mockResolvedValue(undefined) };
+const mail = { enqueue: vi.fn().mockResolvedValue({ queued: true }) };
 
 function makeService() {
-  return new UsersService(audit as any, auth as any, mfa as any);
+  return new UsersService(audit as any, auth as any, mfa as any, mail as any);
 }
 
 function ownerActor(): RequestActor {
@@ -68,9 +75,81 @@ function adminActor(): RequestActor {
 describe("UsersService", () => {
   beforeEach(() => {
     holder.db = makeDb();
-    holder.systemDb = { user: { findUnique: vi.fn().mockResolvedValue(null) } };
+    holder.systemDb = {
+      $transaction: vi.fn((fn: any) => fn(holder.db)),
+      user: { findUnique: vi.fn().mockResolvedValue(null) },
+    };
     audit.record.mockClear();
     auth.revokeAllSessions.mockClear();
+    mail.enqueue.mockClear();
+  });
+
+  describe("create", () => {
+    it("creates an immediately usable account and queues a notification email", async () => {
+      holder.db.user.create.mockResolvedValue({ id: "u1" });
+      holder.db.user.findUnique.mockResolvedValue({
+        id: "u1",
+        email: "new@x.com",
+        name: "New User",
+        avatarUrl: null,
+        lastLoginAt: null,
+        totpEnabledAt: null,
+        createdAt: new Date(),
+        memberships: [{ id: "m1", role: "EDITOR", siteId: "s1", site: { name: "Main" } }],
+      });
+
+      const res = await makeService().create(ownerActor(), {
+        email: "New@x.com",
+        name: "New User",
+        password: "a perfectly fine password",
+        role: "EDITOR",
+        siteId: "s1",
+      } as any);
+
+      expect(holder.db.invitation.create).not.toHaveBeenCalled();
+      expect(holder.db.user.create.mock.calls[0][0].data.email).toBe("new@x.com");
+      expect(holder.db.membership.create.mock.calls[0][0].data).toMatchObject({
+        userId: "u1",
+        role: "EDITOR",
+        siteId: "s1",
+      });
+      expect(res.password).toBe("a perfectly fine password");
+      expect(res.emailQueued).toBe(true);
+      expect(mail.enqueue).toHaveBeenCalledWith(
+        "t1",
+        "s1",
+        null,
+        expect.objectContaining({
+          to: ["new@x.com"],
+          text: expect.stringContaining("Temporary password: a perfectly fine password"),
+        }),
+      );
+    });
+
+    it("still returns credentials when mail cannot be queued", async () => {
+      holder.db.user.create.mockResolvedValue({ id: "u1" });
+      holder.db.user.findUnique.mockResolvedValue({
+        id: "u1",
+        email: "new@x.com",
+        name: "New User",
+        avatarUrl: null,
+        lastLoginAt: null,
+        totpEnabledAt: null,
+        createdAt: new Date(),
+        memberships: [{ id: "m1", role: "EDITOR", siteId: null, site: null }],
+      });
+      mail.enqueue.mockRejectedValueOnce(new Error("smtp not configured"));
+
+      const res = await makeService().create(ownerActor(), {
+        email: "new@x.com",
+        name: "New User",
+        role: "EDITOR",
+        siteId: null,
+      } as any);
+
+      expect(res.password.length).toBeGreaterThanOrEqual(12);
+      expect(res.emailQueued).toBe(false);
+    });
   });
 
   describe("invite", () => {
