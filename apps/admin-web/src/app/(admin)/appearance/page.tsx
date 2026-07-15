@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import {
   can,
   getCurrentSite,
@@ -10,6 +9,8 @@ import {
   type ThemeCatalogEntry,
 } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
+import { LinkButton } from "@/components/ui/button";
+import { Icon } from "@/components/shell/icon";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/ui/table";
 import { MediaGallery } from "@/components/ui/media-gallery";
@@ -91,39 +92,44 @@ export default async function AppearancePage({ searchParams }: PageProps) {
                       isSelected && "ring-2 ring-brand-500/40",
                     )}
                   >
-                    <Link
-                      href={`/appearance?theme=${encodeURIComponent(theme.key)}`}
-                      className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
-                    >
-                      <MediaGallery
-                        screenshots={theme.screenshots}
-                        name={theme.name}
-                        className="mb-3"
-                      />
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <h3 className="truncate text-sm font-semibold">{theme.name}</h3>
-                          <p className="mt-0.5 text-[11px] z-muted">
-                            <code>{theme.key}</code> · v{theme.version}
-                          </p>
-                        </div>
-                        <Badge tone={approved ? "warning" : "danger"}>
-                          {approved
-                            ? t("appearance.sideload.unverified")
-                            : t("appearance.sideload.pending")}
-                        </Badge>
+                    <MediaGallery
+                      screenshots={theme.screenshots}
+                      name={theme.name}
+                      className="mb-3"
+                    />
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h3 className="truncate text-sm font-semibold">{theme.name}</h3>
+                        <p className="mt-0.5 text-[11px] z-muted">
+                          <code>{theme.key}</code> · v{theme.version}
+                        </p>
                       </div>
-                    </Link>
+                      <Badge tone={approved ? "warning" : "danger"}>
+                        {approved
+                          ? t("appearance.sideload.unverified")
+                          : t("appearance.sideload.pending")}
+                      </Badge>
+                    </div>
 
-                    {isActive ? (
-                      <p className="mt-2 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                        {t("appearance.active")}
-                      </p>
-                    ) : approved && canActivate ? (
-                      <div className="mt-3">
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <LinkButton
+                        href={`/appearance?theme=${encodeURIComponent(theme.key)}`}
+                        variant="ghost"
+                        size="sm"
+                        className={cn(isSelected && "bg-[var(--surface-sunken)] text-[var(--text)]")}
+                        aria-label={t("appearance.settings.heading", { name: theme.name })}
+                      >
+                        <Icon name="settings" className="h-3.5 w-3.5" />
+                      </LinkButton>
+
+                      {isActive ? (
+                        <p className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                          {t("appearance.active")}
+                        </p>
+                      ) : approved && canActivate ? (
                         <ActivateButton themeKey={theme.key} name={theme.name} />
-                      </div>
-                    ) : null}
+                      ) : null}
+                    </div>
 
                     {canSideload ? (
                       <SideloadActions
@@ -162,35 +168,40 @@ export default async function AppearancePage({ searchParams }: PageProps) {
                   isSelected && "ring-2 ring-brand-500/40",
                 )}
               >
-                <Link
-                  href={`/appearance?theme=${encodeURIComponent(theme.key)}`}
-                  className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
-                >
-                  <MediaGallery
-                    screenshots={theme.screenshots}
-                    name={theme.name}
-                    className="mb-3"
-                  />
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <h2 className="truncate text-sm font-semibold">{theme.name}</h2>
-                      <p className="mt-0.5 text-[11px] z-muted">
-                        <code>{theme.key}</code> · v{theme.version}
-                      </p>
-                    </div>
-                    {isActive ? (
-                      <Badge tone="success">{t("appearance.active")}</Badge>
-                    ) : (
-                      <Badge tone="neutral">{theme.status}</Badge>
-                    )}
+                <MediaGallery
+                  screenshots={theme.screenshots}
+                  name={theme.name}
+                  className="mb-3"
+                />
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h2 className="truncate text-sm font-semibold">{theme.name}</h2>
+                    <p className="mt-0.5 text-[11px] z-muted">
+                      <code>{theme.key}</code> · v{theme.version}
+                    </p>
                   </div>
-                </Link>
+                  {isActive ? (
+                    <Badge tone="success">{t("appearance.active")}</Badge>
+                  ) : (
+                    <Badge tone="neutral">{theme.status}</Badge>
+                  )}
+                </div>
 
-                {!isActive && canActivate ? (
-                  <div className="mt-3">
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <LinkButton
+                    href={`/appearance?theme=${encodeURIComponent(theme.key)}`}
+                    variant="ghost"
+                    size="sm"
+                    className={cn(isSelected && "bg-[var(--surface-sunken)] text-[var(--text)]")}
+                    aria-label={t("appearance.settings.heading", { name: theme.name })}
+                  >
+                    <Icon name="settings" className="h-3.5 w-3.5" />
+                  </LinkButton>
+
+                  {!isActive && canActivate ? (
                     <ActivateButton themeKey={theme.key} name={theme.name} />
-                  </div>
-                ) : null}
+                  ) : null}
+                </div>
               </article>
             );
           })}
@@ -212,9 +223,19 @@ export default async function AppearancePage({ searchParams }: PageProps) {
                   : t("appearance.settings.generated")}
               </p>
             </div>
-            {selectedTheme.key === active?.key && selectedTheme.demoAvailable && canConfigure ? (
-              <SeedDemoButton seeded={selectedTheme.demoSeeded} />
-            ) : null}
+            <div className="flex items-center gap-2">
+              {selectedTheme.key === active?.key && selectedTheme.demoAvailable && canConfigure ? (
+                <SeedDemoButton seeded={selectedTheme.demoSeeded} />
+              ) : null}
+              <LinkButton
+                href="/appearance"
+                variant="ghost"
+                size="sm"
+                aria-label={t("common.close")}
+              >
+                <Icon name="close" className="h-4 w-4" />
+              </LinkButton>
+            </div>
           </header>
 
           <ThemeSettingsForm

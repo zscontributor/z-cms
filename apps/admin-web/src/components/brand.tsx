@@ -1,4 +1,5 @@
 import { cn } from "@/lib/cn";
+import { adminAssetPath } from "@/lib/assets";
 
 /**
  * Z-CMS's own marks.
@@ -14,7 +15,7 @@ import { cn } from "@/lib/cn";
 export function Logo({ className, size = 28 }: { className?: string; size?: number }) {
   return (
     <img
-      src="/brand/icon.png"
+      src={adminAssetPath("/brand/icon.png")}
       alt=""
       width={size}
       height={size}
@@ -37,12 +38,12 @@ export function Wordmark({ className }: { className?: string }) {
   return (
     <span className={cn("flex items-center gap-2", className)}>
       <img
-        src="/brand/logo.png"
+        src={adminAssetPath("/brand/logo.png")}
         alt="Z-CMS"
         className="h-6 w-auto object-contain dark:hidden"
       />
       <img
-        src="/brand/logo-dark.png"
+        src={adminAssetPath("/brand/logo-dark.png")}
         alt="Z-CMS"
         className="hidden h-6 w-auto object-contain dark:block"
       />

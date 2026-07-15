@@ -1,4 +1,5 @@
 import { flagUrl } from "@zcmsorg/i18n/client";
+import { adminAssetPath } from "@/lib/assets";
 import { cn } from "@/lib/cn";
 
 /**
@@ -35,13 +36,14 @@ export function Flag({
   className?: string;
 }) {
   const source = flag !== undefined ? flagUrl(locale, flag) : flagUrl(locale);
+  const src = source ? adminAssetPath(source) : null;
 
   // 4x3, the proportions a flag is recognised at. The ring is not decoration:
   // Japan and Poland are mostly white, and without it they dissolve into a light
   // background and read as a missing image.
   const box = cn("h-[15px] w-5 shrink-0 rounded-[2px]", className);
 
-  if (!source) {
+  if (!src) {
     return (
       <span
         aria-hidden="true"
@@ -62,7 +64,7 @@ export function Flag({
     // rasteriser in front of a vector.
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={source}
+      src={src}
       alt=""
       aria-hidden="true"
       width={20}

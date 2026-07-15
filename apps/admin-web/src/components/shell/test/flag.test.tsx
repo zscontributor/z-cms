@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Flag } from "../flag";
 
 /**
@@ -10,17 +10,21 @@ import { Flag } from "../flag";
  * absence case, which is the one that ships broken if nobody looks at it.
  */
 describe("Flag", () => {
+  beforeEach(() => {
+    vi.stubEnv("ADMIN_BASE_PATH", "/admin");
+  });
+
   it("renders the flag of the country a locale resolves to", () => {
     const { container } = render(<Flag locale="vi" />);
     const img = container.querySelector("img");
 
-    expect(img).toHaveAttribute("src", "/z-flags/vn.svg");
+    expect(img).toHaveAttribute("src", "/admin/z-flags/vn.svg");
   });
 
   it("reads the region off a tag that carries one", () => {
     const { container } = render(<Flag locale="pt-BR" />);
 
-    expect(container.querySelector("img")).toHaveAttribute("src", "/z-flags/br.svg");
+    expect(container.querySelector("img")).toHaveAttribute("src", "/admin/z-flags/br.svg");
   });
 
   it("prefers a flag the caller already resolved over deriving its own", () => {
@@ -28,7 +32,7 @@ describe("Flag", () => {
     // the contributor wrote. Deriving here anyway would silently ignore it.
     const { container } = render(<Flag locale="en" flag="us" />);
 
-    expect(container.querySelector("img")).toHaveAttribute("src", "/z-flags/us.svg");
+    expect(container.querySelector("img")).toHaveAttribute("src", "/admin/z-flags/us.svg");
   });
 
   describe("when the language has no flag", () => {
