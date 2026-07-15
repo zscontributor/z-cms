@@ -257,13 +257,13 @@ To bake a signed built-in (BUILTIN, not SIDELOAD) into the image instead, see
 
 ```
 1. zcms keygen            the author generates a key pair; the private key NEVER leaves their machine
-2. register publisher     POST /publishers with the PUBLIC key. A reviewer verifies it;
-                          an unverified publisher may hold a key and publish nothing.
+2. register publisher     POST /publishers, then add the PUBLIC key. A reviewer verifies
+                          both identity and key; an unverified publisher/key may publish nothing.
 3. zcms pack              package + sign with the author's private key
 4. POST /api/v1/packages  upload to marketplace.z-cms.org
    ├── openPackage         open it, execute NOTHING
    ├── re-hash the payload never trust the checksum in the envelope
-   ├── verify publisher    against the key in the DB, NOT the key inside the package
+   ├── verify publisher    against an ACTIVE key in the DB, NOT the key inside the package
    ├── scanPackage         static scan → reject (400) | flag (QUARANTINED) | pass (APPROVED)
    ├── marketplace signs   counter-signs the checksum (only reject stops here)
    └── store + register    stores the COUNTER-SIGNED file, with its review status
@@ -277,8 +277,9 @@ To bake a signed built-in (BUILTIN, not SIDELOAD) into the image instead, see
 Step 3's "verify against the key in the DB" is where an impostor is caught. A
 package carries its publisher's public key, and verifying against *that* would be
 very convenient and completely worthless: an attacker forging the package forges
-the key alongside it. The key has to come from the row created when the publisher
-registered.
+the key alongside it. The key has to come from an ACTIVE `publisher_keys` row that
+belongs to the submitter's publisher. `PENDING`, `RETIRED`, `REVOKED`, and
+`COMPROMISED` keys are refused for new submissions.
 
 Step 4's "store the counter-signed file" is a bug we made and fixed. Originally
 cms-api stored the uploaded file (publisher signature only) and recorded the
@@ -506,12 +507,15 @@ morning, and a queue that hides the author asks the reviewer to judge the code i
 a vacuum. (Packages that predate publishers — the seeded built-ins — render as
 "Unknown publisher" rather than pretending to an identity they never had.)
 
-**`/publishers`** is the other half of that: registering a publisher, rotating a
-key, and — for a reviewer — verifying one. Verification is the human step the
-whole signature scheme rests on, so `verified` is a **required boolean**, not an
-optional toggle. A toggle is a read-then-write: two reviewers acting on the same
-stale page flip each other, and the second click silently undoes the first.
-Naming the target state makes the second click idempotent instead of destructive.
+**`/publishers`** is the other half of that: registering a publisher, adding a
+new public key, retiring an old one, and — for a reviewer — verifying both the
+publisher and the key. Verification is the human step the whole signature scheme
+rests on, so `verified` is a **required boolean**, not an optional toggle. Key
+state is explicit too: `PENDING` waits for review, `ACTIVE` may sign new uploads,
+`RETIRED` remains valid history but cannot sign new uploads, `REVOKED` was removed
+or rejected, and `COMPROMISED` means reviewers should inspect packages signed by
+that key. Retiring a key does **not** revoke packages already counter-signed by
+the marketplace; package revocation is the separate kill switch below.
 
 ## One marketplace, many instances
 

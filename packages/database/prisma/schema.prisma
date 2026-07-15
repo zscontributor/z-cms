@@ -44,16 +44,16 @@ model Tenant {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  sites        Site[]
-  memberships  Membership[]
-  users        User[]
-  contents     Content[]
-  contentTypes ContentType[]
-  media        Media[]
-  mediaFolders MediaFolder[]
-  menus        Menu[]
-  taxonomies   Taxonomy[]
-  terms        Term[]
+  sites         Site[]
+  memberships   Membership[]
+  users         User[]
+  contents      Content[]
+  contentTypes  ContentType[]
+  media         Media[]
+  mediaFolders  MediaFolder[]
+  menus         Menu[]
+  taxonomies    Taxonomy[]
+  terms         Term[]
   siteThemes    SiteTheme[]
   sitePlugins   SitePlugin[]
   auditLogs     AuditLog[]
@@ -76,7 +76,7 @@ model Site {
   createdAt     DateTime   @default(now()) @map("created_at")
   updatedAt     DateTime   @updatedAt @map("updated_at")
 
-  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   domains      Domain[]
   contentTypes ContentType[]
   contents     Content[]
@@ -98,13 +98,11 @@ model Site {
 
 /**
  * How this site sends email. One row per site, or none.
- *
  * A table of its own rather than a corner of `Site.settings`, and the password is
  * the whole reason. A JSONB blob is read wholesale — every `select: { settings:
  * true }` anywhere in the codebase would be carrying an SMTP password around, and
  * one of them would eventually put it in a response. Here the secret is a column,
  * it is encrypted, and the DTO that leaves the API does not have a field for it.
- *
  * `passwordEncrypted` holds AES-256-GCM ciphertext (`v1.<iv>.<tag>.<ct>`, the
  * same envelope as a TOTP secret), keyed by MAIL_ENCRYPTION_KEY from the
  * environment. A stolen database dump is not, on its own, a working mail relay.
@@ -122,18 +120,24 @@ model SiteMailSettings {
 
   host   String
   port   Int     @default(587)
-  /** Implicit TLS from the first byte (SMTPS/465). Off still STARTTLSes when offered. */
+  /**
+   * Implicit TLS from the first byte (SMTPS/465). Off still STARTTLSes when offered.
+   */
   secure Boolean @default(false)
 
   username          String?
   passwordEncrypted String? @map("password_encrypted")
 
-  /** The envelope sender. Not a field any sender may set — see @zcmsorg/schemas. */
+  /**
+   * The envelope sender. Not a field any sender may set — see @zcmsorg/schemas.
+   */
   fromName  String  @map("from_name")
   fromEmail String  @map("from_email")
   replyTo   String? @map("reply_to")
 
-  /** The last "send a test" — the only evidence anyone has that this works. */
+  /**
+   * The last "send a test" — the only evidence anyone has that this works.
+   */
   lastTestAt    DateTime? @map("last_test_at")
   lastTestError String?   @map("last_test_error")
 
@@ -184,7 +188,6 @@ model User {
 
   /**
    * The TOTP shared secret, ENCRYPTED (AES-256-GCM, see auth/totp.ts).
-   *
    * Not a hash — a second factor has to be recomputed on every login, so it has
    * to be recoverable, which is exactly what makes it dangerous at rest. A leaked
    * database with plaintext secrets in it hands an attacker every second factor
@@ -195,18 +198,18 @@ model User {
   totpSecret        String?   @map("totp_secret")
   /**
    * The secret being enrolled, not yet proven. Encrypted the same way.
-   *
    * Enrollment is two steps because a one-step enrollment locks people out: if
    * the secret is switched on the moment it is generated and the authenticator
    * never actually scanned it, the account now demands a code nobody can produce.
    * This column is the gap between "generated" and "proven".
    */
   totpPendingSecret String?   @map("totp_pending_secret")
-  /** Null means no second factor. Its presence is the switch. */
+  /**
+   * Null means no second factor. Its presence is the switch.
+   */
   totpEnabledAt     DateTime? @map("totp_enabled_at")
   /**
    * The last TOTP time-step this user successfully consumed.
-   *
    * A TOTP code stays valid for its whole 30-second window, so without this a
    * code shoulder-surfed (or replayed from a proxied request) works a second
    * time. Codes are accepted strictly ascending: once a step is spent, it and
@@ -214,7 +217,7 @@ model User {
    */
   totpLastStep      BigInt?   @map("totp_last_step")
 
-  tenant        Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant        Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   memberships   Membership[]
   contents      Content[]
   versions      ContentVersion[]
@@ -231,13 +234,11 @@ model User {
 
 /**
  * One single-use way back in when the authenticator is gone.
- *
  * A row per code rather than an array on the user, because a code has a life of
  * its own: it is spent, and "which of them are left" is a question the profile
  * screen asks. Only the SHA-256 is stored — they are high-entropy random strings,
  * so a fast hash is the right one; bcrypt exists to slow down guessing a *human*
  * choice, and there is no human choice here.
- *
  * Spent codes are kept, not deleted. "This account was accessed with a recovery
  * code at 03:12" is precisely the row an incident starts from.
  */
@@ -249,7 +250,9 @@ model RecoveryCode {
   // touches it is fenced in by Postgres rather than by good intentions.
   tenantId  String    @map("tenant_id") @db.Uuid
   userId    String    @map("user_id") @db.Uuid
-  /** SHA-256 of the code, hex. The code itself is shown once and never stored. */
+  /**
+   * SHA-256 of the code, hex. The code itself is shown once and never stored.
+   */
   codeHash  String    @map("code_hash")
   usedAt    DateTime? @map("used_at")
   createdAt DateTime  @default(now()) @map("created_at")
@@ -265,18 +268,15 @@ model RecoveryCode {
 
 /**
  * An offer of a role, made to an email address that may not have an account yet.
- *
  * Why an invitation and not "create the user with a temporary password": a
  * password an admin chooses is a password an admin knows, and one that travels
  * through whatever channel they use to pass it on. The invitee sets their own,
  * once, and nobody else ever sees it.
- *
  * Z-CMS ships no mailer, so the link is returned to the inviter to deliver. That
  * makes the token exactly as sensitive as a password reset link, and it is
  * treated like one: single-use, expiring, and stored only as a SHA-256 — the raw
  * token exists only in the response that created it. There is deliberately no
  * endpoint that can show it again.
- *
  * The row is kept after `acceptedAt`: "who let this person in, and as what" is
  * the question an audit of a compromised account starts from, and deleting the
  * invitation would delete the answer.
@@ -288,15 +288,21 @@ model Invitation {
   siteId    String? @map("site_id") @db.Uuid
   email     String
   role      Role
-  /** SHA-256 of the invite token, hex. The raw token is never stored. */
+  /**
+   * SHA-256 of the invite token, hex. The raw token is never stored.
+   */
   tokenHash String  @unique @map("token_hash")
 
   invitedById String? @map("invited_by_id") @db.Uuid
 
   expiresAt  DateTime  @map("expires_at")
-  /** Set once redeemed. A second redemption of the same token is refused. */
+  /**
+   * Set once redeemed. A second redemption of the same token is refused.
+   */
   acceptedAt DateTime? @map("accepted_at")
-  /** Withdrawn before it was used. */
+  /**
+   * Withdrawn before it was used.
+   */
   revokedAt  DateTime? @map("revoked_at")
   createdAt  DateTime  @default(now()) @map("created_at")
 
@@ -311,40 +317,44 @@ model Invitation {
 
 /**
  * A refresh token, stored so it can be ROTATED and REVOKED.
- *
  * Before this table, refresh tokens were stateless JWTs: a leaked one worked
  * until it expired (30 days) with no way to kill it, and logout was a fiction.
- *
  * Now every refresh consumes its token and issues a new one in the same
  * `familyId`. Two properties fall out of that:
- *
- *   - Logout / revoke-all works: mark the family revoked and no descendant is
- *     accepted again.
- *   - Theft is detectable. A refresh token is meant to be used exactly once. If
- *     an already-consumed token is presented again, either the legitimate client
- *     or an attacker is replaying it — we cannot tell which, so we revoke the
- *     WHOLE family. The thief and the victim are both logged out; the victim logs
- *     back in, the thief cannot.
- *
+ * - Logout / revoke-all works: mark the family revoked and no descendant is
+ * accepted again.
+ * - Theft is detectable. A refresh token is meant to be used exactly once. If
+ * an already-consumed token is presented again, either the legitimate client
+ * or an attacker is replaying it — we cannot tell which, so we revoke the
+ * WHOLE family. The thief and the victim are both logged out; the victim logs
+ * back in, the thief cannot.
  * Only the SHA-256 of the token is stored. A database leak does not hand out
  * usable tokens, the same reason passwords are hashed.
  */
 model RefreshToken {
-  id        String    @id @default(uuid()) @db.Uuid
-  tenantId  String    @map("tenant_id") @db.Uuid
-  userId    String    @map("user_id") @db.Uuid
-  /** SHA-256 of the signed token string, hex. The raw token is never stored. */
-  tokenHash String    @unique @map("token_hash")
-  /** Rotation lineage. Reuse of any consumed member revokes the whole family. */
-  familyId  String    @map("family_id") @db.Uuid
-  expiresAt DateTime  @map("expires_at")
-  /** Set when this token has been rotated. A second use of a consumed token is theft. */
+  id         String    @id @default(uuid()) @db.Uuid
+  tenantId   String    @map("tenant_id") @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  /**
+   * SHA-256 of the signed token string, hex. The raw token is never stored.
+   */
+  tokenHash  String    @unique @map("token_hash")
+  /**
+   * Rotation lineage. Reuse of any consumed member revokes the whole family.
+   */
+  familyId   String    @map("family_id") @db.Uuid
+  expiresAt  DateTime  @map("expires_at")
+  /**
+   * Set when this token has been rotated. A second use of a consumed token is theft.
+   */
   consumedAt DateTime? @map("consumed_at")
-  /** Set when the family was killed (logout, or reuse detected). */
-  revokedAt DateTime? @map("revoked_at")
-  userAgent String?   @map("user_agent")
-  ip        String?
-  createdAt DateTime  @default(now()) @map("created_at")
+  /**
+   * Set when the family was killed (logout, or reuse detected).
+   */
+  revokedAt  DateTime? @map("revoked_at")
+  userAgent  String?   @map("user_agent")
+  ip         String?
+  createdAt  DateTime  @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -413,11 +423,11 @@ model ContentType {
 }
 
 model Content {
-  id            String        @id @default(uuid()) @db.Uuid
-  tenantId      String        @map("tenant_id") @db.Uuid
-  siteId        String        @map("site_id") @db.Uuid
-  contentTypeId String        @map("content_type_id") @db.Uuid
-  locale        String        @default("vi")
+  id                 String        @id @default(uuid()) @db.Uuid
+  tenantId           String        @map("tenant_id") @db.Uuid
+  siteId             String        @map("site_id") @db.Uuid
+  contentTypeId      String        @map("content_type_id") @db.Uuid
+  locale             String        @default("vi")
   // The same piece of content, across locales. Every row has one; a row with no
   // translations is simply the only member of its group. Non-null on purpose —
   // a nullable "is this a translation of anything" column means every query that
@@ -426,24 +436,24 @@ model Content {
   // This, and not the slug, is what makes /about and /vi/gioi-thieu the same page:
   // a translation is free to have a completely different slug, which it must be,
   // because a Vietnamese URL that reads as English is not a translated URL.
-  translationGroupId String   @default(uuid()) @map("translation_group_id") @db.Uuid
-  title         String
-  slug          String
-  excerpt       String?
+  translationGroupId String        @default(uuid()) @map("translation_group_id") @db.Uuid
+  title              String
+  slug               String
+  excerpt            String?
   // Typed field values, shaped by ContentType.fields.
-  data          Json          @default("{}")
+  data               Json          @default("{}")
   // Block-editor document: [{ id, type, props, children? }]
-  blocks        Json          @default("[]")
+  blocks             Json          @default("[]")
   // SEO + Open Graph. Owned by core; the SEO plugin will extend it later.
-  seo           Json          @default("{}")
+  seo                Json          @default("{}")
   // Null = normal site content. Non-null = demo content owned by one theme and
   // visible only while that theme is active.
-  demoThemeKey  String?       @map("demo_theme_key")
-  status        ContentStatus @default(DRAFT)
-  publishedAt   DateTime?     @map("published_at")
-  authorId      String?       @map("author_id") @db.Uuid
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @updatedAt @map("updated_at")
+  demoThemeKey       String?       @map("demo_theme_key")
+  status             ContentStatus @default(DRAFT)
+  publishedAt        DateTime?     @map("published_at")
+  authorId           String?       @map("author_id") @db.Uuid
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
 
   tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   site        Site             @relation(fields: [siteId], references: [id], onDelete: Cascade)
@@ -488,13 +498,13 @@ model ContentVersion {
 }
 
 model Taxonomy {
-  id          String   @id @default(uuid()) @db.Uuid
-  tenantId    String   @map("tenant_id") @db.Uuid
-  siteId      String   @map("site_id") @db.Uuid
-  key         String
-  name        String
-  hierarchical Boolean @default(false)
-  createdAt   DateTime @default(now()) @map("created_at")
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  siteId       String   @map("site_id") @db.Uuid
+  key          String
+  name         String
+  hierarchical Boolean  @default(false)
+  createdAt    DateTime @default(now()) @map("created_at")
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
@@ -612,16 +622,16 @@ model Media {
 }
 
 model Menu {
-  id        String   @id @default(uuid()) @db.Uuid
-  tenantId  String   @map("tenant_id") @db.Uuid
-  siteId    String   @map("site_id") @db.Uuid
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  siteId       String   @map("site_id") @db.Uuid
   // Matches a theme's declared menu location, e.g. "primary", "footer".
-  key       String
-  name      String
+  key          String
+  name         String
   // Null = normal menu. Non-null = a theme-owned demo menu, visible only while
   // that theme is active.
-  demoThemeKey String? @map("demo_theme_key")
-  createdAt DateTime @default(now()) @map("created_at")
+  demoThemeKey String?  @map("demo_theme_key")
+  createdAt    DateTime @default(now()) @map("created_at")
 
   tenant Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   site   Site       @relation(fields: [siteId], references: [id], onDelete: Cascade)
@@ -654,14 +664,12 @@ model MenuItem {
 
 /**
  * Who is allowed to publish to the marketplace.
- *
- * A publisher IS their public key. The marketplace stores it once, and from then
- * on "is this package really from Z-SOFT?" is a signature check, not a trust
- * decision made per upload.
- *
+ * A publisher is the reviewed identity. Its signing keys are separate rows below
+ * because keys rotate, get retired, and sometimes get compromised. Treating the
+ * key as the publisher would make rotation either impossible or destructive.
  * `verified` is separate from `trusted` on purpose:
- *   verified — we confirmed the human/company is who they claim (email, VAT id)
- *   trusted  — their code may run with fewer restrictions (first-party only)
+ * verified — we confirmed the human/company is who they claim (email, VAT id)
+ * trusted  — their code may run with fewer restrictions (first-party only)
  * A verified publisher is still sandboxed. Identity is not permission.
  */
 model Publisher {
@@ -669,11 +677,8 @@ model Publisher {
   slug      String   @unique
   name      String
   email     String?
-  /** Ed25519 public key, SPKI PEM. Package signatures are checked against this. */
-  publicKey String   @unique @map("public_key")
   /**
    * The marketplace has confirmed this publisher is who they say they are.
-   *
    * An UNVERIFIED publisher can register and hold a key, but cannot publish: the
    * upload endpoint refuses them. Verification is what makes the publisher
    * signature mean something — without it, "signed by publisher X" only says the
@@ -686,16 +691,51 @@ model Publisher {
    * reserved for first-party code that may skip parts of that.
    */
   trusted   Boolean  @default(false)
-  /** The user who registered this publisher and may rotate its key. */
+  /**
+   * The user who registered this publisher and may manage its signing keys.
+   */
   ownerId   String?  @map("owner_id") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
 
-  owner   User?    @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  owner   User?          @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  keys    PublisherKey[]
   themes  Theme[]
   plugins Plugin[]
 
   @@index([ownerId])
   @@map("publishers")
+}
+
+/**
+ * A public signing key controlled by a publisher.
+ * Only ACTIVE keys may sign new submissions. RETIRED keys remain attached to
+ * old versions for audit/history but cannot be used for new uploads. COMPROMISED
+ * is stronger than RETIRED: it means reviewers should inspect or revoke versions
+ * signed by that key. REVOKED is for keys that were rejected or removed before
+ * becoming a valid signing key.
+ */
+model PublisherKey {
+  id           String             @id @default(uuid()) @db.Uuid
+  publisherId  String             @map("publisher_id") @db.Uuid
+  /**
+   * Ed25519 public key, SPKI PEM.
+   */
+  publicKey    String             @unique @map("public_key")
+  status       PublisherKeyStatus @default(PENDING)
+  label        String?
+  verifiedAt   DateTime?          @map("verified_at")
+  retiredAt    DateTime?          @map("retired_at")
+  revokedAt    DateTime?          @map("revoked_at")
+  revokeReason String?            @map("revoke_reason")
+  createdAt    DateTime           @default(now()) @map("created_at")
+
+  publisher      Publisher       @relation(fields: [publisherId], references: [id], onDelete: Cascade)
+  themeVersions  ThemeVersion[]
+  pluginVersions PluginVersion[]
+
+  @@index([publisherId])
+  @@index([status])
+  @@map("publisher_keys")
 }
 
 // ---------------------------------------------------------------------------
@@ -722,51 +762,59 @@ model Theme {
 }
 
 model ThemeVersion {
-  id      String @id @default(uuid()) @db.Uuid
-  themeId String @map("theme_id") @db.Uuid
-  version String
+  id                   String       @id @default(uuid()) @db.Uuid
+  themeId              String       @map("theme_id") @db.Uuid
+  version              String
   // The engine range this build is compatible with, e.g. ">=1.0.0 <2.0.0".
-  engine  String @default(">=0.1.0")
+  engine               String       @default(">=0.1.0")
   // Full theme.json: templates, features, menu locations, settings schema.
-  manifest Json
+  manifest             Json
   // Where this version came from. Decides which pinned key verifies it and how the
   // admin classifies it — see the Origin enum. No default: register* and the seed
   // each state it explicitly.
-  origin Origin
+  origin               Origin
   // Storage key of the signed .zcms package. NULL only for BUILTIN versions, which
   // ship inside site-runtime and therefore need no distribution.
-  bundleUrl String? @map("bundle_url")
-  /** SHA-256 of the package payload. Re-checked on disk before every load. */
-  checksum  String?
-  /** Ed25519 signature by the PUBLISHER over the checksum. */
-  publisherSignature String? @map("publisher_signature")
+  bundleUrl            String?      @map("bundle_url")
+  /**
+   * SHA-256 of the package payload. Re-checked on disk before every load.
+   */
+  checksum             String?
+  /**
+   * Ed25519 signature by the PUBLISHER over the checksum.
+   */
+  publisherSignature   String?      @map("publisher_signature")
+  /**
+   * Which publisher key signed this version. Null for legacy/imported packages.
+   */
+  publisherKeyId       String?      @map("publisher_key_id") @db.Uuid
   /**
    * Ed25519 signature by the MARKETPLACE. This is the one runtimes verify, using
    * a public key pinned in their own config — so a compromised cms-api still
    * cannot make a runtime execute code it did not sign.
    */
-  marketplaceSignature String? @map("marketplace_signature")
+  marketplaceSignature String?      @map("marketplace_signature")
   /**
    * Outcome of the static scan run at upload. APPROVED versions are servable;
    * QUARANTINED ones are stored but the bundle endpoint refuses to serve them
    * until a human clears them. A REJECTED package is never stored, so it never
    * reaches this table.
    */
-  reviewStatus ReviewStatus @default(PENDING) @map("review_status")
-  scanReport   Json?        @map("scan_report")
+  reviewStatus         ReviewStatus @default(PENDING) @map("review_status")
+  scanReport           Json?        @map("scan_report")
   /**
    * The kill switch. Set when a version already live on real sites is pulled.
-   *
    * REJECTED alone only stops NEW downloads — a runtime that already cached the
    * bundle keeps serving it, possibly for months. Revoking additionally purges
    * the runtimes' caches and falls affected sites back to safety.
    */
-  revokedAt    DateTime?    @map("revoked_at")
-  revokedReason String?     @map("revoked_reason")
-  createdAt DateTime @default(now()) @map("created_at")
+  revokedAt            DateTime?    @map("revoked_at")
+  revokedReason        String?      @map("revoked_reason")
+  createdAt            DateTime     @default(now()) @map("created_at")
 
-  theme      Theme       @relation(fields: [themeId], references: [id], onDelete: Cascade)
-  siteThemes SiteTheme[]
+  theme        Theme         @relation(fields: [themeId], references: [id], onDelete: Cascade)
+  publisherKey PublisherKey? @relation(fields: [publisherKeyId], references: [id], onDelete: SetNull)
+  siteThemes   SiteTheme[]
 
   @@unique([themeId, version])
   @@map("theme_versions")
@@ -774,17 +822,17 @@ model ThemeVersion {
 
 // Installation of a theme onto one site (TENANT table — RLS applies).
 model SiteTheme {
-  id        String      @id @default(uuid()) @db.Uuid
-  tenantId  String      @map("tenant_id") @db.Uuid
-  siteId    String      @map("site_id") @db.Uuid
-  themeId   String      @map("theme_id") @db.Uuid
-  versionId String      @map("version_id") @db.Uuid
+  id        String        @id @default(uuid()) @db.Uuid
+  tenantId  String        @map("tenant_id") @db.Uuid
+  siteId    String        @map("site_id") @db.Uuid
+  themeId   String        @map("theme_id") @db.Uuid
+  versionId String        @map("version_id") @db.Uuid
   status    InstallStatus @default(INACTIVE)
   // Values for the keys declared in the theme's settingsSchema. Kept as JSONB
   // so installing a theme never requires a migration.
-  settings  Json        @default("{}")
-  createdAt DateTime    @default(now()) @map("created_at")
-  updatedAt DateTime    @updatedAt @map("updated_at")
+  settings  Json          @default("{}")
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
 
   tenant  Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   site    Site         @relation(fields: [siteId], references: [id], onDelete: Cascade)
@@ -810,54 +858,59 @@ model Plugin {
   publisherId String?  @map("publisher_id") @db.Uuid
   createdAt   DateTime @default(now()) @map("created_at")
 
-  publisherRef Publisher?    @relation(fields: [publisherId], references: [id], onDelete: SetNull)
-  versions    PluginVersion[]
-  sitePlugins SitePlugin[]
-  data        PluginData[]
+  publisherRef Publisher?      @relation(fields: [publisherId], references: [id], onDelete: SetNull)
+  versions     PluginVersion[]
+  sitePlugins  SitePlugin[]
+  data         PluginData[]
 
   @@map("plugins")
 }
 
 model PluginVersion {
-  id          String   @id @default(uuid()) @db.Uuid
-  pluginId    String   @map("plugin_id") @db.Uuid
-  version     String
-  engine      String   @default(">=0.1.0")
-  manifest    Json
+  id                   String       @id @default(uuid()) @db.Uuid
+  pluginId             String       @map("plugin_id") @db.Uuid
+  version              String
+  engine               String       @default(">=0.1.0")
+  manifest             Json
   // Permissions the plugin requests; the admin approves these at install time.
-  permissions String[] @default([])
+  permissions          String[]     @default([])
   // Where this version came from — see the Origin enum. No default; set on insert.
-  origin      Origin
-  bundleUrl   String?  @map("bundle_url")
-  checksum    String?
-  publisherSignature   String? @map("publisher_signature")
-  marketplaceSignature String? @map("marketplace_signature")
-  reviewStatus ReviewStatus @default(PENDING) @map("review_status")
-  scanReport   Json?        @map("scan_report")
-  revokedAt    DateTime?    @map("revoked_at")
-  revokedReason String?     @map("revoked_reason")
-  createdAt   DateTime @default(now()) @map("created_at")
+  origin               Origin
+  bundleUrl            String?      @map("bundle_url")
+  checksum             String?
+  publisherSignature   String?      @map("publisher_signature")
+  /**
+   * Which publisher key signed this version. Null for legacy/imported packages.
+   */
+  publisherKeyId       String?      @map("publisher_key_id") @db.Uuid
+  marketplaceSignature String?      @map("marketplace_signature")
+  reviewStatus         ReviewStatus @default(PENDING) @map("review_status")
+  scanReport           Json?        @map("scan_report")
+  revokedAt            DateTime?    @map("revoked_at")
+  revokedReason        String?      @map("revoked_reason")
+  createdAt            DateTime     @default(now()) @map("created_at")
 
-  plugin      Plugin       @relation(fields: [pluginId], references: [id], onDelete: Cascade)
-  sitePlugins SitePlugin[]
+  plugin       Plugin        @relation(fields: [pluginId], references: [id], onDelete: Cascade)
+  publisherKey PublisherKey? @relation(fields: [publisherKeyId], references: [id], onDelete: SetNull)
+  sitePlugins  SitePlugin[]
 
   @@unique([pluginId, version])
   @@map("plugin_versions")
 }
 
 model SitePlugin {
-  id        String        @id @default(uuid()) @db.Uuid
-  tenantId  String        @map("tenant_id") @db.Uuid
-  siteId    String        @map("site_id") @db.Uuid
-  pluginId  String        @map("plugin_id") @db.Uuid
-  versionId String        @map("version_id") @db.Uuid
-  status    InstallStatus @default(INACTIVE)
-  settings  Json          @default("{}")
+  id                 String        @id @default(uuid()) @db.Uuid
+  tenantId           String        @map("tenant_id") @db.Uuid
+  siteId             String        @map("site_id") @db.Uuid
+  pluginId           String        @map("plugin_id") @db.Uuid
+  versionId          String        @map("version_id") @db.Uuid
+  status             InstallStatus @default(INACTIVE)
+  settings           Json          @default("{}")
   // Permissions the admin actually granted — may be a subset of those requested.
-  grantedPermissions String[] @default([]) @map("granted_permissions")
-  lastError String?       @map("last_error")
-  createdAt DateTime      @default(now()) @map("created_at")
-  updatedAt DateTime      @updatedAt @map("updated_at")
+  grantedPermissions String[]      @default([]) @map("granted_permissions")
+  lastError          String?       @map("last_error")
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
 
   tenant  Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   site    Site          @relation(fields: [siteId], references: [id], onDelete: Cascade)
@@ -871,12 +924,10 @@ model SitePlugin {
 
 /**
  * Scoped key-value storage for plugins.
- *
  * A marketplace plugin does NOT get to run migrations against the core schema —
  * that is how one bad plugin corrupts a CMS for everyone. It gets rows here,
  * namespaced by (plugin, site), and it can only ever see its own: the gateway
  * stamps plugin_id from the plugin's token, not from anything the plugin sends.
- *
  * Trusted first-party plugins that genuinely need tables get their own Postgres
  * schema (plugin_<name>) with a role scoped to it. Community plugins get this.
  */
@@ -923,7 +974,6 @@ model AuditLog {
 /**
  * What this instance knows about the marketplace it consumes from — and, above
  * all, WHEN it last knew it.
- *
  * A single row. It exists because the revocation sync is fail-open: an instance
  * that cannot reach the marketplace keeps serving the packages it has, because a
  * marketplace outage must not take a thousand customers' sites down with it.
@@ -931,24 +981,33 @@ model AuditLog {
  * able to ask for six weeks" look identical from the inside — so the age of the
  * answer is recorded and surfaced. An attacker who can hold an instance off the
  * network can delay a revocation; they cannot do it invisibly.
- *
  * Platform-level, like themes and publishers: no tenant column, no RLS. And in
  * the database rather than Redis, because staleness is a security signal and must
  * not be erased by a cache flush.
  */
 model MarketplaceSync {
-  id           String    @id @default("singleton")
-  /** When we last completed a sync — successfully or not. */
+  id            String    @id @default("singleton")
+  /**
+   * When we last completed a sync — successfully or not.
+   */
   lastAttemptAt DateTime? @map("last_attempt_at")
-  /** When we last ACCEPTED a signed list. This is the number that means anything. */
-  lastSyncedAt DateTime? @map("last_synced_at")
-  /** `issuedAt` of the newest list accepted. Anything older is a rollback and is refused. */
-  lastIssuedAt DateTime? @map("last_issued_at")
-  /** Why the last attempt failed, if it did. Unreachable, unsigned, forged, rolled back. */
-  lastError    String?   @map("last_error")
-  /** How many revocations the last accepted list carried. */
-  revokedCount Int       @default(0) @map("revoked_count")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  /**
+   * When we last ACCEPTED a signed list. This is the number that means anything.
+   */
+  lastSyncedAt  DateTime? @map("last_synced_at")
+  /**
+   * `issuedAt` of the newest list accepted. Anything older is a rollback and is refused.
+   */
+  lastIssuedAt  DateTime? @map("last_issued_at")
+  /**
+   * Why the last attempt failed, if it did. Unreachable, unsigned, forged, rolled back.
+   */
+  lastError     String?   @map("last_error")
+  /**
+   * How many revocations the last accepted list carried.
+   */
+  revokedCount  Int       @default(0) @map("revoked_count")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
   @@map("marketplace_sync")
 }
@@ -987,6 +1046,29 @@ enum ReviewStatus {
   REJECTED
 }
 
+enum PublisherKeyStatus {
+  /**
+   * Uploaded by a developer, waiting for Z-SOFT verification.
+   */
+  PENDING
+  /**
+   * May sign new package submissions.
+   */
+  ACTIVE
+  /**
+   * Kept for history, but refused for new submissions.
+   */
+  RETIRED
+  /**
+   * Removed or rejected before it was trusted for publishing.
+   */
+  REVOKED
+  /**
+   * Private half may be exposed; reviewers should inspect packages it signed.
+   */
+  COMPROMISED
+}
+
 enum InstallStatus {
   INSTALLING
   INACTIVE
@@ -999,7 +1081,6 @@ enum InstallStatus {
 /**
  * Where a package version came from — the single source of truth for how a runtime
  * verifies it and how the admin UI classifies it.
- *
  * It replaces two fragile proxies the code used to infer origin from: `bundleUrl IS
  * NULL` (meant "built-in") and `isCore` (seed-only). Both were binary and could not
  * express a third, genuinely different source. A runtime picks WHICH pinned key to

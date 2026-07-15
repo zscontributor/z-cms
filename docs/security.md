@@ -221,11 +221,15 @@ serving every tenant's data.
       endpoint — a CMS has no business shipping a Slack client) and log at error
       level regardless: `auth.session_theft_detected`, `auth.revoked_token_used`,
       `package.quarantined`, `job.dead_lettered`.
-- [x] Publisher accounts. `POST /publishers` registers one; a reviewer verifies
-      it. An **unverified publisher cannot publish** — registration is cheap and
-      proves nothing, and without the verification step "signed by X" only means
-      the uploader controls a key, not that X is anybody. Posting a PRIVATE key by
-      mistake is refused with a warning to rotate it.
+- [x] Publisher accounts and key rotation. `POST /publishers` registers the
+      identity; public keys live in `publisher_keys` and must be `ACTIVE` before
+      they can sign submissions. An **unverified publisher or key cannot publish**
+      — registration is cheap and proves nothing, and without the verification
+      step "signed by X" only means the uploader controls a key, not that X is
+      anybody. Retiring a key blocks future submissions without killing already
+      counter-signed packages; marking one `COMPROMISED` tells reviewers to inspect
+      or revoke versions signed by it. Posting a PRIVATE key by mistake is refused
+      with a warning to rotate it.
 - [x] A kill switch. `POST /packages/revoke/:kind/:key/:version` pulls a version
       that is already live: it marks it REJECTED, moves every affected site off it
       (a theme falls back to the built-in default, a plugin is QUARANTINED), and
