@@ -26,7 +26,14 @@ export default mergeConfig(
   }),
   {
     test: {
+      // The sandbox suite launches real worker threads under `isolated-vm`.
+      // In CI, letting Vitest fan those out across multiple workers increases the
+      // odds of a native crash. Run one fork and disable file-level parallelism so
+      // the attack harness stays deterministic and the host process remains stable.
       pool: "forks",
+      fileParallelism: false,
+      maxWorkers: 1,
+      minWorkers: 1,
     },
   },
 );

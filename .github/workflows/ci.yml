@@ -47,7 +47,8 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - name: Validate lockfile
+        run: pnpm verify:lockfile
       - run: pnpm verify:test-convention
       - run: pnpm build
       - run: pnpm typecheck
@@ -71,7 +72,8 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - name: Validate lockfile
+        run: pnpm verify:lockfile
       # ^build: some suites import a sibling package's built output (e.g. the
       # scanner builds real .zcms files with @zcmsorg/package).
       - run: pnpm build
@@ -116,7 +118,8 @@ jobs:
           node-version: 24
           cache: pnpm
 
-      - run: pnpm install --frozen-lockfile
+      - name: Validate lockfile
+        run: pnpm verify:lockfile
 
       # RLS is enforced by a role that owns nothing and cannot bypass policies.
       # The GitHub service container does not run our init SQL, so create it here

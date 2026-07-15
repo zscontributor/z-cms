@@ -30,7 +30,11 @@
 .gitlab-ci.yml
 **/*.log
 .DS_Store
-docs
+# The API runtime reads the checked-in docs directory at runtime for grounding
+# text and prompt context, so it must remain available in the build context.
+docs/
+!docs/
+!docs/**
 *.md
 z-cms-portal.html
 

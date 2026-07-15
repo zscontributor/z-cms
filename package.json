@@ -13,6 +13,7 @@
     "lint": "turbo run lint",
     "test": "turbo run test",
     "test:coverage": "turbo run test:coverage",
+    "verify:lockfile": "pnpm install --frozen-lockfile",
     "verify:test-convention": "node scripts/verify-test-convention.mjs",
     "db:generate": "pnpm --filter @zcmsorg/database --fail-if-no-match generate",
     "db:migrate": "pnpm --filter @zcmsorg/database --fail-if-no-match migrate",
