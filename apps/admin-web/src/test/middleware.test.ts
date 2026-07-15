@@ -66,11 +66,12 @@ describe("middleware", () => {
     expect(response.headers.get("location")).toBeNull();
   });
 
-  it("bounces an already-authenticated user away from /login", async () => {
+  it("lets the login page validate a cookie instead of creating a redirect loop", async () => {
     const response = await middleware(request("/login", { [ACCESS_TOKEN_COOKIE]: "at" }));
 
-    const redirectUrl = new URL(response.headers.get("location") as string);
-    expect(redirectUrl.pathname).toBe("/");
+    // A cookie can be expired or invalid. The login page's getMe() call is the
+    // authority: it redirects a valid session and renders for a stale one.
+    expect(response.headers.get("location")).toBeNull();
   });
 
   it("lets an unauthenticated user reach /login", async () => {

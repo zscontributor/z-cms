@@ -34,9 +34,10 @@ export async function middleware(request: NextRequest) {
   const isLoginPage = pathname === "/login";
 
   if (isLoginPage) {
-    if (accessToken || refreshToken) {
-      return secure(NextResponse.redirect(new URL("/", request.url)), nonce);
-    }
+    // Cookie presence is not proof of authentication. An expired or otherwise
+    // invalid access token used to bounce /login to / here; the authenticated
+    // layout then rejected it and bounced / back to /login forever. Let the
+    // login page call getMe() and redirect genuinely authenticated users itself.
     return secure(NextResponse.next(forward), nonce);
   }
 
