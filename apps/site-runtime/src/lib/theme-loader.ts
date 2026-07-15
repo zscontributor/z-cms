@@ -209,7 +209,7 @@ export async function ensureThemeAssets(
   const builtIn = key === DEFAULT_KEY || builtinThemeKeys().includes(key);
 
   if (builtIn) {
-    await loadBuiltinBundle(key);
+    await loadBuiltinBundle(key, version);
   } else if (origin === "SIDELOAD") {
     await loadOperatorBundle(key, version, checksum);
   } else {
@@ -260,7 +260,7 @@ async function loadUncached(
     // code we signed?". The route is chosen HERE, from the guard and the origin
     // cms-api reported — never from anything inside the package.
     const bundle = builtIn
-      ? await loadBuiltinBundle(key)
+      ? await loadBuiltinBundle(key, version)
       : origin === "SIDELOAD"
         ? await loadOperatorBundle(key, version, checksum)
         : await loadMarketplaceBundle(key, version, checksum);
@@ -306,7 +306,7 @@ async function loadUncached(
 }
 
 /** A theme we ship. Verified against the first-party key; no network, no marketplace. */
-async function loadBuiltinBundle(key: string): Promise<InstalledBundle> {
+async function loadBuiltinBundle(key: string, version: string): Promise<InstalledBundle> {
   const pinned = firstPartyPublicKey();
   if (!pinned) {
     throw new Error(
@@ -324,6 +324,7 @@ async function loadBuiltinBundle(key: string): Promise<InstalledBundle> {
     },
     "theme",
     key,
+    version,
   );
 }
 

@@ -221,6 +221,7 @@ export async function ensureBuiltinBundle(
   cfg: BuiltinLoaderConfig,
   kind: PackageKind,
   key: string,
+  requestedVersion?: string,
 ): Promise<InstalledBundle> {
   if (!cfg.firstPartyPublicKey) {
     throw new PackageError(
@@ -228,7 +229,17 @@ export async function ensureBuiltinBundle(
     );
   }
 
-  for (const file of builtinPackageFiles(cfg.root)) {
+  // A runtime normally knows the exact immutable version selected for the site.
+  // Narrow by the operator-controlled package filename before opening anything,
+  // otherwise an unrelated built-in signed with an older key can prevent every
+  // later package in the directory scan from loading. The package itself is still
+  // verified below and its manifest must still match both id and version.
+  const expectedFile = requestedVersion ? `${key}-${requestedVersion}.zcms` : null;
+  const files = builtinPackageFiles(cfg.root).filter(
+    (file) => expectedFile === null || path.basename(file) === expectedFile,
+  );
+
+  for (const file of files) {
     const { envelope, payload } = await openPackage(fs.readFileSync(file));
 
     // Before the manifest is read out of it, and long before anything is imported.
@@ -236,7 +247,12 @@ export async function ensureBuiltinBundle(
     // rather than skipped on the strength of its own unverified manifest.
     verifyFirstParty(envelope, payload, cfg.firstPartyPublicKey);
 
-    if (envelope.manifest.id !== key) continue;
+    if (
+      envelope.manifest.id !== key ||
+      (requestedVersion !== undefined && envelope.manifest.version !== requestedVersion)
+    ) {
+      continue;
+    }
 
     const version = envelope.manifest.version;
     const dir = bundleDir(

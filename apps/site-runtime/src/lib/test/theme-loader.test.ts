@@ -104,6 +104,7 @@ describe("loadTheme", () => {
       expect.objectContaining({ firstPartyPublicKey: expect.stringContaining("firstparty") }),
       "theme",
       key,
+      "1.1.0",
     );
     expect(ensureBundle).not.toHaveBeenCalled();
     expect(loaded.degraded).toBe(false);
@@ -289,6 +290,7 @@ describe("loadTheme — the operator (sideload) route", () => {
       expect.objectContaining({ firstPartyPublicKey: expect.stringContaining("firstparty") }),
       "theme",
       key,
+      "1.1.0",
     );
     expect(ensureBundle).not.toHaveBeenCalled();
     expect(loaded.degraded).toBe(false);
