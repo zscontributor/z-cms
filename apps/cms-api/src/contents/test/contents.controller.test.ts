@@ -38,19 +38,19 @@ describe("ContentsController", () => {
 
   describe("list", () => {
     it("clamps an absurdly large perPage down to 100", async () => {
-      await makeController().list("s1", undefined, undefined, undefined, "1", "100000");
+      await makeController().list("s1", undefined, undefined, undefined, undefined, "1", "100000");
 
       expect(service.list.mock.calls[0][1].perPage).toBe(100);
     });
 
     it("refuses a negative page, flooring it to 1", async () => {
-      await makeController().list("s1", undefined, undefined, undefined, "-5", "20");
+      await makeController().list("s1", undefined, undefined, undefined, undefined, "-5", "20");
 
       expect(service.list.mock.calls[0][1].page).toBe(1);
     });
 
     it("falls back to defaults for non-numeric pagination", async () => {
-      await makeController().list("s1", undefined, undefined, undefined, "abc", "xyz");
+      await makeController().list("s1", undefined, undefined, undefined, undefined, "abc", "xyz");
 
       const query = service.list.mock.calls[0][1];
       expect(query.page).toBe(1);
@@ -58,11 +58,12 @@ describe("ContentsController", () => {
     });
 
     it("passes the site id straight through to the service", async () => {
-      await makeController().list("s1", "post", "PUBLISHED", "hello", "2", "10");
+      await makeController().list("s1", "post", "PUBLISHED", "vi", "hello", "2", "10");
 
       expect(service.list).toHaveBeenCalledWith("s1", {
         contentTypeKey: "post",
         status: "PUBLISHED",
+        locale: "vi",
         search: "hello",
         page: 2,
         perPage: 10,
