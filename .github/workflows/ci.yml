@@ -192,16 +192,17 @@ jobs:
 
   # Advisory, not blocking: a transitive CVE with no patch available should not
   # stop a security fix from shipping. It should still be loudly visible.
+  #
+  # `pnpm audit` is not used: it POSTs to npm's quick-audit endpoint
+  # (/-/npm/v1/security/audits), which npm retired (HTTP 410). osv-scanner reads
+  # the lockfile directly against the OSV database instead — no install needed.
   audit:
     name: Dependency audit
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
       - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v5
-      - uses: actions/setup-node@v5
+      - uses: google/osv-scanner-action/osv-scanner-action@v2.3.8
         with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm audit --audit-level=high
+          scan-args: |-
+            --lockfile=pnpm-lock.yaml

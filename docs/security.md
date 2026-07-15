@@ -213,7 +213,7 @@ serving every tenant's data.
 - [x] Security headers + a **nonce-based CSP** on site-runtime and admin-web
       (verified in a real browser: zero violations). No `'unsafe-inline'` for
       scripts.
-- [x] Dependency scanning (`pnpm audit --audit-level=high`) in CI. Advisory, not
+- [x] Dependency scanning (`osv-scanner` against `pnpm-lock.yaml`) in CI. Advisory, not
       blocking: a transitive CVE with no available patch must not stop a security
       fix from shipping. Two moderate advisories in build tooling (postcss, and
       @hono/node-server via prisma) are pinned past them with `pnpm.overrides`.
