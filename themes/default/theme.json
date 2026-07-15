@@ -11,20 +11,9 @@
   "engine": ">=0.1.0",
   "entry": "dist/index.mjs",
   "styles": "dist/theme.css",
-  "templates": [
-    "home",
-    "page",
-    "post",
-    "archive",
-    "notFound",
-    "error"
-  ],
-  "optionalCapabilities": [
-    "ai.assistant"
-  ],
-  "integrationSlots": [
-    "floating"
-  ],
+  "templates": ["home", "page", "post", "archive", "notFound", "error"],
+  "optionalCapabilities": ["ai.assistant"],
+  "integrationSlots": ["floating"],
   "menuLocations": [
     {
       "key": "primary",
@@ -36,16 +25,13 @@
     }
   ],
   "colorModes": {
-    "supports": [
-      "light",
-      "dark"
-    ],
+    "supports": ["light", "dark"],
     "default": "system"
   },
   "collections": {
     "latest": {
       "contentType": "post",
-      "limit": 3,
+      "limit": 6,
       "sort": "newest"
     }
   },
@@ -135,11 +121,7 @@
         "type": "string",
         "title": "Default colour mode",
         "description": "Where a first-time visitor starts. \"System\" follows their device. Either way, a visitor who uses the switch keeps their own choice.",
-        "enum": [
-          "system",
-          "light",
-          "dark"
-        ],
+        "enum": ["system", "light", "dark"],
         "default": "system"
       },
       "showSearch": {
@@ -584,19 +566,25 @@
       {
         "contentType": "post",
         "locale": "en",
-        "slug": "why-themes-are-signed-packages",
-        "title": "Why Z-CMS themes are signed packages",
-        "translationGroup": "default-post-1",
-        "excerpt": "Installing a theme means running someone else's code on your site. Here is what Z-CMS does about that.",
+        "slug": "why-z-cms-uses-v8-isolates-instead-of-nodejs-vm",
+        "title": "Why Z-CMS Uses V8 Isolates Instead of Node.js VM",
+        "translationGroup": "default-architecture-1",
+        "excerpt": "Building a safer plugin runtime for a modern open-source CMS",
         "data": {
           "readingTime": 4
         },
+        "seo": {
+          "title": "Why Z-CMS Uses V8 Isolates Instead of Node.js VM",
+          "description": "Building a safer plugin runtime for a modern open-source CMS"
+        },
+        "status": "PUBLISHED",
+        "publishedAt": "2026-07-10T02:00:00.000Z",
         "blocks": [
           {
-            "id": "post1-body-en",
+            "id": "default-architecture-1-en",
             "type": "core/richtext",
             "props": {
-              "html": "<p>\"Install a theme\" is a friendly phrase for something quite serious: downloading code from the internet and running it on your server, inside your site, with access to your content.</p><p>Z-CMS treats a theme as what it is — a package — and makes it prove three things before it will load.</p><h2>It has not been tampered with</h2><p>A package carries the SHA-256 checksum of its own payload. The runtime hashes the bytes it actually received and compares the two. A single flipped byte and the package is refused.</p><h2>Somebody signed it</h2><p>The author signs that checksum with an Ed25519 key that never leaves their machine. The marketplace verifies the signature against the public key it holds on record for that publisher — not the key bundled inside the package, which would be like checking a passport against the photo printed in it.</p><h2>The marketplace let it in</h2><p>Once a package is accepted — scanned, reviewed, approved — the marketplace counter-signs it. The runtime verifies <em>that</em> signature against a key pinned in its own configuration. A package nobody at Z-SOFT has ever seen does not run, however well its author signed it.</p><p>And when something does go wrong, a signed revocation list is the kill switch: the version disappears from the catalogue, every runtime drops it, and the site falls back to the default theme rather than going down.</p>"
+              "html": "<h2>The architectural question behind the plugin system</h2><p>When we started designing the plugin system for Z-CMS, the central question was not how to load another JavaScript module. The real question was how to let third-party developers extend the CMS without giving every plugin unrestricted control over the server.</p><p><em>How can a plugin be powerful enough to extend the platform, but isolated enough that one defect does not destabilize the entire CMS?</em></p><p>A plugin may contain a bug, consume excessive memory, block the event loop, access data outside its scope, or intentionally attempt to use sensitive operating-system capabilities. If every plugin runs directly inside the same Node.js runtime as the CMS Core, one plugin can affect every tenant and every request.</p><h2>The traditional Node.js approach</h2><p>A basic plugin loader can use require() or dynamic import. It is easy to understand and fast to implement:</p><pre><code>const plugin = await import(pluginPath);\n\nawait plugin.activate({\n  database,\n  cache,\n  logger,\n});</code></pre><p>The problem is that the plugin now shares the same process, event loop, memory space, environment variables and Node.js APIs as the Core. Even accidental code can create a serious incident.</p><pre><code>while (true) {\n  // A broken plugin blocks the event loop.\n}</code></pre><pre><code>const values = [];\nwhile (true) {\n  values.push(new Array(1_000_000).fill(&quot;memory&quot;));\n}</code></pre><h2>Why Node.js vm is not the final security boundary</h2><p>The built-in vm module can create a separate JavaScript context. It is useful for controlled scripting, but the context still lives in the same V8 isolate and the same operating-system process. It therefore shares the event loop, process memory and garbage collector with the CMS Core.</p><pre><code>import vm from &quot;node:vm&quot;;\n\nconst context = vm.createContext({ console });\nvm.runInContext(`console.log(&quot;Plugin running&quot;)`, context);</code></pre><p>For Z-CMS, context separation alone was not enough. The runtime needed independent memory limits, execution timeouts and lifecycle control.</p><h2>The V8 Isolate model</h2><p>A V8 Isolate is an independent JavaScript execution environment inside the V8 engine. Each isolate has its own heap, global object, execution context and garbage collector.</p><pre><code>Z-CMS Plugin Runtime\n│\n├── SEO Plugin\n│   └── V8 Isolate\n├── Payment Plugin\n│   └── V8 Isolate\n├── Analytics Plugin\n│   └── V8 Isolate\n└── AI Assistant Plugin\n    └── V8 Isolate</code></pre><p>A plugin cannot automatically access process.env, the host filesystem, child_process or the Core’s internal objects. It only receives capabilities that Z-CMS intentionally exposes.</p><h2>Capability-based APIs</h2><p>Instead of exposing the Node.js runtime, Z-CMS provides a controlled SDK. A plugin may use content, storage, cache, event, logging, HTTP or settings capabilities according to its manifest.</p><pre><code>export default definePlugin({\n  async activate(cms) {\n    const posts = await cms.content.findMany({\n      type: &quot;post&quot;,\n      limit: 10,\n    });\n\n    cms.logger.info(`Loaded ${posts.length} posts`);\n  },\n});</code></pre><pre><code>{\n  &quot;name&quot;: &quot;@z-cms/plugin-seo&quot;,\n  &quot;permissions&quot;: [\n    &quot;content:read&quot;,\n    &quot;content:update&quot;,\n    &quot;settings:read&quot;,\n    &quot;settings:write&quot;\n  ]\n}</code></pre><p>Every bridge call is validated. If a plugin does not have storage:write, a write operation is rejected even when the plugin attempts to invoke the method.</p><h2>CPU, timeout and memory limits</h2><p>Hooks that run inside a request lifecycle must never execute forever. Z-CMS can assign a maximum duration to each execution and terminate or recycle an isolate when it exceeds the policy.</p><pre><code>await runtime.executeHook({\n  pluginId: &quot;plugin-seo&quot;,\n  hook: &quot;content.beforePublish&quot;,\n  timeout: 2_000,\n});</code></pre><p>Memory policies can also be declared per plugin. Small plugins may receive a modest heap, while approved processing plugins can receive a larger allocation.</p><pre><code>{\n  &quot;runtime&quot;: {\n    &quot;memoryLimitMb&quot;: 64,\n    &quot;timeoutMs&quot;: 2000\n  }\n}</code></pre><h2>An isolate is not automatically a perfect sandbox</h2><p>Isolation is only as strong as the bridge exposed by the host. If the Core provides an unsafe system command API, the isolate cannot compensate for that design. Z-CMS therefore follows several rules:</p><ul><li>Do not expose raw Node.js APIs or database connections.</li><li>Do not expose unrestricted filesystem or network access.</li><li>Validate and serialize all values crossing the runtime boundary.</li><li>Apply tenant, user and plugin permission checks inside the Core.</li><li>Apply timeouts to bridge operations and log sensitive actions.</li></ul><h2>Why not one container per plugin?</h2><p>Containers offer stronger operating-system isolation, but they add image distribution, network management, service discovery, startup latency, logging complexity and significant resource overhead. For ordinary plugin business logic, isolates provide a practical balance between isolation, startup speed and operational cost.</p><h2>Failure containment</h2><pre><code>Traditional model:\nPlugin crash → Node.js process crash → CMS unavailable\n\nIsolate model:\nPlugin crash → Isolate terminated → Error recorded → CMS continues</code></pre><p>Repeated failures can trigger a circuit breaker that temporarily suspends the plugin while the rest of the platform remains healthy.</p><h2>Conclusion</h2><p>Z-CMS uses V8 Isolates because plugin isolation is not an optional feature for a marketplace-driven CMS. It is part of the platform foundation. Each plugin receives an independent runtime, explicit capabilities, resource limits and a controllable lifecycle. The approach does not eliminate every security risk, but it creates a much safer and more observable environment than loading third-party code directly into the Core process.</p><p><strong>GitHub:</strong> <a href=\"https://github.com/zscontributor/z-cms\" target=\"_blank\" rel=\"noopener noreferrer\">https://github.com/zscontributor/z-cms</a><br><strong>Website:</strong> <a href=\"https://z-cms.org\" target=\"_blank\" rel=\"noopener noreferrer\">https://z-cms.org</a></p>"
             }
           }
         ]
@@ -604,19 +592,25 @@
       {
         "contentType": "post",
         "locale": "ja",
-        "slug": "why-themes-are-signed-packages",
-        "title": "Z-CMS のテーマが署名付きパッケージである理由",
-        "translationGroup": "default-post-1",
-        "excerpt": "テーマのインストールとは、他人のコードを自分のサイトで動かすこと。Z-CMS はそれにどう向き合っているか。",
+        "slug": "why-z-cms-uses-v8-isolates-instead-of-nodejs-vm",
+        "title": "Z-CMS が Node.js VM ではなく V8 Isolate を採用する理由",
+        "translationGroup": "default-architecture-1",
+        "excerpt": "モダンな open-source CMS のための、より安全な plugin runtime 設計",
         "data": {
-          "readingTime": 4
+          "readingTime": 6
         },
+        "seo": {
+          "title": "Z-CMS が Node.js VM ではなく V8 Isolate を採用する理由",
+          "description": "モダンな open-source CMS のための、より安全な plugin runtime 設計"
+        },
+        "status": "PUBLISHED",
+        "publishedAt": "2026-07-10T02:00:00.000Z",
         "blocks": [
           {
-            "id": "post1-body-ja",
+            "id": "default-architecture-1-ja",
             "type": "core/richtext",
             "props": {
-              "html": "<p>「テーマをインストールする」という言い回しは親しみやすいものですが、実際に起きているのは、インターネットからコードをダウンロードし、自分のサーバーで、自分のサイトの中で、自分のコンテンツにアクセスできる状態で実行する、ということです。</p><p>Z-CMS はテーマをありのまま — ひとつのパッケージとして — 扱い、読み込む前に 3 つのことを証明させます。</p><h2>改ざんされていないこと</h2><p>パッケージは自身のペイロードの SHA-256 チェックサムを持ちます。ランタイムは実際に受け取ったバイト列をハッシュ化して比較します。1 バイトでも違えば読み込みは拒否されます。</p><h2>誰かが署名したこと</h2><p>作者は、手元から出ることのない Ed25519 の鍵でそのチェックサムに署名します。マーケットプレイスは、その発行者について記録している公開鍵で検証します。パッケージに同梱された鍵ではありません。それでは、パスポートを中に印刷された写真と照合するようなものだからです。</p><h2>マーケットプレイスが受け入れたこと</h2><p>スキャンされ、レビューされ、承認されたパッケージには、マーケットプレイスが副署名を付けます。ランタイムは<em>その</em>署名を、自身の設定に固定された鍵で検証します。Z-SOFT の誰も見たことのないパッケージは、作者がどれほど正しく署名していても動きません。</p><p>そして問題が起きたときは、署名付きの失効リストが緊急停止装置になります。該当バージョンはカタログから消え、すべてのランタイムがそれを破棄し、サイトは停止せずデフォルトテーマにフォールバックします。</p>"
+              "html": "<h2>Plugin system の背後にある設計課題</h2><p>Z-CMS の plugin system を設計する際、中心となった問いは「別の JavaScript module をどう load するか」ではありませんでした。本当の課題は、third-party developer に CMS を拡張する自由を与えながら、各 plugin に server への無制限な権限を与えないことです。</p><p>Plugin は platform を十分に拡張できる必要があります。一方で、単一の bug、memory leak、無限 loop が CMS 全体を不安定にしない程度に isolation されていなければなりません。すべての plugin を CMS Core と同じ Node.js runtime で動かすと、1 つの plugin が全 tenant と全 request に影響を与える可能性があります。</p><h2>従来の Node.js アプローチ</h2><p>基本的な plugin loader は require() や dynamic import で実装できます。分かりやすく短期間で作れますが、plugin は Core と同じ process、event loop、memory space、environment variables、Node.js APIs を共有します。意図しないコードでも重大な incident を引き起こし得ます。</p><h2>Node.js vm が最終的な security boundary ではない理由</h2><p>標準の vm module は独立した JavaScript context を作成できます。Controlled scripting には有効ですが、その context は同じ V8 Isolate、同じ operating-system process の中に存在します。そのため event loop、process memory、garbage collector は CMS Core と共有されます。</p><p>Z-CMS が必要としたのは context separation だけではなく、plugin ごとの independent memory limit、execution timeout、lifecycle control です。</p><pre><code>CMS Core\n│\n├── Plugin SEO\n│   └── V8 Isolate\n├── Plugin AI\n│   └── V8 Isolate\n└── Plugin Analytics\n    └── V8 Isolate</code></pre><h2>V8 Isolate モデル</h2><p>V8 Isolate は V8 engine 内の独立した JavaScript execution environment です。各 isolate は専用の heap、global object、execution context、garbage collector を持ちます。</p><p>Plugin は process.env、host filesystem、child_process、Core 内部 object に自動的にはアクセスできません。Z-CMS が明示的に expose した capability だけを受け取ります。</p><h2>Capability-based API</h2><p>Z-CMS は Node.js runtime 全体を expose せず、管理された SDK を提供します。Plugin は manifest に従って content、storage、cache、event、logging、HTTP、settings capability を利用します。</p><p>すべての bridge call は Core 側で validate されます。storage:write permission を持たない plugin が write method を呼んでも、その operation は拒否されます。</p><pre><code>{\n  &quot;name&quot;: &quot;@z-cms/plugin-seo&quot;,\n  &quot;permissions&quot;: [\n    &quot;content:read&quot;,\n    &quot;content:update&quot;,\n    &quot;settings:read&quot;\n  ],\n  &quot;runtime&quot;: {\n    &quot;memoryLimitMb&quot;: 64,\n    &quot;timeoutMs&quot;: 2000\n  }\n}</code></pre><h2>CPU、timeout、memory limit</h2><p>Request lifecycle 内で実行される hook は無期限に動作してはいけません。Z-CMS は execution ごとに maximum duration を設定し、policy を超えた isolate を terminate または recycle できます。</p><p>Memory policy も plugin 単位で定義できます。小規模 plugin には小さな heap を割り当て、承認済みの processing plugin にはより大きな allocation を与えます。</p><h2>Isolate だけで完全な sandbox になるわけではない</h2><p>Isolation の強度は host が expose する bridge に依存します。Core が危険な system command API を提供すれば、isolate では補えません。Z-CMS は raw Node.js API や database connection を expose せず、filesystem と network access を制限し、runtime boundary を越える値を validate・serialize し、tenant・user・plugin permission を Core で enforce します。</p><h2>Plugin ごとに container を使わない理由</h2><p>Container は強い operating-system isolation を提供しますが、image distribution、network management、service discovery、startup latency、logging complexity、resource overhead が増えます。一般的な plugin business logic では、V8 Isolate が isolation、startup speed、operational cost の現実的なバランスになります。</p><h2>Failure containment と結論</h2><p>Plugin が失敗した場合、isolate だけを terminate し、CMS Core は稼働を継続できます。Repeated failure には circuit breaker を適用し、platform 全体を維持したまま plugin を一時 suspend できます。</p><p>Marketplace-driven CMS において plugin isolation は付加機能ではなく platform foundation です。V8 Isolate により、各 plugin に独立 runtime、explicit capability、resource limit、制御可能な lifecycle を提供できます。</p><h2>Key takeaways</h2><ul><li>Security boundary は plugin の善意ではなく Core 側で enforce する必要があります。</li><li>Lifecycle、permission、tenant context、observability は同じ platform contract の一部です。</li><li>優れた developer experience は、安全な runtime と supply chain の設計によって持続可能になります。</li></ul><p><strong>GitHub:</strong> <a href=\"https://github.com/zscontributor/z-cms\" target=\"_blank\" rel=\"noopener noreferrer\">https://github.com/zscontributor/z-cms</a><br><strong>Website:</strong> <a href=\"https://z-cms.org\" target=\"_blank\" rel=\"noopener noreferrer\">https://z-cms.org</a></p>"
             }
           }
         ]
@@ -624,19 +618,25 @@
       {
         "contentType": "post",
         "locale": "vi",
-        "slug": "vi-sao-theme-can-chu-ky-so",
-        "title": "Vì sao theme của Z-CMS là package có chữ ký số",
-        "translationGroup": "default-post-1",
-        "excerpt": "Cài một theme nghĩa là chạy code của người khác trên site của bạn. Đây là cách Z-CMS xử lý chuyện đó.",
+        "slug": "vi-sao-z-cms-su-dung-v8-isolate-thay-vi-nodejs-vm",
+        "title": "Vì sao Z-CMS sử dụng V8 Isolate thay vì Node.js VM",
+        "translationGroup": "default-architecture-1",
+        "excerpt": "Xây dựng plugin runtime an toàn hơn cho một open-source CMS hiện đại",
         "data": {
           "readingTime": 4
         },
+        "seo": {
+          "title": "Vì sao Z-CMS sử dụng V8 Isolate thay vì Node.js VM",
+          "description": "Xây dựng plugin runtime an toàn hơn cho một open-source CMS hiện đại"
+        },
+        "status": "PUBLISHED",
+        "publishedAt": "2026-07-10T02:00:00.000Z",
         "blocks": [
           {
-            "id": "post1-body-vi",
+            "id": "default-architecture-1-vi",
             "type": "core/richtext",
             "props": {
-              "html": "<p>\"Cài một theme\" nghe rất nhẹ nhàng, nhưng thực chất là: tải code từ Internet về, chạy nó trên máy chủ của bạn, bên trong site của bạn, với quyền truy cập nội dung của bạn.</p><p>Z-CMS coi theme đúng như bản chất của nó — một package — và bắt nó chứng minh ba điều trước khi được nạp.</p><h2>Nó chưa bị sửa đổi</h2><p>Mỗi package mang theo checksum SHA-256 của chính phần payload của nó. Runtime băm đúng những byte nó thực sự nhận được rồi đem so sánh. Chỉ cần sai một byte là package bị từ chối.</p><h2>Có người đã ký nó</h2><p>Tác giả ký checksum đó bằng khóa Ed25519 không bao giờ rời khỏi máy của họ. Marketplace xác minh chữ ký bằng khóa công khai đã lưu cho publisher đó — chứ không phải khóa nằm trong package, vì làm vậy chẳng khác nào kiểm tra hộ chiếu bằng chính tấm ảnh in trong hộ chiếu.</p><h2>Marketplace đã chấp nhận nó</h2><p>Khi một package được chấp nhận — quét mã độc, duyệt, phê duyệt — marketplace ký thêm chữ ký thứ hai lên nó. Runtime xác minh <em>chữ ký đó</em> bằng khóa được ghim trong chính cấu hình của mình. Một package chưa ai ở Z-SOFT nhìn thấy thì không chạy, dù tác giả có ký chuẩn đến đâu.</p><p>Và khi có sự cố, danh sách thu hồi (có chữ ký) chính là công tắc ngắt: phiên bản đó biến mất khỏi catalogue, mọi runtime gỡ nó xuống, và site quay về theme mặc định thay vì sập.</p>"
+              "html": "<h2>Câu hỏi kiến trúc phía sau plugin system</h2><p>Khi bắt đầu thiết kế plugin system cho Z-CMS, câu hỏi trung tâm không phải là làm thế nào để load thêm một JavaScript module. Vấn đề thực sự là làm sao cho phép third-party developer mở rộng CMS mà không trao cho mọi plugin quyền kiểm soát không giới hạn đối với server.</p><p>Một plugin phải đủ mạnh để mở rộng platform, nhưng cũng phải đủ cô lập để một bug, memory leak hoặc đoạn code chạy vô hạn không làm mất ổn định toàn bộ CMS. Nếu tất cả plugin chạy trực tiếp trong cùng Node.js runtime với CMS Core, một plugin có thể ảnh hưởng đến mọi tenant và mọi request.</p><h2>Cách tiếp cận Node.js truyền thống</h2><p>Một plugin loader cơ bản có thể dùng require() hoặc dynamic import. Cách này dễ hiểu và nhanh triển khai, nhưng plugin sẽ chia sẻ cùng process, event loop, memory space, environment variables và Node.js APIs với Core. Ngay cả một lỗi vô tình cũng có thể trở thành sự cố nghiêm trọng.</p><h2>Vì sao Node.js vm chưa phải security boundary cuối cùng</h2><p>Module vm tích hợp sẵn có thể tạo JavaScript context riêng. Nó hữu ích cho controlled scripting, nhưng context vẫn nằm trong cùng V8 Isolate và cùng operating-system process. Vì vậy, nó vẫn chia sẻ event loop, process memory và garbage collector với CMS Core.</p><p>Z-CMS cần nhiều hơn context separation: independent memory limits, execution timeout và lifecycle control cho từng plugin.</p><pre><code>CMS Core\n│\n├── Plugin SEO\n│   └── V8 Isolate\n├── Plugin AI\n│   └── V8 Isolate\n└── Plugin Analytics\n    └── V8 Isolate</code></pre><h2>Mô hình V8 Isolate</h2><p>V8 Isolate là một JavaScript execution environment độc lập bên trong V8 engine. Mỗi isolate có heap, global object, execution context và garbage collector riêng.</p><p>Plugin không tự động truy cập được process.env, host filesystem, child_process hoặc các object nội bộ của Core. Nó chỉ nhận những capability mà Z-CMS chủ động expose.</p><h2>Capability-based API</h2><p>Thay vì expose toàn bộ Node.js runtime, Z-CMS cung cấp một SDK có kiểm soát. Plugin có thể sử dụng content, storage, cache, event, logging, HTTP hoặc settings capability theo manifest của nó.</p><p>Mọi bridge call đều được validate. Nếu plugin không có permission storage:write, thao tác ghi sẽ bị từ chối ngay cả khi plugin cố gọi method tương ứng.</p><pre><code>{\n  &quot;name&quot;: &quot;@z-cms/plugin-seo&quot;,\n  &quot;permissions&quot;: [\n    &quot;content:read&quot;,\n    &quot;content:update&quot;,\n    &quot;settings:read&quot;\n  ],\n  &quot;runtime&quot;: {\n    &quot;memoryLimitMb&quot;: 64,\n    &quot;timeoutMs&quot;: 2000\n  }\n}</code></pre><h2>CPU, timeout và memory limits</h2><p>Hook chạy trong request lifecycle không được phép chạy vô hạn. Z-CMS có thể đặt maximum duration cho từng execution và terminate hoặc recycle isolate khi vượt policy.</p><p>Memory policy cũng có thể khai báo theo plugin. Plugin nhỏ nhận heap giới hạn, trong khi plugin xử lý dữ liệu đã được phê duyệt có thể được cấp allocation lớn hơn.</p><h2>Isolate không tự động là sandbox hoàn hảo</h2><p>Mức độ an toàn phụ thuộc vào bridge do host expose. Nếu Core cung cấp một API system command nguy hiểm, isolate không thể bù cho sai lầm thiết kế đó. Vì vậy Z-CMS không expose raw Node.js API hoặc database connection; không cấp filesystem hay network access không giới hạn; validate và serialize dữ liệu qua runtime boundary; enforce tenant, user và plugin permission trong Core; đồng thời áp dụng timeout và audit log cho thao tác nhạy cảm.</p><h2>Vì sao không dùng một container cho mỗi plugin?</h2><p>Container cung cấp operating-system isolation mạnh hơn, nhưng kéo theo image distribution, network management, service discovery, startup latency, logging complexity và resource overhead. Với phần lớn plugin business logic, V8 Isolate tạo được cân bằng thực tế giữa isolation, startup speed và operational cost.</p><h2>Failure containment và kết luận</h2><p>Khi plugin lỗi, isolate có thể bị terminate mà CMS Core vẫn tiếp tục chạy. Repeated failures có thể kích hoạt circuit breaker để tạm suspend plugin trong khi phần còn lại của platform vẫn healthy.</p><p>Z-CMS sử dụng V8 Isolate vì plugin isolation không phải tính năng phụ trong một marketplace-driven CMS. Mỗi plugin nhận runtime độc lập, explicit capability, resource limit và lifecycle có thể kiểm soát. Cách tiếp cận này không loại bỏ mọi security risk, nhưng an toàn và dễ quan sát hơn nhiều so với load third-party code trực tiếp vào Core process.</p><h2>Key takeaways</h2><ul><li>Security boundary phải được enforce trong Core, không dựa vào thiện chí của plugin.</li><li>Lifecycle, permission, tenant context và observability là các phần của cùng một platform contract.</li><li>Developer experience tốt chỉ bền vững khi runtime và supply chain được thiết kế an toàn từ đầu.</li></ul><p><strong>GitHub:</strong> <a href=\"https://github.com/zscontributor/z-cms\" target=\"_blank\" rel=\"noopener noreferrer\">https://github.com/zscontributor/z-cms</a><br><strong>Website:</strong> <a href=\"https://z-cms.org\" target=\"_blank\" rel=\"noopener noreferrer\">https://z-cms.org</a></p>"
             }
           }
         ]
@@ -644,19 +644,25 @@
       {
         "contentType": "post",
         "locale": "en",
-        "slug": "themes-render-on-the-server",
-        "title": "Why Z-CMS themes render on the server",
-        "translationGroup": "default-post-2",
-        "excerpt": "A theme you did not write should not run in your visitors' browsers. Here is what that buys, and what it costs.",
+        "slug": "how-z-cms-loads-plugins-without-restarting-the-server",
+        "title": "How Z-CMS Loads Plugins Without Restarting the Server",
+        "translationGroup": "default-architecture-2",
+        "excerpt": "A lifecycle-oriented approach to zero-downtime plugin activation and updates",
         "data": {
-          "readingTime": 5
+          "readingTime": 4
         },
+        "seo": {
+          "title": "How Z-CMS Loads Plugins Without Restarting the Server",
+          "description": "A lifecycle-oriented approach to zero-downtime plugin activation and updates"
+        },
+        "status": "PUBLISHED",
+        "publishedAt": "2026-07-11T02:00:00.000Z",
         "blocks": [
           {
-            "id": "default-post-2-en",
+            "id": "default-architecture-2-en",
             "type": "core/richtext",
             "props": {
-              "html": "<p>A Z-CMS theme ships no client JavaScript. It renders on the server, hands back HTML, and that is the end of its involvement with the visitor.</p><h2>What it buys</h2><p>Installing a theme from the marketplace means running a stranger's code. On the server it runs in one place we control, with no access to a reader's session, their clipboard or their keystrokes. A theme cannot exfiltrate anything, because it never reaches the browser.</p><h2>What it costs</h2><p>Everything interactive has to be built out of HTML the browser already knows: the language switcher is a <code>&lt;details&gt;</code> disclosure, search is a form, \"back to top\" is a link. The dark-mode toggle is the exception that proves the rule — it genuinely cannot be done without JavaScript, so the <em>runtime</em> owns it and the theme only says where the button goes.</p><p>That constraint is a feature. A theme that cannot ship JavaScript cannot ship a tracker.</p>"
+              "html": "<h2>Why restart-based plugin management does not scale</h2><p>Restarting a server after every plugin installation may be acceptable for a personal website, but it becomes disruptive when a CMS serves many tenants, active sessions, background jobs and real-time connections. Z-CMS treats a plugin as a managed runtime that can be installed, activated, drained, replaced and removed independently.</p><h2>Dynamic import is only the first step</h2><p>Dynamic import can load code, but it does not provide safe unloading. Module caches remain, old event listeners can survive, cron jobs may continue and database connections may leak. Hot plugin management is therefore a lifecycle problem rather than a module-loading trick.</p><h2>The plugin lifecycle</h2><pre><code>Downloaded\n   ↓\nVerified\n   ↓\nInstalled\n   ↓\nInitialized\n   ↓\nActivated\n   ↓\nRunning\n   ↓\nDeactivated\n   ↓\nUninstalled</code></pre><p>Updates introduce an additional sequence: download the new version, verify signatures, validate compatibility, check migrations, start a new runtime, run health checks, switch the active version and finally drain the old runtime.</p><h2>Manifest-driven initialization</h2><pre><code>{\n  &quot;name&quot;: &quot;@z-cms/plugin-seo&quot;,\n  &quot;version&quot;: &quot;1.2.0&quot;,\n  &quot;main&quot;: &quot;dist/index.js&quot;,\n  &quot;engines&quot;: { &quot;z-cms&quot;: &quot;&gt;=1.0.0&quot; },\n  &quot;permissions&quot;: [&quot;content:read&quot;, &quot;content:update&quot;],\n  &quot;hooks&quot;: [&quot;content.beforePublish&quot;, &quot;content.afterPublish&quot;]\n}</code></pre><p>The manifest tells the Core which entry point to load, which CMS versions are supported, which permissions are required and which hooks must be registered.</p><h2>Creating a new runtime</h2><pre><code>const runtime = await pluginRuntimeManager.create({\n  pluginId: plugin.id,\n  version: plugin.version,\n  memoryLimitMb: 64,\n  timeoutMs: 2_000,\n});\n\nawait runtime.load(plugin.bundlePath);\nawait runtime.call(&quot;activate&quot;, { settings, permissions });</code></pre><p>Only after activation and a health check succeed is the runtime allowed to receive production events.</p><h2>Hook registry instead of hard-coded calls</h2><pre><code>Hook Registry\n│\n├── content.beforePublish\n│   ├── plugin-seo\n│   └── plugin-moderation\n├── content.afterPublish\n│   ├── plugin-analytics\n│   └── plugin-webhook\n└── media.afterUpload\n    └── plugin-image-optimizer</code></pre><p>Core services dispatch an event to the registry. The registry resolves active plugins and routes execution to the correct isolate. Disabling a plugin removes its registrations immediately without restarting the application.</p><h2>Managed resources and deactivation</h2><p>Plugins can create listeners, schedules, subscriptions and temporary resources. The SDK therefore routes registration through managed APIs. Z-CMS records which resource belongs to which plugin and can clean it automatically during deactivation.</p><pre><code>export default definePlugin({\n  async activate(cms) {\n    cms.events.on(&quot;content.published&quot;, handlePublished);\n  },\n  async deactivate(cms) {\n    cms.events.off(&quot;content.published&quot;, handlePublished);\n  },\n});</code></pre><p>A well-written deactivate method is still encouraged, but Core cleanup does not rely exclusively on plugin discipline.</p><h2>Blue-green plugin updates</h2><pre><code>plugin-seo\n│\n├── Runtime A — 1.2.0 — Active\n└── Runtime B — 1.3.0 — Starting</code></pre><p>The new version starts alongside the current version. It loads, activates and passes a smoke test before the registry pointer changes. If the health check fails, the old version remains active.</p><h2>Draining active executions</h2><p>The old runtime stops accepting new executions but continues handling work already in progress. An active execution counter and a maximum drain timeout prevent requests from being interrupted unnecessarily.</p><pre><code>Accept new executions: No\nWait for active executions: Yes\nMaximum drain timeout: 30 seconds</code></pre><h2>Migrations and rollback</h2><p>Plugin updates may include data migrations. Z-CMS records migration identifiers, creates a recovery point, runs compatibility checks and starts the new runtime before committing the switch. Reversible migrations can be rolled back automatically when activation fails.</p><pre><code>{\n  &quot;migrations&quot;: [{\n    &quot;id&quot;: &quot;20260714_add_focus_keyword&quot;,\n    &quot;up&quot;: &quot;migrations/001-up.js&quot;,\n    &quot;down&quot;: &quot;migrations/001-down.js&quot;\n  }]\n}</code></pre><h2>Versioned storage</h2><pre><code>/plugins/plugin-seo/\n├── 1.2.0/bundle.js\n├── 1.3.0/bundle.js\n└── active.json</code></pre><p>Keeping previous verified bundles enables fast rollback and reproducible incident investigation.</p><h2>Circuit breakers and development mode</h2><p>A plugin that repeatedly fails can be moved from Active to Degraded and then Suspended. In development, a file watcher rebuilds the bundle, creates a new isolate, runs activation and swaps runtimes, giving developers a hot-reload experience without restarting the entire backend.</p><h2>Conclusion</h2><p>Loading plugins without a server restart requires a complete lifecycle: validation, runtime creation, registry switching, managed cleanup, draining, migration handling, rollback and health monitoring. Z-CMS treats plugin versions as replaceable runtime units so the CMS can remain available while its ecosystem evolves.</p><p><strong>GitHub:</strong> <a href=\"https://github.com/zscontributor/z-cms\" target=\"_blank\" rel=\"noopener noreferrer\">https://github.com/zscontributor/z-cms</a><br><strong>Website:</strong> <a href=\"https://z-cms.org\" target=\"_blank\" rel=\"noopener noreferrer\">https://z-cms.org</a></p>"
             }
           }
         ]
@@ -664,19 +670,25 @@
       {
         "contentType": "post",
         "locale": "ja",
-        "slug": "themes-render-on-the-server",
-        "title": "Z-CMS のテーマがサーバーで描画される理由",
-        "translationGroup": "default-post-2",
-        "excerpt": "自分が書いていないテーマを、読者のブラウザで動かすべきではありません。その利点と代償。",
+        "slug": "how-z-cms-loads-plugins-without-restarting-the-server",
+        "title": "Z-CMS が server restart なしで plugin を load する仕組み",
+        "translationGroup": "default-architecture-2",
+        "excerpt": "Zero-downtime plugin activation と update のための lifecycle-oriented approach",
         "data": {
-          "readingTime": 5
+          "readingTime": 6
         },
+        "seo": {
+          "title": "Z-CMS が server restart なしで plugin を load する仕組み",
+          "description": "Zero-downtime plugin activation と update のための lifecycle-oriented approach"
+        },
+        "status": "PUBLISHED",
+        "publishedAt": "2026-07-11T02:00:00.000Z",
         "blocks": [
           {
-            "id": "default-post-2-ja",
+            "id": "default-architecture-2-ja",
             "type": "core/richtext",
             "props": {
-              "html": "<p>Z-CMS のテーマはクライアント JavaScript を一切送りません。サーバーで描画し、HTML を返し、そこで訪問者との関わりは終わります。</p><h2>得られるもの</h2><p>マーケットプレイスからテーマを入れるとは、他人のコードを実行することです。サーバー上でなら、我々が管理する場所で動き、読者のセッションやキー入力には触れられません。ブラウザに届かないコードは、何も持ち出せません。</p><h2>代償</h2><p>対話的なものはすべて、ブラウザが元から知っている HTML で作る必要があります。言語切替は <code>&lt;details&gt;</code>、検索はフォーム、「上へ戻る」はリンクです。ダークモードの切替だけは例外で、JavaScript なしでは成立しません。だからこそ<em>ランタイム</em>がそれを担い、テーマはボタンの位置だけを決めます。</p><p>この制約は機能です。JavaScript を送れないテーマは、トラッカーも送れません。</p>"
+              "html": "<h2>Restart 前提の plugin management が scale しない理由</h2><p>Plugin install のたびに server を restart する方式は個人 website では許容できます。しかし、多数の tenant、active session、background job、real-time connection を扱う CMS では disruption になります。Z-CMS は plugin を独立して install、activate、drain、replace、remove できる managed runtime として扱います。</p><h2>Dynamic import は最初の一歩にすぎない</h2><p>Dynamic import は code を load できますが、安全な unload は提供しません。Module cache、古い event listener、cron job、database connection が残る可能性があります。Hot plugin management は module loading の工夫ではなく lifecycle の問題です。</p><h2>Plugin lifecycle</h2><p>基本 lifecycle は Downloaded → Verified → Installed → Initialized → Activated → Running → Deactivated → Uninstalled です。</p><p>Update では、新 version の download、signature verification、compatibility validation、migration check、新 runtime の start、health check、active version switch、旧 runtime の drain を行います。</p><pre><code>Downloaded → Verified → Installed → Initialized\n→ Activated → Running → Deactivated → Uninstalled</code></pre><h2>Manifest-driven initialization</h2><p>Manifest は entry point、対応 CMS version、必要 permission、登録 hook、migration を Core に伝えます。Activation と health check が成功するまで runtime は production event を受け取りません。</p><h2>Hard-coded call ではなく hook registry</h2><p>Core service は event を registry に dispatch します。Registry は active plugin を resolve し、適切な isolate に execution を route します。Plugin を disable すると registration は即座に削除され、application restart は不要です。</p><pre><code>Current Runtime A (Active)\nNew Runtime B (Starting)\n        ↓\nLoad → Activate → Health Check\n        ↓\nRegistry Switch A → B\n        ↓\nRuntime A Draining</code></pre><h2>Managed resource と deactivation</h2><p>Plugin は listener、schedule、subscription、temporary resource を作成できます。SDK は registration を managed API 経由にし、Z-CMS が resource ownership を記録して deactivate 時に自動 cleanup できるようにします。</p><p>適切な deactivate method は推奨されますが、Core cleanup は plugin developer の実装だけに依存しません。</p><h2>Blue-green plugin update</h2><p>新 version は現行 version と並行して start します。Load、activate、smoke test に成功してから registry pointer を切り替えます。Health check に失敗した場合、旧 version が active のまま残ります。</p><h2>Active execution の draining</h2><p>旧 runtime は新しい execution の受付を停止し、進行中の処理だけを継続します。Active execution counter と maximum drain timeout により、不要な request interruption を防ぎます。</p><h2>Migration、rollback、versioned storage</h2><p>Plugin update に data migration が含まれる場合、Z-CMS は migration ID と recovery point を記録し、compatibility check と新 runtime start を完了してから switch を commit します。Reversible migration は activation failure 時に自動 rollback できます。</p><p>以前の verified bundle を保持することで、迅速な rollback と再現可能な incident investigation が可能になります。</p><h2>Circuit breaker と development mode</h2><p>失敗を繰り返す plugin は Active から Degraded、Suspended へ移行できます。Development mode では file watcher が bundle を rebuild し、新 isolate を作成して activation 後に runtime を swap するため、backend 全体を restart せずに hot reload できます。</p><h2>結論</h2><p>Server restart なしの plugin load には、validation、runtime creation、registry switching、managed cleanup、draining、migration handling、rollback、health monitoring を含む完全な lifecycle が必要です。Z-CMS は plugin version を交換可能な runtime unit として扱います。</p><h2>Key takeaways</h2><ul><li>Security boundary は plugin の善意ではなく Core 側で enforce する必要があります。</li><li>Lifecycle、permission、tenant context、observability は同じ platform contract の一部です。</li><li>優れた developer experience は、安全な runtime と supply chain の設計によって持続可能になります。</li></ul><p><strong>GitHub:</strong> <a href=\"https://github.com/zscontributor/z-cms\" target=\"_blank\" rel=\"noopener noreferrer\">https://github.com/zscontributor/z-cms</a><br><strong>Website:</strong> <a href=\"https://z-cms.org\" target=\"_blank\" rel=\"noopener noreferrer\">https://z-cms.org</a></p>"
             }
           }
         ]
@@ -684,19 +696,25 @@
       {
         "contentType": "post",
         "locale": "vi",
-        "slug": "theme-render-tren-server",
-        "title": "Vì sao theme Z-CMS render trên server",
-        "translationGroup": "default-post-2",
-        "excerpt": "Một theme bạn không tự viết thì không nên chạy trong trình duyệt của độc giả. Được gì và mất gì.",
+        "slug": "z-cms-load-plugin-khong-restart-server",
+        "title": "Z-CMS load plugin mà không restart server như thế nào",
+        "translationGroup": "default-architecture-2",
+        "excerpt": "Lifecycle-oriented approach cho zero-downtime plugin activation và update",
         "data": {
-          "readingTime": 5
+          "readingTime": 4
         },
+        "seo": {
+          "title": "Z-CMS load plugin mà không restart server như thế nào",
+          "description": "Lifecycle-oriented approach cho zero-downtime plugin activation và update"
+        },
+        "status": "PUBLISHED",
+        "publishedAt": "2026-07-11T02:00:00.000Z",
         "blocks": [
           {
-            "id": "default-post-2-vi",
+            "id": "default-architecture-2-vi",
             "type": "core/richtext",
             "props": {
-              "html": "<p>Theme Z-CMS không gửi một dòng JavaScript nào xuống trình duyệt. Nó render trên server, trả về HTML, và kết thúc quan hệ với người truy cập ở đó.</p><h2>Được gì</h2><p>Cài một theme từ marketplace nghĩa là chạy code của người lạ. Chạy trên server thì nó nằm trong một chỗ ta kiểm soát, không chạm được vào phiên đăng nhập, clipboard hay phím gõ của độc giả. Code không tới được trình duyệt thì không mang được gì ra ngoài.</p><h2>Mất gì</h2><p>Mọi thứ tương tác phải dựng bằng HTML mà trình duyệt vốn đã hiểu: chuyển ngôn ngữ là <code>&lt;details&gt;</code>, tìm kiếm là form, \"lên đầu trang\" là một cái link. Nút dark mode là ngoại lệ chứng minh quy tắc — nó thực sự không thể làm nếu không có JavaScript, nên <em>runtime</em> đảm nhiệm, còn theme chỉ nói nút đặt ở đâu.</p><p>Ràng buộc đó là một tính năng. Theme không gửi được JavaScript thì cũng không gửi được tracker.</p>"
+              "html": "<h2>Vì sao plugin management dựa trên restart không thể scale</h2><p>Restart server sau mỗi lần cài plugin có thể chấp nhận với website cá nhân, nhưng gây gián đoạn khi CMS phục vụ nhiều tenant, active session, background job và real-time connection. Z-CMS xem plugin như một managed runtime có thể install, activate, drain, replace và remove độc lập.</p><h2>Dynamic import chỉ là bước đầu</h2><p>Dynamic import có thể load code nhưng không cung cấp safe unloading. Module cache vẫn tồn tại, event listener cũ có thể còn hoạt động, cron job có thể tiếp tục chạy và database connection có thể leak. Vì vậy hot plugin management là bài toán lifecycle, không phải một mẹo module loading.</p><h2>Plugin lifecycle</h2><p>Lifecycle cơ bản gồm Downloaded → Verified → Installed → Initialized → Activated → Running → Deactivated → Uninstalled.</p><p>Update bổ sung chuỗi bước: download version mới, verify signature, validate compatibility, check migration, start runtime mới, run health check, switch active version và cuối cùng drain runtime cũ.</p><pre><code>Downloaded → Verified → Installed → Initialized\n→ Activated → Running → Deactivated → Uninstalled</code></pre><h2>Manifest-driven initialization</h2><p>Manifest cho Core biết entry point, CMS version được hỗ trợ, permission cần thiết, hook phải register và migration liên quan. Runtime chỉ được nhận production event sau khi activation và health check thành công.</p><h2>Hook registry thay vì hard-coded call</h2><p>Core service dispatch event vào registry. Registry resolve active plugin và route execution đến isolate đúng. Khi disable plugin, registration bị remove ngay lập tức mà không restart application.</p><pre><code>Current Runtime A (Active)\nNew Runtime B (Starting)\n        ↓\nLoad → Activate → Health Check\n        ↓\nRegistry Switch A → B\n        ↓\nRuntime A Draining</code></pre><h2>Managed resource và deactivation</h2><p>Plugin có thể tạo listener, schedule, subscription và temporary resource. SDK route các registration qua managed API để Z-CMS biết resource nào thuộc plugin nào và tự cleanup khi deactivate.</p><p>Một deactivate method tốt vẫn được khuyến khích, nhưng Core cleanup không phụ thuộc hoàn toàn vào kỷ luật của plugin developer.</p><h2>Blue-green plugin update</h2><p>Version mới được start song song với version hiện tại. Nó phải load, activate và vượt smoke test trước khi registry pointer thay đổi. Nếu health check fail, version cũ tiếp tục active.</p><h2>Draining active execution</h2><p>Runtime cũ dừng nhận execution mới nhưng tiếp tục xử lý công việc đang chạy. Active execution counter và maximum drain timeout giúp tránh ngắt request không cần thiết.</p><h2>Migration, rollback và versioned storage</h2><p>Plugin update có thể kèm data migration. Z-CMS ghi migration ID, tạo recovery point, chạy compatibility check và start runtime mới trước khi commit switch. Migration có thể đảo ngược sẽ được rollback tự động nếu activation fail.</p><p>Giữ các verified bundle trước đó cho phép rollback nhanh và điều tra incident có thể tái hiện.</p><h2>Circuit breaker và development mode</h2><p>Plugin lỗi lặp lại có thể chuyển từ Active sang Degraded rồi Suspended. Trong development, file watcher rebuild bundle, tạo isolate mới, run activation và swap runtime, tạo trải nghiệm hot reload mà không restart toàn backend.</p><h2>Kết luận</h2><p>Load plugin không restart server đòi hỏi lifecycle hoàn chỉnh: validation, runtime creation, registry switching, managed cleanup, draining, migration handling, rollback và health monitoring. Z-CMS coi mỗi plugin version là một runtime unit có thể thay thế để CMS vẫn available khi ecosystem liên tục phát triển.</p><h2>Key takeaways</h2><ul><li>Security boundary phải được enforce trong Core, không dựa vào thiện chí của plugin.</li><li>Lifecycle, permission, tenant context và observability là các phần của cùng một platform contract.</li><li>Developer experience tốt chỉ bền vững khi runtime và supply chain được thiết kế an toàn từ đầu.</li></ul><p><strong>GitHub:</strong> <a href=\"https://github.com/zscontributor/z-cms\" target=\"_blank\" rel=\"noopener noreferrer\">https://github.com/zscontributor/z-cms</a><br><strong>Website:</strong> <a href=\"https://z-cms.org\" target=\"_blank\" rel=\"noopener noreferrer\">https://z-cms.org</a></p>"
             }
           }
         ]
@@ -704,19 +722,25 @@
       {
         "contentType": "post",
         "locale": "en",
-        "slug": "content-is-data-not-html",
-        "title": "Content is data, not HTML",
-        "translationGroup": "default-post-3",
-        "excerpt": "A page stored as a blob of markup is a page you can only ever render one way.",
+        "slug": "building-a-secure-plugin-marketplace-for-z-cms",
+        "title": "Building a Secure Plugin Marketplace for Z-CMS",
+        "translationGroup": "default-architecture-3",
+        "excerpt": "Why a marketplace must be treated as a software supply-chain system",
         "data": {
-          "readingTime": 3
+          "readingTime": 4
         },
+        "seo": {
+          "title": "Building a Secure Plugin Marketplace for Z-CMS",
+          "description": "Why a marketplace must be treated as a software supply-chain system"
+        },
+        "status": "PUBLISHED",
+        "publishedAt": "2026-07-12T02:00:00.000Z",
         "blocks": [
           {
-            "id": "default-post-3-en",
+            "id": "default-architecture-3-en",
             "type": "core/richtext",
             "props": {
-              "html": "<p>A Z-CMS page is a list of <strong>blocks</strong>: each one a type and some JSON props. It is not a string of HTML.</p><p>That distinction is what lets the same page render in a different theme without being rewritten, appear in a mobile app that has no notion of a <code>&lt;div&gt;</code>, and be queried — \"the six most recent posts\" — rather than merely displayed.</p><p>It is also what makes <code>core/content-list</code> possible: a block whose props are a <em>question</em> (\"six posts, newest first\") that the server answers while it builds the page. A blob of HTML cannot ask a question.</p>"
+              "html": "<h2>A marketplace is more than a ZIP download page</h2><p>A plugin marketplace distributes executable code into production systems. It must therefore answer who created a package, whether it was modified, what permissions it requests, which versions are vulnerable and how an administrator can recover from a bad update.</p><h2>Threat model</h2><ul><li>Typosquatting packages that imitate popular names.</li><li>A compromised publisher account releasing malicious updates.</li><li>Package modification during upload, storage or delivery.</li><li>Plugins requesting permissions unrelated to their purpose.</li><li>Vulnerable or malicious transitive dependencies.</li><li>Cross-tenant access or unauthorized data transfer.</li></ul><h2>Signed and immutable releases</h2><p>Every published package should have a checksum and cryptographic signature. Z-CMS verifies the package before installation and does not permit an existing version to be overwritten.</p><pre><code>Developer builds package\n   ↓\nCalculate SHA-256\n   ↓\nSign release metadata\n   ↓\nMarketplace verifies\n   ↓\nCMS downloads and verifies again</code></pre><pre><code>{\n  &quot;package&quot;: &quot;@z-cms/plugin-seo&quot;,\n  &quot;version&quot;: &quot;1.3.0&quot;,\n  &quot;sha256&quot;: &quot;6c8f...a9d2&quot;,\n  &quot;publisher&quot;: &quot;z-soft&quot;,\n  &quot;signature&quot;: &quot;MEUCIQD...&quot;\n}</code></pre><p>If a publisher fixes a problem, it must release 1.3.1 rather than silently replacing 1.3.0. Immutable versions make checksums, lockfiles and rollback trustworthy.</p><h2>Publisher identity and namespaces</h2><p>Packages use organization namespaces such as @z-cms/plugin-seo or @community/plugin-forms. Organizations manage owners, maintainers, publishers and security reviewers. Marketplace badges can indicate official, verified, community or experimental status without implying perfect safety.</p><h2>Permission transparency</h2><pre><code>{\n  &quot;permissions&quot;: [\n    &quot;content:read&quot;,\n    &quot;content:update&quot;,\n    &quot;settings:read&quot;\n  ]\n}</code></pre><p>Before installation, the admin sees a human-readable explanation of what the plugin can and cannot do. An update that adds users:read or unrestricted network access requires renewed approval rather than silent auto-update.</p><h2>Runtime enforcement</h2><p>Permissions are not only documentation. Every SDK call is checked inside the Core.</p><pre><code>if (!permissions.has(&quot;users:read&quot;)) {\n  throw new PermissionDeniedError(&quot;users:read&quot;);\n}</code></pre><p>Network permissions can be scoped to approved domains instead of granting unrestricted outbound access.</p><h2>Multi-tenant boundaries</h2><p>All plugin calls carry immutable tenant, plugin and request contexts assigned by the Core. Plugins never choose a tenant ID. Database, cache, storage and search layers add tenant scoping automatically.</p><pre><code>{\n  &quot;tenantId&quot;: &quot;tenant-a&quot;,\n  &quot;pluginId&quot;: &quot;@z-cms/plugin-seo&quot;,\n  &quot;requestId&quot;: &quot;req-123&quot;\n}</code></pre><h2>Security scanning pipeline</h2><ol><li>Validate manifest structure, version compatibility and requested permissions.</li><li>Scan dependencies for known vulnerabilities, typosquatting and suspicious install scripts.</li><li>Run static analysis for obfuscation, eval, dynamic code generation and forbidden Node.js APIs.</li><li>Scan for leaked API keys, tokens, private keys and environment files.</li><li>Execute selected packages in a controlled analysis sandbox.</li><li>Route high-risk permissions to manual review.</li></ol><h2>Release channels and advisories</h2><p>Plugins may expose stable, beta, alpha and nightly channels. Production tenants can remain on stable while staging environments test beta versions. When a vulnerability is discovered, the marketplace publishes an advisory with affected and patched versions.</p><pre><code>Security Advisory ZCMS-2026-001\nAffected: @community/plugin-form-builder &lt;= 2.4.1\nPatched: 2.4.2\nSeverity: Critical</code></pre><p>For severe incidents, the marketplace can block new installations, warn existing administrators and optionally suspend execution under an explicit policy.</p><h2>Audit and data-transfer transparency</h2><p>Installation, permission approval, activation, update, rollback and suspension events are recorded. Plugins that send content to external services must declare destination domains and data types so administrators can make an informed decision.</p><pre><code>{\n  &quot;dataCollection&quot;: {\n    &quot;externalTransfer&quot;: true,\n    &quot;domains&quot;: [&quot;api.example.com&quot;],\n    &quot;dataTypes&quot;: [&quot;article-content&quot;]\n  }\n}</code></pre><h2>Reputation beyond star ratings</h2><p>A useful trust profile includes install count, uninstall rate, crash rate, update frequency, security response time, supported CMS versions, last audit date and publisher history. A five-star score alone cannot represent operational quality.</p><h2>Conclusion</h2><p>Z-CMS approaches the marketplace as a software supply-chain platform. Signed immutable packages, verified identities, runtime permissions, scanning, tenant isolation, advisories and audit logs cannot guarantee that every plugin is safe, but they greatly reduce risk and give administrators meaningful control.</p><p><strong>GitHub:</strong> <a href=\"https://github.com/zscontributor/z-cms\" target=\"_blank\" rel=\"noopener noreferrer\">https://github.com/zscontributor/z-cms</a><br><strong>Website:</strong> <a href=\"https://z-cms.org\" target=\"_blank\" rel=\"noopener noreferrer\">https://z-cms.org</a></p>"
             }
           }
         ]
@@ -724,19 +748,25 @@
       {
         "contentType": "post",
         "locale": "ja",
-        "slug": "content-is-data-not-html",
-        "title": "コンテンツはデータであり、HTML ではない",
-        "translationGroup": "default-post-3",
-        "excerpt": "マークアップの塊として保存されたページは、一通りにしか表示できないページです。",
+        "slug": "building-a-secure-plugin-marketplace-for-z-cms",
+        "title": "Z-CMS のための安全な Plugin Marketplace を構築する",
+        "translationGroup": "default-architecture-3",
+        "excerpt": "Marketplace を software supply-chain system として設計する",
         "data": {
-          "readingTime": 3
+          "readingTime": 6
         },
+        "seo": {
+          "title": "Z-CMS のための安全な Plugin Marketplace を構築する",
+          "description": "Marketplace を software supply-chain system として設計する"
+        },
+        "status": "PUBLISHED",
+        "publishedAt": "2026-07-12T02:00:00.000Z",
         "blocks": [
           {
-            "id": "default-post-3-ja",
+            "id": "default-architecture-3-ja",
             "type": "core/richtext",
             "props": {
-              "html": "<p>Z-CMS のページは <strong>ブロック</strong> のリストです。各ブロックは型と JSON のプロパティであり、HTML の文字列ではありません。</p><p>この違いがあるからこそ、同じページを別のテーマで書き直さずに表示でき、<code>&lt;div&gt;</code> を知らないモバイルアプリにも出せ、そして「最新の 6 件」のように<em>問い合わせる</em>ことができます。</p><p><code>core/content-list</code> が成り立つのも同じ理由です。プロパティが<em>問い</em>（「最新の記事を 6 件」）であり、サーバーがページ構築時にそれに答えます。HTML の塊は問いを立てられません。</p>"
+              "html": "<h2>Marketplace は ZIP download page ではない</h2><p>Plugin marketplace は executable code を production system に配布します。そのため、誰が package を作成したか、改変されていないか、どの permission を要求するか、どの version に vulnerability があるか、bad update からどう recovery するかを説明できなければなりません。</p><h2>Threat model</h2><p>主な threat は typosquatting package、compromised publisher account、upload・storage・delivery 中の package modification、目的と無関係な permission、悪意ある transitive dependency、cross-tenant access、unauthorized data transfer です。</p><h2>Signed package と immutable release</h2><p>各 release は checksum と digital signature を持ちます。CMS は install 前に checksum、marketplace signature、publisher identity を verify します。公開済み version は上書きせず、修正は新 version として publish し、reproducibility と auditability を保ちます。</p><pre><code>Developer builds plugin\n    ↓\nGenerate checksum\n    ↓\nSign package\n    ↓\nMarketplace verifies\n    ↓\nCMS verifies before install</code></pre><h2>Publisher identity と namespace ownership</h2><p>Marketplace は community publisher、verified publisher、verified organization、official package を区別します。@organization/plugin-name 形式の namespace は偽装を減らします。Publish 権限は Owner、Maintainer、Publisher、Security Reviewer などの role で管理します。</p><h2>Permission manifest と runtime enforcement</h2><p>Administrator は plugin がどの data を read、update、external transfer できるかを install 前に確認できる必要があります。Update で新 permission が追加された場合、auto-update を停止して approval を要求します。</p><p>Permission は install 時だけでなく runtime bridge でも enforce します。users:read を持たない plugin は users API を呼び出せません。</p><pre><code>{\n  &quot;permissions&quot;: [\n    &quot;content:read&quot;,\n    &quot;content:update&quot;,\n    &quot;http:domain:api.example.com&quot;\n  ]\n}</code></pre><h2>Multi-tenant isolation</h2><p>Plugin のすべての API call には Core が発行した tenant context が含まれます。Plugin は tenantId を任意に指定できません。Database、cache、storage、queue、search は tenant scope を enforce します。</p><h2>Security scanning pipeline</h2><p>Pipeline には manifest validation、dependency vulnerability scan、static analysis、secret scanning、malware analysis、sensitive permission に対する manual review を含めます。eval()、child_process、process.env、obfuscated code、unrestricted network access などは review 対象です。</p><h2>Security advisory、revocation、rollback</h2><p>Marketplace は affected version、severity、patched version を含む advisory を発行します。必要に応じて package を revoke し、新規 install を block、既存 instance に警告します。Versioned bundle により bad update から迅速に rollback できます。</p><h2>Audit log と data transparency</h2><p>Install、approval、activation、permission change、update は audit log に記録します。Plugin が external domain に data を送信する場合、domain、data type、purpose を明示し、administrator が判断できるようにします。</p><h2>結論</h2><p>安全な marketplace には publisher identity、package signing、immutable release、runtime permission、security scanning、multi-tenant isolation、advisory、revocation、audit log、rollback が必要です。すべての plugin の完全な安全を保証するのではなく、risk を減らし control と transparency を高めることが目的です。</p><h2>Key takeaways</h2><ul><li>Security boundary は plugin の善意ではなく Core 側で enforce する必要があります。</li><li>Lifecycle、permission、tenant context、observability は同じ platform contract の一部です。</li><li>優れた developer experience は、安全な runtime と supply chain の設計によって持続可能になります。</li></ul><p><strong>GitHub:</strong> <a href=\"https://github.com/zscontributor/z-cms\" target=\"_blank\" rel=\"noopener noreferrer\">https://github.com/zscontributor/z-cms</a><br><strong>Website:</strong> <a href=\"https://z-cms.org\" target=\"_blank\" rel=\"noopener noreferrer\">https://z-cms.org</a></p>"
             }
           }
         ]
@@ -744,19 +774,259 @@
       {
         "contentType": "post",
         "locale": "vi",
-        "slug": "noi-dung-la-du-lieu-khong-phai-html",
-        "title": "Nội dung là dữ liệu, không phải HTML",
-        "translationGroup": "default-post-3",
-        "excerpt": "Một trang lưu dưới dạng khối markup là một trang chỉ hiển thị được đúng một kiểu.",
+        "slug": "xay-dung-plugin-marketplace-an-toan-cho-z-cms",
+        "title": "Xây dựng Plugin Marketplace an toàn cho Z-CMS",
+        "translationGroup": "default-architecture-3",
+        "excerpt": "Marketplace phải được xem như một software supply-chain system",
         "data": {
-          "readingTime": 3
+          "readingTime": 4
         },
+        "seo": {
+          "title": "Xây dựng Plugin Marketplace an toàn cho Z-CMS",
+          "description": "Marketplace phải được xem như một software supply-chain system"
+        },
+        "status": "PUBLISHED",
+        "publishedAt": "2026-07-12T02:00:00.000Z",
         "blocks": [
           {
-            "id": "default-post-3-vi",
+            "id": "default-architecture-3-vi",
             "type": "core/richtext",
             "props": {
-              "html": "<p>Một trang Z-CMS là một danh sách <strong>block</strong>: mỗi block gồm một kiểu và vài thuộc tính JSON. Nó không phải một chuỗi HTML.</p><p>Chính khác biệt đó cho phép cùng một trang hiển thị bằng theme khác mà không phải viết lại, xuất hiện trong ứng dụng di động vốn chẳng biết <code>&lt;div&gt;</code> là gì, và <em>truy vấn được</em> — \"sáu bài mới nhất\" — chứ không chỉ để trưng ra.</p><p>Đó cũng là thứ làm cho <code>core/content-list</code> khả thi: một block mà thuộc tính của nó là một <em>câu hỏi</em> (\"sáu bài, mới nhất trước\"), và server trả lời trong lúc dựng trang. Một khối HTML thì không đặt câu hỏi được.</p>"
+              "html": "<h2>Marketplace không chỉ là trang download ZIP</h2><p>Plugin marketplace phân phối executable code vào production system. Nó phải trả lời được ai tạo package, package có bị thay đổi không, yêu cầu permission gì, version nào có vulnerability và administrator có thể phục hồi thế nào sau một bad update.</p><h2>Threat model</h2><p>Các rủi ro chính gồm typosquatting package, publisher account bị compromise, package bị sửa trong quá trình upload hoặc delivery, plugin yêu cầu permission không liên quan, transitive dependency độc hại, cross-tenant access và unauthorized data transfer.</p><h2>Signed package và immutable release</h2><p>Mỗi release cần checksum và digital signature. CMS verify checksum, marketplace signature và publisher identity trước khi install. Một version đã publish không được ghi đè; bản sửa lỗi phải dùng version mới để đảm bảo reproducibility và audit.</p><pre><code>Developer builds plugin\n    ↓\nGenerate checksum\n    ↓\nSign package\n    ↓\nMarketplace verifies\n    ↓\nCMS verifies before install</code></pre><h2>Publisher identity và namespace ownership</h2><p>Marketplace phân biệt community publisher, verified publisher, verified organization và official package. Namespace dạng @organization/plugin-name giúp giảm giả mạo. Quyền publish được quản lý theo role như Owner, Maintainer, Publisher và Security Reviewer.</p><h2>Permission manifest và runtime enforcement</h2><p>Administrator cần thấy rõ plugin có thể đọc, sửa hoặc gửi loại dữ liệu nào. Khi update yêu cầu permission mới, auto-update phải dừng để chờ approval.</p><p>Permission không chỉ được kiểm tra lúc install mà còn enforce ở runtime bridge. Plugin không có users:read sẽ không thể gọi users API, dù source code cố thực hiện thao tác đó.</p><pre><code>{\n  &quot;permissions&quot;: [\n    &quot;content:read&quot;,\n    &quot;content:update&quot;,\n    &quot;http:domain:api.example.com&quot;\n  ]\n}</code></pre><h2>Multi-tenant isolation</h2><p>Mọi API call từ plugin mang tenant context do Core cấp. Plugin không tự chọn tenantId. Database, cache, storage, queue và search layer đều scope theo tenant để ngăn cross-tenant access.</p><h2>Security scanning pipeline</h2><p>Pipeline có thể gồm manifest validation, dependency vulnerability scan, static analysis, secret scanning, malware analysis và manual review cho permission nhạy cảm. Pattern như eval(), child_process, process.env, obfuscated code hoặc unrestricted network access cần được đánh dấu để review.</p><h2>Security advisory, revocation và rollback</h2><p>Marketplace phải phát hành advisory với affected version, severity và patched version. Khi cần, package có thể bị revoke để chặn install mới và cảnh báo instance đang dùng. Versioned bundle giúp rollback nhanh khi update lỗi.</p><h2>Audit log và data transparency</h2><p>Install, approval, activation, permission change và update đều cần audit log. Nếu plugin gửi dữ liệu ra external domain, marketplace phải hiển thị domain, data type và mục đích để administrator quyết định có hiểu biết.</p><h2>Kết luận</h2><p>Một marketplace an toàn cần publisher identity, package signing, immutable release, runtime permission, security scanning, multi-tenant isolation, advisory, revocation, audit log và rollback. Mục tiêu không phải tuyên bố mọi plugin tuyệt đối an toàn, mà là giảm rủi ro và tăng khả năng kiểm soát.</p><h2>Key takeaways</h2><ul><li>Security boundary phải được enforce trong Core, không dựa vào thiện chí của plugin.</li><li>Lifecycle, permission, tenant context và observability là các phần của cùng một platform contract.</li><li>Developer experience tốt chỉ bền vững khi runtime và supply chain được thiết kế an toàn từ đầu.</li></ul><p><strong>GitHub:</strong> <a href=\"https://github.com/zscontributor/z-cms\" target=\"_blank\" rel=\"noopener noreferrer\">https://github.com/zscontributor/z-cms</a><br><strong>Website:</strong> <a href=\"https://z-cms.org\" target=\"_blank\" rel=\"noopener noreferrer\">https://z-cms.org</a></p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "en",
+        "slug": "designing-a-modern-theme-engine-for-nextjs",
+        "title": "Designing a Modern Theme Engine for Next.js",
+        "translationGroup": "default-architecture-4",
+        "excerpt": "Separating presentation from the CMS Core in a React and Next.js architecture",
+        "data": {
+          "readingTime": 4
+        },
+        "seo": {
+          "title": "Designing a Modern Theme Engine for Next.js",
+          "description": "Separating presentation from the CMS Core in a React and Next.js architecture"
+        },
+        "status": "PUBLISHED",
+        "publishedAt": "2026-07-13T02:00:00.000Z",
+        "blocks": [
+          {
+            "id": "default-architecture-4-en",
+            "type": "core/richtext",
+            "props": {
+              "html": "<h2>Why a Next.js theme engine is different</h2><p>popular CMS demonstrated the value of changing a site’s appearance without changing the CMS Core. In Next.js, however, a theme is not only HTML and CSS. It includes React components, server and client boundaries, routing, data contracts, bundling, static generation and cache behavior.</p><h2>Theme responsibilities</h2><p>A Z-CMS theme controls layout, typography, colors, navigation, content templates, blocks, archives, search and responsive presentation. Business logic, authorization and direct database access remain in Core services or plugins.</p><h2>Theme package structure</h2><pre><code>z-theme-orchid/\n├── theme.json\n├── package.json\n├── public/preview.png\n├── src/\n│   ├── layouts/\n│   ├── templates/\n│   ├── blocks/\n│   ├── styles/\n│   └── index.ts\n└── dist/</code></pre><pre><code>{\n  &quot;name&quot;: &quot;@z-cms/theme-orchid&quot;,\n  &quot;version&quot;: &quot;1.0.0&quot;,\n  &quot;engine&quot;: { &quot;z-cms&quot;: &quot;&gt;=1.0.0&quot; },\n  &quot;templates&quot;: {\n    &quot;home&quot;: &quot;HomePage&quot;,\n    &quot;post&quot;: &quot;PostPage&quot;,\n    &quot;page&quot;: &quot;Page&quot;,\n    &quot;archive&quot;: &quot;ArchivePage&quot;,\n    &quot;404&quot;: &quot;NotFoundPage&quot;\n  }\n}</code></pre><h2>Stable view-model contracts</h2><p>Themes do not query database tables. Core services transform domain entities into stable view models, allowing the database schema to evolve without breaking every theme.</p><pre><code>export interface PostPageModel {\n  site: SiteViewModel;\n  post: PostViewModel;\n  navigation: NavigationViewModel[];\n  widgets: WidgetAreaViewModel[];\n  seo: SeoViewModel;\n}</code></pre><pre><code>export default function PostPage({ post, site, navigation }: PostPageModel) {\n  return (\n    &lt;DefaultLayout site={site} navigation={navigation}&gt;\n      &lt;article&gt;\n        &lt;h1&gt;{post.title}&lt;/h1&gt;\n        &lt;div&gt;{post.content}&lt;/div&gt;\n      &lt;/article&gt;\n    &lt;/DefaultLayout&gt;\n  );\n}</code></pre><h2>Template resolution</h2><pre><code>Custom template selected by editor\n   ↓\nContent-type template\n   ↓\nGeneric page template\n   ↓\nCore fallback template</code></pre><p>A missing theme template does not take the site offline because the Core can fall back to a compatible default.</p><h2>Blocks as the content composition layer</h2><pre><code>[\n  { &quot;type&quot;: &quot;hero&quot;, &quot;props&quot;: { &quot;title&quot;: &quot;Build faster with Z-CMS&quot; } },\n  { &quot;type&quot;: &quot;feature-grid&quot;, &quot;props&quot;: { &quot;columns&quot;: 3 } }\n]</code></pre><p>Themes register visual renderers for known blocks, while plugins can introduce new block types. If a theme does not override a plugin block, the plugin’s default renderer or a Core fallback is used.</p><h2>Design tokens and customization</h2><pre><code>{\n  &quot;tokens&quot;: {\n    &quot;colors&quot;: {\n      &quot;primary&quot;: { &quot;type&quot;: &quot;color&quot;, &quot;default&quot;: &quot;#4f46e5&quot; },\n      &quot;background&quot;: { &quot;type&quot;: &quot;color&quot;, &quot;default&quot;: &quot;#ffffff&quot; }\n    },\n    &quot;layout&quot;: {\n      &quot;containerWidth&quot;: { &quot;type&quot;: &quot;size&quot;, &quot;default&quot;: &quot;1200px&quot; }\n    }\n  }\n}</code></pre><pre><code>:root {\n  --z-color-primary: #4f46e5;\n  --z-color-background: #ffffff;\n  --z-container-width: 1200px;\n}</code></pre><p>The administrator can customize approved tokens without editing source code or forking the theme.</p><h2>Server Components and Client Components</h2><p>Most templates should remain Server Components for SEO, performance and lower browser JavaScript. Interactive pieces such as mobile menus or carousels are explicit Client Components. The theme build pipeline validates the boundary and bundles both correctly.</p><h2>Theme security</h2><ul><li>Build and validate a theme before activation.</li><li>Allow only approved dependencies.</li><li>Block imports from Node.js internals and Core private modules.</li><li>Expose a public @z-cms/theme-sdk instead of database access.</li><li>Scan marketplace source and bundles for forbidden capabilities.</li></ul><h2>Inheritance, preview and activation</h2><p>A child theme can override selected templates and styles while extending a parent theme. Administrators preview a candidate theme through an authorized preview context, while public visitors continue seeing the active theme.</p><pre><code>Validate theme\n   ↓\nBuild or load verified bundle\n   ↓\nRun render smoke test\n   ↓\nUpdate active-theme pointer\n   ↓\nInvalidate scoped caches</code></pre><h2>Multi-tenant cache keys</h2><pre><code>tenantId + themeId + themeVersion + route + locale + contentVersion</code></pre><p>Including the theme version in the cache key prevents a page rendered by an old theme from being served after activation.</p><h2>Conclusion</h2><p>A Next.js theme engine requires more than replaceable CSS. It needs package contracts, view models, template resolution, blocks, design tokens, server/client boundaries, preview, safe activation and tenant-aware caching. Z-CMS aims to preserve the flexibility of classic CMS themes while giving developers a modern React and TypeScript workflow.</p><p><strong>GitHub:</strong> <a href=\"https://github.com/zscontributor/z-cms\" target=\"_blank\" rel=\"noopener noreferrer\">https://github.com/zscontributor/z-cms</a><br><strong>Website:</strong> <a href=\"https://z-cms.org\" target=\"_blank\" rel=\"noopener noreferrer\">https://z-cms.org</a></p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "ja",
+        "slug": "designing-a-modern-theme-engine-for-nextjs",
+        "title": "popular CMS の柔軟性を Next.js で実現する Theme Engine 設計",
+        "translationGroup": "default-architecture-4",
+        "excerpt": "モダンな React architecture で presentation layer を CMS Core から分離する",
+        "data": {
+          "readingTime": 6
+        },
+        "seo": {
+          "title": "popular CMS の柔軟性を Next.js で実現する Theme Engine 設計",
+          "description": "モダンな React architecture で presentation layer を CMS Core から分離する"
+        },
+        "status": "PUBLISHED",
+        "publishedAt": "2026-07-13T02:00:00.000Z",
+        "blocks": [
+          {
+            "id": "default-architecture-4-ja",
+            "type": "core/richtext",
+            "props": {
+              "html": "<h2>Theme system の目的</h2><p>Theme は layout、header、footer、typography、color、content template、navigation、block、responsive behavior を制御します。一方で raw database access、authorization bypass、無制限な business logic は持たせません。Business logic は plugin、presentation layer は theme が担当します。</p><h2>Theme package と manifest</h2><p>Theme package には layouts、templates、blocks、styles、public assets、theme.json を含めます。Manifest は version、compatibility、template mapping、design token、許可 dependency を宣言します。</p><h2>Theme contract と view model</h2><p>Theme は database schema に直接依存しません。Core は data を PostPageModel、SiteViewModel、NavigationViewModel、SeoViewModel などの stable view model に変換します。Contract が維持されれば persistence layer の変更で theme は壊れません。</p><pre><code>z-theme-orchid/\n├── theme.json\n├── src/layouts/\n├── src/templates/\n├── src/blocks/\n├── src/styles/\n└── public/assets/</code></pre><h2>Template resolution</h2><p>Theme Resolver は route type、content type、editor selection から template を選びます。優先順位は custom template → content-type template → generic template → Core fallback です。Theme に PostPage がなくても default template で render できます。</p><h2>Block-based rendering</h2><p>Page content は hard-coded layout ではなく block data として保存します。Theme は hero、feature-grid、CTA、plugin 提供 block の renderer を登録します。Custom renderer がない場合は plugin default renderer または Core fallback を使います。</p><pre><code>Core View Model\n    ↓\nTemplate Resolver\n    ↓\nTheme Template\n    ↓\nBlock Renderer\n    ↓\nServer/Client Components</code></pre><h2>Design token と Theme Customizer</h2><p>Color、font、spacing、container width を theme.json に宣言します。Administrator は Theme Customizer で変更し、Core は --z-color-primary のような CSS variables を生成します。Source code の変更は不要です。</p><h2>Server Component と Client Component</h2><p>多くの template は Server Component とし、browser に送る JavaScript を減らし、SEO と data fetching を改善します。Mobile menu や slider など interaction が必要な component だけ use client を利用します。</p><h2>Theme sandboxing と SDK boundary</h2><p>Theme は @z-cms/theme-sdk と allowlist dependency のみ import できます。node:fs、raw database adapter、server internals への access は許可しません。Source は activation 前に scan と build を行います。</p><h2>Inheritance、preview、hot activation</h2><p>Child theme は parent theme の一部 template や style を override できます。Preview context により administrator だけが新 theme を確認し、public user は現行 theme を見続けます。Build validation と render smoke test 成功後に active pointer を切り替え、tenant・theme ID・version 単位で cache を invalidate します。</p><h2>Multi-tenant と plugin compatibility</h2><p>各 tenant は独立した active theme を持ちます。Plugin は block や UI contract を登録し、theme が対応 renderer を提供します。これにより同じ plugin business logic を複数 theme で利用できます。</p><h2>結論</h2><p>Next.js 向け Theme Engine は CSS の切り替えだけではありません。Package contract、template resolution、block renderer、Server/Client Component boundary、design token、inheritance、preview、build validation、cache invalidation、multi-tenant resolution が必要です。</p><h2>Key takeaways</h2><ul><li>Security boundary は plugin の善意ではなく Core 側で enforce する必要があります。</li><li>Lifecycle、permission、tenant context、observability は同じ platform contract の一部です。</li><li>優れた developer experience は、安全な runtime と supply chain の設計によって持続可能になります。</li></ul><p><strong>GitHub:</strong> <a href=\"https://github.com/zscontributor/z-cms\" target=\"_blank\" rel=\"noopener noreferrer\">https://github.com/zscontributor/z-cms</a><br><strong>Website:</strong> <a href=\"https://z-cms.org\" target=\"_blank\" rel=\"noopener noreferrer\">https://z-cms.org</a></p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "vi",
+        "slug": "thiet-ke-theme-engine-cho-nextjs",
+        "title": "Thiết kế Theme Engine giống popular CMS nhưng dành cho Next.js",
+        "translationGroup": "default-architecture-4",
+        "excerpt": "Tách presentation layer khỏi CMS Core trong kiến trúc React hiện đại",
+        "data": {
+          "readingTime": 4
+        },
+        "seo": {
+          "title": "Thiết kế Theme Engine giống popular CMS nhưng dành cho Next.js",
+          "description": "Tách presentation layer khỏi CMS Core trong kiến trúc React hiện đại"
+        },
+        "status": "PUBLISHED",
+        "publishedAt": "2026-07-13T02:00:00.000Z",
+        "blocks": [
+          {
+            "id": "default-architecture-4-vi",
+            "type": "core/richtext",
+            "props": {
+              "html": "<h2>Mục tiêu của theme system</h2><p>Theme kiểm soát layout, header, footer, typography, color, content template, navigation, block và responsive behavior. Theme không nên truy cập trực tiếp database, bypass authorization hoặc chứa business logic không kiểm soát. Business logic thuộc về plugin; theme tập trung vào presentation layer.</p><h2>Theme package và manifest</h2><p>Theme được đóng gói với layouts, templates, blocks, styles, public assets và theme.json. Manifest khai báo version, compatibility, template mapping, design token và dependency được phép.</p><h2>Theme contract và view model</h2><p>Theme không phụ thuộc trực tiếp database schema. Core chuyển dữ liệu thành stable view model như PostPageModel, SiteViewModel, NavigationViewModel và SeoViewModel. Core có thể thay đổi persistence layer mà không phá theme nếu contract vẫn tương thích.</p><pre><code>z-theme-orchid/\n├── theme.json\n├── src/layouts/\n├── src/templates/\n├── src/blocks/\n├── src/styles/\n└── public/assets/</code></pre><h2>Template resolution</h2><p>Theme Resolver chọn template theo route type, content type và lựa chọn của editor. Thứ tự thường là custom template → content-type template → generic template → Core fallback. Nếu theme thiếu PostPage, Core vẫn có thể render bằng default template.</p><h2>Block-based rendering</h2><p>Nội dung trang được lưu thành block data thay vì hard-coded layout. Theme đăng ký renderer cho hero, feature-grid, CTA hoặc block do plugin cung cấp. Nếu theme không có custom renderer, plugin default renderer hoặc Core fallback sẽ được sử dụng.</p><pre><code>Core View Model\n    ↓\nTemplate Resolver\n    ↓\nTheme Template\n    ↓\nBlock Renderer\n    ↓\nServer/Client Components</code></pre><h2>Design token và Theme Customizer</h2><p>Color, font, spacing và container width được khai báo trong theme.json. Administrator chỉnh trong Theme Customizer; Core sinh CSS variables như --z-color-primary để theme sử dụng mà không cần sửa source.</p><h2>Server Component và Client Component</h2><p>Phần lớn template nên là Server Component để giảm JavaScript gửi xuống browser, hỗ trợ SEO và data fetching. Chỉ component tương tác như mobile menu hoặc slider mới cần use client. Theme build pipeline phải bundle đúng hai loại component.</p><h2>Theme sandboxing và SDK boundary</h2><p>Theme chỉ import từ @z-cms/theme-sdk và dependency allowlist. Nó không được import node:fs, raw database adapter hoặc server internals. Source được scan và build trước activation.</p><h2>Inheritance, preview và hot activation</h2><p>Child theme có thể override một số template hoặc style của parent theme. Preview context cho administrator xem theme mới mà public user vẫn thấy theme hiện tại. Activation chỉ diễn ra sau build validation và render smoke test, sau đó cache được invalidate theo tenant, theme ID và version.</p><h2>Multi-tenant và plugin compatibility</h2><p>Mỗi tenant có active theme riêng. Plugin có thể đăng ký block hoặc UI contract, còn theme cung cấp renderer phù hợp. Cùng một plugin vì vậy có thể hoạt động với nhiều theme mà không sửa business logic.</p><h2>Kết luận</h2><p>Theme Engine cho Next.js không chỉ là đổi CSS. Nó cần package contract, template resolution, block renderer, Server/Client Component boundary, design token, inheritance, preview, build validation, cache invalidation và multi-tenant resolution. Z-CMS giữ sự linh hoạt của theme ecosystem truyền thống nhưng sử dụng TypeScript, React và Next.js.</p><h2>Key takeaways</h2><ul><li>Security boundary phải được enforce trong Core, không dựa vào thiện chí của plugin.</li><li>Lifecycle, permission, tenant context và observability là các phần của cùng một platform contract.</li><li>Developer experience tốt chỉ bền vững khi runtime và supply chain được thiết kế an toàn từ đầu.</li></ul><p><strong>GitHub:</strong> <a href=\"https://github.com/zscontributor/z-cms\" target=\"_blank\" rel=\"noopener noreferrer\">https://github.com/zscontributor/z-cms</a><br><strong>Website:</strong> <a href=\"https://z-cms.org\" target=\"_blank\" rel=\"noopener noreferrer\">https://z-cms.org</a></p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "en",
+        "slug": "how-multi-tenancy-is-implemented-in-z-cms",
+        "title": "How Multi-Tenancy Is Implemented in Z-CMS",
+        "translationGroup": "default-architecture-5",
+        "excerpt": "One CMS Core, many websites, with isolation enforced across every infrastructure layer",
+        "data": {
+          "readingTime": 4
+        },
+        "seo": {
+          "title": "How Multi-Tenancy Is Implemented in Z-CMS",
+          "description": "One CMS Core, many websites, with isolation enforced across every infrastructure layer"
+        },
+        "status": "PUBLISHED",
+        "publishedAt": "2026-07-14T02:00:00.000Z",
+        "blocks": [
+          {
+            "id": "default-architecture-5-en",
+            "type": "core/richtext",
+            "props": {
+              "html": "<h2>Multi-tenancy is a cross-cutting architecture</h2><p>Adding a tenant_id column is not enough. Tenant boundaries affect authentication, authorization, database access, cache, object storage, queues, search, plugins, themes, logging and billing. A missing scope in any one layer can expose data across customers.</p><p><em>Tenant context must be resolved early, treated as immutable and enforced at the data boundary.</em></p><h2>What a tenant represents</h2><p>A tenant may represent a company, website, brand, agency customer, workspace or internal portal. Each tenant owns users, roles, content, media, domains, settings, plugins, themes and subscription data.</p><h2>Tenant resolution</h2><ul><li>Custom domain: company-a.com → tenant-a.</li><li>Subdomain: tenant-a.z-cms.cloud → tenant-a.</li><li>Path: /t/tenant-a.</li><li>API header: X-Tenant-Code: tenant-a.</li></ul><pre><code>interface TenantContext {\n  id: string;\n  code: string;\n  domain?: string;\n}</code></pre><p>The tenant is resolved at a trusted boundary. A tenantId supplied in a request body is never accepted as authoritative.</p><h2>Request-scoped context</h2><pre><code>request.tenant = {\n  id: &quot;tenant_a&quot;,\n  code: &quot;tenant-a&quot;\n};</code></pre><p>Services consume the resolved context rather than parsing domains or headers repeatedly.</p><h2>Database isolation models</h2><h3>Shared database and shared schema</h3><p>All tenants share tables and rows are separated by tenant_id. This is operationally efficient for many small tenants but requires strict filtering.</p><pre><code>CREATE TABLE posts (\n  id UUID PRIMARY KEY,\n  tenant_id UUID NOT NULL,\n  title TEXT NOT NULL,\n  content TEXT\n);</code></pre><h3>Separate schema or database</h3><p>Enterprise tenants may receive a dedicated schema or database for stronger isolation, independent backup and compliance. Z-CMS can expose the same repository contract over shared and dedicated storage models.</p><h2>Tenant-aware repositories</h2><p>Developers should not manually remember tenant filters in every query. A repository is bound to the current tenant and adds the scope automatically.</p><pre><code>class TenantPostRepository {\n  constructor(private db: Database, private tenant: TenantContext) {}\n\n  findMany() {\n    return this.db.posts.findMany({\n      where: { tenantId: this.tenant.id }\n    });\n  }\n}</code></pre><h2>PostgreSQL Row-Level Security</h2><p>Application scoping can be reinforced with database policies.</p><pre><code>ALTER TABLE posts ENABLE ROW LEVEL SECURITY;\n\nCREATE POLICY tenant_isolation_policy\nON posts\nUSING (tenant_id = current_setting(&#x27;app.tenant_id&#x27;)::uuid);</code></pre><p>Defense in depth ensures that even an accidentally unfiltered query cannot read rows from another tenant.</p><h2>Cache, storage and search isolation</h2><pre><code>Wrong: post:123\nRight: tenant:tenant-a:post:123</code></pre><pre><code>tenants/tenant-a/media/2026/07/image.jpg</code></pre><p>Storage APIs accept a logical path and add the tenant prefix internally. Search queries always include a tenant filter or use a dedicated enterprise index.</p><h2>Queue and worker context</h2><pre><code>{\n  &quot;job&quot;: &quot;content.publish&quot;,\n  &quot;tenantId&quot;: &quot;tenant-a&quot;,\n  &quot;payload&quot;: { &quot;postId&quot;: &quot;post-123&quot; }\n}</code></pre><p>Retries preserve the original tenant context. Workers validate the context before loading any resource.</p><h2>Membership and authorization</h2><pre><code>quy@example.com\n├── tenant-a → Owner\n├── tenant-b → Editor\n└── tenant-c → Viewer</code></pre><p>Authentication identifies the user. Membership determines whether the user can enter the tenant. Role and permission checks then determine which actions are allowed.</p><h2>Plugin and theme isolation</h2><p>Each tenant activates its own plugin versions, settings and theme. Plugin SDK calls are automatically scoped to tenantId plus pluginId, and rendered-page cache keys include tenant and theme version.</p><h2>Observability and rate limiting</h2><pre><code>{\n  &quot;level&quot;: &quot;info&quot;,\n  &quot;tenantId&quot;: &quot;tenant-a&quot;,\n  &quot;requestId&quot;: &quot;req-123&quot;,\n  &quot;pluginId&quot;: &quot;plugin-seo&quot;,\n  &quot;message&quot;: &quot;SEO metadata updated&quot;\n}</code></pre><p>Rate limits can be applied per IP, user, tenant, API key and plugin so one customer cannot exhaust shared resources.</p><h2>Testing for cross-tenant leakage</h2><pre><code>const tenantA = await createTenant();\nconst tenantB = await createTenant();\n\nawait createPost(tenantA, { title: &quot;Tenant A Post&quot; });\nconst posts = await listPosts(tenantB);\n\nexpect(posts).toHaveLength(0);</code></pre><p>Security tests should intentionally submit resource identifiers belonging to another tenant and verify that every layer rejects them.</p><h2>Conclusion</h2><p>Z-CMS treats multi-tenancy as an end-to-end invariant. Request resolution, membership, repositories, row-level security, cache keys, storage paths, jobs, search, plugins, themes and logs all carry the same immutable tenant context. The goal is to make the safe path the default path for every developer.</p><p><strong>GitHub:</strong> <a href=\"https://github.com/zscontributor/z-cms\" target=\"_blank\" rel=\"noopener noreferrer\">https://github.com/zscontributor/z-cms</a><br><strong>Website:</strong> <a href=\"https://z-cms.org\" target=\"_blank\" rel=\"noopener noreferrer\">https://z-cms.org</a></p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "ja",
+        "slug": "how-multi-tenancy-is-implemented-in-z-cms",
+        "title": "Z-CMS における Multi-tenancy の実装",
+        "translationGroup": "default-architecture-5",
+        "excerpt": "1 つの CMS Core で複数 website を安全に分離する architecture",
+        "data": {
+          "readingTime": 6
+        },
+        "seo": {
+          "title": "Z-CMS における Multi-tenancy の実装",
+          "description": "1 つの CMS Core で複数 website を安全に分離する architecture"
+        },
+        "status": "PUBLISHED",
+        "publishedAt": "2026-07-14T02:00:00.000Z",
+        "blocks": [
+          {
+            "id": "default-architecture-5-ja",
+            "type": "core/richtext",
+            "props": {
+              "html": "<h2>Multi-tenancy はすべての layer に影響する</h2><p>Multi-tenancy は tenant_id column を追加するだけではありません。Authentication、authorization、database、cache、storage、queue、search、plugin、theme、logging、billing のすべてに影響します。1 layer でも tenant context を失うと cross-tenant data leak が起こり得ます。</p><h2>Tenant resolution</h2><p>Z-CMS は custom domain、subdomain、path、X-Tenant-Code のような trusted header から tenant を resolve できます。Tenant を特定できない request は business service に入る前に拒否します。User が request body に指定した tenantId は信頼しません。</p><h2>Request-scoped tenant context</h2><p>Resolution 後、tenant context を request scope に設定し、service call 全体に伝搬させます。Application code は domain を再解析したり任意の tenantId を受け取るのではなく、tenantContext.getTenantId() を利用します。</p><pre><code>Request\n→ Authentication\n→ Tenant Resolution\n→ Authorization\n→ Database / Cache / Storage\n→ Queue / Search\n→ Plugin / Theme\n→ Logging</code></pre><h2>Database isolation strategy</h2><p>小規模 tenant には shared database/shared schema、より高い isolation には separate schema、enterprise には dedicated database を選択できます。Application は共通 repository contract を利用し、hybrid model に対応します。</p><h2>Tenant-aware repository と Row-Level Security</h2><p>Repository は現在の tenant に bind され、developer が各 query に WHERE tenant_id を書き忘れる risk を減らします。PostgreSQL Row-Level Security を defense-in-depth として使えば、application filter が欠けても database policy が row access を制限できます。</p><pre><code>tenant-a:post:123\ntenants/tenant-a/media/image.jpg\ntenant-a:plugin-seo:settings</code></pre><h2>Cache、storage、queue、search isolation</h2><p>Cache key には必ず tenant prefix を含めます。Storage API は tenants/{tenantId}/... path を自動追加し、plugin に arbitrary path を許可しません。Background job は tenant context を保持し、search query は tenant filter または dedicated index を使用します。</p><h2>Authentication、membership、permission</h2><p>Login 済み user がすべての tenant に access できるわけではありません。まず tenant membership、次に role と content.publish などの permission を確認します。同じ user が tenant A では Owner、tenant B では Editor、tenant C では Viewer になることがあります。</p><h2>Tenant ごとの plugin と theme</h2><p>各 tenant は異なる plugin、version、settings、active theme を利用できます。Plugin settings は tenant + plugin ID で scope されます。Runtime は Core から immutable tenant context を受け取り、別 tenant を選択できません。</p><h2>Logging、rate limit、maintenance</h2><p>Structured log には tenantId、requestId、userId、pluginId を含めます。Rate limit は IP、user、tenant、API key、plugin ごとに適用できます。Reindex や migration は tenant 単位の job に分割し、1 tenant が platform 全体を block しないようにします。</p><h2>Multi-tenancy の test</h2><p>Test では常に 2 つ以上の tenant を作り、別 tenant の resource ID を意図的に使用します。Repository、cache、storage、queue、search、plugin bridge が cross-tenant access を拒否することを確認します。</p><h2>結論</h2><p>Z-CMS は trusted boundary で tenant context を決定し、immutable な context を Request → Authorization → Database → Cache → Storage → Queue → Search → Plugin → Theme → Logging 全体で enforce します。</p><h2>Key takeaways</h2><ul><li>Security boundary は plugin の善意ではなく Core 側で enforce する必要があります。</li><li>Lifecycle、permission、tenant context、observability は同じ platform contract の一部です。</li><li>優れた developer experience は、安全な runtime と supply chain の設計によって持続可能になります。</li></ul><p><strong>GitHub:</strong> <a href=\"https://github.com/zscontributor/z-cms\" target=\"_blank\" rel=\"noopener noreferrer\">https://github.com/zscontributor/z-cms</a><br><strong>Website:</strong> <a href=\"https://z-cms.org\" target=\"_blank\" rel=\"noopener noreferrer\">https://z-cms.org</a></p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "vi",
+        "slug": "multi-tenancy-duoc-trien-khai-trong-z-cms",
+        "title": "Multi-tenancy được triển khai trong Z-CMS như thế nào",
+        "translationGroup": "default-architecture-5",
+        "excerpt": "Một CMS Core phục vụ nhiều website với data isolation xuyên suốt",
+        "data": {
+          "readingTime": 4
+        },
+        "seo": {
+          "title": "Multi-tenancy được triển khai trong Z-CMS như thế nào",
+          "description": "Một CMS Core phục vụ nhiều website với data isolation xuyên suốt"
+        },
+        "status": "PUBLISHED",
+        "publishedAt": "2026-07-14T02:00:00.000Z",
+        "blocks": [
+          {
+            "id": "default-architecture-5-vi",
+            "type": "core/richtext",
+            "props": {
+              "html": "<h2>Multi-tenancy ảnh hưởng đến mọi layer</h2><p>Multi-tenancy không chỉ là thêm cột tenant_id. Nó ảnh hưởng authentication, authorization, database, cache, storage, queue, search, plugin, theme, logging và billing. Chỉ cần bỏ sót tenant context ở một layer, dữ liệu tenant này có thể xuất hiện trong tenant khác.</p><h2>Tenant resolution</h2><p>Z-CMS có thể resolve tenant từ custom domain, subdomain, path hoặc trusted header như X-Tenant-Code. Nếu không xác định được tenant, request bị từ chối trước khi vào business service. Tenant ID không được lấy từ request body do user cung cấp.</p><h2>Request-scoped tenant context</h2><p>Sau resolution, tenant context được gắn vào request scope và truyền xuyên suốt service call. Application code dùng tenantContext.getTenantId() thay vì tự parse domain hoặc nhận tenantId tùy ý.</p><pre><code>Request\n→ Authentication\n→ Tenant Resolution\n→ Authorization\n→ Database / Cache / Storage\n→ Queue / Search\n→ Plugin / Theme\n→ Logging</code></pre><h2>Database isolation strategy</h2><p>Z-CMS có thể hỗ trợ shared database/shared schema cho nhiều tenant nhỏ, separate schema cho isolation cao hơn và dedicated database cho enterprise. Application sử dụng cùng repository contract để có thể triển khai hybrid model.</p><h2>Tenant-aware repository và Row-Level Security</h2><p>Repository được bind sẵn với tenant hiện tại, giúp developer không phải nhớ thêm WHERE tenant_id ở mỗi query. PostgreSQL Row-Level Security có thể tạo defense-in-depth: ngay cả khi application quên filter, database policy vẫn giới hạn row theo app.tenant_id.</p><pre><code>tenant-a:post:123\ntenants/tenant-a/media/image.jpg\ntenant-a:plugin-seo:settings</code></pre><h2>Cache, storage, queue và search isolation</h2><p>Cache key luôn có tenant prefix. Storage API tự thêm path tenants/{tenantId}/... và không cho plugin chọn arbitrary path. Background job mang tenant context. Search query luôn có tenant filter hoặc dùng index riêng cho enterprise.</p><h2>Authentication, membership và permission</h2><p>User đăng nhập chưa đồng nghĩa được truy cập mọi tenant. Hệ thống kiểm tra tenant membership trước, sau đó mới kiểm tra role và permission như content.publish. Một user có thể là Owner ở tenant A, Editor ở tenant B và Viewer ở tenant C.</p><h2>Plugin và theme theo tenant</h2><p>Mỗi tenant có thể cài plugin, version, settings và active theme khác nhau. Plugin settings được scope theo tenant + plugin ID. Runtime nhận immutable tenant context từ Core, không tự chọn tenant khác.</p><h2>Logging, rate limit và maintenance</h2><p>Structured log bao gồm tenantId, requestId, userId và pluginId. Rate limit có thể áp dụng theo IP, user, tenant, API key và plugin. Reindex hoặc migration được chia thành job theo tenant để một tenant không khóa toàn platform.</p><h2>Testing multi-tenancy</h2><p>Test luôn tạo ít nhất hai tenant và cố tình dùng resource ID của tenant khác. Security test phải xác nhận repository, cache, storage, queue, search và plugin bridge đều từ chối cross-tenant access.</p><h2>Kết luận</h2><p>Z-CMS xác định tenant context từ trusted boundary, giữ context bất biến và enforce nó xuyên suốt Request → Authorization → Database → Cache → Storage → Queue → Search → Plugin → Theme → Logging. Mục tiêu là giúp developer viết feature an toàn mà không phải tự nhớ tenant filter ở từng dòng code.</p><h2>Key takeaways</h2><ul><li>Security boundary phải được enforce trong Core, không dựa vào thiện chí của plugin.</li><li>Lifecycle, permission, tenant context và observability là các phần của cùng một platform contract.</li><li>Developer experience tốt chỉ bền vững khi runtime và supply chain được thiết kế an toàn từ đầu.</li></ul><p><strong>GitHub:</strong> <a href=\"https://github.com/zscontributor/z-cms\" target=\"_blank\" rel=\"noopener noreferrer\">https://github.com/zscontributor/z-cms</a><br><strong>Website:</strong> <a href=\"https://z-cms.org\" target=\"_blank\" rel=\"noopener noreferrer\">https://z-cms.org</a></p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "en",
+        "slug": "how-ai-plugins-work-inside-z-cms",
+        "title": "How AI Plugins Work Inside Z-CMS",
+        "translationGroup": "default-architecture-6",
+        "excerpt": "A provider-neutral, permission-aware AI SDK for cloud, private and on-premise deployments",
+        "data": {
+          "readingTime": 4
+        },
+        "seo": {
+          "title": "How AI Plugins Work Inside Z-CMS",
+          "description": "A provider-neutral, permission-aware AI SDK for cloud, private and on-premise deployments"
+        },
+        "status": "PUBLISHED",
+        "publishedAt": "2026-07-15T02:00:00.000Z",
+        "blocks": [
+          {
+            "id": "default-architecture-6-en",
+            "type": "core/richtext",
+            "props": {
+              "html": "<h2>Why AI should be a platform capability</h2><p>CMS users increasingly expect AI writing, summarization, translation, SEO metadata, product descriptions, classification, semantic search and assistants. Calling one model directly from the Core is easy, but it creates provider lock-in, unmanaged API keys, unclear data transfer and uncontrolled cost.</p><p>Z-CMS treats AI as a governed platform capability that plugins access through a common SDK.</p><h2>AI Gateway architecture</h2><pre><code>AI Plugin\n   ↓\nZ-CMS AI SDK\n   ↓\nAI Gateway\n   ↓\nPolicy Engine\n   ↓\nProvider Adapter\n   ↓\nAI Provider</code></pre><p>The gateway selects the provider and model, checks quota, applies privacy policy, records usage, handles retries and validates output.</p><h2>Provider abstraction</h2><pre><code>interface AIProvider {\n  generateText(request: GenerateTextRequest): Promise&lt;GenerateTextResponse&gt;;\n  generateEmbedding(request: EmbeddingRequest): Promise&lt;EmbeddingResponse&gt;;\n}</code></pre><p>Adapters can support public cloud services, Azure-hosted models, Ollama, local Llama deployments or an enterprise on-premise model. Plugins continue calling cms.ai regardless of the provider.</p><h2>Tenant-level policy and credentials</h2><pre><code>Tenant A → Public cloud model → Monthly budget $100\nTenant B → Azure-hosted model → Japan region\nTenant C → On-premise model → No external transfer</code></pre><p>Credentials remain in a secret store and are never exposed to plugin isolates.</p><h2>AI permissions</h2><pre><code>{\n  &quot;permissions&quot;: [\n    &quot;ai:text:generate&quot;,\n    &quot;content:read&quot;\n  ]\n}</code></pre><p>Embedding generation, file analysis and other capabilities require separate permissions. Every call is enforced at runtime.</p><h2>Purpose-driven requests</h2><pre><code>const result = await cms.ai.generateText({\n  purpose: &quot;translate-content&quot;,\n  input: article.content,\n  metadata: { targetLanguage: &quot;ja&quot; }\n});</code></pre><p>Purpose allows the gateway to select a model, prompt template, output limit and policy appropriate to the task. A short SEO description may use a fast model and a 300-token ceiling, while long-form generation uses a different policy.</p><h2>Prompt registry and structured output</h2><pre><code>const result = await cms.ai.runPrompt(\n  &quot;seo.generateMetaDescription&quot;,\n  { title: article.title, content: article.content }\n);</code></pre><p>Managed prompt templates are versioned and can be overridden by an enterprise tenant. For machine-consumed results, Z-CMS favors structured output validated against a schema.</p><pre><code>const metadata = await cms.ai.generateObject({\n  purpose: &quot;seo-analysis&quot;,\n  schema: SeoAnalysisSchema,\n  input: article.content\n});</code></pre><h2>Quota and cost control</h2><p>Usage is attributed to tenant, plugin, user, feature, provider and model. Administrators can set warning and hard limits.</p><pre><code>{\n  &quot;tenantId&quot;: &quot;tenant-a&quot;,\n  &quot;pluginId&quot;: &quot;plugin-ai-writer&quot;,\n  &quot;model&quot;: &quot;text-model&quot;,\n  &quot;inputTokens&quot;: 1200,\n  &quot;outputTokens&quot;: 400,\n  &quot;estimatedCost&quot;: 0.012\n}</code></pre><h2>Privacy classification and PII handling</h2><pre><code>Public → External AI allowed\nInternal → Approved providers only\nConfidential → Enterprise provider only\nRestricted → Local model only</code></pre><p>Before external transfer, the gateway can redact emails, phone numbers, customer identifiers, credentials and other sensitive values. A fallback provider is never used when it violates the tenant’s data policy.</p><h2>Human approval and background jobs</h2><p>Low-risk metadata may be applied automatically, while generated articles are normally created as drafts for editorial approval. Long translations and document analysis run as queued jobs rather than blocking a request.</p><pre><code>Editor requests translation\n   ↓\nJob queued with tenant context\n   ↓\nWorker calls AI Gateway\n   ↓\nDraft translation stored\n   ↓\nEditor notified</code></pre><h2>Semantic search and RAG</h2><p>Plugins can request embeddings through the gateway and store vectors in a tenant-aware search layer. Retrieval applies tenant and permission filters before content is added to a model context.</p><pre><code>Question\n   ↓\nRetrieve permitted tenant documents\n   ↓\nBuild context\n   ↓\nGenerate answer\n   ↓\nReturn answer with sources</code></pre><h2>Isolation, fallback and caching</h2><p>AI plugins still run inside V8 Isolates. They cannot read API keys, bypass quota or call an undeclared network endpoint. Deterministic requests may be cached using tenant, plugin, purpose, model, prompt version and content hash.</p><h2>Developer experience</h2><pre><code>const description = await cms.ai.generateText({\n  purpose: &quot;product-description&quot;,\n  input: {\n    name: product.name,\n    features: product.features\n  }\n});</code></pre><p>The plugin developer does not need to implement provider SDKs, retries, rate limits, credentials, billing, audit, output validation or privacy controls.</p><h2>Conclusion</h2><p>Z-CMS AI plugins use a provider-neutral gateway with explicit permissions, tenant policy, quotas, privacy controls, structured output, background execution and auditability. The same plugin can operate with public cloud AI, private enterprise AI or an on-premise model without changing its business logic.</p><p><strong>GitHub:</strong> <a href=\"https://github.com/zscontributor/z-cms\" target=\"_blank\" rel=\"noopener noreferrer\">https://github.com/zscontributor/z-cms</a><br><strong>Website:</strong> <a href=\"https://z-cms.org\" target=\"_blank\" rel=\"noopener noreferrer\">https://z-cms.org</a></p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "ja",
+        "slug": "how-ai-plugins-work-inside-z-cms",
+        "title": "Z-CMS 内部で AI Plugin が動作する仕組み",
+        "translationGroup": "default-architecture-6",
+        "excerpt": "Platform を特定 provider に lock-in せず AI を統合する",
+        "data": {
+          "readingTime": 6
+        },
+        "seo": {
+          "title": "Z-CMS 内部で AI Plugin が動作する仕組み",
+          "description": "Platform を特定 provider に lock-in せず AI を統合する"
+        },
+        "status": "PUBLISHED",
+        "publishedAt": "2026-07-15T02:00:00.000Z",
+        "blocks": [
+          {
+            "id": "default-architecture-6-ja",
+            "type": "core/richtext",
+            "props": {
+              "html": "<h2>AI は controller 内の API call ではなく platform capability</h2><p>モダン CMS には AI writer、summary、translation、SEO metadata、classification、moderation、semantic search、chatbot が求められます。各 plugin が provider を直接呼ぶと、API key が分散し、cost control と privacy が不透明になり、platform が provider に lock-in されます。</p><h2>AI Gateway</h2><p>標準 flow は AI Plugin → Z-CMS AI SDK → AI Gateway → Policy Engine → Provider Adapter → AI Provider です。Plugin は cms.ai だけを呼び、Gateway が provider、model、quota、policy、retry、fallback、cache、audit を管理します。</p><h2>Provider abstraction</h2><p>Z-CMS は generateText、generateObject、generateEmbedding の共通 interface を定義します。Adapter は OpenAI、Azure OpenAI、Anthropic、Gemini、Ollama、local model に接続できます。Administrator が provider を変更しても plugin business logic は変わりません。</p><pre><code>AI Plugin\n    ↓\nZ-CMS AI SDK\n    ↓\nAI Gateway\n    ↓\nPolicy Engine\n    ↓\nProvider Adapter\n    ↓\nAI Provider</code></pre><h2>Tenant-level AI settings と secret management</h2><p>各 tenant は provider、model、region、monthly budget、external transfer policy を設定できます。API key は secure secret store に保存し、plugin には credential を公開しません。</p><h2>AI permission と purpose declaration</h2><p>Plugin は ai:text:generate、ai:embedding:generate、ai:file:analyze を宣言します。Request は seo-description、translate-content、content-moderation などの purpose を指定し、Gateway が適切な model、token limit、prompt template、policy を選びます。</p><pre><code>const result = await cms.ai.generateObject({\n  purpose: &quot;seo-metadata&quot;,\n  input: article.content,\n  schema: seoMetadataSchema\n});</code></pre><h2>Prompt registry と structured output</h2><p>すべての plugin が独自の system prompt を無制限に送る代わりに、Z-CMS は versioned prompt registry を提供できます。Structured output では plugin が JSON schema を指定し、Gateway が response を validate し、必要に応じて retry します。</p><h2>Quota と cost control</h2><p>Usage は tenant、plugin、user、purpose、provider、model ごとに追跡します。Warning threshold と hard limit を設定し、plugin は provider を直接呼べないため quota を bypass できません。</p><h2>Data privacy と PII redaction</h2><p>Content を Public、Internal、Confidential、Restricted に分類し、external AI を許可するか local model のみとするかを policy で決定します。Gateway は email、phone、customer ID、token などの PII を送信前に redact できます。</p><h2>Human approval と async job</h2><p>Risk の高い AI-generated content は自動 publish せず draft として editor review に回します。Translation や batch classification のような長い処理は background job で実行し、tenant context、plugin identity、permission scope を保持します。</p><h2>Semantic search と RAG</h2><p>Embedding API により semantic search を構築できます。RAG pipeline は document retrieval 後に tenant filter と permission filter を適用し、context を作成してから model を呼びます。AI assistant が user に許可されていない content を漏らしてはいけません。</p><h2>Plugin isolation、fallback、audit</h2><p>AI plugin も V8 Isolate 内で動作し、AI Capability Bridge のみを利用します。Fallback provider は privacy policy に従い、local-only tenant を public cloud に自動 fallback してはいけません。各 operation は audit metadata を記録します。</p><h2>結論</h2><p>AI plugin platform には provider abstraction、secure credential、tenant configuration、permission、quota、privacy、structured output、async job、semantic search、RAG、fallback、audit が必要です。Z-CMS AI SDK により developer は infrastructure ではなく feature に集中できます。</p><h2>Key takeaways</h2><ul><li>Security boundary は plugin の善意ではなく Core 側で enforce する必要があります。</li><li>Lifecycle、permission、tenant context、observability は同じ platform contract の一部です。</li><li>優れた developer experience は、安全な runtime と supply chain の設計によって持続可能になります。</li></ul><p><strong>GitHub:</strong> <a href=\"https://github.com/zscontributor/z-cms\" target=\"_blank\" rel=\"noopener noreferrer\">https://github.com/zscontributor/z-cms</a><br><strong>Website:</strong> <a href=\"https://z-cms.org\" target=\"_blank\" rel=\"noopener noreferrer\">https://z-cms.org</a></p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "vi",
+        "slug": "ai-plugin-hoat-dong-ben-trong-z-cms",
+        "title": "AI Plugin hoạt động bên trong Z-CMS như thế nào",
+        "translationGroup": "default-architecture-6",
+        "excerpt": "Đưa AI vào CMS mà không khóa platform vào một provider",
+        "data": {
+          "readingTime": 4
+        },
+        "seo": {
+          "title": "AI Plugin hoạt động bên trong Z-CMS như thế nào",
+          "description": "Đưa AI vào CMS mà không khóa platform vào một provider"
+        },
+        "status": "PUBLISHED",
+        "publishedAt": "2026-07-15T02:00:00.000Z",
+        "blocks": [
+          {
+            "id": "default-architecture-6-vi",
+            "type": "core/richtext",
+            "props": {
+              "html": "<h2>AI là platform capability, không phải API call trong controller</h2><p>CMS hiện đại cần AI writer, summary, translation, SEO metadata, classification, moderation, semantic search và chatbot. Nếu mỗi plugin gọi provider trực tiếp, API key bị phân tán, cost khó kiểm soát, privacy không minh bạch và platform bị lock-in.</p><h2>AI Gateway</h2><p>Luồng chuẩn là AI Plugin → Z-CMS AI SDK → AI Gateway → Policy Engine → Provider Adapter → AI Provider. Plugin chỉ gọi cms.ai; Gateway chọn provider, model, quota, policy, retry, fallback, cache và audit.</p><h2>Provider abstraction</h2><p>Z-CMS định nghĩa interface chung cho generateText, generateObject và generateEmbedding. Adapter có thể kết nối OpenAI, Azure OpenAI, Anthropic, Gemini, Ollama hoặc local model. Plugin business logic không đổi khi administrator chuyển provider.</p><pre><code>AI Plugin\n    ↓\nZ-CMS AI SDK\n    ↓\nAI Gateway\n    ↓\nPolicy Engine\n    ↓\nProvider Adapter\n    ↓\nAI Provider</code></pre><h2>Tenant-level AI settings và secret management</h2><p>Mỗi tenant có thể chọn provider, model, region, monthly budget và policy external transfer. API key nằm trong secure secret store; plugin không bao giờ đọc credential trực tiếp.</p><h2>AI permission và purpose declaration</h2><p>Plugin khai báo ai:text:generate, ai:embedding:generate hoặc ai:file:analyze. Mỗi request khai báo purpose như seo-description, translate-content hoặc content-moderation để Gateway chọn model, token limit, prompt template và policy phù hợp.</p><pre><code>const result = await cms.ai.generateObject({\n  purpose: &quot;seo-metadata&quot;,\n  input: article.content,\n  schema: seoMetadataSchema\n});</code></pre><h2>Prompt registry và structured output</h2><p>Thay vì để mọi plugin tự tạo system prompt không kiểm soát, Z-CMS có prompt registry có version. Với structured output, plugin cung cấp JSON schema; Gateway validate response và retry khi output không hợp lệ.</p><h2>Quota và cost control</h2><p>Usage được theo dõi theo tenant, plugin, user, purpose, provider và model. Policy có warning threshold và hard limit. Plugin không thể bypass quota vì không được gọi provider trực tiếp.</p><h2>Data privacy và PII redaction</h2><p>Content có thể được phân loại Public, Internal, Confidential hoặc Restricted. Policy quyết định external AI có được phép hay phải dùng local model. Gateway có thể redact email, phone, customer ID, token và thông tin nhạy cảm trước khi gửi.</p><h2>Human approval và async job</h2><p>AI-generated content có rủi ro cao nên tạo draft để editor review thay vì publish tự động. Tác vụ dài như translation hoặc batch classification chạy qua background job, giữ nguyên tenant context, plugin identity và permission scope.</p><h2>Semantic search và RAG</h2><p>Embedding API cho phép xây semantic search. RAG pipeline retrieve document, áp dụng tenant filter và permission filter, build context rồi mới gọi model. AI assistant không được làm lộ content mà user không có quyền xem.</p><h2>Plugin isolation, fallback và audit</h2><p>AI plugin vẫn chạy trong V8 Isolate và chỉ truy cập AI Capability Bridge. Fallback provider phải tuân thủ privacy policy; tenant local-only không được tự động fallback ra public cloud. Mỗi operation ghi audit metadata nhưng có thể không lưu raw prompt nếu policy yêu cầu.</p><h2>Kết luận</h2><p>AI integration cho plugin cần provider abstraction, secure credential, tenant configuration, permission, quota, privacy, structured output, async job, semantic search, RAG, fallback và audit. Z-CMS AI SDK giúp developer tập trung vào feature thay vì tự xây lại toàn bộ hạ tầng AI.</p><h2>Key takeaways</h2><ul><li>Security boundary phải được enforce trong Core, không dựa vào thiện chí của plugin.</li><li>Lifecycle, permission, tenant context và observability là các phần của cùng một platform contract.</li><li>Developer experience tốt chỉ bền vững khi runtime và supply chain được thiết kế an toàn từ đầu.</li></ul><p><strong>GitHub:</strong> <a href=\"https://github.com/zscontributor/z-cms\" target=\"_blank\" rel=\"noopener noreferrer\">https://github.com/zscontributor/z-cms</a><br><strong>Website:</strong> <a href=\"https://z-cms.org\" target=\"_blank\" rel=\"noopener noreferrer\">https://z-cms.org</a></p>"
             }
           }
         ]
