@@ -274,11 +274,10 @@ services:
       PORT: "3000"
       CMS_API_URL: http://cms-api:4100
       THEME_CACHE_DIR: /tmp/zcms-themes
-      THEME_DIR: /themes
-      # A theme renders in THIS process, unsandboxed. The volume below is read-only,
-      # but read-only is not the same as trustworthy — a bad image layer still puts
-      # bytes in /themes. Without this key site-runtime refuses to import them, which
-      # is why it is `:?` and not a default.
+      # A theme renders in THIS process, unsandboxed. Built-in theme packages are
+      # shipped in the image, but image bytes are still not a trust boundary.
+      # Without this key site-runtime refuses to import them, which is why it is
+      # `:?` and not a default.
       FIRST_PARTY_PUBLIC_KEY: ${FIRST_PARTY_PUBLIC_KEY:?set FIRST_PARTY_PUBLIC_KEY — built-in themes are verified against it}
       # Browser-facing, non-secret values plus the one shared service token and the
       # pinned public key the runtime verifies theme signatures against.
@@ -295,11 +294,6 @@ services:
       # verifies, never signs. Empty means no sideloaded theme loads. See .env.example.
       OPERATOR_PUBLIC_KEY: ${OPERATOR_PUBLIC_KEY:-}
       S3_PUBLIC_URL: ${S3_PUBLIC_URL:?set S3_PUBLIC_URL}
-    volumes:
-      # The signed built-in themes. Read-only: site-runtime verifies them, it does not
-      # write them, and a process that could rewrite the packages it verifies is a
-      # process that verifies nothing.
-      - ../../themes:/themes:ro
     depends_on:
       cms-api:
         condition: service_healthy
