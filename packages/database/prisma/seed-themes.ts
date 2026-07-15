@@ -83,7 +83,7 @@ async function main() {
         },
       });
 
-      await db.themeVersion.upsert({
+      const version = await db.themeVersion.upsert({
         where: { themeId_version: { themeId: theme.id, version: manifest.version } },
         update: {
           manifest: manifest as never,
@@ -110,6 +110,16 @@ async function main() {
           // against the first-party key, not downloaded and not trusted-by-location.
           origin: "BUILTIN",
         },
+      });
+
+      // A built-in package is replaced in the runtime image on deploy; old package
+      // versions are deliberately removed by sign-builtins.mts. Leaving SiteTheme
+      // rows pinned to an older version therefore cannot preserve the old theme — it
+      // only makes the runtime fail to find it and render the fallback. Move every
+      // installation of this built-in to the package version that actually ships.
+      await db.siteTheme.updateMany({
+        where: { themeId: theme.id, versionId: { not: version.id } },
+        data: { versionId: version.id },
       });
 
       console.log(`  ${manifest.id}@${manifest.version} — ${envelope.checksum.slice(0, 12)}`);

@@ -118,9 +118,9 @@ services:
         }"
         echo "storage ready: $$BUCKET is public-read"
 
-  # One-shot: apply pending migrations, then exit. App services wait for this to
-  # complete successfully. Seeding the first admin is a separate manual step (see
-  # the Dockerfile's migrate stage).
+  # One-shot: apply pending migrations and register the signed built-ins shipped by
+  # this image. App services wait for both to complete. Seeding the first admin/demo
+  # content remains a separate manual bootstrap step (see the Dockerfile stage).
   migrate:
     image: ghcr.io/zscontributor/z-cms-migrate:${IMAGE_TAG:-latest}
     build:
@@ -153,6 +153,7 @@ services:
       PLUGIN_RUNTIME_URL: http://plugin-runtime:4200
       ADMIN_WEB_URL: ${ADMIN_WEB_URL:-http://localhost:3001}
       SITE_RUNTIME_URL: ${SITE_RUNTIME_URL:-http://localhost:3000}
+      MARKETPLACE_URL: ${MARKETPLACE_URL:-https://marketplace.z-cms.org}
       # Behind a real proxy this must be the exact hop count, not "true".
       TRUST_PROXY: ${TRUST_PROXY:-1}
       # Sideloading (install from file). All optional; blank = endpoints refuse uploads.

@@ -68,7 +68,11 @@ async function main() {
 
       const plugin = await db.plugin.upsert({
         where: { key: manifest.id },
-        update: { name: manifest.name, description: manifest.description ?? null },
+        update: {
+          name: manifest.name,
+          description: manifest.description ?? null,
+          isCore: true,
+        },
         create: {
           key: manifest.id,
           name: manifest.name,

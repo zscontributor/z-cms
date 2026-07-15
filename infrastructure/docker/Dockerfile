@@ -129,20 +129,22 @@ USER node
 CMD ["node", "apps/worker/dist/main.js"]
 
 # ===========================================================================
-# migrate — a one-shot job: apply committed migrations, then exit. Built FROM
-# `build` because it needs the prisma CLI (a devDependency) and the compiled
-# @zcmsorg/database. Run it once per deploy, before the app services start.
+# migrate — a one-shot deploy job: apply committed migrations, then register the
+# signed built-in packages that ship in this image. Built FROM `build` because it
+# needs the prisma CLI, the package verifier and the checked-in .zcms artefacts.
 #
-# Seeding (the first admin, demo plugins) is NOT here: it is a one-time
-# bootstrap, not something to re-run on every rollout. Seed by hand once:
-#   docker run --rm --env-file .env zcms/migrate pnpm --filter @zcmsorg/database seed
+# The first admin/demo content seed is still NOT here: that is a one-time bootstrap.
+# Built-ins are different: every image may carry a new immutable version, and the
+# catalogue/site version pointers must move with the image or the runtime would be
+# asked to load a package version the new image deliberately no longer contains.
 # ===========================================================================
 FROM build AS migrate
 LABEL org.opencontainers.image.source="https://github.com/zscontributor/z-cms"
 ENV NODE_ENV=production
 WORKDIR /repo
-# `prisma migrate deploy` — applies pending migrations, never generates or resets.
-CMD ["pnpm", "--filter", "@zcmsorg/database", "migrate"]
+# All three commands are idempotent. The seed scripts verify every manifest against
+# FIRST_PARTY_PUBLIC_KEY before writing it to the catalogue.
+CMD ["/bin/sh", "-c", "pnpm --filter @zcmsorg/database migrate && pnpm --filter @zcmsorg/database seed:plugins && pnpm --filter @zcmsorg/database seed:themes"]
 
 # ===========================================================================
 # Next.js apps run from their traced standalone output (next.config sets
