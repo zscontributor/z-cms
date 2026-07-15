@@ -75,6 +75,12 @@ export async function createSiteAction(input: {
     // does not appear in it until the layout's data is thrown away.
     revalidatePath("/", "layout");
 
+    // Creation hands the admin straight to the new site's detail screen. Make the
+    // selected-site cookie agree before any follow-up site-scoped action, such as
+    // activating a theme, can accidentally target the previously selected site.
+    const store = await cookies();
+    store.set(SITE_COOKIE, site.id, siteCookieOptions);
+
     return { ok: true, message: t("admin.sites.created"), site };
   } catch (error) {
     return { ok: false, error: toMessage(error, t("admin.sites.errors.createFailed")) };

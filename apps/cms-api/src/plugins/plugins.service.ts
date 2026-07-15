@@ -41,6 +41,26 @@ function resolveSandboxSettings(
   return merged;
 }
 
+async function runtimeHttpError(res: Response): Promise<Error> {
+  let detail = "";
+
+  try {
+    const contentType = res.headers.get("content-type") ?? "";
+    if (contentType.includes("application/json")) {
+      const body = (await res.json()) as { message?: unknown; error?: unknown };
+      const message = body.message ?? body.error;
+      if (typeof message === "string") detail = message;
+    } else {
+      detail = await res.text();
+    }
+  } catch {
+    detail = "";
+  }
+
+  const suffix = detail.trim() ? `: ${detail.trim()}` : "";
+  return new Error(`plugin-runtime HTTP ${res.status}${suffix}`);
+}
+
 /**
  * How plugin-runtime should load a plugin: which pinned key verifies it, or that it
  * is read from PLUGIN_DIR. Mirrors the version's `origin`, mapped to the runtime's
@@ -498,7 +518,7 @@ export class PluginsService {
       });
 
       if (!res.ok) {
-        throw new Error(`plugin-runtime HTTP ${res.status}`);
+        throw await runtimeHttpError(res);
       }
 
       return (await res.json()) as { ok: boolean; result?: unknown; error?: string };

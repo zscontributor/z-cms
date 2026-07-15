@@ -49,48 +49,18 @@ export default async function PluginsPage() {
         </div>
       ) : null}
 
-      {installed.length > 0 ? (
-        <section className="mb-6">
-          <h2 className="mb-2 text-sm font-semibold">{t("plugins.installedHeading")}</h2>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {installed.map((plugin) => (
-              <PluginCard
-                key={plugin.key}
-                plugin={plugin}
-                canInstall={canInstall}
-                canActivate={canActivate}
-                canConfigure={canConfigure}
-              />
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      {available.length > 0 ? (
-        <section>
-          <h2 className="mb-2 text-sm font-semibold">{t("plugins.catalogHeading")}</h2>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {available.map((plugin) => (
-              <PluginCard
-                key={plugin.key}
-                plugin={plugin}
-                canInstall={canInstall}
-                canActivate={canActivate}
-                canConfigure={canConfigure}
-              />
-            ))}
-          </div>
-        </section>
-      ) : null}
-
       {canSideload || sideloaded.length > 0 ? (
-        <section className="mt-6">
-          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <section className="mb-6">
+          <div className="mb-2">
             <div>
               <h2 className="text-sm font-semibold">{t("appearance.sideload.heading")}</h2>
               <p className="mt-0.5 text-[11px] z-muted">{t("plugins.sideloadHint")}</p>
             </div>
-            {canSideload ? <SideloadUpload kind="plugin" /> : null}
+            {canSideload ? (
+              <div className="mt-2 flex justify-start">
+                <SideloadUpload kind="plugin" />
+              </div>
+            ) : null}
           </div>
 
           {sideloaded.length > 0 ? (
@@ -135,6 +105,40 @@ export default async function PluginsPage() {
               })}
             </div>
           ) : null}
+        </section>
+      ) : null}
+
+      {installed.length > 0 ? (
+        <section className="mb-6">
+          <h2 className="mb-2 text-sm font-semibold">{t("plugins.installedHeading")}</h2>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {installed.map((plugin) => (
+              <PluginCard
+                key={plugin.key}
+                plugin={plugin}
+                canInstall={canInstall}
+                canActivate={canActivate}
+                canConfigure={canConfigure}
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {available.length > 0 ? (
+        <section>
+          <h2 className="mb-2 text-sm font-semibold">{t("plugins.catalogHeading")}</h2>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {available.map((plugin) => (
+              <PluginCard
+                key={plugin.key}
+                plugin={plugin}
+                canInstall={canInstall}
+                canActivate={canActivate}
+                canConfigure={canConfigure}
+              />
+            ))}
+          </div>
         </section>
       ) : null}
     </>

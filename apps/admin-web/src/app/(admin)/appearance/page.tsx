@@ -70,12 +70,16 @@ export default async function AppearancePage({ searchParams }: PageProps) {
 
       {canSideload || sideloaded.length > 0 ? (
         <section className="mb-5">
-          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <div className="mb-2">
             <div>
               <h2 className="text-sm font-semibold">{t("appearance.sideload.heading")}</h2>
               <p className="mt-0.5 text-[11px] z-muted">{t("appearance.sideload.hint")}</p>
             </div>
-            {canSideload ? <SideloadUpload kind="theme" /> : null}
+            {canSideload ? (
+              <div className="mt-2 flex justify-start">
+                <SideloadUpload kind="theme" />
+              </div>
+            ) : null}
           </div>
 
           {sideloaded.length > 0 ? (

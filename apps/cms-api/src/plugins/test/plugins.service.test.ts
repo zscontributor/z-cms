@@ -226,5 +226,19 @@ describe("PluginsService", () => {
       expect(tokens.mint.mock.calls[0][0].scopes).toEqual(["content:read"]);
       expect(tokens.mint.mock.calls[0][0].tid).toBe("t1");
     });
+
+    it("keeps the runtime error body when setup dispatch fails", async () => {
+      holder.systemDb.sitePlugin.findFirst.mockResolvedValue(activeRow());
+      (fetch as any).mockResolvedValue({
+        ok: false,
+        status: 404,
+        headers: new Headers({ "content-type": "application/json" }),
+        json: async () => ({ message: "No signed package found for plugin zsoft-seo." }),
+      });
+
+      await expect(makeService().runSetup("t1", "s1", "zsoft-seo")).rejects.toThrow(
+        "plugin-runtime HTTP 404: No signed package found for plugin zsoft-seo.",
+      );
+    });
   });
 });
