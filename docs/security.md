@@ -33,7 +33,7 @@ acknowledgement and a fix timeline rather than a lawyer.
 | An admin accidentally granting a permission the plugin never asked for | The API refuses any grant outside the manifest | 400 (tested) |
 | A plugin declaring a core table as its own | `validatePluginTables()` rejects the install before any of its code runs | `verify:tables` (9 attacks) |
 | A broken plugin taking the website down | Actions are fire-and-forget; a failed filter is skipped and the original value used | site still 200 (tested) |
-| A plugin escaping the sandbox (worst case assumed) | Container: read-only FS, `cap_drop: ALL`, non-root, **no credentials** — and **no route off the host**: plugin-runtime sits on an `internal: true` Docker network with no gateway, alone with cms-api. An escaped plugin cannot reach the internet or the cloud metadata endpoint, because there is nothing to reach it *through* | `docker-compose.prod.yml` (verified: 0 default routes) |
+| A plugin escaping the sandbox (worst case assumed) | Container: read-only FS, `cap_drop: ALL`, non-root, **no credentials** — and **no route off the host**: plugin-runtime sits on an `internal: true` Docker network with no gateway, alone with cms-api. An escaped plugin cannot reach the internet or the cloud metadata endpoint, because there is nothing to reach it *through* | `docker-compose.prod.yml` **and** `z-cms-deploy/z-cms.stack.yml` — the lock must exist in **whichever one you deploy** (see below) |
 | A hostile **theme** (runs in-process in site-runtime, no isolate) reading a secret | site-runtime holds no DB/JWT/encryption/S3 secret — only a render-scoped token — and is hardened like plugin-runtime: read-only FS, `cap_drop: ALL`, non-root | stack files |
 | A theme using its stolen token to send mail as any tenant | The render token opens only read-only render endpoints; `/mail/deliver` requires the separate privileged token | by design |
 | A theme reaching the render cache to read/poison other tenants | Redis requires a password site-runtime is not given | stack files |
@@ -236,11 +236,9 @@ serving every tenant's data.
       **purges the runtimes' caches** so the code stops executing now rather than
       at the next deploy. It alerts. Verified: a site running a revoked theme
       stayed HTTP 200 throughout and fell back to the default.
-- [x] **plugin-runtime has no route to the internet.** In production it sits alone
-      with cms-api on `zcms-sandbox`, a Docker network declared `internal: true` —
-      which means Docker gives it no gateway and there is no default route in the
-      container at all. Verified empirically: a container on that network has zero
-      default routes, cannot reach `1.1.1.1`, and cannot reach `169.254.169.254`.
+- [x] **plugin-runtime has no route to the internet.** It sits alone with cms-api on
+      `zcms-sandbox`, a Docker network declared `internal: true` — which means Docker
+      gives it no gateway and there is no default route in the container at all.
       Everything above this line is a policy — the isolate denies a plugin any way to
       open a socket, and the gateway checks every outbound request against the hosts
       the manifest declared. Both live in software, and an isolated-vm escape sidesteps
@@ -252,6 +250,35 @@ serving every tenant's data.
       side of the gateway, and cms-api is the only service on both networks.
       (Still open: the same treatment for the worker, which needs Postgres, Redis and
       S3 and so cannot simply be moved onto an internal network.)
+
+      **This claim was false in production for as long as it has been written here, and
+      how it failed is the useful part.** The lock was designed and verified in
+      `infrastructure/docker/docker-compose.prod.yml`, and that file is not what we
+      deploy: `z-cms-deploy/portainer-deploy.sh` ships `z-cms.stack.yml` to Swarm. The
+      port to that stack dropped the network. plugin-runtime sat on `zcms` — an ordinary
+      overlay, `Internal=false`, `Gateway 10.0.8.1` — while this document claimed "0
+      default routes" and cited a compose file nothing on the node had ever read. The
+      citation was accurate; it just pointed at the wrong artefact. Confirmed live on
+      zsoft05 before the fix:
+
+      ```
+      docker service inspect z-cms_plugin-runtime --format '{{range .Spec.TaskTemplate.Networks}}...'
+        → z-cms_zcms  internal=false
+      docker network inspect z-cms_zcms --format '{{json .IPAM.Config}}'
+        → [{"Subnet":"10.0.8.0/24","Gateway":"10.0.8.1"}]
+      ```
+
+      The lesson generalises past this one network: **a defence verified in a file you
+      do not deploy is not a defence, and a doc that cites that file will state a
+      falsehood with a straight face.** Every infrastructure claim here must name the
+      artefact that actually ships. Check this one on any node, and after every deploy —
+      it is one command, and it is the difference between a boundary and a sentence:
+
+      ```bash
+      docker network inspect z-cms_zcms-sandbox --format '{{.Internal}}'   # must be true
+      docker service inspect z-cms_plugin-runtime \
+        --format '{{range .Spec.TaskTemplate.Networks}}{{.Target}} {{end}}'  # sandbox ONLY
+      ```
 - [x] Built-in **themes** are signed and verified too, and this matters more than it
       does for plugins rather than less. A plugin runs in an isolated-vm isolate in a
       process holding no credentials. **A theme is not sandboxed at all** — it is
