@@ -71,9 +71,9 @@ export interface PublisherKeyDto {
  * `iterations: 1`, which would make the wrapping decorative. The load-bearing
  * control is the strength of the passphrase, and that lives in the browser.
  */
-const MIN_KDF_ITERATIONS = 100_000;
+export const MIN_KDF_ITERATIONS = 100_000;
 
-const SUPPORTED_KDFS = new Set(["PBKDF2-SHA256"]);
+export const SUPPORTED_KDFS = new Set(["PBKDF2-SHA256"]);
 
 @ApiTags("Publisher key")
 @Controller("publisher-key")
@@ -236,6 +236,10 @@ class PublisherKeysController {
  * Refuses anything that is not an Ed25519 public key — and, above all, refuses a
  * PRIVATE one.
  *
+ * Exported for its tests. It is the one piece of judgement in this module, and the
+ * consequence of getting it wrong — an author's signing key sitting in a database
+ * in the clear — is not something to leave to a route test.
+ *
  * The private-key check is not paranoia about types. `zcms keygen` writes two PEM
  * files side by side with names one letter apart, and somebody will eventually
  * paste the wrong one into a form labelled "your key". If that ever reached this
@@ -243,7 +247,7 @@ class PublisherKeysController {
  * nothing would have told them. So it is caught here and named plainly, the same
  * way the marketplace's own `registerPublisher` catches it.
  */
-function assertEd25519PublicKey(pem: string): void {
+export function assertEd25519PublicKey(pem: string): void {
   if (/PRIVATE KEY/.test(pem)) {
     throw new BadRequestException(
       "That is a PRIVATE key. Never send it anywhere — consider it burned, generate a new pair, and send the public half (the file containing 'BEGIN PUBLIC KEY').",
