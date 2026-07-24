@@ -484,11 +484,30 @@ class ThemeDraftsController {
 
     // `jobId` keyed on the draft: BullMQ refuses a duplicate while one is queued,
     // so a double-click cannot start two builds racing to write the same S3 key.
-    await this.queue.enqueue(
-      "theme.build",
-      { tenantId: actor.tenantId, siteId, draftId: existing.id, actorId: actor.userId },
-      { jobId: `theme-build-${existing.id}` },
-    );
+    try {
+      await this.queue.enqueue(
+        "theme.build",
+        { tenantId: actor.tenantId, siteId, draftId: existing.id, actorId: actor.userId },
+        { jobId: `theme-build-${existing.id}` },
+      );
+    } catch (error) {
+      // BUILDING was already committed above, but the job never reached the queue —
+      // so no worker will ever move it off BUILDING, and the draft would spin
+      // forever (Save and Build are both refused while BUILDING). Put it back to
+      // FAILED with a reason the author can act on: almost always Redis is down or
+      // unreachable. Without this the only cure is a hand-edit of the database.
+      await db()
+        .themeDraft.update({
+          where: { id: existing.id },
+          data: {
+            status: "FAILED",
+            buildError:
+              "Could not queue the build. The job queue (Redis) is unreachable, or the worker is not running. Start the infrastructure and the worker, then try again.",
+          },
+        })
+        .catch(() => undefined);
+      throw error;
+    }
 
     return { status: "BUILDING" };
   }
