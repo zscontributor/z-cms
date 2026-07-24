@@ -35,7 +35,19 @@ export interface RunResult {
  * Hard limits. These are the numbers that decide whether a bad plugin is an
  * incident or a log line.
  */
-const MEMORY_LIMIT_MB = 64;
+/**
+ * The worker THREAD's own V8 heap ceiling — deliberately larger than the isolate's
+ * `memoryLimit` (64MB, in worker.ts). The two bound different things and must not be
+ * equal: the isolate cap is the security boundary, and when a plugin bombs memory it
+ * is isolated-vm that catches it and disposes the isolate cleanly (surfaced as a
+ * worker `error`). The worker-thread cap only keeps the host glue honest. Set them
+ * equal and the two race — and a worker-thread V8 out-of-memory is an uncatchable
+ * `FatalProcessOutOfMemory` that aborts the whole process, not a clean kill. Giving
+ * the thread real headroom lets the isolate's cap always win, so the bomb dies where
+ * it should. (This is why the sandbox suite crashed its worker on a memory-tight CI
+ * runner but not on a roomy dev box.)
+ */
+const WORKER_HEAP_LIMIT_MB = 192;
 /**
  * Filters run in the page-render path, so they get a much tighter budget.
  *
@@ -96,7 +108,7 @@ export async function runPlugin(req: RunRequest): Promise<RunResult> {
       // No --experimental flags, no inspector, no preloaded modules.
       execArgv: [],
       resourceLimits: {
-        maxOldGenerationSizeMb: MEMORY_LIMIT_MB,
+        maxOldGenerationSizeMb: WORKER_HEAP_LIMIT_MB,
         maxYoungGenerationSizeMb: 16,
         // A plugin cannot spawn its own workers to escape the limits above.
         maxWorkerCount: 0,
