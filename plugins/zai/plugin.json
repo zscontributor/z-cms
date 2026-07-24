@@ -1,0 +1,114 @@
+{
+  "id": "vn.zsoft.plugin.zai",
+  "name": "zAI",
+  "version": "0.3.0",
+  "description": "AI assistant bubble for public themes, powered by OpenAI, Claude, or Gemini.",
+  "author": {
+    "name": "Z-SOFT Co., Ltd",
+    "url": "https://z-soft.com.vn"
+  },
+  "engine": ">=0.1.0",
+  "entry": "dist/index.js",
+  "permissions": [
+    "network:fetch"
+  ],
+  "capabilities": [
+    "ai.assistant"
+  ],
+  "network": {
+    "hosts": [
+      "api.openai.com",
+      "api.anthropic.com",
+      "generativelanguage.googleapis.com"
+    ],
+    "secrets": {
+      "openaiKey": "openaiApiKey",
+      "claudeKey": "claudeApiKey",
+      "geminiKey": "geminiApiKey"
+    }
+  },
+  "settingsSchema": {
+    "type": "object",
+    "properties": {
+      "assistantName": {
+        "type": "string",
+        "title": "Assistant name",
+        "default": "zAI Assistant"
+      },
+      "welcomeMessage": {
+        "type": "string",
+        "format": "textarea",
+        "title": "Welcome message",
+        "default": "Xin chào! Tôi có thể giúp gì cho bạn?"
+      },
+      "systemPrompt": {
+        "type": "string",
+        "format": "textarea",
+        "title": "System prompt",
+        "description": "Instructions applied to every conversation.",
+        "default": "You are a helpful assistant for this website. Answer clearly and concisely in the visitor's language."
+      },
+      "contentManagementEnabled": {
+        "type": "boolean",
+        "title": "Allow Admin AI to manage pages and blogs",
+        "description": "Allows authenticated admins to use zAI for content CRUD. Public theme visitors never receive this permission.",
+        "default": false
+      },
+      "defaultProvider": {
+        "type": "string",
+        "title": "Default provider",
+        "enum": [
+          "openai",
+          "claude",
+          "gemini"
+        ],
+        "default": "openai"
+      },
+      "openaiEnabled": {
+        "type": "boolean",
+        "title": "Enable OpenAI",
+        "default": false
+      },
+      "openaiApiKey": {
+        "type": "string",
+        "format": "password",
+        "title": "OpenAI API key"
+      },
+      "openaiModel": {
+        "type": "string",
+        "title": "OpenAI model",
+        "default": "gpt-4.1-mini"
+      },
+      "claudeEnabled": {
+        "type": "boolean",
+        "title": "Enable Claude",
+        "default": false
+      },
+      "claudeApiKey": {
+        "type": "string",
+        "format": "password",
+        "title": "Anthropic API key"
+      },
+      "claudeModel": {
+        "type": "string",
+        "title": "Claude model",
+        "default": "claude-sonnet-4-5"
+      },
+      "geminiEnabled": {
+        "type": "boolean",
+        "title": "Enable Gemini",
+        "default": false
+      },
+      "geminiApiKey": {
+        "type": "string",
+        "format": "password",
+        "title": "Gemini API key"
+      },
+      "geminiModel": {
+        "type": "string",
+        "title": "Gemini model",
+        "default": "gemini-2.5-flash"
+      }
+    }
+  }
+}

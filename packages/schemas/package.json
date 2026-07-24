@@ -1,0 +1,47 @@
+{
+  "name": "@zcmsorg/schemas",
+  "version": "0.1.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "4.1.10",
+    "typescript": "5.9.3",
+    "vitest": "4.1.10"
+  },
+  "description": "Shared Zod contracts between the Z-CMS API and its front ends.",
+  "license": "MIT",
+  "author": "Z-SOFT Co., Ltd. <support@z-cms.org> (https://z-cms.org)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zscontributor/z-cms.git",
+    "directory": "packages/schemas"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "homepage": "https://z-cms.org",
+  "bugs": {
+    "url": "https://github.com/zscontributor/z-cms/issues"
+  }
+}

@@ -1,0 +1,157 @@
+{
+  "auth": {
+    "missingToken": "アクセストークンがありません。",
+    "invalidToken": "アクセス トークンが無効であるか、有効期限が切れています。",
+    "invalidRefreshToken": "リフレッシュ トークンが無効であるか、有効期限が切れています。",
+    "invalidInternalToken": "内部トークンが無効です。",
+    "invalidCredentials": "メールアドレスまたはパスワードが間違っています。",
+    "accountNotFound": "このアカウントはもう存在しません。",
+    "invalidSiteHeader": "X-Site-Id ヘッダーは有効なサイト ID ではありません。",
+    "siteRequired": "このリクエストには、ロールを持っているサイトの有効な X-Site-Id ヘッダーが必要です。",
+    "noRole": "このアカウントには、このテナントに対する役割が与えられていません。",
+    "missingPermissions": "権限がありません: {permissions}。あなたの現在の役割は {role} です。",
+    "refreshReused": "このセッションはセキュリティのためサインアウトされました。再度サインインしてください。",
+    "sessionRevoked": "このセッションはサインアウトされました。再度サインインしてください。"
+  },
+  "validation": {
+    "invalidPayload": "送信したデータは無効です。",
+    "invalidFields": "1 つ以上のフィールド値が無効です。",
+    "requiredParam": "「{name}」パラメータは必須です。"
+  },
+  "content": {
+    "notFound": "コンテンツが見つかりません。",
+    "contentTypeNotFound": "そのコンテンツ タイプはこのサイトに存在しません。",
+    "singletonExists": "「{name}」はシングルトン コンテンツ タイプであるため、エントリを 1 つだけ持つことができます。",
+    "translationExists": "このページにはすでに {locale} 翻訳が含まれています。 2 番目のものを作成する代わりに、それを編集します。",
+    "publishForbidden": "コンテンツを公開する権限がありません。",
+    "draftOnly": "保存できるのは下書きのみです。公開するには編集者以上の役割が必要です。",
+    "editOwnOnly": "自分で作成したコンテンツのみを編集できます。"
+  },
+  "contentTypes": {
+    "keyTaken": "キー「{key}」を持つコンテンツ タイプはすでに存在します。",
+    "routePrefixTaken": "ルート プレフィックス「{prefix}」はすでに「{name}」によって使用されています。"
+  },
+  "media": {
+    "noFile": "ファイルはアップロードされませんでした。",
+    "tooLarge": "ファイルが {limit} 制限を超えています。",
+    "unsupportedType": "「{mimeType}」形式はサポートされていません。",
+    "notFound": "メディアが見つかりません。",
+    "folderNotFound": "フォルダーが見つかりません。",
+    "folderNameTaken": "ここには「{name}」というフォルダーがすでに存在します。",
+    "folderCycle": "フォルダーをその内部で移動することはできません。",
+    "folderTooDeep": "フォルダーは最大で {max} レベルの深さまでネストできます。"
+  },
+  "sites": {
+    "defaultLocaleNotPublished": "既定のロケールはサイトのロケールのいずれかである必要があります。",
+    "hostnameTaken": "そのホスト名は既に使用されています。",
+    "notFound": "サイトが見つかりません。",
+    "slugTaken": "そのスラッグのサイトは既に存在します。"
+  },
+  "themes": {
+    "notFound": "テーマ「{key}」は存在しません。",
+    "noVersion": "テーマ「{key}」にはまだ公開されたバージョンがありません。",
+    "notInstalled": "そのテーマはこのサイトにはインストールされていません。"
+  },
+  "plugins": {
+    "notFound": "プラグイン「{key}」は存在しません。",
+    "noVersion": "プラグイン「{key}」はまだ公開バージョンがありません。",
+    "notInstalled": "そのプラグインはこのサイトにはインストールされていません。",
+    "unknownPermissions": "不明な権限: {permissions}。",
+    "permissionNotRequested": "プラグインはこれらの権限を要求していないため、これらの権限を付与できません: {permissions}。",
+    "missingToken": "プラグイントークンがありません。",
+    "invalidToken": "プラグイン トークンが無効であるか、有効期限が切れています。",
+    "unknownMethod": "プラグイン API には「{method}」というメソッドがありません。",
+    "methodNotSupported": "メソッド「{method}」はまだサポートされていません。",
+    "scopeNotGranted": "プラグイン「{plugin}」には「{scope}」権限が付与されていません。",
+    "invalidTables": "プラグインは「{prefix}」というプレフィックスが付いたテーブルのみを作成できます。拒否されました: {tables}。",
+    "invalidHosts": "プラグインが宣言できるのは、実際に接続する正当なホスト名だけです。拒否されました: {hosts}。ワイルドカード単独、IP アドレス、ポート、スキームは使用できません。",
+    "noNetworkHosts": "プラグイン「{plugin}」にはネットワーク権限が付与されていますが、マニフェストにホストの宣言がないため、接続先がありません。",
+    "secretNotConfigured": "プラグインはシークレット「{secret}」を使用しましたが、設定「{setting}」が空です。プラグインの設定画面で入力してください。",
+    "egressFailed": "プラグインのリクエストを完了できませんでした: {reason}",
+    "egressQuotaExceeded": "このサイトは 1 時間に {limit} 件を超えるプラグインリクエストを行いました。{retryAfterSec} 秒後に再試行してください。",
+    "egressQuotaUnavailable": "現在プラグインのリクエストを計数できないため、拒否されました。しばらくしてから再試行してください。"
+  },
+  "packages": {
+    "tooLarge": "パッケージが {limit} 制限を超えています。",
+    "unreadable": "パッケージを読み取れませんでした: {reason}",
+    "invalidKind": "「{kind}」は有効なパッケージの種類ではありません。",
+    "unknownPublisher": "この発行者キーはマーケットプレイスに登録されていません。パッケージを送信する前に、発行者とその公開キーを登録します。",
+    "invalidSignature": "発行者の署名が無効です: {reason}",
+    "versionImmutable": "{key}@{version} は、異なる内容で既に存在します。バージョンをバンプします。リリースされたバージョンは不変です。",
+    "bundleNotFound": "{key}@{version}のバンドルはありません。",
+    "noFile": "パッケージファイルがありません。",
+    "kindRequired": "kind は「テーマ」または「プラグイン」のいずれかである必要があります。",
+    "scanRejected": "パッケージはマルウェア スキャンによって拒否されました: {reason}",
+    "notApproved": "{key}@{version} はレビュー中 ({status}) のため、まだロードできません。"
+  },
+  "render": {
+    "missingHostname": "ホスト名パラメータは必須です。",
+    "hostNotFound": "ホスト名「{hostname}」を提供するサイトはありません。",
+    "noActiveTheme": "このサイトにはアクティブなテーマがありません。"
+  },
+  "marketplace": {
+    "unreachable": "{url} のマーケットプレイスにアクセスできませんでした: {reason}",
+    "unverified": "このパッケージは、このインスタンスが信頼するマーケットプレイスによって署名されていないため、インストールされませんでした: {reason}",
+    "mismatch": "マーケットプレイスは {asked} を要求され、{got} で応答されました。インストールを拒否します。",
+    "bundleNotFound": "マーケットプレイスには、{key}@{version} (HTTP {status}) の提供可能なバンドルがありません。取り消された可能性があります。",
+    "notConfigured": "マーケットプレイスが構成されていません。 MARKETPLACE_URL を、このインスタンスのインストール元となるレジストリに設定します。",
+    "noPinnedKey": "MARKETPLACE_PUBLIC_KEY が構成されていません。固定されたキーがなければ、パッケージを検証するものが何もないため、何もインストールできません。",
+    "scanRejected": "このパッケージはこのインスタンス自身のセキュリティスキャンに失敗したため、インストールされませんでした: {findings}"
+  },
+  "sideload": {
+    "notEnabled": "このインスタンスではサイドロードが有効になっていません。ローカルパッケージに署名するオペレーター鍵を OPERATOR_PUBLIC_KEY に設定してください。",
+    "themeDisabled": "テーマのサイドロードは無効です。テーマは site-runtime 内でサンドボックスなしに実行されるため、ALLOW_THEME_SIDELOAD=true で意図的に有効化する必要があります。",
+    "unverified": "このパッケージはこのインスタンスのオペレーター鍵で署名されていないため、インストールされませんでした: {reason}",
+    "operatorKeyMissing": "オペレーターの公開鍵が構成されていません。",
+    "operatorChecksumMismatch": "パッケージの内容が署名後に変更されています。",
+    "operatorSignatureMissing": "このパッケージにはオペレーター署名がなく、サイドロード経路からも届いていません。",
+    "operatorSignatureInvalid": "オペレーター署名が無効か、別の鍵で作成されています。",
+    "kindMismatch": "このエンドポイントは {asked} をインストールしますが、ファイルは {got} です。",
+    "scanRejected": "このパッケージはセキュリティスキャンに失敗したため、インストールされませんでした: {findings}",
+    "reservedNamespace": "\"{key}\" はプラットフォーム自身のパッケージに属する予約名前空間 \"{prefix}\" を使用しています。別の id を選んでください。",
+    "keyTaken": "\"{key}\" はすでに組み込みまたはマーケットプレイスのパッケージの id です。サイドロードは自分のものでない名前を使用できません。",
+    "notSideload": "{key}@{version} はサイドロードされていないため、この経路では承認も削除もできません。",
+    "zipNotEnabled": "このインスタンスは署名済みの .zcms ファイルのみを受け付けます。生の .zip をアップロードするには、サーバーが署名できるよう OPERATOR_PRIVATE_KEY を設定してください。",
+    "zipUnreadable": ".zip をパッケージ化できませんでした: {reason}"
+  },
+  "docs": {
+    "title": "API ドキュメントがオフになっています",
+    "body": "このインスタンスは API ドキュメントを提供しません。これは意図的な設定であり、障害ではありません。API 自体は正常に実行されています。",
+    "hint": "このインスタンスを実行する場合は、SWAGGER_ENABLED=true を設定し、cms-api を再起動して、{path} でドキュメントを提供します。",
+    "health": "API がアップされました: {url}"
+  },
+  "users": {
+    "notFound": "ユーザーが見つかりません。",
+    "membershipNotFound": "そのユーザーはそのロールを保持していません。",
+    "emailTaken": "{email} はすでにアカウントを持っています。",
+    "alreadyInvited": "{email} はすでに招待されています。まずその招待を撤回してください。",
+    "alreadyRegistered": "このアドレスにはすでにアカウントがあります。代わりにサインインしてください。",
+    "inviteInvalid": "この招待リンクは無効です。使用済み、撤回、または期限切れになっている可能性があります。",
+    "inviteNotFound": "招待状が見つかりません。",
+    "inviteAlreadyAccepted": "この招待はすでに受諾されています。代わりにユーザーを削除してください。",
+    "wrongPassword": "現在のパスワードは正しくありません。",
+    "notYourself": "自分のアカウントに対してこれを行うことはできません。",
+    "outranked": "自分の役割を超えた役割を持つ人に代わって行動することはできません。",
+    "cannotGrant": "{role} を付与することはできません。あなた自身のロールは {actorRole} です。",
+    "needTenantWide": "テナント全体のロールを持つユーザーのみがロールを付与できます。",
+    "notYourSite": "そのサイトではあなたには何の役割もありません。",
+    "siteNotFound": "サイトが見つかりません。",
+    "lastOwner": "これが最後の所有者です。最初に他の人を昇格させないと、誰もこのテナントを管理できなくなります。"
+  },
+  "mfa": {
+    "alreadyEnabled": "このアカウントでは 2 要素認証がすでに有効になっています。",
+    "notEnabled": "このアカウントには 2 番目の要素はありません。",
+    "noSetup": "最初にセットアップを開始します。確認する保留中の認証子はありません。",
+    "invalidCode": "そのコードは正しくありません。",
+    "challengeExpired": "このサインイン試行は期限切れになりました。パスワードをもう一度入力してください。",
+    "tooManyAttempts": "間違ったコードが多すぎます。このアカウントは今後 15 分間コードを受け付けません。",
+    "throttleUnavailable": "現在コードを確認できません。カウントできないレート リミッターは 6 桁の秘密を保護できないため、その試みは無視されるのではなく拒否されます。"
+  },
+  "mail": {
+    "notConfigured": "このサイトにはメールサーバーが設定されていないため、送信できません。管理者が「設定 → メール」で設定します。",
+    "invalidMessage": "メッセージが不正です: {detail}",
+    "quotaExceeded": "このサイトのプラグインは 1 時間あたり {limit} 通の上限に達しました。次の送信は約 {retryAfterSec} 秒後に受け付けられます。",
+    "quotaUnavailable": "現在メール送信の上限を確認できないため、送信を拒否しました。プラグインのメールは、数えずに送るのではなく、意図的に遮断されます。",
+    "cancelledByPlugin": "プラグインの mail.sending フィルターが、送信前にこのメッセージを取り消しました。"
+  }
+}

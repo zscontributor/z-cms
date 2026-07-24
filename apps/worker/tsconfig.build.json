@@ -1,0 +1,8 @@
+{
+  "extends": "./tsconfig.json",
+  // Tests are not part of the running worker. Compiling them with it emits them
+  // into dist/ and lets a type error in a *test* stop the worker build — so the
+  // build config excludes them. `pnpm typecheck` still checks them (it runs
+  // against tsconfig.json), and Vitest runs them under the config they run in.
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts", "src/**/*.test.tsx"]
+}

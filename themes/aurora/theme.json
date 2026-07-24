@@ -1,0 +1,73 @@
+{
+  "id": "vn.zsoft.theme.aurora",
+  "name": "Aurora",
+  "version": "1.1.0",
+  "kind": "theme",
+  "description": "A dark, high-contrast editorial theme for blogs and magazines.",
+  "author": {
+    "name": "Z-SOFT Co., Ltd",
+    "url": "https://z-soft.com.vn"
+  },
+  "engine": ">=0.1.0",
+  "entry": "dist/index.mjs",
+  "styles": "dist/theme.css",
+  "templates": [
+    "home",
+    "page",
+    "post",
+    "archive",
+    "notFound",
+    "error"
+  ],
+  "optionalCapabilities": ["ai.assistant"],
+  "integrationSlots": ["floating"],
+  "menuLocations": [
+    {
+      "key": "primary",
+      "name": "Primary menu"
+    },
+    {
+      "key": "footer",
+      "name": "Footer menu"
+    }
+  ],
+  "colorModes": {
+    "supports": [
+      "dark"
+    ]
+  },
+  "seo": {
+    "titleTemplate": "%s · %site%",
+    "robots": {
+      "index": true,
+      "follow": true
+    }
+  },
+  "settingsSchema": {
+    "type": "object",
+    "properties": {
+      "accent": {
+        "type": "string",
+        "format": "color",
+        "title": "Accent colour",
+        "default": "",
+        "description": "Leave empty to use the site's brand colour."
+      },
+      "siteTitle": {
+        "type": "string",
+        "title": "Display name",
+        "default": "Aurora"
+      },
+      "tagline": {
+        "type": "string",
+        "title": "Tagline",
+        "default": "Write. Publish. No noise."
+      },
+      "footerText": {
+        "type": "string",
+        "title": "Footer text",
+        "default": "© Z-SOFT Co., Ltd"
+      }
+    }
+  }
+}

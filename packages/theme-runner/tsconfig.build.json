@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // CommonJS, like theme-sdk: site-runtime consumes it without a bundler, and the
+    // worker is spawned by PATH (dist/worker.js) rather than imported — Node loads it
+    // directly, so it must be something Node can run with no build step of its own.
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "noEmit": false,
+    "declaration": true,
+    "rootDir": "./src",
+    "outDir": "./dist"
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts", "src/**/*.test.tsx", "src/test/**"]
+}

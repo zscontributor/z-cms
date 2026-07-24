@@ -1,0 +1,1788 @@
+/**
+ * Z Magazine — an editorial theme for news sites, magazines and publications.
+ *
+ * Three rules govern this file, and each of them is a constraint the platform
+ * imposes rather than a preference:
+ *
+ * 1. EVERYTHING IS SCOPED UNDER `.zmag`.
+ *    A theme's stylesheet is served alongside whatever else the page carries. A
+ *    bare `h1 {}` here would not restyle this theme, it would restyle the page —
+ *    including anything the runtime, a plugin or a block renders outside it. So
+ *    there is no element selector in this file that is not a descendant of `.zmag`.
+ *
+ * 2. NO EXTERNAL FONTS.
+ *    A magazine is its typeface, and this one cannot download it: the public site's
+ *    CSP is `style-src 'self'` and `font-src 'self' data:`, so a Google Fonts
+ *    stylesheet and its .woff2 files are both refused by the browser. The stacks
+ *    below reach for what the OS already has. The headline face is a *real* old-
+ *    style serif — Iowan on a Mac, Palatino/Book Antiqua on Windows, Georgia
+ *    everywhere else — because a front page set in the UI sans is not a front page.
+ *
+ * 3. DARK MODE IS AN ATTRIBUTE, NOT A MEDIA QUERY.
+ *    `html[data-theme="dark"]` is set by the runtime's colour-mode script, which is
+ *    also what wires up the SDK's <ColorModeToggle> that this theme places in the
+ *    dateline bar. The `prefers-color-scheme` block at the bottom is only the
+ *    no-JavaScript fallback, and it is guarded by `html:not([data-theme])` so that
+ *    it can never fight a visitor who has chosen.
+ *
+ * And one rule that is only a design decision, but the one that shapes the file:
+ * the theme ships NO PHOTOGRAPHS. Every picture on the front page is `.zmag__art` —
+ * gradients and a rule, tinted per story, re-coloured with the palette in the dark.
+ */
+
+.zmag {
+  --z-accent: #c0392b;
+  --z-accent-deep: #96241a;
+
+  --z-ink: #14120f;
+  --z-ink-soft: #3a3631;
+  --z-muted: #6b655d;
+  --z-faint: #948d84;
+
+  --z-paper: #fbfaf7;
+  --z-card: #ffffff;
+  --z-tint: #f2efe9;
+
+  /* Hairlines. A newspaper is mostly rules, and they must stay hairlines: a rule
+     you notice is a rule that is too heavy. */
+  --z-rule: #ddd8d0;
+  --z-rule-strong: #14120f;
+
+  --z-shell: #16130f;
+  --z-shell-ink: #f6f3ed;
+  --z-shell-muted: #a49d93;
+  --z-shell-rule: #302b25;
+
+  --z-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua",
+    "Times New Roman", Times, Georgia, serif;
+  --z-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, system-ui, sans-serif;
+  --z-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  --z-measure: 68ch;
+
+  background: var(--z-paper);
+  color: var(--z-ink);
+  font-family: var(--z-sans);
+  line-height: 1.6;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.zmag *,
+.zmag *::before,
+.zmag *::after {
+  box-sizing: border-box;
+}
+
+.zmag a {
+  color: inherit;
+  text-decoration: none;
+}
+.zmag img {
+  max-width: 100%;
+  display: block;
+}
+.zmag button {
+  font: inherit;
+}
+
+/* The keyboard ring, once, for everything. A theme that draws its own focus styles
+   per component is a theme that will forget one. */
+.zmag :focus-visible {
+  outline: 2px solid var(--z-accent);
+  outline-offset: 2px;
+}
+
+.zmag__skip {
+  position: absolute;
+  left: -9999px;
+  z-index: 60;
+}
+.zmag__skip:focus {
+  left: 16px;
+  top: 16px;
+  padding: 10px 16px;
+  background: var(--z-accent);
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* --------------------------------------------------------------- primitives */
+
+.zmag__container {
+  width: min(1240px, calc(100% - 40px));
+  margin: 0 auto;
+}
+
+/* The measure. ~68ch is where a serif stops being tiring — the reason a broadsheet
+   is set in columns rather than across the sheet. */
+.zmag__measure {
+  max-width: var(--z-measure);
+}
+
+/* The category label. The one place colour is allowed to shout. */
+.zmag__kicker {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--z-accent);
+}
+
+.zmag__lede {
+  font-family: var(--z-serif);
+  font-size: 20px;
+  line-height: 1.5;
+  color: var(--z-ink-soft);
+  margin: 0 0 14px;
+}
+
+.zmag__byline {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--z-faint);
+  font-weight: 700;
+}
+
+.zmag__caption {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--z-faint);
+  border-left: 2px solid var(--z-rule);
+  padding-left: 10px;
+}
+
+.zmag__rule {
+  border: 0;
+  border-top: 1px solid var(--z-rule);
+  margin: 26px 0;
+}
+.zmag__rule--thick {
+  border-top: 3px double var(--z-rule-strong);
+}
+
+.zmag__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 22px;
+  border: 1px solid var(--z-ink);
+  background: var(--z-ink);
+  color: var(--z-paper);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease;
+}
+.zmag__btn:hover {
+  background: var(--z-accent);
+  border-color: var(--z-accent);
+  color: #fff;
+}
+.zmag__btn--ghost {
+  background: transparent;
+  color: var(--z-ink);
+}
+
+/* --------------------------------------------------------------- breaking news */
+
+.zmag__breaking {
+  background: var(--z-accent);
+  color: #fff;
+}
+.zmag__breaking-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 9px 0;
+  font-size: 13px;
+}
+.zmag__breaking-label {
+  flex-shrink: 0;
+  padding: 3px 8px;
+  background: #fff;
+  color: var(--z-accent-deep);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.zmag__breaking-text {
+  font-weight: 600;
+}
+
+/* ------------------------------------------------------------------- dateline */
+
+.zmag__dateline {
+  border-bottom: 1px solid var(--z-rule);
+  background: var(--z-paper);
+}
+.zmag__dateline-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 46px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--z-muted);
+  font-weight: 700;
+}
+.zmag__dateline-edition {
+  color: var(--z-faint);
+}
+.zmag__dateline-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ------------------------------------------- language switch + colour toggle */
+
+/*
+ * The language switcher is a <details> disclosure and the colour toggle is the SDK's
+ * <ColorModeToggle>. Neither ships a line of JavaScript from this theme: themes
+ * render on the server only. The disclosure is native HTML, and the toggle is wired
+ * up by the runtime's own delegated listener — the theme only supplies the button's
+ * class, styled below.
+ */
+.zmag__lang {
+  position: relative;
+}
+.zmag__lang > summary {
+  list-style: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border: 1px solid var(--z-rule);
+  background: var(--z-card);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--z-ink);
+}
+.zmag__lang > summary::-webkit-details-marker {
+  display: none;
+}
+.zmag__lang-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 30;
+  min-width: 200px;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  border: 1px solid var(--z-rule);
+  background: var(--z-card);
+  box-shadow: 0 18px 44px rgba(20, 18, 15, 0.14);
+}
+.zmag__lang-menu a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--z-muted);
+}
+.zmag__lang-menu a:hover {
+  background: var(--z-tint);
+  color: var(--z-ink);
+}
+.zmag__lang-menu a[aria-current="true"] {
+  color: var(--z-accent);
+  font-weight: 800;
+}
+.zmag__lang-flag {
+  width: 20px;
+  height: 15px;
+  object-fit: cover;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+}
+
+.zmag__toggle {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--z-rule);
+  background: var(--z-card);
+  color: var(--z-ink);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+.zmag__toggle:hover {
+  border-color: var(--z-accent);
+  color: var(--z-accent);
+}
+
+/* The toggle's two glyphs need no rules here: <ColorModeToggle> marks them with
+   `data-z-theme-icon`, and the runtime's own stylesheet shows exactly one. */
+
+/* ------------------------------------------------------------------ masthead */
+
+.zmag__masthead {
+  border-bottom: 3px double var(--z-rule-strong);
+  padding-top: 26px;
+  text-align: center;
+}
+.zmag__wordmark {
+  display: inline-block;
+}
+.zmag__wordmark-text {
+  font-family: var(--z-serif);
+  font-size: clamp(42px, 8vw, 96px);
+  line-height: 0.94;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  display: block;
+}
+.zmag__wordmark-logo {
+  height: clamp(40px, 7vw, 76px);
+  width: auto;
+  margin: 0 auto;
+  object-fit: contain;
+}
+.zmag__masthead-tagline {
+  margin: 10px 0 22px;
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--z-muted);
+  font-weight: 700;
+}
+
+.zmag__nav {
+  border-top: 1px solid var(--z-rule);
+}
+.zmag__nav-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 48px;
+}
+
+.zmag__sections ul {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 22px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.zmag__sections a {
+  display: block;
+  padding: 12px 0;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  border-bottom: 2px solid transparent;
+  transition:
+    color 0.18s ease,
+    border-color 0.18s ease;
+}
+.zmag__sections a:hover {
+  color: var(--z-accent);
+  border-bottom-color: var(--z-accent);
+}
+
+.zmag__search {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--z-rule);
+  background: var(--z-card);
+}
+.zmag__search input {
+  border: 0;
+  padding: 7px 12px;
+  background: transparent;
+  color: var(--z-ink);
+  font-size: 13px;
+  min-width: 190px;
+}
+.zmag__search input:focus {
+  outline: none;
+}
+.zmag__search button {
+  border: 0;
+  border-left: 1px solid var(--z-rule);
+  padding: 0 12px;
+  background: transparent;
+  color: var(--z-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.zmag__search button:hover {
+  background: var(--z-accent);
+  border-color: var(--z-accent);
+  color: #fff;
+}
+
+/* ------------------------------------------------------------------ the art */
+
+/*
+ * The picture areas. No photograph ships with this theme, so each one is drawn:
+ * a soft radial "subject" over a linear ground, with a hairline underneath. The
+ * tones are mixed FROM the palette (`color-mix` with `--z-accent` and `--z-ink`),
+ * which is why the whole front page re-colours when a site owner changes the accent
+ * — and why it goes dark with everything else instead of staying a bright rectangle.
+ */
+.zmag__art {
+  /* Three colours, and every composition below is built from only these three.
+     `--z-art-ink` is mixed FROM `--z-ink`, so in the dark palette — where `--z-ink`
+     is cream — the shapes invert to light-on-dark on their own, and the accent is
+     the site's accent, so the whole front page re-colours with one setting. */
+  --z-art-paper: #ece5da;
+  --z-art-ink: color-mix(in srgb, var(--z-ink) 88%, var(--z-art-paper));
+  --z-art-accent: var(--z-accent);
+
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--z-rule);
+  background: var(--z-art-paper);
+  aspect-ratio: 16 / 9;
+}
+.zmag__art--wide {
+  aspect-ratio: 16 / 9;
+}
+.zmag__art--square {
+  aspect-ratio: 4 / 3;
+}
+.zmag__art--tall {
+  aspect-ratio: 3 / 4;
+}
+
+/* The composition. Every stop is a HARD stop — `X 0 21%, transparent 21.4%` — so
+   the shapes have edges. The first version of this file drew soft radial blurs and
+   they rendered as murky smudges: a reader does not see "abstract", a reader sees an
+   image that failed to load. Geometry reads as a decision; a blur reads as a bug. */
+.zmag__art > span {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+}
+
+/* The newsprint. A dot screen over the whole plate, at the size a coarse halftone
+   actually is. It is what ties the five compositions together and what makes them
+   read as *printed* rather than as CSS. */
+.zmag__art > i {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(
+    circle at center,
+    color-mix(in srgb, var(--z-art-ink) 42%, transparent) 0 0.9px,
+    transparent 1.1px
+  );
+  background-size: 5px 5px;
+}
+
+/* One — the sun over a horizon. The lead story, and the article hero. */
+.zmag__art--one {
+  --z-art-paper: #ede4d6;
+}
+.zmag__art--one > span {
+  background-image:
+    linear-gradient(
+      to bottom,
+      transparent 0 66%,
+      var(--z-art-ink) 66% 67.5%,
+      transparent 67.5% 74%,
+      var(--z-art-ink) 74% 100%
+    ),
+    radial-gradient(
+      circle at 33% 47%,
+      var(--z-art-accent) 0 20%,
+      transparent 20.4%
+    ),
+    linear-gradient(
+      to right,
+      transparent 0 78%,
+      color-mix(in srgb, var(--z-art-ink) 16%, transparent) 78% 100%
+    );
+}
+
+/* Two — a diagonal mass, a rule and a column screen. Cool, architectural. */
+.zmag__art--two {
+  --z-art-paper: #e4e5e3;
+}
+.zmag__art--two > span {
+  background-image:
+    linear-gradient(
+      to bottom,
+      transparent 0 20%,
+      var(--z-art-accent) 20% 23%,
+      transparent 23%
+    ),
+    linear-gradient(202deg, transparent 0 52%, var(--z-art-ink) 52% 100%),
+    repeating-linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--z-art-ink) 20%, transparent) 0 1px,
+      transparent 1px 11px
+    );
+}
+
+/* Three — concentric rings struck out of an accent disc. */
+.zmag__art--three {
+  --z-art-paper: #f0e7de;
+}
+/* The ground band is the FIRST layer and therefore the topmost one. Under the rings
+   it was being striped by them into a dashed staircase — a shape nobody drew, which
+   is the signature of a bug rather than of a decision. */
+.zmag__art--three > span {
+  background-image:
+    linear-gradient(to top, var(--z-art-ink) 0 11%, transparent 11%),
+    repeating-radial-gradient(
+      circle at 72% 84%,
+      transparent 0 8px,
+      var(--z-art-paper) 8px 10px
+    ),
+    radial-gradient(
+      circle at 72% 84%,
+      var(--z-art-accent) 0 52%,
+      transparent 52.4%
+    );
+}
+
+/* Four — a skyline. Bars anchored to the bottom, feet buried in a solid base. */
+.zmag__art--four {
+  --z-art-paper: #e7e4dc;
+}
+.zmag__art--four > span {
+  background-image:
+    linear-gradient(to bottom, transparent 0 87%, var(--z-art-ink) 87% 100%),
+    linear-gradient(var(--z-art-accent), var(--z-art-accent)),
+    linear-gradient(var(--z-art-ink), var(--z-art-ink)),
+    linear-gradient(var(--z-art-ink), var(--z-art-ink)),
+    linear-gradient(var(--z-art-ink), var(--z-art-ink)),
+    linear-gradient(
+      color-mix(in srgb, var(--z-art-ink) 45%, transparent),
+      color-mix(in srgb, var(--z-art-ink) 45%, transparent)
+    );
+  background-size:
+    100% 100%,
+    9% 40%,
+    13% 64%,
+    7% 50%,
+    16% 32%,
+    11% 76%;
+  background-position:
+    0 0,
+    24% 100%,
+    39% 100%,
+    54% 100%,
+    66% 100%,
+    84% 100%;
+}
+
+/* Five — a duotone split with a hatched sky and an accent disc. The archive rail. */
+.zmag__art--five {
+  --z-art-paper: #eae4da;
+}
+.zmag__art--five > span {
+  background-image:
+    radial-gradient(
+      circle at 70% 33%,
+      var(--z-art-accent) 0 15%,
+      transparent 15.4%
+    ),
+    linear-gradient(163deg, transparent 0 48%, var(--z-art-ink) 48% 100%),
+    repeating-linear-gradient(
+      45deg,
+      color-mix(in srgb, var(--z-art-ink) 26%, transparent) 0 1px,
+      transparent 1px 9px
+    );
+}
+
+/* ---------------------------------------------------------------- front page */
+
+.zmag__front {
+  padding: 34px 0 0;
+}
+.zmag__front-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.85fr) minmax(0, 1fr);
+  gap: 0;
+}
+.zmag__lead {
+  padding-right: 36px;
+  border-right: 1px solid var(--z-rule);
+}
+/* A paper with one story, or none. The rule down the middle of the front page divides
+   the lead from the secondaries — with no secondaries to divide it from, it is a line
+   drawn against nothing, so the lead takes the full measure instead. */
+.zmag__front-grid--solo {
+  grid-template-columns: minmax(0, 1fr);
+}
+.zmag__front-grid--solo .zmag__lead {
+  padding-right: 0;
+  border-right: 0;
+}
+.zmag__lead-headline {
+  font-family: var(--z-serif);
+  font-size: clamp(38px, 5.2vw, 66px);
+  line-height: 1.03;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  margin: 0 0 16px;
+  max-width: 16ch;
+}
+.zmag__lead-headline a:hover {
+  color: var(--z-accent);
+}
+.zmag__lead .zmag__lede {
+  max-width: 58ch;
+  font-size: 21px;
+}
+.zmag__lead .zmag__byline {
+  margin-bottom: 22px;
+}
+
+.zmag__secondaries {
+  padding-left: 36px;
+  display: grid;
+  align-content: start;
+  gap: 26px;
+}
+.zmag__secondary + .zmag__secondary {
+  border-top: 1px solid var(--z-rule);
+  padding-top: 26px;
+}
+.zmag__secondary h2 {
+  font-family: var(--z-serif);
+  font-size: 25px;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin: 0 0 8px;
+}
+.zmag__secondary h2 a:hover {
+  color: var(--z-accent);
+}
+.zmag__secondary p {
+  margin: 0 0 14px;
+  font-size: 14px;
+  color: var(--z-muted);
+}
+
+/* --------------------------------------------------------------------- bands */
+
+.zmag__band {
+  padding: 44px 0;
+  border-top: 1px solid var(--z-rule);
+  margin-top: 44px;
+}
+.zmag__band-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 0 0 26px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--z-rule-strong);
+  font-family: var(--z-sans);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.zmag__band-title a {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--z-muted);
+  font-weight: 700;
+}
+.zmag__band-title a:hover {
+  color: var(--z-accent);
+}
+
+/* --------------------------------------------------------------------- river */
+
+.zmag__river {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+}
+.zmag__river-item {
+  padding: 0 26px;
+  border-left: 1px solid var(--z-rule);
+}
+.zmag__river-item:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+.zmag__river-item:last-child {
+  padding-right: 0;
+}
+/* A four-up or six-up river wraps, and the wrapped row needs its own rule above it
+   or the columns float. `:nth-child(n + 4)` is that rule. */
+.zmag__river-item:nth-child(n + 4) {
+  margin-top: 26px;
+  padding-top: 26px;
+  border-top: 1px solid var(--z-rule);
+}
+.zmag__river-item:nth-child(3n + 1) {
+  padding-left: 0;
+  border-left: 0;
+}
+.zmag__river-item:nth-child(3n) {
+  padding-right: 0;
+}
+.zmag__river-item h3 {
+  font-family: var(--z-serif);
+  font-size: 22px;
+  line-height: 1.2;
+  margin: 0 0 8px;
+  font-weight: 700;
+}
+.zmag__river-item h3 a:hover {
+  color: var(--z-accent);
+}
+.zmag__river-item p {
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: var(--z-muted);
+}
+
+/* ----------------------------------------------------------- river + rail */
+
+.zmag__split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.9fr) minmax(0, 1fr);
+  gap: 44px;
+}
+/* The river sits in the LEFT column of the split, so it runs two columns wide there
+   rather than three — a 22px serif headline in a 250px column is a stack of hyphens.
+   The rules below re-state the river's own hairlines for a two-up grid: the base ones
+   are written for three, and a 3n rule in a 2n grid draws the lines in the wrong
+   places. */
+.zmag__split .zmag__river {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.zmag__split .zmag__river-item {
+  padding: 0 26px;
+  border-left: 1px solid var(--z-rule);
+}
+.zmag__split .zmag__river-item:nth-child(2n + 1) {
+  padding-left: 0;
+  border-left: 0;
+}
+.zmag__split .zmag__river-item:nth-child(2n) {
+  padding-right: 0;
+}
+.zmag__split .zmag__river-item:nth-child(n + 3) {
+  margin-top: 26px;
+  padding-top: 26px;
+  border-top: 1px solid var(--z-rule);
+}
+
+.zmag__mostread {
+  border-left: 1px solid var(--z-rule);
+  padding-left: 30px;
+}
+.zmag__rail-title {
+  margin: 0 0 16px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--z-rule-strong);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.zmag__mostread-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  counter-reset: none;
+}
+.zmag__mostread-list li {
+  display: flex;
+  gap: 14px;
+  align-items: baseline;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--z-rule);
+}
+.zmag__mostread-list li > span {
+  font-family: var(--z-serif);
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--z-accent);
+  min-width: 28px;
+}
+.zmag__mostread-list li > a {
+  font-family: var(--z-serif);
+  font-size: 17px;
+  line-height: 1.3;
+}
+.zmag__mostread-list li > a:hover {
+  color: var(--z-accent);
+}
+.zmag__rail-note {
+  margin-top: 22px;
+  padding: 18px;
+  background: var(--z-tint);
+  border-top: 3px solid var(--z-accent);
+}
+.zmag__rail-note p:last-child {
+  margin: 0;
+  font-size: 14px;
+  color: var(--z-muted);
+}
+
+/* -------------------------------------------------------------- empty state
+
+   A newspaper with nothing in it. On the day the theme is installed the site has no
+   stories, and the front page says so in words rather than leaving a hole where the
+   lead should be — a section that renders nothing at all is indistinguishable from a
+   bug. Set like a standfirst inside a ruled box, so it reads as a deliberate notice. */
+
+.zmag__empty {
+  margin: 0;
+  border: 1px solid var(--z-rule);
+  border-top: 3px solid var(--z-accent);
+  background: var(--z-tint);
+  padding: 40px;
+  font-family: var(--z-serif);
+  font-size: 20px;
+  line-height: 1.5;
+  color: var(--z-muted);
+}
+.zmag__empty p:last-child {
+  margin: 10px 0 0;
+  max-width: 52ch;
+}
+
+/* --------------------------------------------------------------- newsletter */
+
+.zmag__newsletter {
+  padding: 46px 0 60px;
+}
+.zmag__newsletter-box {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 40px;
+  align-items: center;
+  padding: 38px;
+  border: 1px solid var(--z-rule);
+  border-top: 4px solid var(--z-accent);
+  background: var(--z-card);
+}
+.zmag__newsletter-box h2 {
+  font-family: var(--z-serif);
+  font-size: clamp(28px, 3.4vw, 40px);
+  line-height: 1.1;
+  margin: 0 0 10px;
+  font-weight: 700;
+}
+.zmag__newsletter-box p {
+  margin: 0;
+  color: var(--z-muted);
+  max-width: 46ch;
+}
+.zmag__newsletter-form label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--z-muted);
+}
+.zmag__newsletter-row {
+  display: flex;
+}
+.zmag__newsletter-row input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 1px solid var(--z-ink);
+  border-right: 0;
+  padding: 13px 14px;
+  background: var(--z-paper);
+  color: var(--z-ink);
+  font-size: 15px;
+}
+.zmag__newsletter-row input:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--z-accent);
+}
+.zmag__newsletter-row button {
+  flex-shrink: 0;
+  border: 1px solid var(--z-ink);
+  background: var(--z-ink);
+  color: var(--z-paper);
+  padding: 0 22px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease;
+}
+.zmag__newsletter-row button:hover {
+  background: var(--z-accent);
+  border-color: var(--z-accent);
+  color: #fff;
+}
+.zmag__newsletter-note {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--z-faint);
+}
+.zmag__newsletter-box .zmag__newsletter-note {
+  max-width: none;
+}
+
+/* ------------------------------------------------------------------ article */
+
+.zmag__article {
+  padding: 40px 0 70px;
+}
+.zmag__article-headline {
+  font-family: var(--z-serif);
+  font-size: clamp(34px, 4.6vw, 58px);
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  margin: 0 0 16px;
+}
+.zmag__standfirst {
+  font-family: var(--z-serif);
+  font-size: 21px;
+  line-height: 1.5;
+  color: var(--z-ink-soft);
+  margin: 0 0 20px;
+}
+.zmag__article-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px 0 22px;
+  border-top: 1px solid var(--z-rule);
+  border-bottom: 1px solid var(--z-rule);
+  margin-bottom: 26px;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--z-faint);
+  font-weight: 700;
+  padding-top: 12px;
+}
+.zmag__article-meta-sep {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--z-faint);
+}
+.zmag__article .zmag__art {
+  margin-bottom: 0;
+}
+.zmag__article .zmag__caption {
+  margin-bottom: 34px;
+}
+
+.zmag__more {
+  margin-top: 50px;
+  padding-top: 8px;
+}
+.zmag__more ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.zmag__more li {
+  border-bottom: 1px solid var(--z-rule);
+}
+.zmag__more a {
+  display: block;
+  padding: 13px 0;
+  font-family: var(--z-serif);
+  font-size: 18px;
+}
+.zmag__more a::after {
+  content: " →";
+  color: var(--z-accent);
+}
+.zmag__more a:hover {
+  color: var(--z-accent);
+}
+
+/* ---------------------------------------------------------------------- page */
+
+.zmag__page {
+  padding: 42px 0 70px;
+}
+.zmag__page-title {
+  font-family: var(--z-serif);
+  font-size: clamp(34px, 4.4vw, 54px);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  margin: 0 0 14px;
+}
+
+/* ------------------------------------------------------------ section front */
+
+.zmag__section-front {
+  margin-bottom: 30px;
+}
+.zmag__section-front-title {
+  font-family: var(--z-serif);
+  font-size: clamp(38px, 5.6vw, 72px);
+  line-height: 1;
+  letter-spacing: -0.025em;
+  font-weight: 700;
+  margin: 0 0 18px;
+}
+
+.zmag__archive {
+  display: grid;
+  gap: 0;
+}
+.zmag__archive-item {
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  gap: 28px;
+  padding: 28px 0;
+  border-top: 1px solid var(--z-rule);
+  align-items: start;
+}
+.zmag__archive-item:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.zmag__archive-item h2 {
+  font-family: var(--z-serif);
+  font-size: 30px;
+  line-height: 1.14;
+  letter-spacing: -0.01em;
+  font-weight: 700;
+  margin: 0 0 10px;
+  max-width: 28ch;
+}
+.zmag__archive-item h2 a:hover {
+  color: var(--z-accent);
+}
+.zmag__archive-item p {
+  margin: 0 0 12px;
+  color: var(--z-muted);
+  max-width: 70ch;
+}
+
+.zmag__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-top: 36px;
+  padding-top: 20px;
+  border-top: 3px double var(--z-rule-strong);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--z-muted);
+}
+.zmag__pagination a:hover {
+  color: var(--z-accent);
+}
+
+/* -------------------------------------------------------------------- status */
+
+.zmag__status {
+  padding: 90px 0 110px;
+}
+.zmag__status-code {
+  font-family: var(--z-serif);
+  font-size: 76px;
+  line-height: 1;
+  font-weight: 700;
+  color: var(--z-accent);
+  margin: 0 0 8px;
+}
+.zmag__status-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0;
+}
+
+/* --------------------------------------------------------------------- prose */
+
+.zmag__prose {
+  font-family: var(--z-serif);
+  font-size: 19px;
+  line-height: 1.72;
+  color: var(--z-ink-soft);
+  max-width: var(--z-measure);
+}
+.zmag__prose h2 {
+  font-family: var(--z-serif);
+  font-size: 30px;
+  line-height: 1.18;
+  letter-spacing: -0.01em;
+  color: var(--z-ink);
+  margin: 40px 0 12px;
+}
+.zmag__prose h3 {
+  font-family: var(--z-sans);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--z-ink);
+  margin: 30px 0 10px;
+}
+.zmag__prose p {
+  margin: 0 0 20px;
+}
+.zmag__prose ul,
+.zmag__prose ol {
+  margin: 0 0 20px;
+  padding-left: 22px;
+}
+.zmag__prose li {
+  margin: 6px 0;
+}
+.zmag__prose a {
+  color: var(--z-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+.zmag__prose strong {
+  color: var(--z-ink);
+}
+.zmag__prose code {
+  font-family: var(--z-mono);
+  font-size: 0.85em;
+  background: var(--z-tint);
+  padding: 2px 6px;
+  color: var(--z-ink);
+}
+.zmag__prose hr {
+  border: 0;
+  border-top: 1px solid var(--z-rule);
+  margin: 32px 0;
+}
+.zmag__prose img {
+  width: 100%;
+  margin: 28px 0;
+}
+
+/* The pull-quote. A blockquote in an article is not a citation, it is a line the
+   editor wanted you to see from across the room — so it breaks the measure. */
+.zmag__prose blockquote {
+  margin: 34px 0;
+  padding: 4px 0 4px 22px;
+  border-left: 3px solid var(--z-accent);
+  font-family: var(--z-serif);
+  font-size: 27px;
+  line-height: 1.32;
+  font-style: italic;
+  color: var(--z-ink);
+}
+.zmag__prose blockquote p {
+  margin: 0;
+}
+.zmag__prose blockquote p + p {
+  margin-top: 12px;
+}
+.zmag__prose blockquote cite {
+  display: block;
+  margin-top: 12px;
+  font-family: var(--z-sans);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--z-faint);
+}
+
+/*
+ * The drop cap.
+ *
+ * `:first-of-type` and not `:first-child`: the first node inside a rendered block is
+ * as likely to be a heading, and a three-line capital hanging off an <h2> looks like
+ * a bug. `::first-letter` only ever applies to the first paragraph of the article
+ * because the selector is anchored at `.zmag__prose--dropcap > p:first-of-type`.
+ */
+.zmag__prose--dropcap > div > p:first-of-type::first-letter,
+.zmag__prose--dropcap > p:first-of-type::first-letter {
+  float: left;
+  font-family: var(--z-serif);
+  font-size: 74px;
+  line-height: 0.78;
+  font-weight: 700;
+  color: var(--z-ink);
+  padding: 6px 10px 0 0;
+  margin-top: 4px;
+}
+
+/* -------------------------------------------------------------------- blocks */
+
+.zmag__block-hero {
+  padding: 26px 0 32px;
+  border-bottom: 1px solid var(--z-rule);
+  margin-bottom: 30px;
+}
+.zmag__block-hero h2 {
+  font-family: var(--z-serif);
+  font-size: clamp(30px, 4vw, 46px);
+  line-height: 1.08;
+  font-weight: 700;
+  margin: 0 0 12px;
+}
+
+.zmag__factbox {
+  margin: 36px 0;
+  padding: 26px;
+  background: var(--z-tint);
+  border-top: 3px solid var(--z-ink);
+}
+.zmag__factbox h2 {
+  font-family: var(--z-sans);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin: 0 0 6px;
+  color: var(--z-ink);
+}
+.zmag__factbox-sub {
+  margin: 0 0 18px;
+  font-size: 14px;
+  color: var(--z-muted);
+}
+.zmag__factbox ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.zmag__factbox li {
+  display: flex;
+  gap: 14px;
+  padding: 14px 0;
+  border-top: 1px solid var(--z-rule);
+}
+.zmag__factbox li > span {
+  font-family: var(--z-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--z-accent);
+  padding-top: 3px;
+}
+.zmag__factbox h3 {
+  font-family: var(--z-serif);
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  margin: 0 0 4px;
+  color: var(--z-ink);
+}
+.zmag__factbox p {
+  margin: 0;
+  font-family: var(--z-sans);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--z-muted);
+}
+
+.zmag__figure {
+  margin: 32px 0;
+}
+.zmag__figure img {
+  width: 100%;
+  border: 1px solid var(--z-rule);
+}
+.zmag__figure figcaption {
+  margin-top: 10px;
+  padding-left: 10px;
+  border-left: 2px solid var(--z-rule);
+  font-family: var(--z-sans);
+  font-size: 12px;
+  color: var(--z-faint);
+}
+
+/* `core/content-list`: a list an editor placed in the page. A "grid" is set as the
+   front page's river; a "list" is the stacked, ruled column a section front uses. */
+
+.zmag__block-list {
+  margin: 40px 0;
+}
+.zmag__block-river {
+  display: grid;
+  gap: 0;
+}
+.zmag__block-river .zmag__river-item {
+  padding: 22px 0;
+  border-left: 0;
+  border-top: 1px solid var(--z-rule);
+  margin-top: 0;
+}
+.zmag__block-river .zmag__river-item:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.zmag__block-list .zmag__empty {
+  padding: 28px;
+}
+
+.zmag__block-cta {
+  margin: 40px 0;
+  padding: 34px;
+  background: var(--z-shell);
+  color: var(--z-shell-ink);
+  text-align: center;
+}
+.zmag__block-cta h2 {
+  font-family: var(--z-serif);
+  font-size: 32px;
+  line-height: 1.14;
+  font-weight: 700;
+  margin: 0 0 10px;
+  color: var(--z-shell-ink);
+}
+.zmag__block-cta p {
+  margin: 0 0 20px;
+  font-family: var(--z-sans);
+  font-size: 15px;
+  color: var(--z-shell-muted);
+}
+.zmag__block-cta .zmag__btn {
+  background: var(--z-accent);
+  border-color: var(--z-accent);
+  color: #fff;
+}
+.zmag__block-cta .zmag__btn:hover {
+  background: #fff;
+  border-color: #fff;
+  color: var(--z-ink);
+}
+
+/* -------------------------------------------------------------------- footer */
+
+.zmag__footer {
+  margin-top: auto;
+  background: var(--z-shell);
+  color: var(--z-shell-ink);
+  padding: 52px 0 26px;
+}
+.zmag__footer-grid {
+  display: grid;
+  grid-template-columns: 1.6fr repeat(3, 1fr);
+  gap: 36px;
+  padding-bottom: 34px;
+  border-bottom: 1px solid var(--z-shell-rule);
+}
+.zmag__footer-wordmark {
+  font-family: var(--z-serif);
+  font-size: 32px;
+  font-weight: 700;
+  display: block;
+  margin-bottom: 12px;
+}
+.zmag__footer-brand p {
+  margin: 0 0 10px;
+  max-width: 34ch;
+  font-size: 14px;
+  color: var(--z-shell-muted);
+}
+.zmag__footer-org a {
+  color: var(--z-shell-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.zmag__footer-col h2 {
+  margin: 0 0 14px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--z-shell-muted);
+}
+.zmag__footer-col ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.zmag__footer-col li {
+  margin: 9px 0;
+  font-size: 14px;
+}
+.zmag__footer-col a:hover {
+  color: var(--z-accent);
+}
+.zmag__footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding-top: 22px;
+  font-size: 12px;
+  color: var(--z-shell-muted);
+}
+.zmag__footer-bottom a:hover {
+  color: var(--z-shell-ink);
+}
+
+/* ---------------------------------------------------------------------- dark */
+
+/*
+ * One block of overrides, driven by an attribute the runtime sets on <html>.
+ * Only the custom properties are re-declared: every rule above already reads them,
+ * so the palette swaps and not one element moves. The art areas re-mix themselves,
+ * because their gradients are `color-mix`ed from these same properties.
+ */
+html[data-theme="dark"] .zmag {
+  --z-ink: #f2eee6;
+  --z-ink-soft: #d5cfc4;
+  --z-muted: #a49d92;
+  --z-faint: #7e776d;
+
+  --z-paper: #100e0c;
+  --z-card: #191713;
+  --z-tint: #1d1a16;
+
+  --z-rule: #332e28;
+  --z-rule-strong: #6a6259;
+
+  --z-shell: #070605;
+  --z-shell-ink: #f2eee6;
+  --z-shell-muted: #948d83;
+  --z-shell-rule: #2b2621;
+}
+
+/*
+ * The art in the dark.
+ *
+ * Only the PAPER changes. `--z-art-ink` is mixed from `--z-ink`, which the block
+ * above has already turned cream, so every shape inverts to light-on-dark by
+ * itself: the same sun, the same skyline, the same rings, printed on black paper.
+ * Nothing here restates a composition, which is why the two modes cannot drift.
+ */
+html[data-theme="dark"] .zmag__art--one {
+  --z-art-paper: #1d1813;
+}
+html[data-theme="dark"] .zmag__art--two {
+  --z-art-paper: #16181a;
+}
+html[data-theme="dark"] .zmag__art--three {
+  --z-art-paper: #1e1813;
+}
+html[data-theme="dark"] .zmag__art--four {
+  --z-art-paper: #1a1a17;
+}
+html[data-theme="dark"] .zmag__art--five {
+  --z-art-paper: #1b1712;
+}
+
+html[data-theme="dark"] .zmag__breaking-label {
+  background: #14120f;
+  color: #fff;
+}
+html[data-theme="dark"] .zmag__btn {
+  background: var(--z-ink);
+  border-color: var(--z-ink);
+  color: var(--z-paper);
+}
+html[data-theme="dark"] .zmag__btn--ghost {
+  background: transparent;
+  color: var(--z-ink);
+}
+html[data-theme="dark"] .zmag__btn:hover {
+  background: var(--z-accent);
+  border-color: var(--z-accent);
+  color: #fff;
+}
+html[data-theme="dark"] .zmag__newsletter-row input,
+html[data-theme="dark"] .zmag__newsletter-row button {
+  border-color: var(--z-rule-strong);
+}
+html[data-theme="dark"] .zmag__newsletter-row button {
+  background: var(--z-ink);
+  color: var(--z-paper);
+}
+html[data-theme="dark"] .zmag__factbox {
+  border-top-color: var(--z-accent);
+}
+html[data-theme="dark"] .zmag__lang-menu {
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
+}
+
+/*
+ * No JavaScript: honour the OS instead.
+ *
+ * `html:not([data-theme])` is the guard that keeps this from ever overriding a
+ * visitor who chose — once the colour-mode script has run, `data-theme` is always
+ * present and this whole block stops matching.
+ */
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) .zmag {
+    --z-ink: #f2eee6;
+    --z-ink-soft: #d5cfc4;
+    --z-muted: #a49d92;
+    --z-faint: #7e776d;
+
+    --z-paper: #100e0c;
+    --z-card: #191713;
+    --z-tint: #1d1a16;
+
+    --z-rule: #332e28;
+    --z-rule-strong: #6a6259;
+
+    --z-shell: #070605;
+    --z-shell-ink: #f2eee6;
+    --z-shell-muted: #948d83;
+    --z-shell-rule: #2b2621;
+  }
+  html:not([data-theme]) .zmag__art--one {
+    --z-art-paper: #1d1813;
+  }
+  html:not([data-theme]) .zmag__art--two {
+    --z-art-paper: #16181a;
+  }
+  html:not([data-theme]) .zmag__art--three {
+    --z-art-paper: #1e1813;
+  }
+  html:not([data-theme]) .zmag__art--four {
+    --z-art-paper: #1a1a17;
+  }
+  html:not([data-theme]) .zmag__art--five {
+    --z-art-paper: #1b1712;
+  }
+  html:not([data-theme]) .zmag__breaking-label {
+    background: #14120f;
+    color: #fff;
+  }
+  html:not([data-theme]) .zmag__btn {
+    background: var(--z-ink);
+    border-color: var(--z-ink);
+    color: var(--z-paper);
+  }
+  html:not([data-theme]) .zmag__btn--ghost {
+    background: transparent;
+    color: var(--z-ink);
+  }
+  html:not([data-theme]) .zmag__newsletter-row input,
+  html:not([data-theme]) .zmag__newsletter-row button {
+    border-color: var(--z-rule-strong);
+  }
+  html:not([data-theme]) .zmag__newsletter-row button {
+    background: var(--z-ink);
+    color: var(--z-paper);
+  }
+  html:not([data-theme]) .zmag__factbox {
+    border-top-color: var(--z-accent);
+  }
+}
+
+/* ---------------------------------------------------------------- responsive */
+
+@media (max-width: 1080px) {
+  .zmag__front-grid {
+    grid-template-columns: 1fr;
+  }
+  .zmag__lead {
+    padding-right: 0;
+    border-right: 0;
+    padding-bottom: 30px;
+    border-bottom: 1px solid var(--z-rule);
+  }
+  .zmag__secondaries {
+    padding-left: 0;
+    padding-top: 30px;
+    grid-template-columns: 1fr 1fr;
+    grid-auto-flow: column;
+    gap: 30px;
+  }
+  .zmag__secondary + .zmag__secondary {
+    border-top: 0;
+    padding-top: 0;
+    border-left: 1px solid var(--z-rule);
+    padding-left: 30px;
+  }
+  .zmag__split {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+  .zmag__mostread {
+    border-left: 0;
+    padding-left: 0;
+    border-top: 1px solid var(--z-rule);
+    padding-top: 30px;
+  }
+  .zmag__newsletter-box {
+    grid-template-columns: 1fr;
+    gap: 26px;
+  }
+}
+
+@media (max-width: 820px) {
+  .zmag__river {
+    grid-template-columns: 1fr 1fr;
+  }
+  .zmag__river-item {
+    padding: 0 20px;
+  }
+  .zmag__river-item:nth-child(3n + 1) {
+    padding-left: 20px;
+    border-left: 1px solid var(--z-rule);
+  }
+  .zmag__river-item:nth-child(3n) {
+    padding-right: 20px;
+  }
+  .zmag__river-item:nth-child(odd) {
+    padding-left: 0;
+    border-left: 0;
+  }
+  .zmag__river-item:nth-child(even) {
+    padding-right: 0;
+  }
+  .zmag__river-item:nth-child(n + 3) {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid var(--z-rule);
+  }
+  .zmag__archive-item {
+    grid-template-columns: 180px minmax(0, 1fr);
+    gap: 20px;
+  }
+  .zmag__footer-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .zmag__footer-brand {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .zmag__container {
+    width: min(100% - 28px, 1240px);
+  }
+  .zmag__dateline-row {
+    flex-wrap: wrap;
+    padding: 8px 0;
+    gap: 8px 14px;
+  }
+  .zmag__dateline-edition {
+    display: none;
+  }
+  .zmag__masthead {
+    padding-top: 20px;
+  }
+  .zmag__nav-row {
+    display: block;
+    padding-bottom: 12px;
+  }
+  .zmag__sections {
+    overflow-x: auto;
+  }
+  .zmag__sections ul {
+    flex-wrap: nowrap;
+    gap: 18px;
+  }
+  .zmag__search {
+    margin-top: 10px;
+  }
+  .zmag__search input {
+    min-width: 0;
+    width: 100%;
+  }
+  .zmag__secondaries {
+    grid-template-columns: 1fr;
+    grid-auto-flow: row;
+  }
+  .zmag__secondary + .zmag__secondary {
+    border-left: 0;
+    padding-left: 0;
+    border-top: 1px solid var(--z-rule);
+    padding-top: 26px;
+  }
+  .zmag__river {
+    grid-template-columns: 1fr;
+  }
+  .zmag__river-item,
+  .zmag__river-item:nth-child(3n + 1),
+  .zmag__river-item:nth-child(3n) {
+    padding-left: 0;
+    padding-right: 0;
+    border-left: 0;
+  }
+  .zmag__river-item + .zmag__river-item {
+    margin-top: 22px;
+    padding-top: 22px;
+    border-top: 1px solid var(--z-rule);
+  }
+  .zmag__archive-item {
+    grid-template-columns: 1fr;
+  }
+  .zmag__newsletter-box {
+    padding: 24px 20px;
+  }
+  .zmag__newsletter-row {
+    display: block;
+  }
+  .zmag__newsletter-row input {
+    width: 100%;
+    border-right: 1px solid var(--z-ink);
+  }
+  .zmag__newsletter-row button {
+    width: 100%;
+    margin-top: 10px;
+    padding: 13px 0;
+  }
+  .zmag__prose {
+    font-size: 18px;
+  }
+  .zmag__prose blockquote {
+    font-size: 22px;
+  }
+  .zmag__prose--dropcap > div > p:first-of-type::first-letter,
+  .zmag__prose--dropcap > p:first-of-type::first-letter {
+    font-size: 60px;
+  }
+  .zmag__footer-grid {
+    grid-template-columns: 1fr;
+    gap: 26px;
+  }
+  .zmag__footer-bottom {
+    display: block;
+  }
+  .zmag__footer-bottom a {
+    display: inline-block;
+    margin-top: 8px;
+  }
+}

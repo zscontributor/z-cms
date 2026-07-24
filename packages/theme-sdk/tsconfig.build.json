@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Emit CommonJS: cms-api requires it at runtime, and both Next.js apps consume
+    // CJS without complaint. The SDK is types, a handful of pure functions, and one
+    // server component (ColorModeToggle) — tsc compiles its JSX through the
+    // automatic runtime, so no bundler is needed to build it.
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "noEmit": false,
+    "declaration": true,
+    "rootDir": "./src",
+    "outDir": "./dist"
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts", "src/**/*.test.tsx"]
+}

@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // CommonJS: cms-api (NestJS) requires this at runtime, and both Next.js apps
+    // consume CJS without complaint.
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "noEmit": false,
+    "declaration": true,
+    "rootDir": "./src",
+    "outDir": "./dist",
+    // The locale JSON lives under src/ so that `tsc` emits it into dist/ next to
+    // the code that imports it. Keep it there — a catalogue that is not in the
+    // published build is a catalogue nobody can read.
+    "resolveJsonModule": true
+  },
+  "include": ["src/**/*.ts", "src/**/*.json"],
+  // Tests are not part of the package. Compiling them here emitted them into
+  // dist/ — published to anyone who installs @zcmsorg/i18n — and typechecked them
+  // against the CommonJS build config rather than against vitest's, so a test
+  // using `import.meta` or a vitest global failed the *build*. Vitest typechecks
+  // them itself, under the config they actually run in.
+  "exclude": ["src/**/*.test.ts"]
+}

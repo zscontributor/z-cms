@@ -1,0 +1,26 @@
+{
+  // The ESM half of the SDK's dual build. See tsconfig.build.json for the CJS half,
+  // and package.json's "exports" for who gets which.
+  //
+  // A theme is bundled to ESM with React left external, so when it imports the SDK
+  // the bundler must find ESM. Handed the CJS build instead, esbuild cannot turn
+  // `require("react/jsx-runtime")` — which ColorModeToggle's compiled JSX needs —
+  // into a static import, so it emits a `__require` shim that throws the moment the
+  // theme is loaded: "Dynamic require of react/jsx-runtime is not supported".
+  //
+  // That is not a monorepo quirk. Any theme built anywhere would hit it.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": false,
+    // The types are emitted once, by the CJS build, and both entries in "exports"
+    // point at them. A second copy would only be a second thing to disagree.
+    "declaration": false,
+    "declarationMap": false,
+    "rootDir": "./src",
+    "outDir": "./dist/esm"
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts", "src/**/*.test.tsx"]
+}

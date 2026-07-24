@@ -1,0 +1,906 @@
+{
+  "id": "vn.zsoft.theme.market",
+  "name": "Z Market",
+  "version": "1.2.1",
+  "kind": "theme",
+  "description": "An elegant storefront theme for cosmetics, skincare and beauty brands: a full-bleed hero, shop-by-category tiles, a product grid, an ingredients accordion and a newsletter strip. English, Japanese and Vietnamese, with dark and light modes.",
+  "author": {
+    "name": "Z-SOFT Co., Ltd.",
+    "url": "https://z-soft.com.vn"
+  },
+  "engine": ">=0.1.0",
+  "entry": "dist/index.mjs",
+  "styles": "dist/theme.css",
+  "templates": [
+    "home",
+    "page",
+    "post",
+    "archive",
+    "notFound",
+    "error"
+  ],
+  "optionalCapabilities": [
+    "ai.assistant"
+  ],
+  "integrationSlots": [
+    "floating"
+  ],
+  "menuLocations": [
+    {
+      "key": "primary",
+      "name": "Primary menu"
+    },
+    {
+      "key": "footer",
+      "name": "Footer menu"
+    }
+  ],
+  "colorModes": {
+    "supports": [
+      "light",
+      "dark"
+    ],
+    "default": "system"
+  },
+  "collections": {
+    "featured": {
+      "contentType": "product",
+      "limit": 3,
+      "sort": "newest"
+    },
+    "journal": {
+      "contentType": "post",
+      "limit": 3,
+      "sort": "newest"
+    }
+  },
+  "media": {
+    "screenshots": [
+      "screenshots/1-home-light.png",
+      "screenshots/2-home-dark.png",
+      "screenshots/3-product.png"
+    ]
+  },
+  "seo": {
+    "titleTemplate": "%s — %site%",
+    "robots": {
+      "index": true,
+      "follow": true
+    },
+    "icons": {
+      "favicon": "assets/favicon.ico",
+      "icon": "assets/icon.png",
+      "appleTouchIcon": "assets/apple-touch-icon.png",
+      "themeColor": "#C2185B"
+    },
+    "organization": {
+      "name": "Z Market"
+    }
+  },
+  "settingsSchema": {
+    "type": "object",
+    "properties": {
+      "primaryColor": {
+        "type": "string",
+        "title": "Accent colour",
+        "description": "The rose used for buttons, prices and highlights. Leave empty to use the site's brand colour.",
+        "format": "color",
+        "default": "#C2185B"
+      },
+      "siteTitle": {
+        "type": "string",
+        "title": "Shop name",
+        "default": "Lumière"
+      },
+      "logo": {
+        "type": "string",
+        "title": "Logo",
+        "description": "Shown in the header. Leave empty to use the site's logo, or the wordmark this theme draws.",
+        "format": "image",
+        "default": ""
+      },
+      "tagline": {
+        "type": "string",
+        "title": "Tagline",
+        "default": "Clean beauty, honestly made."
+      },
+      "metaDescription": {
+        "type": "string",
+        "title": "Meta description",
+        "description": "Used for pages that have no description of their own. Around 150–160 characters.",
+        "format": "textarea",
+        "default": "Skincare and colour made with short ingredient lists, refillable packaging and nothing to hide. Serums, cleansers and balms for every skin."
+      },
+      "announcement": {
+        "type": "string",
+        "title": "Announcement bar",
+        "description": "The strip above the header — free shipping, a launch, a sale. Leave empty to hide it.",
+        "default": "Complimentary shipping on orders over $50 · Free samples with every order"
+      },
+      "shopUrl": {
+        "type": "string",
+        "title": "Shop URL",
+        "description": "Where “Shop all” and every add-to-cart button lead. A checkout on this site, or an external store.",
+        "format": "url",
+        "default": "/shop"
+      },
+      "currency": {
+        "type": "string",
+        "title": "Currency",
+        "description": "ISO code used to format prices, e.g. USD, JPY, VND.",
+        "default": "USD"
+      },
+      "colorMode": {
+        "type": "string",
+        "title": "Default colour mode",
+        "description": "Where a first-time visitor starts. \"System\" follows their device. Either way, a visitor who uses the switch keeps their own choice.",
+        "enum": [
+          "system",
+          "light",
+          "dark"
+        ],
+        "default": "system"
+      },
+      "showSearch": {
+        "type": "boolean",
+        "title": "Show search box",
+        "default": true
+      },
+      "footerText": {
+        "type": "string",
+        "title": "Footer text",
+        "default": "© 2026 Lumière. Made in small batches."
+      },
+      "ogImage": {
+        "type": "string",
+        "title": "Social share image",
+        "description": "Shown when a page with no image of its own is shared.",
+        "format": "image",
+        "default": ""
+      },
+      "favicon": {
+        "type": "string",
+        "title": "Favicon",
+        "description": "Browser tab icon. An .ico, .png or .svg.",
+        "format": "image",
+        "default": ""
+      },
+      "twitterSite": {
+        "type": "string",
+        "title": "X / Twitter handle",
+        "description": "Including the @, e.g. @lumiere.",
+        "default": ""
+      },
+      "noindex": {
+        "type": "boolean",
+        "title": "Discourage search engines",
+        "description": "Turn on for a staging shop. No individual page can override this.",
+        "default": false
+      },
+      "organizationName": {
+        "type": "string",
+        "title": "Organisation name",
+        "default": "Lumière Beauty"
+      },
+      "organizationUrl": {
+        "type": "string",
+        "title": "Organisation website",
+        "format": "url",
+        "default": "https://z-soft.com.vn"
+      },
+      "socialProfiles": {
+        "type": "string",
+        "title": "Social profiles",
+        "description": "One URL per line. Confirms to search engines that these profiles are the same brand.",
+        "format": "textarea",
+        "default": ""
+      }
+    }
+  },
+  "demo": {
+    "settings": {
+      "siteTitle": "Lumière",
+      "tagline": "Clean beauty, honestly made.",
+      "announcement": "Complimentary shipping on orders over $50 · Free samples with every order",
+      "shopUrl": "/shop",
+      "currency": "USD",
+      "footerText": "© 2026 Lumière. Made in small batches."
+    },
+    "contentTypes": [
+      {
+        "key": "page",
+        "name": "Page",
+        "pluralName": "Pages",
+        "routePrefix": "",
+        "hasBlocks": true,
+        "icon": "file-text",
+        "fields": []
+      },
+      {
+        "key": "product",
+        "name": "Product",
+        "pluralName": "Products",
+        "routePrefix": "shop",
+        "hasBlocks": true,
+        "icon": "shopping-bag",
+        "fields": [
+          {
+            "key": "price",
+            "type": "number",
+            "label": "Price",
+            "required": true
+          },
+          {
+            "key": "oldPrice",
+            "type": "number",
+            "label": "Compare-at price",
+            "required": false
+          },
+          {
+            "key": "badge",
+            "type": "string",
+            "label": "Badge",
+            "required": false
+          },
+          {
+            "key": "volume",
+            "type": "string",
+            "label": "Volume",
+            "required": false
+          }
+        ]
+      },
+      {
+        "key": "post",
+        "name": "Journal entry",
+        "pluralName": "Journal",
+        "routePrefix": "journal",
+        "hasBlocks": true,
+        "icon": "newspaper",
+        "fields": [
+          {
+            "key": "readingTime",
+            "type": "number",
+            "label": "Reading time",
+            "required": false
+          }
+        ]
+      }
+    ],
+    "contents": [
+      {
+        "contentType": "page",
+        "locale": "en",
+        "slug": "",
+        "title": "Radiance, honestly made",
+        "translationGroup": "market-home",
+        "excerpt": "Short ingredient lists. Refillable glass. Formulas that tell you exactly what they do.",
+        "seo": {
+          "title": "Lumière — Clean beauty, honestly made",
+          "description": "Serums, cleansers and balms formulated with short ingredient lists, refillable packaging and nothing to hide."
+        },
+        "blocks": [
+          {
+            "id": "market-home-intro-en",
+            "type": "core/richtext",
+            "props": {
+              "html": "<h2>A shorter list, a better result</h2><p>Lumière began with a question nobody in a laboratory wanted to answer honestly: how many of these ingredients are actually doing something? We took the list apart, kept what earned its place, and printed the percentage on the bottle.</p><p>Every formula is made in small batches, tested by dermatologists, and packed in glass we will happily refill for you.</p>"
+            }
+          },
+          {
+            "id": "market-home-promise-en",
+            "type": "core/features",
+            "props": {
+              "heading": "What we promise",
+              "subheading": "Not marketing. Conditions we hold ourselves to.",
+              "items": [
+                {
+                  "title": "Percentages on the label",
+                  "body": "If an active is in the bottle, you can read how much of it there is. No “complex”, no “blend”."
+                },
+                {
+                  "title": "Refill, don't rebuy",
+                  "body": "Bring the glass back, or order a pouch. The bottle is designed to outlive its contents."
+                },
+                {
+                  "title": "Tested where it matters",
+                  "body": "Dermatologist-tested on people, never on animals. Certified cruelty-free and vegan."
+                }
+              ]
+            }
+          },
+          {
+            "id": "market-home-cta-en",
+            "type": "core/cta",
+            "props": {
+              "heading": "Not sure where to begin?",
+              "body": "Take the two-minute skin quiz and we will build a routine around what your skin is actually doing.",
+              "ctaLabel": "Find your routine",
+              "ctaHref": "/shop"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "page",
+        "locale": "ja",
+        "slug": "",
+        "title": "ごまかさない、素直な輝き",
+        "translationGroup": "market-home",
+        "excerpt": "短い成分表。詰め替えできるガラス容器。効能を正直に書いた処方。",
+        "seo": {
+          "title": "Lumière — 正直につくる、クリーンビューティー",
+          "description": "短い成分表、詰め替え可能な容器、隠しごとのない処方でつくる美容液・洗顔料・バーム。"
+        },
+        "blocks": [
+          {
+            "id": "market-home-intro-ja",
+            "type": "core/richtext",
+            "props": {
+              "html": "<h2>成分は少なく、結果は確かに</h2><p>Lumière は、研究室の誰もが正直に答えたがらない問いから始まりました。この成分表のうち、本当に働いているものはいくつあるのか。私たちは一度すべてを分解し、役割のあるものだけを残し、その配合率をボトルに印刷しました。</p><p>すべての処方は少量ずつ製造し、皮膚科医のテストを経て、繰り返し詰め替えられるガラス容器でお届けします。</p>"
+            }
+          },
+          {
+            "id": "market-home-promise-ja",
+            "type": "core/features",
+            "props": {
+              "heading": "私たちの約束",
+              "subheading": "宣伝文句ではなく、自らに課した条件です。",
+              "items": [
+                {
+                  "title": "配合率をラベルに",
+                  "body": "有効成分が入っているなら、どれだけ入っているかを読めるようにします。「複合成分」も「独自ブレンド」もありません。"
+                },
+                {
+                  "title": "買い替えず、詰め替える",
+                  "body": "ガラス容器はお持ち込みいただくか、詰め替えパウチをご注文ください。容器は中身より長く生きるように設計されています。"
+                },
+                {
+                  "title": "必要な場所でテストを",
+                  "body": "皮膚科医が人の肌でテストし、動物実験は一切行いません。クルエルティフリー・ヴィーガン認証取得済み。"
+                }
+              ]
+            }
+          },
+          {
+            "id": "market-home-cta-ja",
+            "type": "core/cta",
+            "props": {
+              "heading": "どれから始めるか迷ったら",
+              "body": "2 分の肌診断にお答えください。いまのお肌の状態に合わせたお手入れをご提案します。",
+              "ctaLabel": "自分に合うケアを探す",
+              "ctaHref": "/shop"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "page",
+        "locale": "vi",
+        "slug": "",
+        "title": "Rạng rỡ, một cách thành thật",
+        "translationGroup": "market-home",
+        "excerpt": "Bảng thành phần ngắn. Chai thủy tinh có thể tái nạp. Công thức nói đúng những gì nó làm.",
+        "seo": {
+          "title": "Lumière — Mỹ phẩm sạch, làm một cách thành thật",
+          "description": "Serum, sữa rửa mặt và son dưỡng với bảng thành phần ngắn, bao bì tái nạp và không giấu điều gì."
+        },
+        "blocks": [
+          {
+            "id": "market-home-intro-vi",
+            "type": "core/richtext",
+            "props": {
+              "html": "<h2>Ít thành phần hơn, hiệu quả thật hơn</h2><p>Lumière bắt đầu từ một câu hỏi mà không phòng thí nghiệm nào muốn trả lời thành thật: trong bảng thành phần này, bao nhiêu thứ thực sự có tác dụng? Chúng tôi tháo rời cả bảng, giữ lại những gì xứng đáng, rồi in nồng độ của chúng ngay trên chai.</p><p>Mọi công thức đều được sản xuất theo mẻ nhỏ, kiểm nghiệm bởi bác sĩ da liễu, và đựng trong chai thủy tinh mà chúng tôi sẵn lòng nạp lại cho bạn.</p>"
+            }
+          },
+          {
+            "id": "market-home-promise-vi",
+            "type": "core/features",
+            "props": {
+              "heading": "Những gì chúng tôi cam kết",
+              "subheading": "Không phải lời quảng cáo. Đó là điều kiện chúng tôi tự đặt ra cho mình.",
+              "items": [
+                {
+                  "title": "Nồng độ in trên nhãn",
+                  "body": "Nếu có hoạt chất trong chai, bạn đọc được chính xác bao nhiêu phần trăm. Không “phức hợp”, không “hỗn hợp độc quyền”."
+                },
+                {
+                  "title": "Nạp lại, đừng mua lại",
+                  "body": "Mang chai thủy tinh quay lại, hoặc đặt một túi nạp. Chai được thiết kế để sống lâu hơn thứ đựng bên trong."
+                },
+                {
+                  "title": "Kiểm nghiệm ở nơi cần kiểm nghiệm",
+                  "body": "Bác sĩ da liễu thử trên người thật, không bao giờ thử trên động vật. Chứng nhận cruelty-free và thuần chay."
+                }
+              ]
+            }
+          },
+          {
+            "id": "market-home-cta-vi",
+            "type": "core/cta",
+            "props": {
+              "heading": "Chưa biết bắt đầu từ đâu?",
+              "body": "Làm bài trắc nghiệm da hai phút, chúng tôi sẽ dựng một chu trình đúng với tình trạng da của bạn.",
+              "ctaLabel": "Tìm chu trình của bạn",
+              "ctaHref": "/shop"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "page",
+        "locale": "en",
+        "slug": "about",
+        "title": "Our story",
+        "translationGroup": "market-about",
+        "excerpt": "A chemist, a dermatologist and a very short ingredient list.",
+        "blocks": [
+          {
+            "id": "market-about-en",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>Lumière was founded in a rented kitchen in 2019 by a formulation chemist who was tired of writing ingredient lists she could not defend, and a dermatologist who was tired of reading them.</p><h2>The short list</h2><p>Most of what goes into a bottle of skincare is there to make the product feel expensive: silicones for slip, fragrance for the first impression, colourants so it looks like the photograph. We took all of it out, and then we put back only what a study could justify.</p><p>The result is formulas with eight to twelve ingredients instead of forty. They are less luxurious to open and considerably better at their job.</p><h2>The glass</h2><p>Our bottles are made of heavy pharmaceutical glass, and they are meant to stay with you. Send one back and we sterilise and refill it; order a pouch and refill it yourself. Either way the bottle is the last one you buy from us.</p><h2>The testing</h2><p>Every formula is patch-tested by a dermatologist on a panel of real skin, across skin tones and skin types, before it is sold to anyone. It is never tested on an animal, and it never contains an ingredient of animal origin.</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "page",
+        "locale": "ja",
+        "slug": "about",
+        "title": "私たちの物語",
+        "translationGroup": "market-about",
+        "excerpt": "調香化学者と、皮膚科医と、とても短い成分表。",
+        "blocks": [
+          {
+            "id": "market-about-ja",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>Lumière は 2019 年、借りたキッチンから始まりました。自分で擁護できない成分表を書き続けることに疲れた処方化学者と、それを読み続けることに疲れた皮膚科医の二人によって。</p><h2>短い成分表</h2><p>スキンケアのボトルに入っているものの多くは、製品を高級に「感じさせる」ためにあります。なめらかさのためのシリコーン、第一印象のための香料、写真どおりに見せるための着色料。私たちはそれらをすべて取り除き、研究で正当化できるものだけを戻しました。</p><p>結果として、40 種類ではなく 8〜12 種類の成分でできた処方が生まれました。開けたときの高級感は少し減り、仕事の出来はかなり上がりました。</p><h2>ガラス容器</h2><p>ボトルは厚みのある薬用ガラス製で、長く使っていただくためのものです。お送りいただければ洗浄・殺菌して詰め替えます。パウチをご注文いただければご自分で詰め替えられます。いずれにせよ、そのボトルが私たちから買う最後のボトルになります。</p><h2>テスト</h2><p>すべての処方は、販売前に皮膚科医が実際の肌でパッチテストを行います。肌色も肌質も異なるパネルで。動物実験は一切行わず、動物由来の成分も使いません。</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "page",
+        "locale": "vi",
+        "slug": "ve-chung-toi",
+        "title": "Câu chuyện của chúng tôi",
+        "translationGroup": "market-about",
+        "excerpt": "Một nhà hóa học, một bác sĩ da liễu và một bảng thành phần rất ngắn.",
+        "blocks": [
+          {
+            "id": "market-about-vi",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>Lumière ra đời năm 2019 trong một căn bếp đi thuê, bởi một nhà hóa học công thức đã chán viết những bảng thành phần mà chính cô không bảo vệ nổi, và một bác sĩ da liễu đã chán đọc chúng.</p><h2>Bảng thành phần ngắn</h2><p>Phần lớn những gì nằm trong một chai dưỡng da là để sản phẩm có cảm giác đắt tiền: silicone cho độ trượt, hương liệu cho ấn tượng đầu tiên, chất tạo màu để trông giống tấm ảnh quảng cáo. Chúng tôi bỏ hết, rồi chỉ đưa trở lại những gì có nghiên cứu bảo chứng.</p><p>Kết quả là những công thức chỉ tám đến mười hai thành phần, thay vì bốn mươi. Mở ra kém sang hơn một chút, và làm việc tốt hơn rất nhiều.</p><h2>Chai thủy tinh</h2><p>Chai của chúng tôi làm bằng thủy tinh dược phẩm dày, và được làm ra để ở lại với bạn. Gửi chai về, chúng tôi tiệt trùng và nạp lại; đặt một túi nạp, bạn tự làm ở nhà. Dù cách nào, đó cũng là chiếc chai cuối cùng bạn mua của chúng tôi.</p><h2>Kiểm nghiệm</h2><p>Mọi công thức đều được bác sĩ da liễu thử nghiệm áp da trên người thật, với nhiều tông da và loại da khác nhau, trước khi bán ra. Không bao giờ thử trên động vật, và không bao giờ chứa thành phần có nguồn gốc động vật.</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "product",
+        "locale": "en",
+        "slug": "lumiere-glow-serum",
+        "title": "Glow Serum · Vitamin C 15%",
+        "translationGroup": "market-product-serum",
+        "excerpt": "A stabilised vitamin C serum that brightens without the sting. Eleven ingredients, and you can read every one.",
+        "data": {
+          "price": 48,
+          "oldPrice": 58,
+          "badge": "Bestseller",
+          "volume": "30 ml"
+        },
+        "blocks": [
+          {
+            "id": "market-serum-en",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>Fifteen percent stabilised L-ascorbic acid, buffered with ferulic acid and vitamin E so it stays active in the bottle and calm on the skin. Applied in the morning, it fades the marks left behind by last month's breakout and makes the rest of the routine work harder.</p><h2>How to use</h2><p>Three drops on clean, dry skin each morning, before moisturiser and always before sunscreen. Expect a warm tingle for the first week. Expect the marks to lift by the fourth.</p><h2>Ingredients</h2><p>Aqua, L-Ascorbic Acid (15%), Propanediol, Ferulic Acid (0.5%), Tocopherol (1%), Glycerin, Panthenol, Sodium Hyaluronate, Zinc PCA, Citric Acid, Sodium Benzoate.</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "product",
+        "locale": "ja",
+        "slug": "lumiere-glow-serum",
+        "title": "グロウセラム・ビタミン C 15%",
+        "translationGroup": "market-product-serum",
+        "excerpt": "刺激なく明るさを引き出す、安定型ビタミン C 美容液。成分は 11 種類、そのすべてを読めます。",
+        "data": {
+          "price": 48,
+          "oldPrice": 58,
+          "badge": "人気No.1",
+          "volume": "30 ml"
+        },
+        "blocks": [
+          {
+            "id": "market-serum-ja",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>15% の安定型ピュアビタミン C を、フェルラ酸とビタミン E で緩衝。ボトルの中では活性を保ち、肌の上では穏やかにはたらきます。朝に使えば、先月のニキビが残した跡を薄くし、その後のお手入れの効きを高めます。</p><h2>使い方</h2><p>毎朝、清潔で乾いた肌に 3 滴。保湿の前、日焼け止めの前に。最初の 1 週間は温かいピリつきを感じることがあります。4 週目には跡が薄くなっているはずです。</p><h2>全成分</h2><p>水、アスコルビン酸（15%）、プロパンジオール、フェルラ酸（0.5%）、トコフェロール（1%）、グリセリン、パンテノール、ヒアルロン酸 Na、PCA 亜鉛、クエン酸、安息香酸 Na。</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "product",
+        "locale": "vi",
+        "slug": "serum-sang-da",
+        "title": "Serum Sáng Da · Vitamin C 15%",
+        "translationGroup": "market-product-serum",
+        "excerpt": "Serum vitamin C dạng bền, làm sáng mà không gây rát. Mười một thành phần, và bạn đọc được cả mười một.",
+        "data": {
+          "price": 48,
+          "oldPrice": 58,
+          "badge": "Bán chạy",
+          "volume": "30 ml"
+        },
+        "blocks": [
+          {
+            "id": "market-serum-vi",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>Mười lăm phần trăm L-ascorbic acid dạng bền, được đệm bằng ferulic acid và vitamin E để giữ hoạt tính trong chai và dịu nhẹ trên da. Dùng buổi sáng, nó làm mờ vết thâm mà đợt mụn tháng trước để lại, và khiến phần còn lại của chu trình làm việc hiệu quả hơn.</p><h2>Cách dùng</h2><p>Ba giọt lên da sạch và khô mỗi sáng, trước kem dưỡng ẩm và luôn trước kem chống nắng. Tuần đầu có thể hơi râm ran ấm. Đến tuần thứ tư, vết thâm sẽ nhạt đi.</p><h2>Thành phần</h2><p>Aqua, L-Ascorbic Acid (15%), Propanediol, Ferulic Acid (0,5%), Tocopherol (1%), Glycerin, Panthenol, Sodium Hyaluronate, Zinc PCA, Citric Acid, Sodium Benzoate.</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "product",
+        "locale": "en",
+        "slug": "lumiere-milk-cleanser",
+        "title": "Quiet Milk Cleanser",
+        "translationGroup": "market-product-cleanser",
+        "excerpt": "A pH-balanced milk that takes the day off without taking your barrier with it.",
+        "data": {
+          "price": 32,
+          "badge": "New",
+          "volume": "150 ml"
+        },
+        "blocks": [
+          {
+            "id": "market-cleanser-en",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>Most cleansers are judged by how clean they leave you feeling — which is to say, by how much of your skin barrier they removed. This one is judged the other way. Oat lipids and glycerin lift makeup, sunscreen and the city off your face at pH 5.5, and leave the rest of it exactly where it was.</p><h2>How to use</h2><p>A coin-sized amount on dry skin, morning and night. Massage for thirty seconds, add a little water to emulsify, rinse. No squeak. That is the point.</p><h2>Ingredients</h2><p>Aqua, Avena Sativa Kernel Oil, Glycerin, Cetearyl Alcohol, Coco-Caprylate, Panthenol, Allantoin, Sodium PCA, Xanthan Gum, Lactic Acid, Sodium Benzoate.</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "product",
+        "locale": "ja",
+        "slug": "lumiere-milk-cleanser",
+        "title": "クワイエット ミルククレンザー",
+        "translationGroup": "market-product-cleanser",
+        "excerpt": "一日の汚れだけを落とし、バリアは連れていかない、pH 調整済みのミルク。",
+        "data": {
+          "price": 32,
+          "badge": "新発売",
+          "volume": "150 ml"
+        },
+        "blocks": [
+          {
+            "id": "market-cleanser-ja",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>多くの洗顔料は「どれだけさっぱりしたか」で評価されます。言い換えれば、肌のバリアをどれだけ削ぎ落としたかで。これは逆の基準でつくりました。オーツ由来の脂質とグリセリンが、pH 5.5 のままメイク・日焼け止め・街の汚れだけを持ち去り、それ以外はそのまま残します。</p><h2>使い方</h2><p>乾いた肌に 10 円玉大を、朝と夜。30 秒ほどなじませ、少量の水で乳化させてすすぎます。きゅっとした音はしません。それが狙いです。</p><h2>全成分</h2><p>水、エンバク核油、グリセリン、セテアリルアルコール、ココカプリレート、パンテノール、アラントイン、PCA-Na、キサンタンガム、乳酸、安息香酸 Na。</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "product",
+        "locale": "vi",
+        "slug": "sua-rua-mat-diu-nhe",
+        "title": "Sữa Rửa Mặt Dịu Nhẹ",
+        "translationGroup": "market-product-cleanser",
+        "excerpt": "Sữa rửa mặt cân bằng pH, lấy đi một ngày dài mà không lấy theo hàng rào bảo vệ da.",
+        "data": {
+          "price": 32,
+          "badge": "Mới",
+          "volume": "150 ml"
+        },
+        "blocks": [
+          {
+            "id": "market-cleanser-vi",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>Phần lớn sữa rửa mặt được chấm điểm bằng cảm giác sạch kin kít để lại — nghĩa là bằng lượng hàng rào bảo vệ da mà nó đã lấy đi. Sản phẩm này được chấm điểm theo chiều ngược lại. Lipid yến mạch và glycerin nhấc lớp trang điểm, kem chống nắng và bụi phố khỏi mặt bạn ở pH 5,5, và để nguyên mọi thứ còn lại.</p><h2>Cách dùng</h2><p>Lượng bằng đồng xu lên da khô, sáng và tối. Massage ba mươi giây, thêm chút nước để nhũ hóa rồi rửa sạch. Da sẽ không kin kít. Đó chính là điều chúng tôi muốn.</p><h2>Thành phần</h2><p>Aqua, Avena Sativa Kernel Oil, Glycerin, Cetearyl Alcohol, Coco-Caprylate, Panthenol, Allantoin, Sodium PCA, Xanthan Gum, Lactic Acid, Sodium Benzoate.</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "product",
+        "locale": "en",
+        "slug": "lumiere-velvet-lip-balm",
+        "title": "Velvet Lip Balm · Rosewood",
+        "translationGroup": "market-product-balm",
+        "excerpt": "A tinted balm with the finish of a lipstick and the ingredient list of a treatment.",
+        "data": {
+          "price": 24,
+          "badge": "Refillable",
+          "volume": "4.5 g"
+        },
+        "blocks": [
+          {
+            "id": "market-balm-en",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>Rosewood is the colour your lips already are, on the day they behave. Squalane and shea hold it there; a whisper of mineral pigment does the rest. It wears like a balm, photographs like a lipstick, and refills into the same brass case for as long as you keep it.</p><h2>How to use</h2><p>Straight from the bullet, or pressed on with a fingertip for something softer. Reapply whenever you remember to.</p><h2>Ingredients</h2><p>Squalane, Butyrospermum Parkii Butter, Ricinus Communis Seed Oil, Candelilla Wax, Jojoba Esters, Tocopherol, Mica, Iron Oxides (CI 77491).</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "product",
+        "locale": "ja",
+        "slug": "lumiere-velvet-lip-balm",
+        "title": "ベルベット リップバーム・ローズウッド",
+        "translationGroup": "market-product-balm",
+        "excerpt": "口紅の仕上がりと、トリートメントの成分表を併せ持つ色付きバーム。",
+        "data": {
+          "price": 24,
+          "badge": "詰め替え可",
+          "volume": "4.5 g"
+        },
+        "blocks": [
+          {
+            "id": "market-balm-ja",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>ローズウッドは、調子のいい日の唇がもともと持っている色です。スクワランとシアバターがその色を留め、ごくわずかなミネラル顔料が残りを担います。つけ心地はバーム、写真映りは口紅。真鍮のケースはそのままに、何度でも詰め替えられます。</p><h2>使い方</h2><p>スティックから直接、または指先でぽんぽんとなじませて柔らかく。思い出したときに塗り直してください。</p><h2>全成分</h2><p>スクワラン、シア脂、ヒマシ油、キャンデリラロウ、ホホバエステル、トコフェロール、マイカ、酸化鉄（CI 77491）。</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "product",
+        "locale": "vi",
+        "slug": "son-duong-nhung",
+        "title": "Son Dưỡng Nhung · Rosewood",
+        "translationGroup": "market-product-balm",
+        "excerpt": "Son dưỡng có màu, hoàn thiện như một thỏi son và thành phần như một sản phẩm điều trị.",
+        "data": {
+          "price": 24,
+          "badge": "Tái nạp",
+          "volume": "4,5 g"
+        },
+        "blocks": [
+          {
+            "id": "market-balm-vi",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>Rosewood là đúng màu môi bạn vốn có, vào những ngày môi chịu hợp tác. Squalane và bơ hạt mỡ giữ màu ở lại; một chút xíu sắc tố khoáng lo phần còn lại. Cảm giác như son dưỡng, lên hình như son thỏi, và nạp lại vào đúng chiếc vỏ đồng thau ấy chừng nào bạn còn giữ nó.</p><h2>Cách dùng</h2><p>Thoa trực tiếp từ thỏi, hoặc dặm bằng đầu ngón tay cho hiệu ứng mềm hơn. Thoa lại bất cứ khi nào bạn nhớ ra.</p><h2>Thành phần</h2><p>Squalane, Butyrospermum Parkii Butter, Ricinus Communis Seed Oil, Candelilla Wax, Jojoba Esters, Tocopherol, Mica, Iron Oxides (CI 77491).</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "en",
+        "slug": "how-to-read-an-ingredient-list",
+        "title": "How to read an ingredient list",
+        "translationGroup": "market-journal-1",
+        "excerpt": "The order is the law, the first five are the product, and “fragrance” is a hiding place. A five-minute education.",
+        "data": {
+          "readingTime": 5
+        },
+        "blocks": [
+          {
+            "id": "market-journal1-en",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>An ingredient list is the only part of the packaging that is legally obliged to be true. Learn to read it and most of the rest of the box stops mattering.</p><h2>The order is the law</h2><p>Ingredients are listed by weight, in descending order, down to one percent. So the first five entries are, in practice, the product; everything after them is present in amounts a laboratory measures and your skin mostly does not notice.</p><p>Below one percent, the order is free — which is why the exciting molecule from the advertisement so often appears at the very end, sitting just behind the preservative.</p><h2>Water is not a filler</h2><p>Aqua at the top of the list is not a scandal. Most actives are water-soluble and have to be dissolved in something. What matters is what comes second.</p><h2>Fragrance is a hiding place</h2><p>“Parfum / Fragrance” can lawfully stand in for dozens of undeclared compounds, and it is the single most common cause of contact dermatitis in cosmetics. A brand that leaves it out is telling you something; a brand that leaves it in and does not say why is telling you something too.</p><h2>Percentages, or it did not happen</h2><p>An active without a number is a story. Niacinamide works at 4–5%, vitamin C at 10–20%, retinol at 0.3–1%. If the brand knows those numbers — and it does — the only reason not to print them is that the answer is disappointing.</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "ja",
+        "slug": "how-to-read-an-ingredient-list",
+        "title": "成分表の読み方",
+        "translationGroup": "market-journal-1",
+        "excerpt": "並び順が法律であり、最初の 5 つが製品そのもの。そして「香料」は隠れ場所です。5 分で学べる読み方。",
+        "data": {
+          "readingTime": 5
+        },
+        "blocks": [
+          {
+            "id": "market-journal1-ja",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>パッケージのうち、法律上「本当のこと」を書く義務があるのは成分表だけです。読み方を覚えれば、箱に書かれた残りの言葉はほとんど気にならなくなります。</p><h2>並び順が法律</h2><p>成分は配合量の多い順に記載されます（1% までは）。つまり最初の 5 つが実質的に製品そのものであり、それ以降は研究室の計測器は捉えても、肌はたいてい気づかない量です。</p><p>1% 未満になると順番は自由です。広告で語られた華やかな成分が、防腐剤のすぐ後ろ、いちばん最後に置かれていることが多いのはそのためです。</p><h2>水は「かさ増し」ではない</h2><p>成分表の先頭に「水」があること自体はスキャンダルではありません。多くの有効成分は水溶性で、何かに溶かす必要があります。重要なのは 2 番目に何が来るかです。</p><h2>香料は隠れ場所</h2><p>「香料（Parfum / Fragrance）」の一語は、開示されない数十の化合物を合法的に代表できます。そして化粧品による接触皮膚炎のもっとも一般的な原因でもあります。あえて入れないブランドはそのことを語っており、入れておいて理由を語らないブランドも、また別のことを語っています。</p><h2>配合率がなければ、なかったのと同じ</h2><p>数字のない有効成分は、ただの物語です。ナイアシンアミドは 4〜5%、ビタミン C は 10〜20%、レチノールは 0.3〜1% で働きます。ブランドはその数字を知っています。それでも印刷しない理由があるとすれば、答えが期待外れだから、というだけです。</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "vi",
+        "slug": "cach-doc-bang-thanh-phan",
+        "title": "Cách đọc một bảng thành phần",
+        "translationGroup": "market-journal-1",
+        "excerpt": "Thứ tự là luật, năm cái đầu tiên chính là sản phẩm, và “hương liệu” là một chỗ để giấu. Năm phút để hiểu.",
+        "data": {
+          "readingTime": 5
+        },
+        "blocks": [
+          {
+            "id": "market-journal1-vi",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>Bảng thành phần là phần duy nhất trên bao bì mà luật buộc phải nói thật. Học cách đọc nó, và gần như mọi dòng chữ còn lại trên hộp sẽ hết quan trọng.</p><h2>Thứ tự là luật</h2><p>Thành phần được liệt kê theo khối lượng giảm dần, cho tới ngưỡng một phần trăm. Nghĩa là năm dòng đầu tiên, trên thực tế, chính là sản phẩm; mọi thứ sau đó có mặt với hàm lượng mà máy móc trong phòng thí nghiệm đo được còn làn da của bạn thì thường không.</p><p>Dưới một phần trăm, thứ tự là tùy ý — và đó là lý do phân tử hào nhoáng trong quảng cáo thường nằm tít cuối bảng, ngay sau chất bảo quản.</p><h2>Nước không phải chất độn</h2><p>Aqua đứng đầu bảng không phải một vụ bê bối. Phần lớn hoạt chất tan trong nước và phải được hòa vào một thứ gì đó. Điều đáng quan tâm là thành phần đứng thứ hai.</p><h2>Hương liệu là chỗ để giấu</h2><p>“Parfum / Fragrance” có thể hợp pháp thay thế cho hàng chục hợp chất không được khai báo, và đó là nguyên nhân phổ biến nhất gây viêm da tiếp xúc do mỹ phẩm. Một thương hiệu bỏ nó ra là đang nói với bạn điều gì đó; một thương hiệu giữ nó lại mà không giải thích vì sao, cũng đang nói với bạn điều gì đó.</p><h2>Không có nồng độ thì coi như không có</h2><p>Một hoạt chất không kèm con số chỉ là một câu chuyện. Niacinamide hiệu quả ở 4–5%, vitamin C ở 10–20%, retinol ở 0,3–1%. Thương hiệu biết những con số đó — chắc chắn biết. Lý do duy nhất để không in chúng lên nhãn là vì câu trả lời đáng thất vọng.</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "en",
+        "slug": "why-our-glass-comes-back",
+        "title": "Why our glass comes back",
+        "translationGroup": "market-journal-2",
+        "excerpt": "A refill is not a discount and it is not a gesture. It is the only part of the packaging decision that survives contact with a warehouse.",
+        "data": {
+          "readingTime": 4
+        },
+        "blocks": [
+          {
+            "id": "market-journal2-en",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>Refillable packaging is the easiest promise in cosmetics to make and the hardest one to keep, because it is not really a packaging decision at all. It is a logistics decision, and logistics is where good intentions go to be quietly cancelled.</p><h2>The bottle is the cheap part</h2><p>Heavy pharmaceutical glass costs more than a plastic pump, but not dramatically more. What costs money is everything the glass then obliges you to do: a refill line, a second SKU, a return route, and a warehouse that has to hold both.</p><p>Most brands do the first three and abandon the fourth, which is how a refill programme quietly becomes a marketing page.</p><h2>What we actually ask of you</h2><p>Keep the bottle. Buy the pouch. The pouch uses about a fifth of the material and travels flat, which is where most of the saving genuinely is — not in the glass on your shelf, but in the lorry.</p><h2>The honest caveat</h2><p>A refill only pays for itself environmentally from about the third one. If you are going to buy a serum once and never again, buy the standard bottle with a clear conscience. We would rather tell you that than sell you a ritual.</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "ja",
+        "slug": "why-our-glass-comes-back",
+        "title": "なぜ、ガラス瓶は返ってくるのか",
+        "translationGroup": "market-journal-2",
+        "excerpt": "詰め替えは値引きでも、ジェスチャーでもありません。それは、倉庫の現実とぶつかっても生き残る唯一の包装の判断です。",
+        "data": {
+          "readingTime": 4
+        },
+        "blocks": [
+          {
+            "id": "market-journal2-ja",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>詰め替え可能な容器は、化粧品業界でもっとも約束しやすく、もっとも守りにくい約束です。なぜならそれは、本当は包装の判断ではないからです。物流の判断であり、物流とは、善意が静かに取り消される場所のことです。</p><h2>高いのは瓶ではない</h2><p>厚手の薬用ガラスはプラスチックのポンプより高価ですが、劇的に高いわけではありません。お金がかかるのは、そのガラスが後から要求してくるすべて——詰め替え用の生産ライン、二つ目の品番、回収の導線、そしてその両方を抱える倉庫です。</p><p>多くのブランドは最初の三つをやり、四つ目を諦めます。こうして詰め替えプログラムは、静かに「紹介ページ」へと変わっていきます。</p><h2>私たちがお願いしていること</h2><p>瓶は取っておいてください。買っていただくのはパウチです。パウチの材料は約 5 分の 1 で、平らなまま輸送できます。本当の削減はそこにあります——棚の上のガラスではなく、トラックの荷台に。</p><h2>正直な但し書き</h2><p>詰め替えが環境的に元を取るのは、およそ 3 回目からです。セラムを一度きりしか使わないのであれば、迷わず通常のボトルを選んでください。儀式を売るより、そう申し上げたいのです。</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "vi",
+        "slug": "vi-sao-chai-thuy-tinh-quay-tro-lai",
+        "title": "Vì sao chai thủy tinh của chúng tôi quay trở lại",
+        "translationGroup": "market-journal-2",
+        "excerpt": "Túi nạp không phải một khoản giảm giá, cũng không phải một cử chỉ đẹp. Đó là phần duy nhất của quyết định bao bì sống sót khi va vào thực tế của một cái kho.",
+        "data": {
+          "readingTime": 4
+        },
+        "blocks": [
+          {
+            "id": "market-journal2-vi",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>Bao bì tái nạp là lời hứa dễ đưa ra nhất và khó giữ nhất trong ngành mỹ phẩm, bởi thực ra nó không phải một quyết định về bao bì. Nó là một quyết định về logistics — và logistics là nơi những thiện chí lặng lẽ bị hủy bỏ.</p><h2>Cái chai không phải phần đắt</h2><p>Thủy tinh dược phẩm dày nặng đắt hơn một cái vòi nhựa, nhưng không đắt hơn đến mức khủng khiếp. Thứ tốn tiền là tất cả những gì cái chai ấy buộc bạn phải làm sau đó: một dây chuyền đóng túi nạp, một mã hàng thứ hai, một đường thu hồi, và một cái kho phải chứa cả hai.</p><p>Phần lớn thương hiệu làm ba việc đầu rồi bỏ việc thứ tư. Đó là cách một chương trình tái nạp lặng lẽ trở thành một trang quảng cáo.</p><h2>Điều chúng tôi thực sự đề nghị</h2><p>Hãy giữ lại cái chai. Hãy mua túi nạp. Túi dùng khoảng một phần năm vật liệu và được vận chuyển ở dạng phẳng — phần tiết kiệm thật nằm ở đó, không phải ở cái chai trên kệ nhà bạn, mà ở trên thùng xe tải.</p><h2>Một lưu ý thành thật</h2><p>Về mặt môi trường, túi nạp chỉ thực sự bù lại được từ lần thứ ba trở đi. Nếu bạn chỉ mua serum một lần rồi thôi, hãy chọn chai tiêu chuẩn mà không cần áy náy. Chúng tôi thà nói với bạn điều đó còn hơn bán cho bạn một nghi thức.</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "en",
+        "slug": "vitamin-c-and-the-four-weeks-nobody-waits",
+        "title": "Vitamin C, and the four weeks nobody waits",
+        "translationGroup": "market-journal-3",
+        "excerpt": "Every active is judged in a week and abandoned in two. Skin does not renew on that schedule, and neither does the evidence.",
+        "data": {
+          "readingTime": 6
+        },
+        "blocks": [
+          {
+            "id": "market-journal3-en",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>The most common reason an active “does not work” is that it was given nine days to do something that takes six weeks.</p><h2>The skin's own clock</h2><p>The epidermis turns over roughly every four weeks in your twenties, and more slowly after that. A product that changes how cells behave cannot show you the result before those cells have reached the surface. Anything visible sooner is hydration, and hydration is real — it is simply not what you paid for.</p><h2>What the trials actually measure</h2><p>The published work on vitamin C runs for twelve weeks, not for a weekend. Pigmentation studies typically report their first significant change somewhere between week six and week eight, and the honest ones say so in the abstract.</p><blockquote>Introduce one new active at a time. Two at once tells you only that something happened.</blockquote><h2>How to run the experiment</h2><p>Photograph your skin in the same light, on the same day of the week, for six weeks. Change nothing else. It is the least romantic advice in skincare and the only kind that produces an answer.</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "ja",
+        "slug": "vitamin-c-and-the-four-weeks-nobody-waits",
+        "title": "ビタミン C と、誰も待たない四週間",
+        "translationGroup": "market-journal-3",
+        "excerpt": "有効成分は一週間で判定され、二週間で見捨てられます。けれど肌は、そんな予定表では生まれ変わりません。研究のほうも同じです。",
+        "data": {
+          "readingTime": 6
+        },
+        "blocks": [
+          {
+            "id": "market-journal3-ja",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>有効成分が「効かない」ともっとも多く言われる理由は、六週間かかることに九日しか与えられなかった、というものです。</p><h2>肌には肌の時計がある</h2><p>表皮が入れ替わる周期は、20 代でおよそ四週間。年齢とともにさらに緩やかになります。細胞のふるまいを変える製品は、その細胞が表面に届くまで結果を見せることができません。それより早く目に見えるものは保湿です。保湿は本物ですが、あなたが対価を払ったものではありません。</p><h2>試験が実際に測っているもの</h2><p>ビタミン C に関する論文が観察するのは十二週間であって、週末の二日間ではありません。色素沈着の研究で最初の有意な変化が報告されるのは、たいてい六週目から八週目のあいだです。誠実な論文は、それを要旨にきちんと書いています。</p><blockquote>新しい有効成分は、一度に一つだけ。二つ同時に始めると、分かるのは「何かが起きた」ということだけです。</blockquote><h2>実験のやり方</h2><p>同じ照明で、毎週同じ曜日に、六週間、肌を撮影してください。ほかは何も変えないこと。スキンケアの助言としてもっともロマンのない方法であり、答えが出る唯一の方法です。</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "vi",
+        "slug": "vitamin-c-va-bon-tuan-chang-ai-chiu-doi",
+        "title": "Vitamin C và bốn tuần chẳng ai chịu đợi",
+        "translationGroup": "market-journal-3",
+        "excerpt": "Hoạt chất nào cũng bị phán xét sau một tuần và bị bỏ rơi sau hai tuần. Da không tái tạo theo lịch đó, và bằng chứng khoa học cũng vậy.",
+        "data": {
+          "readingTime": 6
+        },
+        "blocks": [
+          {
+            "id": "market-journal3-vi",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>Lý do phổ biến nhất khiến một hoạt chất bị coi là “không hiệu quả” là nó được cho chín ngày để làm một việc cần tới sáu tuần.</p><h2>Chiếc đồng hồ riêng của làn da</h2><p>Lớp biểu bì thay mới khoảng bốn tuần một lần ở tuổi hai mươi, và chậm dần sau đó. Một sản phẩm làm thay đổi cách các tế bào hoạt động không thể cho bạn thấy kết quả trước khi những tế bào ấy nổi lên bề mặt. Mọi thứ nhìn thấy sớm hơn đều là cấp ẩm — cấp ẩm là có thật, chỉ là nó không phải thứ bạn đã trả tiền để mua.</p><h2>Các thử nghiệm thực sự đo cái gì</h2><p>Những nghiên cứu công bố về vitamin C kéo dài mười hai tuần, không phải một kỳ nghỉ cuối tuần. Các nghiên cứu về sắc tố thường ghi nhận thay đổi có ý nghĩa đầu tiên vào khoảng tuần thứ sáu đến tuần thứ tám — và những nghiên cứu trung thực nói thẳng điều đó ngay trong phần tóm tắt.</p><blockquote>Mỗi lần chỉ thêm một hoạt chất mới. Thêm hai cùng lúc chỉ cho bạn biết rằng có điều gì đó đã xảy ra.</blockquote><h2>Cách tự làm thí nghiệm</h2><p>Hãy chụp ảnh làn da dưới cùng một thứ ánh sáng, vào cùng một ngày trong tuần, suốt sáu tuần. Không thay đổi bất cứ thứ gì khác. Đó là lời khuyên ít lãng mạn nhất trong chăm sóc da, và là loại duy nhất cho ra một câu trả lời.</p>"
+            }
+          }
+        ]
+      }
+    ],
+    "menus": [
+      {
+        "key": "primary",
+        "name": "Primary menu",
+        "items": [
+          {
+            "label": "Shop",
+            "url": "/shop"
+          },
+          {
+            "label": "Skincare",
+            "url": "/shop"
+          },
+          {
+            "label": "Our story",
+            "url": "/about"
+          },
+          {
+            "label": "Journal",
+            "url": "/journal"
+          }
+        ]
+      },
+      {
+        "key": "footer",
+        "name": "Footer menu",
+        "items": [
+          {
+            "label": "Shop all",
+            "url": "/shop"
+          },
+          {
+            "label": "Our story",
+            "url": "/about"
+          },
+          {
+            "label": "Journal",
+            "url": "/journal"
+          }
+        ]
+      }
+    ]
+  }
+}

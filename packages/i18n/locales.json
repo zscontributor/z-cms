@@ -1,0 +1,5 @@
+[
+  { "code": "en", "name": "English", "nativeName": "English", "dir": "ltr" },
+  { "code": "vi", "name": "Vietnamese", "nativeName": "Tiếng Việt", "dir": "ltr" },
+  { "code": "ja", "name": "Japanese", "nativeName": "日本語", "dir": "ltr" }
+]

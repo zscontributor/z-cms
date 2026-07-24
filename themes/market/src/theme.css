@@ -1,0 +1,1816 @@
+/**
+ * Z Market — a cosmetics storefront.
+ *
+ * Three rules govern this file, and each is a constraint the platform imposes
+ * rather than a preference:
+ *
+ * 1. EVERYTHING IS SCOPED UNDER `.zmarket`.
+ *    A theme's stylesheet is served on pages that may also carry the built-in
+ *    theme's CSS. Scoping is what stops this file from being a global reset that
+ *    leaks onto themes it has never heard of. A bare `h1 {}` here would restyle
+ *    the marketplace.
+ *
+ * 2. NO EXTERNAL FONTS.
+ *    The public site's CSP is `style-src 'self'` and `font-src 'self' data:`, so a
+ *    Google Fonts stylesheet and its font files would both be refused by the
+ *    browser. The stacks below reach for what the OS already has, and they are
+ *    chosen for the contrast a beauty masthead needs: a high-contrast serif for
+ *    display, a quiet grotesque for everything else.
+ *
+ * 3. DARK MODE IS AN ATTRIBUTE, NOT A MEDIA QUERY.
+ *    `html[data-theme="dark"]` is set by the runtime's colour-mode script, which is
+ *    also what wires up the SDK's <ColorModeToggle> that this theme places in the
+ *    header. The `prefers-color-scheme` block at the bottom is only the
+ *    no-JavaScript fallback, and it is guarded by `html:not([data-theme])` so it can
+ *    never fight a visitor who has chosen.
+ *
+ * The product imagery is DRAWN (`.zmarket__art`): a theme cannot ship photographs
+ * of products it has never seen, and a grey rectangle is not a design.
+ */
+
+.zmarket {
+  --zm-rose: #c2185b;
+  --zm-rose-deep: #9c1349;
+  --zm-accent: #c2185b;
+  --zm-on-rose: #ffffff;
+  --zm-blush: #f7e6ea;
+  --zm-blush-deep: #eccdd6;
+
+  --zm-ink: #1f1a1c;
+  --zm-muted: #7c6e72;
+  --zm-paper: #fbf8f5;
+  --zm-card: #ffffff;
+  --zm-sand: #f2eae4;
+  --zm-line: #e6dcd6;
+  --zm-hair: #efe6e0;
+
+  --zm-shell: #1f1a1c;
+  --zm-shell-ink: #f8f2ee;
+  --zm-shell-muted: #a2949a;
+  --zm-shell-line: #362e31;
+
+  --zm-tint-one: #f6e7ea;
+  --zm-tint-two: #eee7dd;
+  --zm-tint-three: #e4e8e6;
+  --zm-tint-four: #e9e4ee;
+
+  --zm-radius: 18px;
+  --zm-shadow: 0 26px 60px rgba(48, 30, 36, 0.09);
+  --zm-shadow-sm: 0 10px 26px rgba(48, 30, 36, 0.07);
+
+  --zm-serif: "Hoefler Text", "Iowan Old Style", "Palatino Linotype", Palatino,
+    Georgia, "Times New Roman", serif;
+  --zm-sans: "Avenir Next", "Helvetica Neue", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", system-ui, sans-serif;
+
+  background: var(--zm-paper);
+  color: var(--zm-ink);
+  font-family: var(--zm-sans);
+  line-height: 1.65;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.zmarket *,
+.zmarket *::before,
+.zmarket *::after {
+  box-sizing: border-box;
+}
+
+.zmarket a {
+  color: inherit;
+  text-decoration: none;
+}
+.zmarket img {
+  max-width: 100%;
+  display: block;
+}
+.zmarket button {
+  font: inherit;
+}
+
+/* The keyboard ring, once, for everything. A theme that draws its own focus styles
+   per component is a theme that will forget one. */
+.zmarket :focus-visible {
+  outline: 2px solid var(--zm-accent);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
+/* Visually hidden, still read aloud: the skip link, form labels, and the "original
+   price" that gives a struck-through number its meaning. */
+.zmarket__skip {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+a.zmarket__skip:focus {
+  position: fixed;
+  left: 16px;
+  top: 16px;
+  z-index: 80;
+  width: auto;
+  height: auto;
+  clip-path: none;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: var(--zm-rose);
+  color: var(--zm-on-rose);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* --------------------------------------------------------------- primitives */
+
+.zmarket__container {
+  width: min(1220px, calc(100% - 48px));
+  margin: 0 auto;
+}
+.zmarket__narrow {
+  width: min(720px, 100%);
+  margin: 0 auto;
+}
+.zmarket__center {
+  text-align: center;
+}
+
+.zmarket__eyebrow {
+  color: var(--zm-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  font-size: 11px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.zmarket__section {
+  padding: 104px 0;
+}
+
+.zmarket__section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 48px;
+  margin-bottom: 52px;
+}
+
+.zmarket__section-title {
+  font-family: var(--zm-serif);
+  font-weight: 400;
+  font-size: clamp(32px, 4vw, 52px);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin: 14px 0 0;
+}
+
+.zmarket__section-copy {
+  max-width: 460px;
+  font-size: 16px;
+  color: var(--zm-muted);
+  margin: 0;
+}
+
+.zmarket__lede {
+  font-size: 19px;
+  line-height: 1.6;
+  color: var(--zm-muted);
+  margin: 0 0 28px;
+}
+
+.zmarket__meta {
+  font-size: 13px;
+  color: var(--zm-muted);
+  letter-spacing: 0.04em;
+}
+.zmarket__meta a:hover {
+  color: var(--zm-accent);
+}
+
+.zmarket__rule {
+  height: 1px;
+  background: var(--zm-line);
+  margin: 32px 0;
+}
+
+.zmarket__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px 26px;
+  border: 1px solid var(--zm-ink);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background 0.25s ease,
+    color 0.25s ease,
+    border-color 0.25s ease,
+    transform 0.25s ease;
+}
+.zmarket__btn:hover {
+  transform: translateY(-2px);
+  border-color: var(--zm-accent);
+  color: var(--zm-accent);
+}
+.zmarket__btn--rose {
+  background: var(--zm-rose);
+  border-color: var(--zm-rose);
+  color: var(--zm-on-rose);
+}
+.zmarket__btn--rose:hover {
+  background: var(--zm-rose-deep);
+  border-color: var(--zm-rose-deep);
+  color: var(--zm-on-rose);
+}
+.zmarket__btn--block {
+  width: 100%;
+  padding: 16px 26px;
+}
+
+/* --------------------------------------------------------- announcement bar */
+
+.zmarket__announce {
+  background: var(--zm-shell);
+  color: var(--zm-shell-ink);
+  text-align: center;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  padding: 10px 16px;
+}
+.zmarket__announce a {
+  color: var(--zm-blush);
+  font-weight: 600;
+  border-bottom: 1px solid transparent;
+}
+.zmarket__announce a:hover {
+  border-bottom-color: currentColor;
+}
+
+/* ------------------------------------------------------------------- header */
+
+.zmarket__header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  border-bottom: 1px solid var(--zm-hair);
+  background: color-mix(in srgb, var(--zm-paper) 90%, transparent);
+  backdrop-filter: blur(16px);
+}
+
+.zmarket__nav {
+  min-height: 78px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 20px;
+}
+
+.zmarket__nav-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.zmarket__links {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.zmarket__links a {
+  padding-bottom: 2px;
+  border-bottom: 1px solid transparent;
+}
+.zmarket__links a:hover {
+  color: var(--zm-accent);
+  border-bottom-color: var(--zm-accent);
+}
+
+/* The wordmark sits centred, the way a beauty masthead does. */
+.zmarket__brand {
+  justify-self: center;
+  display: flex;
+  align-items: center;
+}
+.zmarket__brand-logo {
+  height: 30px;
+  width: auto;
+  max-width: 190px;
+  object-fit: contain;
+}
+.zmarket__wordmark {
+  font-family: var(--zm-serif);
+  font-size: 26px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  text-indent: 0.24em;
+  white-space: nowrap;
+}
+
+.zmarket__actions {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.zmarket__bag {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  border: 1px solid var(--zm-line);
+  border-radius: 999px;
+  background: var(--zm-card);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition:
+    border-color 0.25s ease,
+    color 0.25s ease;
+}
+.zmarket__bag:hover {
+  border-color: var(--zm-accent);
+  color: var(--zm-accent);
+}
+
+.zmarket__search input {
+  width: 190px;
+  padding: 9px 16px;
+  border: 1px solid var(--zm-line);
+  border-radius: 999px;
+  background: var(--zm-card);
+  color: var(--zm-ink);
+  font-size: 13px;
+}
+.zmarket__search input::placeholder {
+  color: var(--zm-muted);
+}
+
+/* --------------------------------------- language, colour mode, mobile nav */
+
+/*
+ * The language switcher and the mobile menu are <details> disclosures, and the
+ * colour toggle is the SDK's <ColorModeToggle>. None of them ships a line of
+ * JavaScript from this theme: themes render on the server only. The disclosures are
+ * native HTML, and the toggle is wired up by the runtime's delegated listener —
+ * the theme only supplies the button's class, styled below.
+ */
+.zmarket__lang,
+.zmarket__burger {
+  position: relative;
+}
+.zmarket__lang > summary,
+.zmarket__burger > summary {
+  list-style: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--zm-line);
+  border-radius: 999px;
+  background: var(--zm-card);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.zmarket__lang > summary::-webkit-details-marker,
+.zmarket__burger > summary::-webkit-details-marker {
+  display: none;
+}
+.zmarket__lang > summary:hover,
+.zmarket__burger > summary:hover {
+  border-color: var(--zm-accent);
+  color: var(--zm-accent);
+}
+
+.zmarket__burger {
+  display: none;
+}
+.zmarket__burger > summary {
+  width: 38px;
+  padding: 0;
+  font-size: 14px;
+}
+.zmarket__burger-menu {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 8px);
+  z-index: 30;
+  min-width: 210px;
+  display: grid;
+  padding: 8px;
+  border: 1px solid var(--zm-line);
+  border-radius: 14px;
+  background: var(--zm-card);
+  box-shadow: var(--zm-shadow);
+}
+.zmarket__burger-menu a {
+  padding: 11px 12px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--zm-muted);
+}
+.zmarket__burger-menu a:hover {
+  background: var(--zm-blush);
+  color: var(--zm-ink);
+}
+
+.zmarket__lang-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 30;
+  min-width: 200px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border: 1px solid var(--zm-line);
+  border-radius: 14px;
+  background: var(--zm-card);
+  box-shadow: var(--zm-shadow);
+}
+.zmarket__lang-menu a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 9px;
+  font-size: 14px;
+  color: var(--zm-muted);
+}
+.zmarket__lang-menu a:hover {
+  background: var(--zm-blush);
+  color: var(--zm-ink);
+}
+.zmarket__lang-menu a[aria-current="true"] {
+  color: var(--zm-accent);
+  font-weight: 700;
+}
+.zmarket__lang-flag {
+  width: 20px;
+  height: 15px;
+  border-radius: 2px;
+  object-fit: cover;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+}
+
+.zmarket__icon-btn {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--zm-line);
+  border-radius: 50%;
+  background: var(--zm-card);
+  color: var(--zm-ink);
+  font-size: 15px;
+  cursor: pointer;
+  transition:
+    border-color 0.25s ease,
+    color 0.25s ease;
+}
+.zmarket__icon-btn:hover {
+  border-color: var(--zm-accent);
+  color: var(--zm-accent);
+}
+
+/* The toggle's two glyphs need no rules here: <ColorModeToggle> marks them with
+   `data-z-theme-icon`, and the runtime's own stylesheet shows exactly one. */
+
+.zmarket__totop {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 40;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--zm-line);
+  border-radius: 50%;
+  background: var(--zm-card);
+  color: var(--zm-ink);
+  box-shadow: var(--zm-shadow-sm);
+  transition:
+    transform 0.25s ease,
+    border-color 0.25s ease;
+}
+.zmarket__totop:hover {
+  transform: translateY(-3px);
+  border-color: var(--zm-accent);
+  color: var(--zm-accent);
+}
+
+/* --------------------------------------------------------------------- hero */
+
+.zmarket__hero {
+  padding: 40px 0 96px;
+  background:
+    radial-gradient(
+      ellipse 60% 70% at 78% 40%,
+      var(--zm-blush) 0%,
+      transparent 70%
+    ),
+    var(--zm-paper);
+}
+.zmarket__hero-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 64px;
+  align-items: center;
+  min-height: 560px;
+}
+.zmarket__hero-copy {
+  padding: 40px 0;
+}
+.zmarket__hero-title {
+  font-family: var(--zm-serif);
+  font-weight: 400;
+  font-size: clamp(48px, 6.4vw, 88px);
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  margin: 20px 0 24px;
+}
+.zmarket__hero-title em {
+  font-style: italic;
+  color: var(--zm-accent);
+}
+.zmarket__hero .zmarket__lede {
+  max-width: 480px;
+}
+.zmarket__hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.zmarket__hero-note {
+  margin: 34px 0 0;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--zm-muted);
+}
+
+/* ------------------------------------------------------- the drawn products */
+
+/*
+ * A bottle, a jar and a stick, made of four elements and a gradient.
+ *
+ * The theme cannot ship product photography — it has never seen the products — and
+ * a placeholder rectangle would look like a bug. These read as deliberate: glass
+ * catching light on the left, a cap in a darker tone, an ellipse of shadow on the
+ * surface underneath. The tone classes tint the backdrop, so a grid of them looks
+ * like a considered set rather than three copies.
+ */
+.zmarket__art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 5;
+  border-radius: var(--zm-radius);
+  overflow: hidden;
+  background:
+    radial-gradient(
+      ellipse 70% 55% at 50% 32%,
+      rgba(255, 255, 255, 0.62),
+      transparent 70%
+    ),
+    var(--zm-tint-one);
+}
+.zmarket__art--one {
+  background:
+    radial-gradient(
+      ellipse 70% 55% at 50% 32%,
+      rgba(255, 255, 255, 0.62),
+      transparent 70%
+    ),
+    var(--zm-tint-one);
+}
+.zmarket__art--two {
+  background:
+    radial-gradient(
+      ellipse 70% 55% at 50% 32%,
+      rgba(255, 255, 255, 0.62),
+      transparent 70%
+    ),
+    var(--zm-tint-two);
+}
+.zmarket__art--three {
+  background:
+    radial-gradient(
+      ellipse 70% 55% at 50% 32%,
+      rgba(255, 255, 255, 0.62),
+      transparent 70%
+    ),
+    var(--zm-tint-three);
+}
+.zmarket__art--four {
+  background:
+    radial-gradient(
+      ellipse 70% 55% at 50% 32%,
+      rgba(255, 255, 255, 0.62),
+      transparent 70%
+    ),
+    var(--zm-tint-four);
+}
+
+/* The ellipse of shadow the vessel stands on. Without it the bottle floats, and a
+   floating bottle reads as a mistake rather than as a photograph. */
+.zmarket__art-floor {
+  position: absolute;
+  left: 50%;
+  bottom: 15%;
+  width: 46%;
+  height: 16px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(60, 36, 44, 0.22),
+    transparent 70%
+  );
+  filter: blur(4px);
+}
+
+.zmarket__vessel {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 62%;
+  margin-bottom: 4%;
+}
+.zmarket__vessel-cap,
+.zmarket__vessel-body {
+  display: block;
+  position: relative;
+}
+
+.zmarket__vessel-cap {
+  background: linear-gradient(
+    100deg,
+    var(--zm-ink) 0%,
+    color-mix(in srgb, var(--zm-ink) 72%, #ffffff) 48%,
+    var(--zm-ink) 100%
+  );
+}
+
+/* Glass: a light band down the left third is the whole trick. */
+.zmarket__vessel-body {
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--zm-blush-deep) 70%, #ffffff) 0%,
+    rgba(255, 255, 255, 0.94) 26%,
+    color-mix(in srgb, var(--zm-blush) 85%, #ffffff) 62%,
+    color-mix(in srgb, var(--zm-blush-deep) 88%, transparent) 100%
+  );
+  box-shadow:
+    inset 0 -14px 26px rgba(120, 80, 92, 0.1),
+    0 12px 26px rgba(60, 36, 44, 0.1);
+}
+
+/* The label: a rose band across the glass, the one place the accent appears in the
+   artwork. It is what makes the drawing read as a *product* and not as a shape. */
+.zmarket__vessel-body b {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: block;
+  background: color-mix(in srgb, var(--zm-rose) 16%, #ffffff);
+  border-top: 1px solid color-mix(in srgb, var(--zm-rose) 30%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--zm-rose) 30%, transparent);
+}
+
+/* --- bottle: tall, narrow, square shoulders, a slim collar and a flat cap */
+.zmarket__vessel--bottle {
+  width: 34%;
+}
+.zmarket__vessel--bottle .zmarket__vessel-cap {
+  width: 44%;
+  height: 34px;
+  border-radius: 5px 5px 2px 2px;
+}
+.zmarket__vessel--bottle .zmarket__vessel-body {
+  width: 100%;
+  height: 190px;
+  margin-top: -2px;
+  border-radius: 10px 10px 12px 12px;
+}
+.zmarket__vessel--bottle .zmarket__vessel-body b {
+  top: 34%;
+  width: 78%;
+  height: 46px;
+  border-radius: 3px;
+}
+
+/* --- jar: wide and low, a broad lid, a squat body */
+.zmarket__vessel--jar {
+  width: 52%;
+}
+.zmarket__vessel--jar .zmarket__vessel-cap {
+  width: 92%;
+  height: 26px;
+  border-radius: 8px 8px 3px 3px;
+}
+.zmarket__vessel--jar .zmarket__vessel-body {
+  width: 100%;
+  height: 110px;
+  margin-top: -2px;
+  border-radius: 8px 8px 16px 16px;
+}
+.zmarket__vessel--jar .zmarket__vessel-body b {
+  top: 30%;
+  width: 66%;
+  height: 38px;
+  border-radius: 999px;
+}
+
+/* --- stick: a lipstick, mostly cap */
+.zmarket__vessel--stick {
+  width: 20%;
+}
+.zmarket__vessel--stick .zmarket__vessel-cap {
+  width: 100%;
+  height: 96px;
+  border-radius: 6px 6px 2px 2px;
+}
+.zmarket__vessel--stick .zmarket__vessel-body {
+  width: 100%;
+  height: 104px;
+  margin-top: -2px;
+  border-radius: 3px 3px 6px 6px;
+}
+.zmarket__vessel--stick .zmarket__vessel-body b {
+  top: 26%;
+  width: 100%;
+  height: 26px;
+  background: var(--zm-rose);
+  border-color: transparent;
+}
+
+/* --------------------------------------------------------- shop by category */
+
+.zmarket__cats {
+  border-top: 1px solid var(--zm-hair);
+}
+.zmarket__cat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+}
+.zmarket__cat {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--zm-hair);
+  border-radius: var(--zm-radius);
+  overflow: hidden;
+  background: var(--zm-card);
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease,
+    border-color 0.3s ease;
+}
+.zmarket__cat:hover {
+  transform: translateY(-5px);
+  border-color: var(--zm-blush-deep);
+  box-shadow: var(--zm-shadow);
+}
+.zmarket__cat-art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 210px;
+  overflow: hidden;
+}
+.zmarket__cat--one .zmarket__cat-art {
+  background: var(--zm-tint-one);
+}
+.zmarket__cat--two .zmarket__cat-art {
+  background: var(--zm-tint-two);
+}
+.zmarket__cat--three .zmarket__cat-art {
+  background: var(--zm-tint-three);
+}
+.zmarket__cat--four .zmarket__cat-art {
+  background: var(--zm-tint-four);
+}
+/* Inside a category tile the vessel is smaller and sits centred rather than on a
+   floor: a tile is an icon, not a photograph. */
+.zmarket__cat-art .zmarket__vessel {
+  height: 138px;
+  margin-bottom: 0;
+  transform: scale(0.72);
+}
+.zmarket__cat-art .zmarket__vessel--bottle {
+  width: 58px;
+}
+.zmarket__cat-art .zmarket__vessel--jar {
+  width: 92px;
+}
+.zmarket__cat-art .zmarket__vessel--stick {
+  width: 34px;
+}
+.zmarket__cat-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px;
+  border-top: 1px solid var(--zm-hair);
+}
+.zmarket__cat-body strong {
+  font-family: var(--zm-serif);
+  font-weight: 400;
+  font-size: 20px;
+  letter-spacing: -0.01em;
+}
+.zmarket__cat-body span {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--zm-muted);
+  white-space: nowrap;
+}
+.zmarket__cat:hover .zmarket__cat-body span {
+  color: var(--zm-accent);
+}
+
+/* ------------------------------------------------------------ product cards */
+
+.zmarket__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+}
+.zmarket__card {
+  display: flex;
+  flex-direction: column;
+}
+.zmarket__card-art {
+  position: relative;
+  display: block;
+  border-radius: var(--zm-radius);
+  overflow: hidden;
+  transition: transform 0.35s ease;
+}
+.zmarket__card:hover .zmarket__card-art {
+  transform: translateY(-6px);
+}
+.zmarket__card-art .zmarket__art {
+  transition: filter 0.35s ease;
+}
+.zmarket__card:hover .zmarket__card-art .zmarket__art {
+  filter: saturate(1.06);
+}
+
+.zmarket__badge {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 2;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--zm-card);
+  color: var(--zm-ink);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  box-shadow: var(--zm-shadow-sm);
+}
+
+.zmarket__card-body {
+  padding: 20px 4px 0;
+}
+.zmarket__card-body h3 {
+  font-family: var(--zm-serif);
+  font-weight: 400;
+  font-size: 21px;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+.zmarket__card-body h3 a:hover {
+  color: var(--zm-accent);
+}
+
+.zmarket__volume {
+  margin: 6px 0 0;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--zm-muted);
+}
+
+.zmarket__price {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 12px 0 0;
+  font-size: 16px;
+}
+.zmarket__price strong {
+  font-weight: 600;
+}
+.zmarket__price s {
+  color: var(--zm-muted);
+  font-size: 14px;
+  text-decoration-thickness: 1px;
+}
+.zmarket__price--lg {
+  font-size: 26px;
+  margin: 16px 0 22px;
+}
+.zmarket__price--lg strong {
+  color: var(--zm-accent);
+}
+.zmarket__price--lg s {
+  font-size: 17px;
+}
+
+.zmarket__grid-more {
+  margin: 52px 0 0;
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------- empty state
+
+   A shelf with nothing on it. Every section drawn from a collection has one, because
+   on the day this theme is installed the shop has no products and no journal — and a
+   section that renders nothing at all is indistinguishable from a broken one. It is
+   drawn as a deliberate, quiet card rather than left as white space. */
+
+.zmarket__empty {
+  margin: 0;
+  padding: 44px;
+  border: 1px dashed var(--zm-line);
+  border-radius: var(--zm-radius);
+  background: var(--zm-sand);
+  color: var(--zm-muted);
+  font-family: var(--zm-serif);
+  font-size: 19px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+/* -------------------------------------------------------------- the journal */
+
+.zmarket__journal {
+  background: var(--zm-sand);
+  border-top: 1px solid var(--zm-hair);
+}
+.zmarket__journal-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.zmarket__journal-card {
+  padding: 30px;
+  border-radius: var(--zm-radius);
+  background: var(--zm-card);
+  border: 1px solid var(--zm-hair);
+  transition:
+    transform 0.35s ease,
+    box-shadow 0.35s ease;
+}
+.zmarket__journal-card:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--zm-shadow-sm);
+}
+.zmarket__journal-card h3 {
+  font-family: var(--zm-serif);
+  font-weight: 400;
+  font-size: 24px;
+  line-height: 1.28;
+  letter-spacing: -0.01em;
+  margin: 10px 0 10px;
+}
+.zmarket__journal-card h3 a:hover {
+  color: var(--zm-accent);
+}
+.zmarket__journal-card p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--zm-muted);
+}
+.zmarket__journal-card .zmarket__meta {
+  margin: 0;
+}
+
+/* ------------------------------------------------------------- values band */
+
+.zmarket__values {
+  padding: 96px 0;
+  background: var(--zm-sand);
+  border-top: 1px solid var(--zm-hair);
+  border-bottom: 1px solid var(--zm-hair);
+  text-align: center;
+}
+.zmarket__values .zmarket__section-title {
+  margin: 14px auto 60px;
+  max-width: 640px;
+}
+.zmarket__value-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 40px;
+}
+.zmarket__value {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.zmarket__value-icon {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 12px;
+  border: 1px solid var(--zm-blush-deep);
+  border-radius: 50%;
+  background: var(--zm-card);
+  color: var(--zm-accent);
+  font-size: 19px;
+}
+.zmarket__value h3 {
+  font-family: var(--zm-serif);
+  font-weight: 400;
+  font-size: 19px;
+  margin: 0;
+}
+.zmarket__value p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--zm-muted);
+  max-width: 260px;
+}
+
+/* -------------------------------------------------------------- press quote */
+
+.zmarket__quote {
+  max-width: 860px;
+  text-align: center;
+}
+.zmarket__quote blockquote {
+  margin: 26px 0 0;
+}
+.zmarket__quote blockquote p {
+  font-family: var(--zm-serif);
+  font-size: clamp(26px, 3.2vw, 40px);
+  line-height: 1.35;
+  letter-spacing: -0.015em;
+  margin: 0;
+}
+.zmarket__quote blockquote p::before {
+  content: "“";
+  color: var(--zm-accent);
+}
+.zmarket__quote blockquote p::after {
+  content: "”";
+  color: var(--zm-accent);
+}
+.zmarket__quote footer {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 30px;
+  font-size: 13px;
+  color: var(--zm-muted);
+}
+.zmarket__quote footer strong {
+  color: var(--zm-ink);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+/* --------------------------------------------------------------- newsletter */
+
+.zmarket__letter {
+  padding: 0 0 104px;
+}
+.zmarket__letter-box {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  align-items: center;
+  padding: 64px;
+  border-radius: 26px;
+  background:
+    radial-gradient(
+      ellipse 70% 90% at 88% 10%,
+      color-mix(in srgb, var(--zm-rose) 12%, transparent),
+      transparent 70%
+    ),
+    var(--zm-blush);
+}
+.zmarket__letter-box h2 {
+  font-family: var(--zm-serif);
+  font-weight: 400;
+  font-size: clamp(30px, 3.6vw, 46px);
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  margin: 14px 0 14px;
+}
+.zmarket__letter-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+}
+.zmarket__letter-form input {
+  padding: 15px 22px;
+  border: 1px solid var(--zm-blush-deep);
+  border-radius: 999px;
+  background: var(--zm-card);
+  color: var(--zm-ink);
+  font-size: 15px;
+}
+.zmarket__letter-form input::placeholder {
+  color: var(--zm-muted);
+}
+.zmarket__letter-note {
+  grid-column: 1 / -1;
+  margin: 4px 0 0;
+  padding-left: 22px;
+  font-size: 12px;
+  color: var(--zm-muted);
+}
+
+/* ------------------------------------------------------------------- footer */
+
+.zmarket__footer {
+  margin-top: auto;
+  background: var(--zm-shell);
+  color: var(--zm-shell-ink);
+  padding: 76px 0 26px;
+}
+.zmarket__footer-grid {
+  display: grid;
+  grid-template-columns: 1.6fr repeat(4, 1fr);
+  gap: 44px;
+}
+.zmarket__footer-brand .zmarket__wordmark {
+  font-size: 22px;
+}
+.zmarket__footer-brand p {
+  margin: 20px 0 0;
+  max-width: 300px;
+  font-size: 14px;
+  color: var(--zm-shell-muted);
+}
+.zmarket__footer h4 {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--zm-shell-muted);
+}
+.zmarket__footer ul {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
+}
+.zmarket__footer li {
+  margin: 11px 0;
+  font-size: 14px;
+}
+.zmarket__footer a:hover {
+  color: var(--zm-blush);
+}
+.zmarket__footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  margin-top: 56px;
+  padding-top: 24px;
+  border-top: 1px solid var(--zm-shell-line);
+  font-size: 12px;
+  color: var(--zm-shell-muted);
+}
+
+/* ------------------------------------------------------------- product page */
+
+.zmarket__product {
+  padding: 40px 0 96px;
+}
+.zmarket__product-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 72px;
+  align-items: start;
+  margin-top: 22px;
+}
+.zmarket__product-art {
+  position: relative;
+  border-radius: 24px;
+  overflow: hidden;
+}
+.zmarket__product-art .zmarket__badge {
+  top: 20px;
+  left: 20px;
+}
+.zmarket__product-info {
+  padding-top: 12px;
+}
+.zmarket__product-title {
+  font-family: var(--zm-serif);
+  font-weight: 400;
+  font-size: clamp(32px, 3.6vw, 46px);
+  line-height: 1.14;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+.zmarket__product-info .zmarket__volume {
+  margin-top: 12px;
+}
+.zmarket__product-info .zmarket__lede {
+  font-size: 17px;
+  margin-bottom: 30px;
+}
+.zmarket__product-prose {
+  margin-top: 88px;
+}
+
+/* The accordion. <details> is the disclosure widget the platform already has;
+   re-implementing it in JavaScript is how a theme ends up with a bug that only
+   appears for keyboard users. */
+.zmarket__accordion {
+  margin-top: 12px;
+}
+.zmarket__accordion details {
+  border-bottom: 1px solid var(--zm-line);
+}
+.zmarket__accordion details:first-child {
+  border-top: 1px solid var(--zm-line);
+}
+.zmarket__accordion summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 2px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.zmarket__accordion summary::-webkit-details-marker {
+  display: none;
+}
+.zmarket__accordion summary:hover {
+  color: var(--zm-accent);
+}
+/* The plus that becomes a minus: two pseudo-elements, one of which is rotated away
+   when the disclosure opens. */
+.zmarket__accordion summary i {
+  position: relative;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+.zmarket__accordion summary i::before,
+.zmarket__accordion summary i::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 12px;
+  height: 1.5px;
+  background: currentColor;
+  transition: transform 0.25s ease;
+}
+.zmarket__accordion summary i::after {
+  transform: rotate(90deg);
+}
+.zmarket__accordion details[open] summary i::after {
+  transform: rotate(0deg);
+}
+.zmarket__accordion details p {
+  margin: 0 0 20px;
+  padding-right: 24px;
+  font-size: 15px;
+  color: var(--zm-muted);
+}
+
+/* ------------------------------------------------- article / archive / prose */
+
+.zmarket__article {
+  padding: 72px 0 96px;
+}
+.zmarket__archive-head {
+  max-width: 640px;
+  margin-bottom: 56px;
+}
+.zmarket__article-title {
+  font-family: var(--zm-serif);
+  font-weight: 400;
+  font-size: clamp(34px, 4.6vw, 58px);
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  margin: 14px 0 18px;
+}
+
+.zmarket__center .zmarket__btn {
+  margin-top: 8px;
+}
+
+.zmarket__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-top: 64px;
+  padding-top: 26px;
+  border-top: 1px solid var(--zm-line);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--zm-muted);
+}
+.zmarket__pagination a:hover {
+  color: var(--zm-accent);
+}
+
+.zmarket__prose {
+  font-size: 17px;
+}
+.zmarket__prose h2 {
+  font-family: var(--zm-serif);
+  font-weight: 400;
+  font-size: 30px;
+  letter-spacing: -0.015em;
+  margin: 46px 0 14px;
+}
+.zmarket__prose h3 {
+  font-size: 19px;
+  letter-spacing: 0.02em;
+  margin: 32px 0 10px;
+}
+.zmarket__prose p,
+.zmarket__prose li {
+  color: var(--zm-muted);
+}
+.zmarket__prose a {
+  color: var(--zm-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.zmarket__prose strong {
+  color: var(--zm-ink);
+}
+.zmarket__prose blockquote {
+  margin: 30px 0;
+  padding-left: 22px;
+  border-left: 2px solid var(--zm-rose);
+  font-family: var(--zm-serif);
+  font-size: 21px;
+}
+
+/* ------------------------------------------------------------------- blocks */
+
+.zmarket__block-hero {
+  text-align: center;
+  padding: 56px 0;
+}
+.zmarket__block-hero h2 {
+  font-family: var(--zm-serif);
+  font-weight: 400;
+  font-size: clamp(30px, 4vw, 48px);
+  letter-spacing: -0.02em;
+  margin: 12px 0 16px;
+}
+.zmarket__block-hero .zmarket__section-copy {
+  margin: 0 auto;
+}
+.zmarket__block-hero-cta {
+  margin: 26px 0 0;
+}
+
+.zmarket__block-section {
+  padding: 36px 0;
+}
+.zmarket__block-section h2 {
+  font-family: var(--zm-serif);
+  font-weight: 400;
+  font-size: 30px;
+  letter-spacing: -0.015em;
+  margin: 0 0 8px;
+}
+.zmarket__block-section > p {
+  margin: 0;
+  color: var(--zm-muted);
+}
+.zmarket__block-features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 26px;
+  margin-top: 30px;
+}
+.zmarket__block-features article {
+  padding-top: 18px;
+  border-top: 1px solid var(--zm-line);
+}
+.zmarket__block-features span {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--zm-accent);
+}
+.zmarket__block-features h3 {
+  font-family: var(--zm-serif);
+  font-weight: 400;
+  font-size: 19px;
+  margin: 8px 0 6px;
+}
+.zmarket__block-features p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--zm-muted);
+}
+
+.zmarket__block-cta {
+  margin: 44px 0;
+  padding: 48px;
+  border-radius: 22px;
+  background: var(--zm-blush);
+  text-align: center;
+}
+.zmarket__block-cta h2 {
+  font-family: var(--zm-serif);
+  font-weight: 400;
+  font-size: 34px;
+  letter-spacing: -0.02em;
+  margin: 0 0 10px;
+}
+.zmarket__block-cta p {
+  margin: 0 auto 24px;
+  max-width: 480px;
+  color: var(--zm-muted);
+}
+
+.zmarket__figure {
+  margin: 34px 0;
+}
+.zmarket__figure img {
+  width: 100%;
+  border-radius: var(--zm-radius);
+}
+.zmarket__figure figcaption {
+  margin-top: 10px;
+  font-size: 13px;
+  text-align: center;
+  color: var(--zm-muted);
+}
+
+/* --------------------------------------------------------------------- dark */
+
+/*
+ * One block of overrides, driven by an attribute the runtime sets on <html>. Only
+ * the custom properties are re-declared: every rule above already reads them, so
+ * the palette swaps and the layout does not move.
+ *
+ * `--zm-rose` stays a deep rose because it is a FILL and carries white text on it;
+ * `--zm-accent` is the same colour used as TEXT, and text needs to lift off a dark
+ * ground, so it lightens. Collapsing the two into one variable is how a dark mode
+ * ends up with either an unreadable link or an unreadable button.
+ */
+html[data-theme="dark"] .zmarket {
+  --zm-accent: #f0a0bb;
+  --zm-blush: #33222a;
+  --zm-blush-deep: #4a2f3a;
+
+  --zm-ink: #f6eeef;
+  --zm-muted: #ab9ba1;
+  --zm-paper: #141011;
+  --zm-card: #1d1719;
+  --zm-sand: #1a1516;
+  --zm-line: #362c30;
+  --zm-hair: #2b2325;
+
+  --zm-shell: #0d0a0b;
+  --zm-shell-ink: #f6eeef;
+  --zm-shell-muted: #9c8d93;
+  --zm-shell-line: #332a2d;
+
+  --zm-tint-one: #2c1d23;
+  --zm-tint-two: #272220;
+  --zm-tint-three: #1f2624;
+  --zm-tint-four: #24202c;
+
+  --zm-shadow: 0 26px 60px rgba(0, 0, 0, 0.5);
+  --zm-shadow-sm: 0 10px 26px rgba(0, 0, 0, 0.4);
+}
+
+/* The drawn glass is lit from a light source, and a light source in a dark room is
+   dimmer. Highlight, cap and floor are re-mixed rather than re-drawn. */
+html[data-theme="dark"] .zmarket__art {
+  background:
+    radial-gradient(
+      ellipse 70% 55% at 50% 32%,
+      rgba(255, 255, 255, 0.06),
+      transparent 70%
+    ),
+    var(--zm-tint-one);
+}
+html[data-theme="dark"] .zmarket__art--two {
+  background:
+    radial-gradient(
+      ellipse 70% 55% at 50% 32%,
+      rgba(255, 255, 255, 0.06),
+      transparent 70%
+    ),
+    var(--zm-tint-two);
+}
+html[data-theme="dark"] .zmarket__art--three {
+  background:
+    radial-gradient(
+      ellipse 70% 55% at 50% 32%,
+      rgba(255, 255, 255, 0.06),
+      transparent 70%
+    ),
+    var(--zm-tint-three);
+}
+html[data-theme="dark"] .zmarket__art--four {
+  background:
+    radial-gradient(
+      ellipse 70% 55% at 50% 32%,
+      rgba(255, 255, 255, 0.06),
+      transparent 70%
+    ),
+    var(--zm-tint-four);
+}
+html[data-theme="dark"] .zmarket__vessel-cap {
+  background: linear-gradient(100deg, #0f0c0d 0%, #3a3134 48%, #0f0c0d 100%);
+}
+html[data-theme="dark"] .zmarket__vessel-body {
+  background: linear-gradient(
+    100deg,
+    #4a3a40 0%,
+    #6e585f 24%,
+    #4e3d43 62%,
+    #33262b 100%
+  );
+  box-shadow:
+    inset 0 -14px 26px rgba(0, 0, 0, 0.3),
+    0 12px 26px rgba(0, 0, 0, 0.4);
+}
+html[data-theme="dark"] .zmarket__vessel-body b {
+  background: color-mix(in srgb, var(--zm-rose) 55%, #1a1214);
+}
+html[data-theme="dark"] .zmarket__art-floor {
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.55), transparent 70%);
+}
+html[data-theme="dark"] .zmarket__badge {
+  background: var(--zm-card);
+  color: var(--zm-ink);
+}
+html[data-theme="dark"] .zmarket__letter-box {
+  background:
+    radial-gradient(
+      ellipse 70% 90% at 88% 10%,
+      color-mix(in srgb, var(--zm-rose) 26%, transparent),
+      transparent 70%
+    ),
+    var(--zm-blush);
+}
+
+/*
+ * No JavaScript: honour the OS instead.
+ *
+ * `html:not([data-theme])` is the guard that keeps this from ever overriding a
+ * visitor who chose — once the colour-mode script has run, `data-theme` is always
+ * present and this whole block stops matching.
+ */
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) .zmarket {
+    --zm-accent: #f0a0bb;
+    --zm-blush: #33222a;
+    --zm-blush-deep: #4a2f3a;
+
+    --zm-ink: #f6eeef;
+    --zm-muted: #ab9ba1;
+    --zm-paper: #141011;
+    --zm-card: #1d1719;
+    --zm-sand: #1a1516;
+    --zm-line: #362c30;
+    --zm-hair: #2b2325;
+
+    --zm-shell: #0d0a0b;
+    --zm-shell-ink: #f6eeef;
+    --zm-shell-muted: #9c8d93;
+    --zm-shell-line: #332a2d;
+
+    --zm-tint-one: #2c1d23;
+    --zm-tint-two: #272220;
+    --zm-tint-three: #1f2624;
+    --zm-tint-four: #24202c;
+
+    --zm-shadow: 0 26px 60px rgba(0, 0, 0, 0.5);
+    --zm-shadow-sm: 0 10px 26px rgba(0, 0, 0, 0.4);
+  }
+  html:not([data-theme]) .zmarket__vessel-cap {
+    background: linear-gradient(100deg, #0f0c0d 0%, #3a3134 48%, #0f0c0d 100%);
+  }
+  html:not([data-theme]) .zmarket__vessel-body {
+    background: linear-gradient(
+      100deg,
+      #4a3a40 0%,
+      #6e585f 24%,
+      #4e3d43 62%,
+      #33262b 100%
+    );
+  }
+  html:not([data-theme]) .zmarket__art-floor {
+    background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.55), transparent 70%);
+  }
+}
+
+/* --------------------------------------------------------------- responsive */
+
+@media (max-width: 1080px) {
+  .zmarket__links {
+    display: none;
+  }
+  .zmarket__burger {
+    display: block;
+  }
+  .zmarket__search {
+    display: none;
+  }
+  .zmarket__hero-grid,
+  .zmarket__product-grid,
+  .zmarket__letter-box {
+    grid-template-columns: 1fr;
+  }
+  .zmarket__hero-grid {
+    gap: 40px;
+    min-height: 0;
+  }
+  .zmarket__product-grid {
+    gap: 44px;
+  }
+  .zmarket__letter-box {
+    gap: 34px;
+    padding: 48px;
+  }
+  .zmarket__cat-grid,
+  .zmarket__value-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .zmarket__value-grid {
+    gap: 44px 24px;
+  }
+  .zmarket__footer-grid {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+  .zmarket__footer-brand {
+    grid-column: 1 / -1;
+  }
+  .zmarket__product-prose {
+    margin-top: 56px;
+  }
+}
+
+@media (max-width: 760px) {
+  .zmarket__container {
+    width: min(100% - 32px, 1220px);
+  }
+  .zmarket__nav {
+    min-height: 66px;
+    gap: 10px;
+  }
+  .zmarket__wordmark {
+    font-size: 19px;
+    letter-spacing: 0.18em;
+    text-indent: 0.18em;
+  }
+  .zmarket__bag span:last-child {
+    display: none;
+  }
+  .zmarket__bag {
+    padding: 8px 12px;
+  }
+  .zmarket__section,
+  .zmarket__values {
+    padding: 68px 0;
+  }
+  .zmarket__section-head {
+    display: block;
+    margin-bottom: 36px;
+  }
+  .zmarket__section-head .zmarket__section-copy {
+    margin-top: 16px;
+  }
+  .zmarket__hero {
+    padding: 24px 0 68px;
+  }
+  .zmarket__hero-copy {
+    padding: 20px 0 0;
+  }
+  .zmarket__hero-actions .zmarket__btn {
+    width: 100%;
+  }
+  .zmarket__grid,
+  .zmarket__journal-grid {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+  .zmarket__cat-grid {
+    gap: 14px;
+  }
+  .zmarket__cat-art {
+    height: 150px;
+  }
+  .zmarket__cat-body {
+    display: block;
+    padding: 16px;
+  }
+  .zmarket__cat-body span {
+    display: block;
+    margin-top: 4px;
+  }
+  .zmarket__value-grid {
+    grid-template-columns: 1fr;
+    gap: 36px;
+  }
+  .zmarket__letter {
+    padding-bottom: 68px;
+  }
+  .zmarket__letter-box {
+    padding: 34px 24px;
+    border-radius: 20px;
+  }
+  .zmarket__letter-form {
+    grid-template-columns: 1fr;
+  }
+  .zmarket__letter-note {
+    padding-left: 0;
+    text-align: center;
+  }
+  .zmarket__article,
+  .zmarket__product {
+    padding: 48px 0 72px;
+  }
+  .zmarket__block-cta {
+    padding: 32px 22px;
+  }
+  .zmarket__footer {
+    padding-top: 56px;
+  }
+  .zmarket__footer-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 34px;
+  }
+  .zmarket__footer-bottom {
+    display: block;
+    text-align: center;
+  }
+  .zmarket__footer-bottom span {
+    display: block;
+    margin-bottom: 6px;
+  }
+  .zmarket__pagination {
+    font-size: 11px;
+  }
+  .zmarket__totop {
+    right: 16px;
+    bottom: 16px;
+  }
+}

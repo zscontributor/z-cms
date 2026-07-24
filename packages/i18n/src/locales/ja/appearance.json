@@ -1,0 +1,68 @@
+{
+  "metaTitle": "外観",
+  "title": "外観",
+  "description": "テーマをアクティブ化し、テーマが宣言する設定を調整します。",
+  "denied": "テーマを表示する権限がありません。",
+  "drafts": {
+    "heading": "あなたのデザイン",
+    "hint": "エディターで作成したテーマ。ビルドしてインストールするまで、どこにも表示されません。",
+    "empty": "デザインはまだありません。",
+    "name": "名前",
+    "key": "テーマキー",
+    "keyHint": "逆引きDNS形式（例: com.acme.theme.shop）。vn.zsoft. で始めることはできません。",
+    "status": {
+      "DRAFT": "下書き",
+      "BUILDING": "ビルド中",
+      "BUILT": "ビルド済み",
+      "SUBMITTED": "申請済み",
+      "FAILED": "失敗"
+    }
+  },
+  "emptyTitle": "テーマがインストールされていません",
+  "emptyDescription": "このサイトにはテーマがまだインストールされていません。",
+  "active": "使用中",
+  "activate": "活性化",
+  "activating": "アクティブ化中…",
+  "edit": "編集",
+  "available": "利用可能なテーマ",
+  "settings": {
+    "heading": "設定: {name}",
+    "generated": "このフォームはテーマの settingsSchema から生成されます。",
+    "empty": "このテーマには設定がありません。",
+    "denied": "テーマを構成する権限がありません。",
+    "saved": "テーマ設定が保存されました。",
+    "saveFailed": "設定を保存できませんでした。"
+  },
+  "demo": {
+    "seed": "シードデモ",
+    "reseed": "リシードデモ",
+    "seeding": "シード…",
+    "availableHint": "このアクティブなテーマはデモ コンテンツを提供します。シードしても実際のコンテンツには影響しません。",
+    "seededHint": "このアクティブなテーマのデモ コンテンツはシードされています。安全に再シードできます。",
+    "seeded": "シードされたデモ データ: {content} コンテンツ項目と {menus} メニュー。",
+    "seedFailed": "デモ データをシードできませんでした。",
+    "denied": "テーマのデモ データをシードする権限がありません。"
+  },
+  "errors": {
+    "missingKey": "テーマキーがありません。",
+    "activateDenied": "テーマをアクティブ化する権限がありません。",
+    "activateFailed": "{name}をアクティブ化できませんでした。"
+  },
+  "sideload": {
+    "heading": "ファイルからインストール",
+    "hint": "オペレーターが署名した .zcms をアップロードします。オペレーター鍵で検証・スキャンされ、承認されるまで実行されません。",
+    "upload": ".zcms をアップロード",
+    "uploading": "アップロード中…",
+    "noFile": "先に .zcms ファイルを選択してください。",
+    "uploaded": "{name} v{version} をアップロードしました。承認するまで隔離されます。",
+    "uploadFailed": "パッケージをインストールできませんでした。",
+    "denied": "パッケージをサイドロードする権限がありません。",
+    "unverified": "未検証",
+    "pending": "承認待ち",
+    "approve": "承認",
+    "uninstall": "アンインストール",
+    "approved": "{name} を承認しました。",
+    "removed": "{name} を削除しました。",
+    "actionFailed": "この操作を完了できませんでした。"
+  }
+}

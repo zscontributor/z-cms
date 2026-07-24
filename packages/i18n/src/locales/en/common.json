@@ -1,0 +1,32 @@
+{
+  "save": "Save",
+  "saving": "Saving…",
+  "cancel": "Cancel",
+  "delete": "Delete",
+  "deleting": "Deleting…",
+  "close": "Close",
+  "select": "Select",
+  "clear": "Clear",
+  "retry": "Try again",
+  "working": "Working…",
+  "loading": "Loading…",
+  "on": "On",
+  "off": "Off",
+  "selectPlaceholder": "— Select —",
+  "moveUp": "Move up",
+  "moveDown": "Move down",
+  "duplicate": "Duplicate",
+  "saveSettings": "Save settings",
+  "restoreDefaults": "Restore defaults",
+  "actionFailed": "The action failed.",
+  "unknownError": "Something went wrong.",
+  "invalidData": "The data is not valid.",
+  "pagination": {
+    "label": "Pagination",
+    "previous": "Previous",
+    "next": "Next",
+    "results": "{total} results",
+    "summary": "Page {page}/{totalPages} · {total} results",
+    "page": "Page {page}/{totalPages}"
+  }
+}

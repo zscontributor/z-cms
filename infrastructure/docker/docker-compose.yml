@@ -1,0 +1,183 @@
+name: z-cms
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: zcms-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: zcms
+      POSTGRES_PASSWORD: zcms
+      POSTGRES_DB: zcms
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zcms -d zcms"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    container_name: zcms-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # S3-compatible object storage for media. RustFS (Apache-2.0) speaks the S3 API,
+  # so the same @aws-sdk/client-s3 code runs against it here and against any S3
+  # provider in production.
+  #
+  # Named volume, not a bind mount: the container runs as uid 10001 and a host
+  # directory would need chown'ing before it could boot.
+  rustfs:
+    image: rustfs/rustfs:1.0.0-beta.8
+    container_name: zcms-rustfs
+    restart: unless-stopped
+    environment:
+      RUSTFS_VOLUMES: /data
+      RUSTFS_ADDRESS: 0.0.0.0:9000
+      RUSTFS_CONSOLE_ADDRESS: 0.0.0.0:9001
+      RUSTFS_CONSOLE_ENABLE: "true"
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY:-zcms}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY:-zcms-secret}
+      RUSTFS_OBS_LOGGER_LEVEL: warn
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - rustfs-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # Creates the media bucket on first boot so the API has somewhere to upload to.
+  #
+  # The AWS CLI, not MinIO's `mc`: `mc` is AGPL-3.0, and keeping the stack free of
+  # AGPL components is the reason the object store is RustFS (Apache-2.0) in the
+  # first place. Everything here is plain S3, so this sidecar works unchanged
+  # against any S3 provider.
+  #
+  # Read access is granted on the BUCKET, once, here — not per object. RustFS
+  # rejects PutObject requests that carry an ACL parameter, so per-object ACLs are
+  # not available (and the API deliberately does not send one). Note the array form
+  # of Principal/Action/Resource: RustFS's policy parser rejects the scalar
+  # shorthand `"Principal": "*"` that AWS accepts.
+  storage-init:
+    image: amazon/aws-cli:latest
+    container_name: zcms-storage-init
+    restart: "no"
+    depends_on:
+      rustfs:
+        condition: service_healthy
+    environment:
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY:-zcms}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:-zcms-secret}
+      AWS_DEFAULT_REGION: ${S3_REGION:-us-east-1}
+      BUCKET: ${S3_BUCKET:-zcms-media}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        endpoint="--endpoint-url http://rustfs:9000"
+
+        # Healthy is not the same as ready to serve S3: the health endpoint answers
+        # a little before the first request is accepted.
+        until aws $$endpoint s3 ls >/dev/null 2>&1; do sleep 2; done
+
+        aws $$endpoint s3api create-bucket --bucket "$$BUCKET" || true
+        aws $$endpoint s3api put-bucket-policy --bucket "$$BUCKET" --policy "{
+          \"Version\": \"2012-10-17\",
+          \"Statement\": [{
+            \"Sid\": \"PublicRead\",
+            \"Effect\": \"Allow\",
+            \"Principal\": { \"AWS\": [\"*\"] },
+            \"Action\": [\"s3:GetObject\"],
+            \"Resource\": [\"arn:aws:s3:::$$BUCKET/*\"]
+          }]
+        }"
+        echo "storage ready: $$BUCKET is public-read"
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: zcms-mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  # ---------------------------------------------------------------------------
+  # plugin-runtime — the only service that executes code we did not write.
+  #
+  # The V8 isolate is the first boundary and it is a real one. This container is
+  # the second, and it exists because "the sandbox is unbreakable" is a claim no
+  # one should stake a platform on. Every setting below assumes the isolate has
+  # already been defeated and asks: what can the attacker do now?
+  #
+  #   read_only          — nothing to write, so nothing to persist or backdoor
+  #   cap_drop: ALL      — no raw sockets, no ptrace, no mount
+  #   no-new-privileges  — no setuid escalation
+  #   non-root user      — nothing owned to tamper with
+  #   plugins mounted ro — a plugin cannot rewrite its own bundle or another's
+  #   no DB/S3 env vars  — the credentials simply are not in this process
+  #   cpu/mem limits     — a mining plugin degrades itself, not the platform
+  #
+  # In production this belongs on its own node pool with egress restricted to
+  # cms-api only. A plugin has no legitimate reason to reach the internet.
+  # ---------------------------------------------------------------------------
+  plugin-runtime:
+    profiles: ["full"]
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/plugin-runtime.Dockerfile
+    container_name: zcms-plugin-runtime
+    restart: unless-stopped
+    user: "node"
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid,nodev
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    environment:
+      NODE_ENV: production
+      PLUGIN_RUNTIME_PORT: "4200"
+      PLUGIN_DIR: /plugins
+      # The key the built-in plugins are verified against, pinned in the process
+      # that runs them. The volume below is read-only, but read-only is not the
+      # same as trustworthy: a bad image layer or a compromised build still puts
+      # bytes in /plugins. Without this key the runtime refuses to run them, which
+      # is why it is `:?` and not a default.
+      FIRST_PARTY_PUBLIC_KEY: ${FIRST_PARTY_PUBLIC_KEY:?set FIRST_PARTY_PUBLIC_KEY — built-in plugins are verified against it}
+      # Deliberately absent: DATABASE_URL, APP_DATABASE_URL, REDIS_URL, S3_*.
+      # This service must not be able to reach them even if it wanted to.
+      CMS_API_URL: http://host.docker.internal:4100
+      CMS_INTERNAL_TOKEN: ${CMS_INTERNAL_TOKEN}
+    volumes:
+      - ../../plugins:/plugins:ro
+    ports:
+      - "4200:4200"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+
+volumes:
+  postgres-data:
+  redis-data:
+  rustfs-data:

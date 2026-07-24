@@ -1,0 +1,23 @@
+{
+  "nav": {
+    "primary": "Primary menu",
+    "footer": "Footer menu"
+  },
+  "archive": {
+    "empty": "No posts yet.",
+    "previous": "Previous",
+    "next": "Next",
+    "pageOf": "Page {page}/{total}"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "This address does not exist, or it has been taken down.",
+    "backHome": "Back to home"
+  },
+  "error": {
+    "title": "Something went wrong",
+    "description": "This page could not be rendered right now.",
+    "backHome": "Back to home",
+    "reference": "Reference"
+  }
+}

@@ -1,0 +1,305 @@
+/*
+ * The one stylesheet every drawn theme ships.
+ *
+ * Plain CSS, on purpose. Tailwind never sees a downloaded theme's classes — the
+ * runtime's build scanned its own source, not a package fetched at request time —
+ * so a theme that expected to be scanned arrives unstyled. This file carries all
+ * the CSS the widgets need, and the code generator copies it into the package's
+ * dist/theme.css.
+ *
+ * It is static: it knows nothing about any particular drawing. Everything an author
+ * chose arrives as a CSS variable (see tokens.ts) or an inline style from the node's
+ * own props, so ONE reviewed stylesheet serves every theme anyone ever draws.
+ *
+ * Every var() carries a fallback, so a document that sets no tokens still renders a
+ * legible page rather than an unstyled one.
+ */
+
+.zw-root {
+  color: var(--zw-color-text, #18181b);
+  background: var(--zw-color-background, transparent);
+  font-family: var(--zw-font-body, system-ui, -apple-system, "Segoe UI", sans-serif);
+  line-height: 1.6;
+}
+
+/* --- Containers ---------------------------------------------------------- */
+
+.zw-section {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.zw-section-inner {
+  margin-inline: auto;
+  padding-inline: 20px;
+  box-sizing: border-box;
+}
+
+.zw-section-inner.zw-width-contained {
+  max-width: var(--zw-max-width, 1120px);
+}
+
+.zw-section-inner.zw-width-full {
+  max-width: none;
+  padding-inline: 0;
+}
+
+.zw-row {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.zw-row-start {
+  align-items: flex-start;
+}
+.zw-row-center {
+  align-items: center;
+}
+.zw-row-stretch {
+  align-items: stretch;
+}
+
+/*
+ * A column occupies `--zw-span` of twelve. `calc` turns the span into a percentage
+ * basis; `min-width: 0` is the standard fix for a flex child refusing to shrink
+ * below its content (a long unbroken word would otherwise blow the row wider than
+ * the page).
+ */
+.zw-column {
+  flex: 0 1 calc((var(--zw-span, 12) / 12) * 100%);
+  max-width: calc((var(--zw-span, 12) / 12) * 100%);
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/*
+ * Below the breakpoint every column is full width.
+ *
+ * `span` is a desktop instruction. A phone asked to honour "2 of 12" renders a
+ * 50px-wide column of broken words — so the narrow screen simply does not ask.
+ * This is why the editor's responsive toggle needs no per-breakpoint span: the
+ * stacking is a property of the grid, not a thing each author re-decides.
+ */
+@media (max-width: 767px) {
+  .zw-column {
+    flex-basis: 100%;
+    max-width: 100%;
+  }
+}
+
+/* --- Alignment ----------------------------------------------------------- */
+
+.zw-align-left {
+  text-align: left;
+}
+.zw-align-center {
+  text-align: center;
+}
+.zw-align-right {
+  text-align: right;
+}
+
+.zw-button-wrap.zw-align-center {
+  display: flex;
+  justify-content: center;
+}
+.zw-button-wrap.zw-align-right {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* --- Text ---------------------------------------------------------------- */
+
+.zw-heading,
+.zw-post-title {
+  font-family: var(--zw-font-heading, var(--zw-font-body, system-ui, sans-serif));
+  line-height: 1.2;
+  margin: 0 0 0.5em;
+  text-wrap: balance;
+}
+
+.zw-richtext > :first-child {
+  margin-top: 0;
+}
+.zw-richtext > :last-child {
+  margin-bottom: 0;
+}
+
+.zw-richtext a {
+  color: var(--zw-color-primary, #fa5600);
+}
+
+.zw-richtext img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* --- Button -------------------------------------------------------------- */
+
+.zw-button {
+  display: inline-block;
+  padding: 0.7em 1.4em;
+  border-radius: var(--zw-radius, 8px);
+  text-decoration: none;
+  font-weight: 600;
+  line-height: 1.2;
+  transition: opacity 0.15s ease;
+}
+
+.zw-button:hover {
+  opacity: 0.85;
+}
+
+.zw-button-primary {
+  background: var(--zw-color-primary, #fa5600);
+  color: #fff;
+}
+
+.zw-button-secondary {
+  background: transparent;
+  color: var(--zw-color-primary, #fa5600);
+  border: 1px solid currentColor;
+}
+
+.zw-button-link {
+  background: transparent;
+  color: var(--zw-color-primary, #fa5600);
+  padding: 0;
+  text-decoration: underline;
+}
+
+/* --- Media --------------------------------------------------------------- */
+
+.zw-image {
+  margin: 0;
+}
+
+.zw-image img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--zw-radius, 8px);
+}
+
+.zw-image.zw-width-full img,
+.zw-image.zw-width-wide img {
+  width: 100%;
+}
+
+.zw-image.zw-width-full img {
+  border-radius: 0;
+}
+
+.zw-caption {
+  margin-top: 0.5em;
+  font-size: 0.875em;
+  opacity: 0.7;
+}
+
+.zw-logo {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+}
+
+.zw-logo img {
+  display: block;
+  width: auto;
+}
+
+.zw-logo-text {
+  font-family: var(--zw-font-heading, var(--zw-font-body, system-ui, sans-serif));
+  font-weight: 700;
+  font-size: 1.25rem;
+}
+
+/* --- Menu ---------------------------------------------------------------- */
+
+.zw-menu-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 1.25rem;
+}
+
+.zw-menu-horizontal > .zw-menu-list {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.zw-menu-vertical > .zw-menu-list {
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.zw-menu-item a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.zw-menu-item a:hover {
+  color: var(--zw-color-primary, #fa5600);
+}
+
+/* A submenu is a nested list; it stacks rather than trying to be a flyout, which
+   would need JavaScript a server-rendered theme does not ship. */
+.zw-menu-item .zw-menu-list {
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+  padding-left: 0.75rem;
+  font-size: 0.9em;
+}
+
+/* --- Post list ----------------------------------------------------------- */
+
+.zw-post-list-heading {
+  font-family: var(--zw-font-heading, var(--zw-font-body, system-ui, sans-serif));
+  margin: 0 0 1rem;
+}
+
+.zw-post-list-items {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.zw-post-list-list .zw-post-list-items {
+  grid-template-columns: 1fr;
+}
+
+.zw-post-list-grid .zw-post-list-items {
+  /* auto-fit rather than a fixed count: the grid adapts to whatever width the
+     column it landed in turned out to have, with no breakpoint to maintain. */
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.zw-post-card-link {
+  font-family: var(--zw-font-heading, var(--zw-font-body, system-ui, sans-serif));
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: inherit;
+  text-decoration: none;
+}
+
+.zw-post-card-link:hover {
+  color: var(--zw-color-primary, #fa5600);
+}
+
+.zw-post-card-excerpt {
+  margin: 0.4em 0 0;
+  opacity: 0.75;
+}
+
+.zw-post-list-empty {
+  opacity: 0.6;
+  font-style: italic;
+}
+
+/* --- Misc ---------------------------------------------------------------- */
+
+.zw-spacer {
+  width: 100%;
+}

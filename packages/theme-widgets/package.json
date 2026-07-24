@@ -1,0 +1,58 @@
+{
+  "name": "@zcmsorg/theme-widgets",
+  "version": "0.1.0",
+  "description": "The shared, pre-reviewed widget library a GUI-drawn Z-CMS theme renders with. One LayoutDocument in, server-rendered HTML out.",
+  "license": "MIT",
+  "author": "Z-SOFT Co., Ltd. <support@z-cms.org> (https://z-cms.org)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zscontributor/z-cms.git",
+    "directory": "packages/theme-widgets"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "default": "./dist/index.js"
+    },
+    "./widgets.css": "./src/widgets.css"
+  },
+  "files": [
+    "dist",
+    "src/widgets.css",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && tsc -p tsconfig.build.esm.json && node scripts/esm-package.mjs",
+    "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@zcmsorg/schemas": "workspace:*",
+    "@zcmsorg/theme-sdk": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.17",
+    "@vitest/coverage-v8": "4.1.10",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "typescript": "5.9.3",
+    "vitest": "4.1.10"
+  },
+  "homepage": "https://z-cms.org",
+  "bugs": {
+    "url": "https://github.com/zscontributor/z-cms/issues"
+  }
+}

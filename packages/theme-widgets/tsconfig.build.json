@@ -1,0 +1,16 @@
+{
+  // CJS half of the dual build — see theme-sdk/tsconfig.build.json for the full
+  // reasoning. cms-api and both Next apps consume CJS; the ESM half exists so a
+  // theme bundled with React external can find static imports.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "noEmit": false,
+    "declaration": true,
+    "rootDir": "./src",
+    "outDir": "./dist"
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts", "src/**/*.test.tsx"]
+}

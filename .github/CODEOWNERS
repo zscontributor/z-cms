@@ -1,0 +1,38 @@
+# Review is required from an owner before merge. The point is not gatekeeping for
+# its own sake — it is that some directories, if they go wrong, go wrong for every
+# site on every instance at once.
+
+# Default: any change gets a maintainer's eyes.
+*                               @zscontributor
+
+# The security boundaries. Nothing here merges without a security review, because a
+# mistake in one of these four places is not a bug in one feature — it is an
+# exposure of every tenant, or the execution of untrusted code with our privileges.
+/packages/database/prisma/      @zscontributor   # RLS policies and the tenant schema
+/packages/package/              @zscontributor   # signing, verification, revocation
+/packages/scanner/              @zscontributor   # what we refuse to publish
+/apps/plugin-runtime/           @zscontributor   # the V8 isolate
+/apps/cms-api/src/auth/         @zscontributor   # sessions, tokens, 2FA
+/apps/cms-api/src/common/       @zscontributor   # tenancy interceptor, guards, secret box
+/apps/cms-api/src/plugins/      @zscontributor   # the gateway plugins call back into
+/SECURITY.md                    @zscontributor
+/docs/security.md               @zscontributor
+
+# Supply chain: a dependency bump and a CI change are both ways to run new code on
+# our runners and in our images.
+/.github/workflows/             @zscontributor
+/.gitleaks.toml                 @zscontributor
+/lefthook.yml                   @zscontributor
+/infrastructure/                @zscontributor
+/pnpm-lock.yaml                 @zscontributor
+
+# The published SDK surfaces. Breaking these breaks other people's packages, which
+# is not something a release can take back.
+/packages/plugin-sdk/           @zscontributor
+/packages/theme-sdk/            @zscontributor
+/packages/schemas/              @zscontributor
+
+# Translations are the most welcoming contribution in the project. Keep the review
+# path short.
+/packages/i18n/src/locales/     @zscontributor
+/themes/*/src/locales/          @zscontributor

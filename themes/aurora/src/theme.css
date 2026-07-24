@@ -1,0 +1,296 @@
+/*
+ * Aurora ships its own CSS, scoped under .aurora.
+ *
+ * Scoping matters: this stylesheet is injected into a page that already carries
+ * site-runtime's own styles. Bare element selectors would leak out and restyle
+ * anything the host renders around the theme.
+ */
+
+.aurora {
+  --bg: #0b0b12;
+  --surface: #14141f;
+  --border: #262635;
+  --text: #e9e9f2;
+  --muted: #9a9ab0;
+  --accent: #7c5cff;
+
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+.aurora *,
+.aurora *::before,
+.aurora *::after {
+  box-sizing: border-box;
+}
+
+.aurora a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.aurora__wrap {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* Header ------------------------------------------------------------------ */
+
+.aurora__header {
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(12px);
+  z-index: 10;
+}
+
+.aurora__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px 0;
+}
+
+.aurora__brand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.aurora__brand-logo {
+  display: block;
+  height: 30px;
+  width: auto;
+  max-width: 220px;
+  object-fit: contain;
+}
+
+.aurora__brand-name {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.aurora__brand-name em {
+  font-style: normal;
+  color: var(--accent);
+}
+
+.aurora__tagline {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.aurora__nav {
+  display: flex;
+  gap: 22px;
+  font-size: 14px;
+  color: var(--muted);
+  flex-wrap: wrap;
+}
+
+.aurora__nav a:hover,
+.aurora__nav a:focus-visible {
+  color: var(--text);
+}
+
+/* Content ----------------------------------------------------------------- */
+
+.aurora__main {
+  padding: 64px 0 96px;
+}
+
+.aurora__eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+
+.aurora__title {
+  font-size: clamp(30px, 5vw, 46px);
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+  font-weight: 700;
+  margin: 0 0 16px;
+}
+
+.aurora__lede {
+  font-size: 18px;
+  color: var(--muted);
+  margin: 0 0 40px;
+}
+
+.aurora__prose {
+  font-size: 17px;
+}
+
+.aurora__prose p {
+  margin: 0 0 20px;
+}
+
+.aurora__prose strong {
+  color: #fff;
+}
+
+.aurora__rule {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 48px 0;
+}
+
+/* Hero block -------------------------------------------------------------- */
+
+.aurora__hero {
+  padding: 32px 0 8px;
+}
+
+.aurora__cta {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 11px 20px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.aurora__cta:hover {
+  filter: brightness(1.12);
+}
+
+/* Features ---------------------------------------------------------------- */
+
+.aurora__features {
+  margin: 40px 0;
+}
+
+.aurora__features h2 {
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 20px;
+  font-weight: 600;
+}
+
+.aurora__feature {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 16px;
+  padding: 18px 0;
+  border-top: 1px solid var(--border);
+}
+
+.aurora__feature-num {
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  padding-top: 3px;
+}
+
+.aurora__feature h3 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.aurora__feature p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+/* Archive ----------------------------------------------------------------- */
+
+.aurora__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.aurora__item {
+  padding: 26px 0;
+  border-top: 1px solid var(--border);
+}
+
+.aurora__item h2 {
+  margin: 0 0 6px;
+  font-size: 21px;
+  letter-spacing: -0.02em;
+}
+
+.aurora__item h2 a:hover {
+  color: var(--accent);
+}
+
+.aurora__item p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.aurora__meta {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Media ------------------------------------------------------------------- */
+
+.aurora__figure {
+  margin: 32px 0;
+}
+
+.aurora__figure img {
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.aurora__figure figcaption {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* Footer ------------------------------------------------------------------ */
+
+.aurora__footer {
+  border-top: 1px solid var(--border);
+  padding: 32px 0;
+  color: var(--muted);
+  font-size: 13px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.aurora :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+@media (max-width: 640px) {
+  .aurora__bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .aurora__main {
+    padding: 40px 0 64px;
+  }
+}

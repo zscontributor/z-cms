@@ -1,0 +1,23 @@
+{
+  "nav": {
+    "primary": "メインメニュー",
+    "footer": "フッターメニュー"
+  },
+  "archive": {
+    "empty": "まだ投稿はありません。",
+    "previous": "前の",
+    "next": "次",
+    "pageOf": "ページ {page}/{total}"
+  },
+  "notFound": {
+    "title": "ページが見つかりません",
+    "description": "このアドレスは存在しないか、削除されています。",
+    "backHome": "家に戻る"
+  },
+  "error": {
+    "title": "何か問題が発生しました",
+    "description": "このページは現在レンダリングできません。",
+    "backHome": "家に戻る",
+    "reference": "参照"
+  }
+}

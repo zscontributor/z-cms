@@ -1,0 +1,88 @@
+{
+  "layout": {
+    "skipToContent": "Bỏ qua, tới nội dung chính",
+    "backToTop": "Lên đầu trang"
+  },
+  "colorMode": {
+    "toggle": "Chuyển giữa chế độ sáng và tối"
+  },
+  "language": {
+    "switch": "Đổi ngôn ngữ"
+  },
+  "breaking": {
+    "label": "Tin nóng"
+  },
+  "dateline": {
+    "edition": "Bản điện tử",
+    "price": "Đọc miễn phí"
+  },
+  "nav": {
+    "primary": "Chuyên mục",
+    "news": "Tin tức",
+    "about": "Về tòa soạn"
+  },
+  "search": {
+    "label": "Tìm kiếm",
+    "placeholder": "Tìm trong kho bài viết",
+    "submit": "Tìm"
+  },
+  "common": {
+    "seeAll": "Xem tất cả"
+  },
+  "front": {
+    "label": "Trang nhất hôm nay",
+    "caption": "Minh họa được đặt riêng cho bài này. Ảnh chụp, nếu có, đều được ghi nguồn tại chỗ."
+  },
+  "latest": {
+    "title": "Mới nhất",
+    "empty": "Chưa có bài nào được xuất bản. Viết một bài trong trang quản trị là nó lên trang nhất."
+  },
+  "mostRead": {
+    "title": "Đọc nhiều nhất",
+    "noteKicker": "Thư tòa soạn",
+    "note": "Hoạt động đưa tin của chúng tôi do bạn đọc nuôi, không phải do nhà quảng cáo. Không một thứ gì trên trang này được đặt ở đây bởi người trả tiền."
+  },
+  "newsletter": {
+    "kicker": "Bản tin buổi sáng",
+    "title": "Tin của cả ngày, có trong hộp thư trước tám giờ.",
+    "copy": "Mỗi ngày làm việc một email: chuyện gì đã xảy ra, nó có nghĩa gì, và chúng tôi đang theo đuổi điều gì. Không quảng cáo, không pixel theo dõi.",
+    "label": "Địa chỉ email",
+    "placeholder": "ban@vidu.com",
+    "submit": "Đăng ký",
+    "note": "Mỗi ngày một email, và bạn có thể hủy chỉ bằng một cú nhấp."
+  },
+  "footer": {
+    "sections": "Chuyên mục",
+    "about": "Tòa soạn",
+    "follow": "Theo dõi",
+    "newsletter": "Bản tin"
+  },
+  "post": {
+    "kicker": "Bài viết",
+    "byline": "{author}",
+    "bylineStaff": "Nhóm phóng viên",
+    "readingTime": "Đọc {minutes} phút",
+    "moreFrom": "Thêm bài trong chuyên mục này",
+    "allNews": "Tất cả tin tức"
+  },
+  "archive": {
+    "eyebrow": "Chuyên mục",
+    "empty": "Chuyên mục này chưa có bài nào được xuất bản.",
+    "previous": "Bài mới hơn",
+    "next": "Bài cũ hơn",
+    "pageOf": "Trang {page} / {total}",
+    "pagination": "Phân trang"
+  },
+  "notFound": {
+    "title": "Trang này không có trên mặt báo",
+    "description": "Có thể liên kết đã cũ, hoặc bài viết đã được chuyển đi hay gỡ xuống.",
+    "backHome": "Về trang nhất",
+    "browseNews": "Xem tin mới nhất"
+  },
+  "error": {
+    "title": "Máy in đã dừng",
+    "description": "Không thể hiển thị trang này. Sự cố đã được ghi nhận và chúng tôi đang xử lý.",
+    "backHome": "Về trang nhất",
+    "reference": "Mã tham chiếu"
+  }
+}

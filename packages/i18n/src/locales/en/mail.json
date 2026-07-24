@@ -1,0 +1,63 @@
+{
+  "metaTitle": "Mail settings",
+  "title": "Mail",
+  "description": "The SMTP server this site sends through. Invitations, notifications, and anything a plugin you have granted \"mail:send\" asks to send, all leave from here.",
+  "denied": "You do not have permission to see this site's mail settings.",
+  "readOnly": "You can see this configuration but not change it. That needs the settings:update permission.",
+  "test": {
+    "subject": "Z-CMS test email",
+    "body": "This is a test email from Z-CMS. If you are reading it, this site's mail settings work."
+  },
+  "server": {
+    "legend": "Mail server",
+    "hint": "Your mail provider gives you these four. Port 587 with STARTTLS is the common case; 465 needs \"implicit TLS\" switched on."
+  },
+  "sender": {
+    "legend": "Sender",
+    "hint": "Who the mail comes from. Plugins cannot change this — it is what stops a plugin sending as anyone it likes on your domain."
+  },
+  "fields": {
+    "enabled": "Send email from this site",
+    "enabledHint": "Off keeps everything below saved, and refuses every send. The switch to reach for when mail is going somewhere it should not.",
+    "host": "SMTP host",
+    "port": "Port",
+    "secure": "Implicit TLS (SMTPS)",
+    "secureHint": "On for port 465. Off does not mean plaintext — the connection still upgrades with STARTTLS when the server offers it.",
+    "username": "Username",
+    "password": "Password",
+    "passwordSet": "A password is stored. Leave this blank to keep it, or type a new one to replace it.",
+    "passwordUnset": "No password stored. Leave blank if your server does not need one.",
+    "passwordClear": "Clear the stored password",
+    "fromName": "From name",
+    "fromEmail": "From address",
+    "replyTo": "Reply-to address",
+    "replyToHint": "Optional. Where replies go, when that is not the from address."
+  },
+  "fromEnv": {
+    "title": "Using SMTP_* from the environment",
+    "body": "Nothing has been saved for this site, so these values come from the environment — in development that is Mailpit, which captures mail instead of delivering it. Saving this form stores a configuration for the site and takes over from the environment."
+  },
+  "status": {
+    "never": "Never tested.",
+    "ok": "Last test succeeded {when}.",
+    "failed": "Last test failed {when}."
+  },
+  "actions": {
+    "save": "Save settings",
+    "saved": "Mail settings saved.",
+    "saveFailed": "Could not save the mail settings.",
+    "sendTest": "Send a test email",
+    "sending": "Sending…",
+    "testTo": "Send the test to",
+    "testSent": "Test email sent to {to}. If it does not arrive, check the recipient's spam folder before changing anything here.",
+    "testFailed": "The mail server refused it: {error}",
+    "testDenied": "You do not have permission to send email from this site.",
+    "saveFirst": "Save the settings before sending a test — the test uses what is stored, not what is on screen."
+  },
+  "plugins": {
+    "legend": "Plugins that can send mail",
+    "none": "No plugin on this site has been granted mail:send.",
+    "quota": "Plugins may send at most {limit} emails per hour from this site, in total. The CMS's own mail — invitations, password resets — is not counted against it.",
+    "manage": "Manage"
+  }
+}

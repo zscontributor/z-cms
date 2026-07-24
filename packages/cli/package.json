@@ -1,0 +1,57 @@
+{
+  "name": "@zcmsorg/cli",
+  "version": "0.1.0",
+  "description": "Scaffold, build and sign Z-CMS themes and plugins.",
+  "keywords": [
+    "z-cms",
+    "zcms",
+    "cms",
+    "plugin",
+    "theme",
+    "scaffold",
+    "package",
+    "signing"
+  ],
+  "license": "MIT",
+  "author": "Z-SOFT Co., Ltd. <support@z-cms.org> (https://z-cms.org)",
+  "homepage": "https://z-cms.org",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zscontributor/z-cms.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/zscontributor/z-cms/issues"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "zcms": "./dist/main.js"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc --noEmit",
+    "zcms": "tsx src/main.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "@vitest/coverage-v8": "4.1.10",
+    "@zcmsorg/package": "workspace:*",
+    "esbuild": "0.25.12",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3",
+    "vitest": "4.1.10"
+  }
+}

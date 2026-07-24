@@ -1,0 +1,166 @@
+{
+  "layout": {
+    "skipToContent": "Skip to content",
+    "backToTop": "Back to top"
+  },
+  "colorMode": {
+    "toggle": "Switch between dark and light mode"
+  },
+  "language": {
+    "switch": "Change language"
+  },
+  "topbar": {
+    "link": "Join the community"
+  },
+  "nav": {
+    "primary": "Primary",
+    "about": "About",
+    "features": "Features",
+    "ecosystem": "Ecosystem",
+    "developers": "Developers",
+    "community": "Community",
+    "blog": "Blog",
+    "docs": "Docs",
+    "github": "GitHub"
+  },
+  "search": {
+    "label": "Search",
+    "placeholder": "Search this site"
+  },
+  "hero": {
+    "title": {
+      "first": "Build the web,",
+      "second": "your way."
+    },
+    "copy": "Z-CMS is a next-generation open-source content platform. It pairs the friendly editing experience of a traditional CMS with a modern architecture built on Next.js, NestJS, PostgreSQL and Redis.",
+    "primary": "Get Z-CMS",
+    "secondary": "Read the docs"
+  },
+  "mock": {
+    "aria": "A preview of a website built with Z-CMS"
+  },
+  "trust": {
+    "label": "Built on a modern stack"
+  },
+  "about": {
+    "eyebrow": "Meet Z-CMS",
+    "title": "An open, flexible CMS, ready for the next generation of websites.",
+    "point1": {
+      "title": "Easy to use",
+      "copy": "A clear admin, a visual page builder, and a publishing workflow that suits editors and developers alike."
+    },
+    "point2": {
+      "title": "No theme limits",
+      "copy": "An independent Theme Engine to build, install, customise and share themes the way you already expect."
+    },
+    "point3": {
+      "title": "Extend with plugins",
+      "copy": "A Plugin SDK, a permission model and a marketplace let you extend Z-CMS safely, without patching the core."
+    },
+    "point4": {
+      "title": "Enterprise ready",
+      "copy": "Multi-tenancy, RBAC, audit logs, caching, job queues and a cloud-native deployment story."
+    }
+  },
+  "features": {
+    "eyebrow": "Powerful from day one",
+    "title": "Everything you need to publish better.",
+    "copy": "One platform to manage content, design the site and extend what it can do — without locking you into a single theme or a single vendor.",
+    "card1": {
+      "title": "Block Page Builder",
+      "copy": "Compose pages from blocks, store the structure as data, and render it fast on every device."
+    },
+    "card2": {
+      "title": "Theme Engine",
+      "copy": "Templates, layouts, block styles and a settings schema, packaged as an independent, signed theme."
+    },
+    "card3": {
+      "title": "Plugin SDK",
+      "copy": "Extend content types, APIs, admin screens, background jobs and front-end blocks through one standard SDK."
+    },
+    "card4": {
+      "title": "Headless API",
+      "copy": "Use Z-CMS as the content backend for a website, a mobile app, a kiosk or a SaaS product."
+    },
+    "card5": {
+      "title": "Developer Experience",
+      "copy": "TypeScript end to end, a CLI, local development, hot reload and a package-based architecture."
+    },
+    "card6": {
+      "title": "Secure by default",
+      "copy": "Signed packages, a sandboxed plugin runtime, row-level tenant isolation and a strict content security policy."
+    }
+  },
+  "ecosystem": {
+    "eyebrow": "Explore the ecosystem",
+    "title": "Start with a beautiful theme.",
+    "copy": "Themes and plugins built by Z-SOFT and the community, every one of them signed and verified. Install them straight from the CMS admin.",
+    "tabs": {
+      "themes": "Featured themes",
+      "plugins": "Popular plugins"
+    }
+  },
+  "latest": {
+    "eyebrow": "From the blog",
+    "title": "What we have been writing.",
+    "all": "All posts",
+    "empty": "No posts have been published yet. Write one in the admin and it appears here."
+  },
+  "market": {
+    "business": "Business",
+    "commerce": "Commerce",
+    "publishing": "Publishing",
+    "free": "Free",
+    "byZSoft": "By Z-SOFT"
+  },
+  "developers": {
+    "eyebrow": "Made for developers",
+    "title": "Extend with code. Keep the core intact.",
+    "copy": "A standard SDK lets you build themes and plugins as separate packages, test them on their own, and ship them through the Marketplace.",
+    "cta": "Read the developer docs"
+  },
+  "community": {
+    "eyebrow": "Built in the open",
+    "title": "Software gets better when we build it together.",
+    "copy": "Z-CMS is an open-source project for the developers, designers, content creators and businesses who want to own their platform.",
+    "github": "Read the source and the roadmap",
+    "docs": "Start building with Z-CMS",
+    "forum": "Ask, answer and discuss",
+    "contributeTitle": "Contribute",
+    "contribute": "Send code, docs and ideas"
+  },
+  "cta": {
+    "title": "Free to build. Free to extend.",
+    "button": "Get Z-CMS on GitHub"
+  },
+  "footer": {
+    "product": "Product",
+    "download": "Download",
+    "documentation": "Documentation",
+    "discussions": "Discussions",
+    "issues": "Issues",
+    "about": "About",
+    "license": "License"
+  },
+  "archive": {
+    "empty": "Nothing has been published here yet.",
+    "previous": "Previous",
+    "next": "Next",
+    "pageOf": "Page {page} of {total}"
+  },
+  "post": {
+    "backToPosts": "All posts",
+    "readingTime": "{minutes} min read"
+  },
+  "notFound": {
+    "title": "This page does not exist",
+    "description": "The link may be out of date, or the page may have been moved or unpublished.",
+    "backHome": "Back to the home page"
+  },
+  "error": {
+    "title": "Something went wrong",
+    "description": "The page could not be rendered. The problem has been logged and we are looking into it.",
+    "backHome": "Back to the home page",
+    "reference": "Reference"
+  }
+}

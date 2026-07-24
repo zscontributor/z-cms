@@ -1,0 +1,51 @@
+{
+  "name": "@zcmsorg/database",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "prisma generate && tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
+    "generate": "prisma generate",
+    "migrate": "prisma migrate deploy",
+    "migrate:dev": "prisma migrate dev",
+    "reset": "prisma migrate reset --force",
+    "seed": "tsx prisma/seed.ts",
+    "studio": "prisma studio",
+    "typecheck": "tsc --noEmit",
+    "verify:rls": "tsx prisma/verify-rls.ts",
+    "seed:plugins": "tsx prisma/seed-plugins.ts",
+    "seed:themes": "tsx prisma/seed-themes.ts",
+    "locales:enable": "tsx prisma/enable-locales.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@zcmsorg/package": "workspace:*",
+    "@prisma/adapter-pg": "7.8.0",
+    "@prisma/client": "7.8.0",
+    "pg": "8.16.3"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
+    "@types/pg": "8.15.6",
+    "bcryptjs": "^3.0.3",
+    "dotenv": "17.2.3",
+    "prisma": "7.8.0",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3",
+    "vitest": "4.1.10",
+    "@vitest/coverage-v8": "4.1.10"
+  }
+}

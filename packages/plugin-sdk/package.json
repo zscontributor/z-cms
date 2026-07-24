@@ -1,0 +1,49 @@
+{
+  "name": "@zcmsorg/plugin-sdk",
+  "version": "0.1.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
+    "typecheck": "tsc --noEmit",
+    "verify:tables": "tsx src/verify-tables.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@zcmsorg/schemas": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "tsx": "4.20.6",
+    "vitest": "4.1.10",
+    "@vitest/coverage-v8": "4.1.10"
+  },
+  "description": "The contract for writing a Z-CMS plugin: manifest, permissions, typed actions and filters.",
+  "license": "MIT",
+  "author": "Z-SOFT Co., Ltd. <support@z-cms.org> (https://z-cms.org)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zscontributor/z-cms.git",
+    "directory": "packages/plugin-sdk"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "homepage": "https://z-cms.org",
+  "bugs": {
+    "url": "https://github.com/zscontributor/z-cms/issues"
+  }
+}

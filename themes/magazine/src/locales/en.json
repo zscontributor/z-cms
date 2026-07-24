@@ -1,0 +1,88 @@
+{
+  "layout": {
+    "skipToContent": "Skip to content",
+    "backToTop": "Back to top"
+  },
+  "colorMode": {
+    "toggle": "Switch between dark and light mode"
+  },
+  "language": {
+    "switch": "Change language"
+  },
+  "breaking": {
+    "label": "Breaking"
+  },
+  "dateline": {
+    "edition": "Digital edition",
+    "price": "Free to read"
+  },
+  "nav": {
+    "primary": "Sections",
+    "news": "News",
+    "about": "About us"
+  },
+  "search": {
+    "label": "Search",
+    "placeholder": "Search the archive",
+    "submit": "Go"
+  },
+  "common": {
+    "seeAll": "See all"
+  },
+  "front": {
+    "label": "Today's front page",
+    "caption": "Illustration commissioned for this story. Photographs are credited where they appear."
+  },
+  "latest": {
+    "title": "Latest",
+    "empty": "Nothing has been published yet. Write a story in the admin and it leads the front page."
+  },
+  "mostRead": {
+    "title": "Most read",
+    "noteKicker": "From the editor",
+    "note": "Our reporting is funded by readers, not by advertisers. Nothing on this page was placed here by anyone who paid for it."
+  },
+  "newsletter": {
+    "kicker": "The morning edition",
+    "title": "The day's reporting, in your inbox before eight.",
+    "copy": "One email each weekday: what happened, what it means, and what we are still working on. No advertising, and no tracking pixels.",
+    "label": "Email address",
+    "placeholder": "you@example.com",
+    "submit": "Subscribe",
+    "note": "We send one email a day and you can leave with one click."
+  },
+  "footer": {
+    "sections": "Sections",
+    "about": "The paper",
+    "follow": "Follow",
+    "newsletter": "Newsletter"
+  },
+  "post": {
+    "kicker": "Report",
+    "byline": "By {author}",
+    "bylineStaff": "By our staff",
+    "readingTime": "{minutes} min read",
+    "moreFrom": "More from this section",
+    "allNews": "All news"
+  },
+  "archive": {
+    "eyebrow": "Section",
+    "empty": "Nothing has been published in this section yet.",
+    "previous": "Newer stories",
+    "next": "Older stories",
+    "pageOf": "Page {page} of {total}",
+    "pagination": "Pagination"
+  },
+  "notFound": {
+    "title": "This page is not in print",
+    "description": "The link may be out of date, or the story may have been moved or withdrawn.",
+    "backHome": "Back to the front page",
+    "browseNews": "Browse the latest news"
+  },
+  "error": {
+    "title": "The presses have stopped",
+    "description": "This page could not be rendered. The problem has been logged and we are looking into it.",
+    "backHome": "Back to the front page",
+    "reference": "Reference"
+  }
+}

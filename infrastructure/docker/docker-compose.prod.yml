@@ -1,0 +1,386 @@
+name: z-cms-prod
+
+# Production stack. Same file builds locally (`docker compose -f … build`) or runs
+# prebuilt images pulled from GHCR — every service carries both `image:` and
+# `build:`. Pick with IMAGE_TAG (a git SHA or release tag); it defaults to latest.
+#
+# Config comes from the repo-root .env (env_file). The service-to-service URLs
+# below are set per service and OVERRIDE any localhost values in that .env, so the
+# containers talk over the compose network, not 127.0.0.1. Rotate every secret in
+# .env before this is exposed to anything — see .env.example and docs/security.md.
+#
+#   CMS_INTERNAL_TOKEN=<same value as in .env> \
+#     docker compose -f infrastructure/docker/docker-compose.prod.yml up -d
+#
+# plugin-runtime deliberately does NOT read .env (it must hold no DB/S3
+# credentials), so the one secret it shares with the API — CMS_INTERNAL_TOKEN —
+# is passed by interpolation and must be present in the deploy environment.
+# admin-web holds no credentials either, and needs exactly one public value —
+# S3_PUBLIC_URL, the origin its CSP must allow images from — so that too is
+# interpolated and must be present:
+#
+#   CMS_INTERNAL_TOKEN=… S3_PUBLIC_URL=… \
+#     docker compose -f infrastructure/docker/docker-compose.prod.yml up -d
+#
+# The migrate job runs to completion first; the app services wait on it.
+
+x-build: &build-context
+  context: ../..
+  dockerfile: infrastructure/docker/Dockerfile
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: zcms-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-zcms}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-zcms}
+      POSTGRES_DB: ${POSTGRES_DB:-zcms}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      # Creates the NOBYPASSRLS runtime role on first boot. Without it, verify:rls
+      # and tenant isolation break — see the SQL for why this is load-bearing.
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-zcms} -d ${POSTGRES_DB:-zcms}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    container_name: zcms-redis
+    restart: unless-stopped
+    # Password-protected so a process on the compose network that should not reach
+    # Redis (site-runtime, which runs third-party theme code) cannot read or poison
+    # the render cache. Has a dev default; set REDIS_PASSWORD for anything real.
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-zcms-redis}
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      # Must authenticate now that the server requires a password, or PING returns
+      # NOAUTH and the service never reports healthy.
+      test: ["CMD-SHELL", "redis-cli -a \"${REDIS_PASSWORD:-zcms-redis}\" ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # S3-compatible media storage. Swap for a managed provider (R2, S3) in a real
+  # deployment by dropping this service and pointing S3_* at the provider.
+  rustfs:
+    image: rustfs/rustfs:1.0.0-beta.8
+    container_name: zcms-rustfs
+    restart: unless-stopped
+    environment:
+      RUSTFS_VOLUMES: /data
+      RUSTFS_ADDRESS: 0.0.0.0:9000
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY:-zcms}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY:-zcms-secret}
+      RUSTFS_OBS_LOGGER_LEVEL: warn
+    volumes:
+      - rustfs-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # Creates the media bucket once and makes it public-read. Plain S3, so it works
+  # unchanged against any provider. Exits 0 when done.
+  storage-init:
+    image: amazon/aws-cli:latest
+    container_name: zcms-storage-init
+    restart: "no"
+    depends_on:
+      rustfs:
+        condition: service_healthy
+    environment:
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY:-zcms}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:-zcms-secret}
+      AWS_DEFAULT_REGION: ${S3_REGION:-us-east-1}
+      BUCKET: ${S3_BUCKET:-zcms-media}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        endpoint="--endpoint-url http://rustfs:9000"
+        until aws $$endpoint s3 ls >/dev/null 2>&1; do sleep 2; done
+        aws $$endpoint s3api create-bucket --bucket "$$BUCKET" || true
+        aws $$endpoint s3api put-bucket-policy --bucket "$$BUCKET" --policy "{
+          \"Version\": \"2012-10-17\",
+          \"Statement\": [{
+            \"Sid\": \"PublicRead\", \"Effect\": \"Allow\",
+            \"Principal\": { \"AWS\": [\"*\"] },
+            \"Action\": [\"s3:GetObject\"],
+            \"Resource\": [\"arn:aws:s3:::$$BUCKET/*\"]
+          }]
+        }"
+        echo "storage ready: $$BUCKET is public-read"
+
+  # One-shot: apply pending migrations and register the signed built-ins shipped by
+  # this image. App services wait for both to complete. Seeding the first admin/demo
+  # content remains a separate manual bootstrap step (see the Dockerfile stage).
+  migrate:
+    image: ghcr.io/zscontributor/z-cms-migrate:${IMAGE_TAG:-latest}
+    build:
+      <<: *build-context
+      target: migrate
+    container_name: zcms-migrate
+    restart: "no"
+    env_file: ../../.env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-zcms}:${POSTGRES_PASSWORD:-zcms}@postgres:5432/${POSTGRES_DB:-zcms}?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  cms-api:
+    image: ghcr.io/zscontributor/z-cms-cms-api:${IMAGE_TAG:-latest}
+    build:
+      <<: *build-context
+      target: cms-api
+    container_name: zcms-cms-api
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      NODE_ENV: production
+      CMS_API_PORT: "4100"
+      DATABASE_URL: postgresql://${POSTGRES_USER:-zcms}:${POSTGRES_PASSWORD:-zcms}@postgres:5432/${POSTGRES_DB:-zcms}?schema=public
+      APP_DATABASE_URL: postgresql://${APP_DB_USER:-zcms_app}:${APP_DB_PASSWORD:-zcms_app}@postgres:5432/${POSTGRES_DB:-zcms}?schema=public
+      REDIS_URL: redis://:${REDIS_PASSWORD:-zcms-redis}@redis:6379
+      S3_ENDPOINT: http://rustfs:9000
+      PLUGIN_RUNTIME_URL: http://plugin-runtime:4200
+      ADMIN_WEB_URL: ${ADMIN_WEB_URL:-http://localhost:3001}
+      SITE_RUNTIME_URL: ${SITE_RUNTIME_URL:-http://localhost:3000}
+      MARKETPLACE_URL: ${MARKETPLACE_URL:-https://marketplace.z-cms.org}
+      # Behind a real proxy this must be the exact hop count, not "true".
+      TRUST_PROXY: ${TRUST_PROXY:-1}
+      # Sideloading (install from file). All optional; blank = endpoints refuse uploads.
+      # OPERATOR_PUBLIC_KEY verifies uploads; OPERATOR_PRIVATE_KEY is set ONLY for the
+      # .zip path (cms-api signs) and makes a cms-api compromise code-exec in
+      # site-runtime — omit it to keep that boundary. ALLOW_THEME_SIDELOAD gates the
+      # unsandboxed theme case. See .env.example.
+      OPERATOR_PUBLIC_KEY: ${OPERATOR_PUBLIC_KEY:-}
+      OPERATOR_PRIVATE_KEY: ${OPERATOR_PRIVATE_KEY:-}
+      ALLOW_THEME_SIDELOAD: ${ALLOW_THEME_SIDELOAD:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:4100/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    ports:
+      - "${CMS_API_PORT:-4100}:4100"
+    # On BOTH networks, and it is the only service that is.
+    #
+    # `default` because cms-api genuinely needs the internet: it is the process that
+    # makes a plugin's outbound request on its behalf (PluginEgressService), after
+    # checking the host against the manifest and refusing every private address. It
+    # also talks to the marketplace.
+    #
+    # `zcms-sandbox` because that is the one door plugin-runtime has. The sandbox
+    # network has no route anywhere else, so cms-api is not merely the *preferred*
+    # way out for a plugin — it is the only one that exists.
+    networks:
+      - default
+      - zcms-sandbox
+
+  worker:
+    image: ghcr.io/zscontributor/z-cms-worker:${IMAGE_TAG:-latest}
+    build:
+      <<: *build-context
+      target: worker
+    container_name: zcms-worker
+    restart: unless-stopped
+    env_file: ../../.env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-zcms}:${POSTGRES_PASSWORD:-zcms}@postgres:5432/${POSTGRES_DB:-zcms}?schema=public
+      APP_DATABASE_URL: postgresql://${APP_DB_USER:-zcms_app}:${APP_DB_PASSWORD:-zcms_app}@postgres:5432/${POSTGRES_DB:-zcms}?schema=public
+      REDIS_URL: redis://:${REDIS_PASSWORD:-zcms-redis}@redis:6379
+      S3_ENDPOINT: http://rustfs:9000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  admin-web:
+    image: ghcr.io/zscontributor/z-cms-admin-web:${IMAGE_TAG:-latest}
+    build:
+      <<: *build-context
+      target: admin-web
+      args:
+        ADMIN_BASE_PATH: ${ADMIN_BASE_PATH:-/admin}
+    container_name: zcms-admin-web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3001"
+      # The admin talks to the API from the server side over the compose network.
+      CMS_API_URL: http://cms-api:4100
+      SITE_RUNTIME_URL: ${SITE_RUNTIME_URL:-http://localhost:3000}
+      # The admin lives under each public site's origin, e.g. https://z-cms.org/admin.
+      ADMIN_BASE_PATH: ${ADMIN_BASE_PATH:-/admin}
+      # The origin media is served from, for the admin's own img-src. Without it
+      # the CSP blocks every thumbnail in the media library.
+      S3_PUBLIC_URL: ${S3_PUBLIC_URL:?set S3_PUBLIC_URL in the environment}
+    depends_on:
+      cms-api:
+        condition: service_healthy
+    ports:
+      - "${ADMIN_WEB_PORT:-3001}:3001"
+
+  # Runs THIRD-PARTY marketplace THEME code in-process: Next.js imports theme
+  # bundles directly (`await import(file://…)`), so this process evaluates code we
+  # did not write — exactly like plugin-runtime, and hardened the same way.
+  #
+  # It therefore must NEVER read the repo .env: `env_file` injected all ~40 keys —
+  # DATABASE_URL (the RLS-bypassing owner role), JWT_SECRET, the *_ENCRYPTION_KEY
+  # values, S3_SECRET_KEY, REDIS_URL — into the one process a hostile theme can
+  # read with `process.env`. That turned "theme escape" into "full platform
+  # compromise". Only the handful of values it genuinely needs are passed by
+  # interpolation below; see the deliberately-absent list.
+  site-runtime:
+    image: ghcr.io/zscontributor/z-cms-site-runtime:${IMAGE_TAG:-latest}
+    build:
+      <<: *build-context
+      target: site-runtime
+    container_name: zcms-site-runtime
+    restart: unless-stopped
+    user: "node"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      # Verified theme bundles are unpacked here (THEME_CACHE_DIR), and Next's
+      # runtime cache needs a writable path — both must be tmpfs under read_only.
+      - /tmp:size=256m
+      - /app/apps/site-runtime/.next/cache:size=128m
+    environment:
+      NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=640
+      PORT: "3000"
+      CMS_API_URL: http://cms-api:4100
+      THEME_CACHE_DIR: /tmp/zcms-themes
+      # A theme renders in THIS process, unsandboxed. Built-in theme packages are
+      # shipped in the image, but image bytes are still not a trust boundary.
+      # Without this key site-runtime refuses to import them, which is why it is
+      # `:?` and not a default.
+      FIRST_PARTY_PUBLIC_KEY: ${FIRST_PARTY_PUBLIC_KEY:?set FIRST_PARTY_PUBLIC_KEY — built-in themes are verified against it}
+      # Browser-facing, non-secret values plus the one shared service token and the
+      # pinned public key the runtime verifies theme signatures against.
+      # Deliberately ABSENT (a theme must never read these): DATABASE_URL,
+      # APP_DATABASE_URL, JWT_SECRET, TOTP_ENCRYPTION_KEY, MAIL_ENCRYPTION_KEY,
+      # S3_ACCESS_KEY, S3_SECRET_KEY, REDIS_URL, SMTP_*, SEED_ADMIN_*.
+      CMS_API_PUBLIC_URL: ${CMS_API_PUBLIC_URL:-}
+      # A theme runs in this process today, so never give it the worker-wide token.
+      # This render token is accepted only by read-only render/package endpoints.
+      CMS_INTERNAL_TOKEN: ${SITE_RUNTIME_INTERNAL_TOKEN:?set a distinct SITE_RUNTIME_INTERNAL_TOKEN}
+      # Optional now, not `:?`. An air-gapped instance runs no marketplace, so it may
+      # have no key to pin; when empty, site-runtime simply refuses to load a
+      # marketplace theme (there are none) while built-ins and sideloads still work.
+      MARKETPLACE_PUBLIC_KEY: ${MARKETPLACE_PUBLIC_KEY:-}
+      # The pinned operator key for sideloaded themes — public half only; site-runtime
+      # verifies, never signs. Empty means no sideloaded theme loads. See .env.example.
+      OPERATOR_PUBLIC_KEY: ${OPERATOR_PUBLIC_KEY:-}
+      S3_PUBLIC_URL: ${S3_PUBLIC_URL:?set S3_PUBLIC_URL}
+    depends_on:
+      cms-api:
+        condition: service_healthy
+    ports:
+      - "${SITE_RUNTIME_PORT:-3000}:3000"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 768M
+          pids: 128
+
+  # The only service that runs untrusted marketplace code. Its own minimal,
+  # credential-free image, hardened the same way the dev stack hardens it: the
+  # V8 isolate is the first boundary, this container is the second. It is handed
+  # NO database, Redis or S3 env — those credentials are simply not in the process.
+  plugin-runtime:
+    image: ghcr.io/zscontributor/z-cms-plugin-runtime:${IMAGE_TAG:-latest}
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/plugin-runtime.Dockerfile
+    container_name: zcms-plugin-runtime
+    restart: unless-stopped
+    user: "node"
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid,nodev
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    environment:
+      NODE_ENV: production
+      PLUGIN_RUNTIME_PORT: "4200"
+      PLUGIN_DIR: /plugins
+      # The key the built-in plugins are verified against, pinned in the process
+      # that runs them. The volume below is read-only, but read-only is not the
+      # same as trustworthy: a bad image layer or a compromised build still puts
+      # bytes in /plugins. Without this key the runtime refuses to run them, which
+      # is why it is `:?` and not a default.
+      FIRST_PARTY_PUBLIC_KEY: ${FIRST_PARTY_PUBLIC_KEY:?set FIRST_PARTY_PUBLIC_KEY — built-in plugins are verified against it}
+      # The pinned operator key for sideloaded plugins — public half only. Empty means
+      # no sideloaded plugin loads. (A plugin is sandboxed regardless of origin.)
+      OPERATOR_PUBLIC_KEY: ${OPERATOR_PUBLIC_KEY:-}
+      CMS_API_URL: http://cms-api:4100
+      CMS_INTERNAL_TOKEN: ${CMS_INTERNAL_TOKEN:?set CMS_INTERNAL_TOKEN in the environment}
+    volumes:
+      - ../../plugins:/plugins:ro
+    # THE EGRESS LOCK.
+    #
+    # `zcms-sandbox` is declared `internal: true`, which means Docker gives it no
+    # gateway. There is no route off this host, for anything in this container, ever —
+    # not for a plugin, not for a shell, not for a process that escaped the isolate.
+    # The only thing reachable is cms-api, which sits on this network too.
+    #
+    # Everything above it is a policy; this is a boundary. The isolate denies a plugin
+    # any way to open a socket, and the gateway checks every outbound request against
+    # the hosts its manifest declared — but both of those live in software, and an
+    # isolated-vm escape sidesteps them by definition. What it cannot sidestep is a
+    # network with no default route.
+    #
+    # Concretely: this is what stops a plugin that gets out of the isolate from
+    # reading 169.254.169.254 and walking away with the instance's IAM credentials.
+    # Note it also means a plugin's legitimate `ctx.http.fetch` CANNOT go out from
+    # here — and it does not: cms-api makes that request, on the far side of the
+    # gateway, after checking the host. That was already true. This makes it enforced.
+    networks:
+      - zcms-sandbox
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+          pids: 128
+
+networks:
+  # The ordinary bridge every other service uses. Has a default route.
+  default:
+    driver: bridge
+  # No gateway, no route, no internet. plugin-runtime lives here alone with cms-api.
+  zcms-sandbox:
+    internal: true
+
+volumes:
+  postgres-data:
+  redis-data:
+  rustfs-data:

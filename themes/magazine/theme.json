@@ -1,0 +1,1129 @@
+{
+  "id": "vn.zsoft.theme.magazine",
+  "name": "Z Magazine",
+  "version": "1.2.0",
+  "kind": "theme",
+  "description": "An editorial theme for news sites, magazines and publications: a dateline bar, a serif masthead, a lead story with secondaries, a river of latest news, a most-read rail and an opinion strip. English, Japanese and Vietnamese, with dark and light modes.",
+  "author": {
+    "name": "Z-SOFT Co., Ltd.",
+    "url": "https://z-soft.com.vn"
+  },
+  "engine": ">=0.1.0",
+  "entry": "dist/index.mjs",
+  "styles": "dist/theme.css",
+  "templates": [
+    "home",
+    "page",
+    "post",
+    "archive",
+    "notFound",
+    "error"
+  ],
+  "optionalCapabilities": [
+    "ai.assistant"
+  ],
+  "integrationSlots": [
+    "floating"
+  ],
+  "menuLocations": [
+    {
+      "key": "primary",
+      "name": "Section menu"
+    },
+    {
+      "key": "footer",
+      "name": "Footer menu"
+    }
+  ],
+  "colorModes": {
+    "supports": [
+      "light",
+      "dark"
+    ],
+    "default": "system"
+  },
+  "collections": {
+    "latest": {
+      "contentType": "post",
+      "limit": 8,
+      "sort": "newest"
+    }
+  },
+  "media": {
+    "screenshots": [
+      "screenshots/1-home-light.png",
+      "screenshots/2-home-dark.png",
+      "screenshots/3-article.png"
+    ]
+  },
+  "seo": {
+    "titleTemplate": "%s | %site%",
+    "robots": {
+      "index": true,
+      "follow": true
+    },
+    "icons": {
+      "favicon": "assets/favicon.ico",
+      "icon": "assets/icon.png",
+      "appleTouchIcon": "assets/apple-touch-icon.png",
+      "themeColor": "#C0392B"
+    },
+    "organization": {
+      "name": "Z Magazine"
+    }
+  },
+  "settingsSchema": {
+    "type": "object",
+    "properties": {
+      "primaryColor": {
+        "type": "string",
+        "title": "Accent colour",
+        "description": "The colour of the kickers, the category labels and the breaking-news strip. Leave empty to use the site's brand colour.",
+        "format": "color",
+        "default": "#C0392B"
+      },
+      "siteTitle": {
+        "type": "string",
+        "title": "Masthead title",
+        "description": "The wordmark printed across the top of every page.",
+        "default": "The Z Review"
+      },
+      "logo": {
+        "type": "string",
+        "title": "Masthead logo",
+        "description": "Replaces the wordmark. Leave empty to set the title in the theme's serif.",
+        "format": "image",
+        "default": ""
+      },
+      "tagline": {
+        "type": "string",
+        "title": "Masthead line",
+        "description": "The small line under the wordmark.",
+        "default": "Independent reporting since 2026"
+      },
+      "metaDescription": {
+        "type": "string",
+        "title": "Meta description",
+        "description": "Used for pages that have no description of their own. Around 150–160 characters.",
+        "format": "textarea",
+        "default": "Independent reporting on the world, technology, business and culture — published daily, funded by readers."
+      },
+      "announcement": {
+        "type": "string",
+        "title": "Breaking-news strip",
+        "description": "The red strip above the dateline. Leave empty to hide it.",
+        "default": "Border talks resume after a summer of silence — live updates through the day."
+      },
+      "colorMode": {
+        "type": "string",
+        "title": "Default colour mode",
+        "description": "Where a first-time visitor starts. \"System\" follows their device. Either way, a visitor who uses the switch keeps their own choice.",
+        "enum": [
+          "system",
+          "light",
+          "dark"
+        ],
+        "default": "system"
+      },
+      "showSearch": {
+        "type": "boolean",
+        "title": "Show search box",
+        "default": true
+      },
+      "featuredCount": {
+        "type": "number",
+        "title": "Stories in the “Latest” river",
+        "description": "Between 3 and 6.",
+        "default": 6
+      },
+      "footerText": {
+        "type": "string",
+        "title": "Footer text",
+        "default": "© 2026 Z-SOFT Co., Ltd. All rights reserved."
+      },
+      "ogImage": {
+        "type": "string",
+        "title": "Social share image",
+        "description": "Shown when a story with no image of its own is shared.",
+        "format": "image",
+        "default": ""
+      },
+      "favicon": {
+        "type": "string",
+        "title": "Favicon",
+        "description": "Browser tab icon. An .ico, .png or .svg.",
+        "format": "image",
+        "default": ""
+      },
+      "twitterSite": {
+        "type": "string",
+        "title": "X / Twitter handle",
+        "description": "Including the @, e.g. @zsoft.",
+        "default": ""
+      },
+      "noindex": {
+        "type": "boolean",
+        "title": "Discourage search engines",
+        "description": "Turn on for a staging site. No individual story can override this.",
+        "default": false
+      },
+      "organizationName": {
+        "type": "string",
+        "title": "Publisher name",
+        "default": "Z-SOFT Co., Ltd."
+      },
+      "organizationUrl": {
+        "type": "string",
+        "title": "Publisher website",
+        "format": "url",
+        "default": "https://z-soft.com.vn"
+      },
+      "organizationLogo": {
+        "type": "string",
+        "title": "Publisher logo",
+        "description": "Used in search results. A square image reads best.",
+        "format": "image",
+        "default": ""
+      },
+      "socialProfiles": {
+        "type": "string",
+        "title": "Social profiles",
+        "description": "One URL per line. Listed in the footer, and confirms to search engines that these profiles are the same publisher.",
+        "format": "textarea",
+        "default": ""
+      }
+    }
+  },
+  "demo": {
+    "settings": {
+      "siteTitle": "The Z Review",
+      "tagline": "Independent reporting since 2026",
+      "announcement": "Border talks resume after a summer of silence — live updates through the day.",
+      "featuredCount": 6,
+      "showSearch": true
+    },
+    "contentTypes": [
+      {
+        "key": "page",
+        "name": "Page",
+        "pluralName": "Pages",
+        "routePrefix": "",
+        "hasBlocks": true,
+        "icon": "file-text",
+        "fields": []
+      },
+      {
+        "key": "post",
+        "name": "Story",
+        "pluralName": "News",
+        "routePrefix": "news",
+        "hasBlocks": true,
+        "icon": "newspaper",
+        "fields": [
+          {
+            "key": "readingTime",
+            "type": "number",
+            "label": "Reading time",
+            "required": false
+          },
+          {
+            "key": "category",
+            "type": "string",
+            "label": "Section",
+            "required": false
+          },
+          {
+            "key": "kicker",
+            "type": "string",
+            "label": "Kicker",
+            "required": false
+          }
+        ]
+      }
+    ],
+    "contents": [
+      {
+        "contentType": "page",
+        "locale": "en",
+        "slug": "",
+        "title": "The Z Review",
+        "translationGroup": "magazine-home",
+        "excerpt": "Independent reporting on the world, technology, business and culture.",
+        "seo": {
+          "title": "The Z Review — Independent reporting",
+          "description": "The world, technology, business and culture, reported daily and funded by readers."
+        },
+        "blocks": [
+          {
+            "id": "mag-home-en",
+            "type": "core/richtext",
+            "props": {
+              "html": "<h2>About this front page</h2><p>The <strong>Z Magazine</strong> theme draws the paper — the dateline, the masthead, the lead slot, the river of latest news and the most-read rail. It does not write it. Every story above this line is a post published in this CMS, newest first: file a story and it leads the front page.</p><p>Everything below the line is ordinary page content, edited in the CMS. Open <em>Content → Pages</em> and change this block; open <em>Appearance</em> and change the accent colour, the masthead line or the breaking-news strip.</p>"
+            }
+          },
+          {
+            "id": "mag-home-facts-en",
+            "type": "core/features",
+            "props": {
+              "heading": "How this paper is put together",
+              "subheading": "Three things worth knowing before you file your first story.",
+              "items": [
+                {
+                  "title": "Sections are menus",
+                  "body": "The row under the masthead is the Primary menu. Add a section in Appearance → Menus and it appears on every page."
+                },
+                {
+                  "title": "Kickers are fields",
+                  "body": "A story carries a Section and a Kicker. They set the coloured label above the headline, on the front page and on the article."
+                },
+                {
+                  "title": "No photographs required",
+                  "body": "Every image area is drawn in CSS, so the paper looks finished from the first day — before a single picture has been commissioned."
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "page",
+        "locale": "ja",
+        "slug": "",
+        "title": "ザ・Z・レビュー",
+        "translationGroup": "magazine-home",
+        "excerpt": "国際・テクノロジー・経済・文化を伝える、独立した報道。",
+        "seo": {
+          "title": "ザ・Z・レビュー — 独立した報道",
+          "description": "国際、テクノロジー、経済、文化を毎日お伝えします。運営は読者に支えられています。"
+        },
+        "blocks": [
+          {
+            "id": "mag-home-ja",
+            "type": "core/richtext",
+            "props": {
+              "html": "<h2>この一面について</h2><p><strong>Z Magazine</strong> テーマが描くのは「紙面」です——日付欄、題字、トップ記事の枠、最新ニュースの段組み、よく読まれている記事の欄。記事そのものを書くわけではありません。この行より上にある記事はすべて、この CMS で公開された投稿であり、新しい順に並びます。記事を出稿すれば、それが一面のトップになります。</p><p>この行より下は、CMS で編集する通常のページコンテンツです。<em>コンテンツ → ページ</em> でこのブロックを書き換え、<em>外観</em> でアクセントカラー、題字下の一行、速報バーを変更してみてください。</p>"
+            }
+          },
+          {
+            "id": "mag-home-facts-ja",
+            "type": "core/features",
+            "props": {
+              "heading": "この新聞の組み立てかた",
+              "subheading": "最初の記事を出稿する前に知っておきたい 3 つのこと。",
+              "items": [
+                {
+                  "title": "セクションはメニュー",
+                  "body": "題字の下の一列はプライマリメニューです。外観 → メニューでセクションを追加すれば、全ページに現れます。"
+                },
+                {
+                  "title": "キッカーはフィールド",
+                  "body": "記事はセクションとキッカーを持ちます。これが見出しの上の色付きラベルになります（一面でも記事ページでも）。"
+                },
+                {
+                  "title": "写真は不要",
+                  "body": "画像領域はすべて CSS で描かれています。写真を一枚も発注していない初日から、紙面は完成して見えます。"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "page",
+        "locale": "vi",
+        "slug": "",
+        "title": "The Z Review",
+        "translationGroup": "magazine-home",
+        "excerpt": "Đưa tin độc lập về thế giới, công nghệ, kinh doanh và văn hóa.",
+        "seo": {
+          "title": "The Z Review — Đưa tin độc lập",
+          "description": "Thế giới, công nghệ, kinh doanh và văn hóa, cập nhật hằng ngày và được bạn đọc nuôi dưỡng."
+        },
+        "blocks": [
+          {
+            "id": "mag-home-vi",
+            "type": "core/richtext",
+            "props": {
+              "html": "<h2>Về trang nhất này</h2><p>Theme <strong>Z Magazine</strong> vẽ ra tờ báo — thanh ngày tháng, măng-sét, ô bài chủ lực, dải tin mới nhất và cột đọc nhiều nhất. Nó không viết tờ báo. Mọi bài phía trên dòng này đều là bài đã xuất bản trong CMS, xếp theo thứ tự mới nhất trước: bạn gửi một bài, bài đó lên trang nhất.</p><p>Mọi thứ bên dưới dòng này là nội dung trang thông thường, biên tập trong CMS. Mở <em>Nội dung → Trang</em> để sửa block này; mở <em>Giao diện</em> để đổi màu nhấn, dòng chữ dưới măng-sét hay thanh tin nóng.</p>"
+            }
+          },
+          {
+            "id": "mag-home-facts-vi",
+            "type": "core/features",
+            "props": {
+              "heading": "Tờ báo này được lắp ráp thế nào",
+              "subheading": "Ba điều nên biết trước khi bạn gửi bài đầu tiên.",
+              "items": [
+                {
+                  "title": "Chuyên mục chính là menu",
+                  "body": "Hàng ngay dưới măng-sét là menu Primary. Thêm một chuyên mục ở Giao diện → Menu là nó xuất hiện trên mọi trang."
+                },
+                {
+                  "title": "Kicker là một field",
+                  "body": "Mỗi bài mang một Chuyên mục và một Kicker. Chúng tạo nên nhãn màu phía trên tiêu đề, cả ở trang nhất lẫn trong bài."
+                },
+                {
+                  "title": "Không cần ảnh chụp",
+                  "body": "Mọi khung ảnh đều được vẽ bằng CSS, nên tờ báo trông đã hoàn chỉnh từ ngày đầu — trước khi đặt bất kỳ tấm ảnh nào."
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "page",
+        "locale": "en",
+        "slug": "about",
+        "title": "The masthead",
+        "translationGroup": "magazine-about",
+        "excerpt": "Who we are, how we are funded, and what we will not do.",
+        "blocks": [
+          {
+            "id": "mag-about-en",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>The Z Review is an independent newsroom. We report on the world, on technology, on business and on culture, and we publish every weekday.</p><h2>How we are funded</h2><p>By readers. There is no advertising on this site, no sponsored content, and no arrangement under which anyone can pay to appear on the front page. When we are wrong we say so, at the top of the piece, in the same type size as the original claim.</p><blockquote>A newspaper that cannot be embarrassed by its own corrections column is not a newspaper.</blockquote><h2>Who we are</h2><p>Twelve reporters and four editors, working from Hanoi, Osaka, Lisbon and Leipzig. Our correspondents file in their own language and are edited in it — a story is translated after it is right, never before.</p><h2>Corrections</h2><p>Write to the editor. Every correction we make is logged, dated and kept: the archive is not quietly rewritten.</p>"
+            }
+          },
+          {
+            "id": "mag-about-cta-en",
+            "type": "core/cta",
+            "props": {
+              "heading": "Support the reporting",
+              "body": "No advertising, no paywall, no proprietor. Just readers.",
+              "ctaLabel": "Become a subscriber",
+              "ctaHref": "/newsletter"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "page",
+        "locale": "ja",
+        "slug": "about",
+        "title": "本紙について",
+        "translationGroup": "magazine-about",
+        "excerpt": "私たちが何者で、どう運営され、何をしないのか。",
+        "blocks": [
+          {
+            "id": "mag-about-ja",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>ザ・Z・レビューは独立した報道機関です。国際、テクノロジー、経済、文化を取材し、平日は毎日発行しています。</p><h2>運営資金について</h2><p>読者に支えられています。本紙に広告はなく、記事広告もなく、対価を払って一面に載る仕組みも存在しません。誤りがあれば記事の冒頭で、元の記述と同じ大きさの文字で訂正します。</p><blockquote>自紙の訂正欄に恥じ入ることのできない新聞は、新聞ではない。</blockquote><h2>私たちについて</h2><p>記者 12 名、編集者 4 名。ハノイ、大阪、リスボン、ライプツィヒから発信しています。特派員は自分の言語で書き、その言語のまま編集されます。翻訳は記事が正確になった後であり、その前ではありません。</p><h2>訂正</h2><p>編集部までご連絡ください。訂正はすべて記録し、日付を付けて保存します。アーカイブを黙って書き換えることはありません。</p>"
+            }
+          },
+          {
+            "id": "mag-about-cta-ja",
+            "type": "core/cta",
+            "props": {
+              "heading": "取材を支える",
+              "body": "広告なし、ペイウォールなし、オーナーなし。読者だけです。",
+              "ctaLabel": "購読する",
+              "ctaHref": "/newsletter"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "page",
+        "locale": "vi",
+        "slug": "ve-chung-toi",
+        "title": "Về tòa soạn",
+        "translationGroup": "magazine-about",
+        "excerpt": "Chúng tôi là ai, sống bằng gì, và sẽ không làm điều gì.",
+        "blocks": [
+          {
+            "id": "mag-about-vi",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>The Z Review là một tòa soạn độc lập. Chúng tôi đưa tin về thế giới, công nghệ, kinh doanh và văn hóa, xuất bản tất cả các ngày làm việc trong tuần.</p><h2>Chúng tôi sống bằng gì</h2><p>Bằng bạn đọc. Trang này không có quảng cáo, không có bài tài trợ, và không có thỏa thuận nào cho phép ai đó trả tiền để lên trang nhất. Khi sai, chúng tôi nói ngay đầu bài, bằng cỡ chữ đúng bằng cỡ chữ của khẳng định ban đầu.</p><blockquote>Một tờ báo không biết ngượng vì chính mục đính chính của mình thì không phải là một tờ báo.</blockquote><h2>Chúng tôi là ai</h2><p>Mười hai phóng viên và bốn biên tập viên, làm việc từ Hà Nội, Osaka, Lisbon và Leipzig. Phóng viên thường trú viết bằng tiếng mẹ đẻ và được biên tập bằng chính thứ tiếng đó — bài chỉ được dịch sau khi đã đúng, không bao giờ trước đó.</p><h2>Đính chính</h2><p>Hãy viết cho ban biên tập. Mọi đính chính đều được ghi lại, ghi ngày và giữ nguyên: kho lưu trữ không bị lặng lẽ viết lại.</p>"
+            }
+          },
+          {
+            "id": "mag-about-cta-vi",
+            "type": "core/cta",
+            "props": {
+              "heading": "Ủng hộ hoạt động đưa tin",
+              "body": "Không quảng cáo, không tường phí, không ông chủ. Chỉ có bạn đọc.",
+              "ctaLabel": "Đăng ký nhận bản tin",
+              "ctaHref": "/newsletter"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "en",
+        "slug": "the-quiet-cities-rebuilding-themselves",
+        "title": "The quiet cities rebuilding themselves around the people who stayed",
+        "translationGroup": "magazine-post-world",
+        "excerpt": "A decade after the factories closed, a dozen mid-sized towns bet everything on housing, transit and daylight. The results are beginning to show.",
+        "data": {
+          "readingTime": 9,
+          "category": "World",
+          "kicker": "The long read"
+        },
+        "blocks": [
+          {
+            "id": "mag-p1-en",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>Nobody left Leipzig in a hurry. The plant closed on a Friday in 2013, and the leaving took four years — a family at a time, a shop at a time, until the street that had fed two thousand shift workers had a butcher, a bar and a great deal of silence.</p><p>What happened next is the part the delegations come to see. The city did not chase a replacement employer. It spent the money on the street instead: on housing above the empty shops, on a tram that runs every seven minutes, on cutting three lanes of traffic down to one and giving the rest to anyone on foot.</p><h2>The arithmetic of staying</h2><p>The bet was that people do not leave a place because there is no work. They leave because there is no reason to stay, and work is only the most obvious of the reasons.</p><blockquote>We stopped asking what would bring people here, and started asking what would stop the ones already here from going.</blockquote><p>It is a distinction that sounds like semantics until you look at the numbers. The population fell for eleven consecutive years and has now risen for four. Nobody has opened a factory.</p><h2>What the capitals want to copy</h2><p>Delegations arrive most months, and the mayor has learned to disappoint them politely. There is no single policy to take home. There is a decade of small, boring, expensive decisions, each one of which was unpopular at the time and none of which would survive a single election cycle on its own.</p><p>The towns that copied one piece of it — the tram, usually — got a tram, and nothing else.</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "ja",
+        "slug": "the-quiet-cities-rebuilding-themselves",
+        "title": "工場が去っても残った人々が、静かに街をつくり直している",
+        "translationGroup": "magazine-post-world",
+        "excerpt": "工場の閉鎖から十年。十余りの中規模都市が、住宅・公共交通・日当たりにすべてを賭けた。その成果がいま見え始めている。",
+        "data": {
+          "readingTime": 9,
+          "category": "国際",
+          "kicker": "長編ルポ"
+        },
+        "blocks": [
+          {
+            "id": "mag-p1-ja",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>ライプツィヒから人が去るのは、急な出来事ではなかった。工場が閉じたのは 2013 年のある金曜日。しかし人が抜けていくのには四年かかった。一家族ずつ、一店舗ずつ。二千人の交替勤務者を養っていた通りに、最後に残ったのは肉屋が一軒、酒場が一軒、そして大量の沈黙だった。</p><p>視察団が見に来るのは、その後に起きたことだ。市は代わりの大企業を追いかけなかった。代わりに、その予算を通りに注ぎ込んだ。空き店舗の上に住宅を、七分間隔で走る路面電車を、三車線あった車道を一車線に減らし、残りを歩く人に明け渡すことに。</p><h2>「留まる」ことの算術</h2><p>賭けの前提はこうだった——人は仕事がないから土地を離れるのではない。留まる理由がないから離れるのであり、仕事はその理由のうち最も分かりやすい一つにすぎない。</p><blockquote>私たちは「何が人をここへ連れてくるか」を問うのをやめ、「何がここにいる人を引き止めるか」を問い始めた。</blockquote><p>言葉遊びのように聞こえるが、数字を見れば話は変わる。人口は十一年連続で減り続け、いまは四年連続で増えている。工場は一つも建っていない。</p><h2>首都が真似したがるもの</h2><p>視察団はほぼ毎月訪れ、市長は丁重に失望させる術を身につけた。持ち帰れる単一の政策などない。あるのは、小さく、退屈で、費用のかかる決定を十年積み上げた記録だ。そのどれもが当時は不人気で、どれ一つとして単独では一回の選挙を生き延びられなかった。</p><p>その一部だけ——たいていは路面電車だけ——を真似た街は、路面電車を手に入れた。それだけだった。</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "vi",
+        "slug": "nhung-thanh-pho-lang-le-dung-lai-minh",
+        "title": "Những thành phố lặng lẽ tự dựng lại mình quanh những người đã ở lại",
+        "translationGroup": "magazine-post-world",
+        "excerpt": "Mười năm sau khi các nhà máy đóng cửa, hơn chục đô thị cỡ vừa đặt cược tất cả vào nhà ở, giao thông công cộng và ánh sáng. Kết quả đang dần hiện ra.",
+        "data": {
+          "readingTime": 9,
+          "category": "Thế giới",
+          "kicker": "Phóng sự dài kỳ"
+        },
+        "blocks": [
+          {
+            "id": "mag-p1-vi",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>Không ai rời Leipzig một cách vội vã. Nhà máy đóng cửa vào một ngày thứ Sáu năm 2013, nhưng cuộc ra đi kéo dài bốn năm — từng gia đình một, từng cửa hiệu một, cho tới khi con phố từng nuôi hai nghìn công nhân ca kíp chỉ còn một hàng thịt, một quán rượu và rất nhiều im lặng.</p><p>Điều xảy ra sau đó mới là thứ các đoàn khảo sát tìm đến. Thành phố không đi săn một ông chủ mới thay thế. Họ đổ tiền vào chính con phố ấy: nhà ở phía trên những cửa hiệu bỏ trống, một tuyến tàu điện bảy phút một chuyến, cắt ba làn xe xuống còn một và trả phần còn lại cho người đi bộ.</p><h2>Phép tính của việc ở lại</h2><p>Ván cược đặt trên một giả định: người ta không rời một nơi vì không có việc làm. Người ta rời đi vì không còn lý do để ở lại, và việc làm chỉ là lý do dễ thấy nhất trong số đó.</p><blockquote>Chúng tôi thôi hỏi điều gì sẽ đưa người ta đến đây, và bắt đầu hỏi điều gì sẽ giữ những người đang ở đây khỏi bỏ đi.</blockquote><p>Nghe như chơi chữ, cho tới khi bạn nhìn vào các con số. Dân số giảm liên tục mười một năm, và nay đã tăng bốn năm liền. Không một nhà máy nào mở lại.</p><h2>Thứ các thủ đô muốn sao chép</h2><p>Gần như tháng nào cũng có đoàn đến, và ông thị trưởng đã học được cách làm họ thất vọng một cách lịch sự. Không có một chính sách duy nhất nào để mang về. Chỉ có mười năm của những quyết định nhỏ, buồn tẻ và tốn kém, mỗi quyết định đều bị phản đối vào lúc nó được đưa ra, và không quyết định nào một mình sống nổi qua một nhiệm kỳ.</p><p>Những thành phố chỉ sao chép một mảnh — thường là tuyến tàu điện — thì có được một tuyến tàu điện. Và không gì khác.</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "en",
+        "slug": "the-software-nobody-maintains",
+        "title": "The software everyone depends on and nobody maintains",
+        "translationGroup": "magazine-post-tech",
+        "excerpt": "The libraries underneath the modern web were written by volunteers and are one burnout away from being unpatched. The industry has known this for a decade.",
+        "data": {
+          "readingTime": 7,
+          "category": "Technology",
+          "kicker": "Analysis"
+        },
+        "blocks": [
+          {
+            "id": "mag-p2-en",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>Somewhere on a hard drive in a spare room is a compression library. It is four thousand lines long, it is thirty years old, and it is running inside the browser you are reading this in, the phone in your pocket and the aircraft you will fly on next month.</p><p>Its maintainer is one person. He is not paid for it. He has asked, several times, whether anyone else would like to take it on.</p><h2>The economics of a shared foundation</h2><p>Every company that uses the library has calculated, correctly, that it is cheaper to depend on it than to fund it. Each of them is right. Collectively they have built a civilisation on a volunteer's evenings.</p><blockquote>The tragedy is not that nobody pays. It is that everybody has run the numbers and paying is, individually, irrational.</blockquote><h2>What actually breaks</h2><p>Not the code. The code is fine — that is why it has lasted. What breaks is the person: an unpaid maintainer who has spent a decade reviewing patches from strangers, and who one Tuesday simply stops answering.</p><p>The library keeps working. It keeps working for years. And then a vulnerability is found, and there is nobody with the keys.</p>"
+            }
+          },
+          {
+            "id": "mag-p2-facts-en",
+            "type": "core/features",
+            "props": {
+              "heading": "By the numbers",
+              "items": [
+                {
+                  "title": "1 maintainer",
+                  "body": "For a library present in an estimated 3.1 billion devices."
+                },
+                {
+                  "title": "0 dollars",
+                  "body": "Received in funding from the twelve largest companies that ship it."
+                },
+                {
+                  "title": "11 years",
+                  "body": "Since the last time anyone else reviewed a line of it."
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "ja",
+        "slug": "the-software-nobody-maintains",
+        "title": "誰もが依存し、誰も保守していないソフトウェア",
+        "translationGroup": "magazine-post-tech",
+        "excerpt": "現代のウェブを支えるライブラリはボランティアが書き、一人の燃え尽きで修正が止まる。業界はこれを十年前から知っている。",
+        "data": {
+          "readingTime": 7,
+          "category": "テクノロジー",
+          "kicker": "解説"
+        },
+        "blocks": [
+          {
+            "id": "mag-p2-ja",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>どこかの空き部屋にあるハードディスクの中に、一本の圧縮ライブラリがある。四千行、三十年もの。そしてそれは、あなたがいまこれを読んでいるブラウザの中でも、ポケットの中の電話でも、来月あなたが乗る航空機の中でも動いている。</p><p>保守しているのは一人だけだ。報酬はない。彼はこれまで何度も、誰か引き継いでくれないかと尋ねてきた。</p><h2>共有された土台の経済学</h2><p>このライブラリを使うすべての企業が、正しく計算した——資金を出すより、ただ依存するほうが安い、と。個々の判断はどれも合理的だ。その総和として、私たちはボランティアの夜の時間の上に文明を築いた。</p><blockquote>悲劇は、誰も払わないことではない。全員が計算し、払うことが個別には不合理だと結論したことだ。</blockquote><h2>実際に壊れるもの</h2><p>コードではない。コードは健全だ。だからこそ三十年もった。壊れるのは人のほうだ。見知らぬ相手からのパッチを十年レビューし続けた無報酬の保守者が、ある火曜日、ただ返事をしなくなる。</p><p>ライブラリはそれでも動き続ける。何年も動き続ける。そしてある日、脆弱性が見つかる。鍵を持つ者は、もう誰もいない。</p>"
+            }
+          },
+          {
+            "id": "mag-p2-facts-ja",
+            "type": "core/features",
+            "props": {
+              "heading": "数字で見る",
+              "items": [
+                {
+                  "title": "保守者 1 名",
+                  "body": "推定 31 億台の機器に組み込まれたライブラリに対して。"
+                },
+                {
+                  "title": "資金 0 円",
+                  "body": "これを出荷している大企業 12 社からの支援額。"
+                },
+                {
+                  "title": "11 年",
+                  "body": "他の誰かが 1 行でもレビューした最後の日から。"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "vi",
+        "slug": "phan-mem-khong-ai-bao-tri",
+        "title": "Phần mềm ai cũng phụ thuộc mà chẳng ai bảo trì",
+        "translationGroup": "magazine-post-tech",
+        "excerpt": "Những thư viện nằm dưới nền web hiện đại do tình nguyện viên viết, và chỉ cần một người kiệt sức là không còn ai vá lỗi. Ngành công nghệ đã biết điều này suốt một thập kỷ.",
+        "data": {
+          "readingTime": 7,
+          "category": "Công nghệ",
+          "kicker": "Phân tích"
+        },
+        "blocks": [
+          {
+            "id": "mag-p2-vi",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>Ở đâu đó, trên một ổ cứng trong một căn phòng trống, có một thư viện nén dữ liệu. Bốn nghìn dòng, ba mươi năm tuổi. Và nó đang chạy bên trong trình duyệt bạn đọc dòng này, trong chiếc điện thoại trong túi bạn, và trong chiếc máy bay bạn sẽ đi tháng sau.</p><p>Người bảo trì nó là một người. Không được trả lương. Anh ta đã hỏi nhiều lần, rằng có ai muốn tiếp quản hay không.</p><h2>Kinh tế học của một nền móng dùng chung</h2><p>Mọi công ty dùng thư viện ấy đều đã tính toán, và tính đúng: phụ thuộc vào nó rẻ hơn là tài trợ cho nó. Từng công ty một đều có lý. Cộng lại, họ đã dựng cả một nền văn minh trên những buổi tối rảnh của một tình nguyện viên.</p><blockquote>Bi kịch không nằm ở chỗ không ai trả tiền. Bi kịch là mọi người đều đã tính, và với từng người, trả tiền là điều phi lý.</blockquote><h2>Thứ thực sự gãy</h2><p>Không phải đoạn mã. Đoạn mã vẫn ổn — chính vì thế nó mới sống lâu đến vậy. Thứ gãy là con người: một người bảo trì không lương, đã mười năm duyệt các bản vá từ những người xa lạ, rồi một ngày thứ Ba nào đó, đơn giản là thôi trả lời.</p><p>Thư viện vẫn chạy. Nó chạy tiếp nhiều năm. Rồi một lỗ hổng bị phát hiện, và không còn ai giữ chìa khóa.</p>"
+            }
+          },
+          {
+            "id": "mag-p2-facts-vi",
+            "type": "core/features",
+            "props": {
+              "heading": "Những con số",
+              "items": [
+                {
+                  "title": "1 người bảo trì",
+                  "body": "Cho một thư viện có mặt trong khoảng 3,1 tỉ thiết bị."
+                },
+                {
+                  "title": "0 đồng",
+                  "body": "Số tiền tài trợ nhận được từ mười hai công ty lớn nhất đang phân phối nó."
+                },
+                {
+                  "title": "11 năm",
+                  "body": "Kể từ lần cuối có người khác đọc lại dù chỉ một dòng."
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "en",
+        "slug": "the-freight-boom-is-over",
+        "title": "The freight boom is over. Nobody told the ports",
+        "translationGroup": "magazine-post-business",
+        "excerpt": "Cranes ordered at the peak are arriving into a market that no longer needs them, and the bill is now due.",
+        "data": {
+          "readingTime": 5,
+          "category": "Business",
+          "kicker": "Markets"
+        },
+        "blocks": [
+          {
+            "id": "mag-p3-en",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>The crane arrived in March, on a ship built to carry cranes, and it took nine days to raise. It cost eleven million euros, it can lift a forty-foot container in under ninety seconds, and it has moved forty-one boxes since it was switched on.</p><p>It was ordered in 2022, when the queue of ships outside this port was visible from space.</p><h2>The lag that eats ports</h2><p>A crane takes three years from order to operation. A shipping boom lasts eighteen months. Every port authority in Europe knows both of those numbers, and every one of them ordered anyway, because the alternative was watching the traffic go to the port down the coast.</p><blockquote>We did not buy a crane. We bought an option on a boom that was already over when we signed.</blockquote><h2>Who pays</h2><p>The debt is public, the volumes are private, and the difference between them will be settled in the next municipal budget — a document that does not, anywhere in its four hundred pages, use the word crane.</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "ja",
+        "slug": "the-freight-boom-is-over",
+        "title": "海運バブルは終わった。港湾だけが知らない",
+        "translationGroup": "magazine-post-business",
+        "excerpt": "好況の頂点で発注されたクレーンが、もう必要としない市場に届き始めている。請求書だけが残った。",
+        "data": {
+          "readingTime": 5,
+          "category": "経済",
+          "kicker": "マーケット"
+        },
+        "blocks": [
+          {
+            "id": "mag-p3-ja",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>そのクレーンは三月、クレーンを運ぶために造られた船に載って到着し、組み上げるのに九日かかった。価格は 1,100 万ユーロ。40 フィートコンテナを 90 秒以内に吊り上げられる。稼働開始以来、動かしたコンテナは 41 本である。</p><p>発注は 2022 年。この港の沖に並ぶ船の列が、宇宙から見えた年だ。</p><h2>港を食い潰す時間差</h2><p>クレーンは発注から稼働まで三年かかる。海運の好況は十八か月しか続かない。欧州のどの港湾当局もこの二つの数字を知っていて、それでも全員が発注した。発注しなければ、貨物が海岸沿いの隣の港へ行くのを黙って見ているだけだからだ。</p><blockquote>私たちが買ったのはクレーンではない。契約した時点ですでに終わっていた好況への、オプションだった。</blockquote><h2>誰が払うのか</h2><p>債務は公的で、取扱量は民間のもの。その差額は次の市予算で埋められる。四百ページのその文書には、「クレーン」という語は一度も出てこない。</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "vi",
+        "slug": "con-sot-van-tai-bien-da-qua",
+        "title": "Cơn sốt vận tải biển đã qua. Chỉ các cảng là chưa biết",
+        "translationGroup": "magazine-post-business",
+        "excerpt": "Những cần cẩu đặt mua lúc đỉnh điểm đang cập bến một thị trường không còn cần tới chúng, và hóa đơn thì đã đến hạn.",
+        "data": {
+          "readingTime": 5,
+          "category": "Kinh doanh",
+          "kicker": "Thị trường"
+        },
+        "blocks": [
+          {
+            "id": "mag-p3-vi",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>Chiếc cần cẩu cập cảng hồi tháng Ba, trên một con tàu được đóng riêng để chở cần cẩu, và mất chín ngày để dựng lên. Nó tốn mười một triệu euro, có thể nhấc một container bốn mươi feet trong chưa đầy chín mươi giây, và đã di chuyển đúng bốn mươi mốt thùng hàng kể từ khi được bật lên.</p><p>Nó được đặt mua năm 2022, khi hàng tàu xếp chờ ngoài cảng này còn nhìn thấy được từ vũ trụ.</p><h2>Độ trễ ăn thịt các cảng</h2><p>Một cần cẩu mất ba năm từ lúc đặt tới lúc vận hành. Một cơn sốt vận tải kéo dài mười tám tháng. Cơ quan quản lý cảng nào ở châu Âu cũng biết cả hai con số ấy, và ai cũng vẫn đặt mua — bởi lựa chọn còn lại là đứng nhìn hàng hóa chạy sang cảng bên kia bờ.</p><blockquote>Chúng tôi không mua một cần cẩu. Chúng tôi mua quyền chọn trên một cơn sốt vốn đã kết thúc ngay khi đặt bút ký.</blockquote><h2>Ai trả tiền</h2><p>Nợ thì công, sản lượng thì tư, và khoản chênh lệch sẽ được quyết trong kỳ ngân sách thành phố tới — một tài liệu bốn trăm trang không có lấy một lần chữ \"cần cẩu\".</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "en",
+        "slug": "a-museum-gives-back",
+        "title": "A museum gives back what it never should have taken",
+        "translationGroup": "magazine-post-culture",
+        "excerpt": "The restitution took eleven years, four governments and one very stubborn archivist working nights.",
+        "data": {
+          "readingTime": 6,
+          "category": "Culture",
+          "kicker": "Restitution"
+        },
+        "blocks": [
+          {
+            "id": "mag-p4-en",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>The crate left the loading bay at six in the morning, which is the hour museums choose when they would rather a thing happened without a photograph of it happening.</p><p>Inside were nine hundred objects, catalogued in 1897 by a man who described the acquisition, in his own hand, as \"taken\".</p><h2>Eleven years</h2><p>The claim was filed in 2015 and refused. It was refiled, and refused. The archivist who eventually found the acquisition ledger was not looking for it; she was checking a date on an unrelated bequest, and there it was, in a box that had been mis-shelved for sixty years.</p><blockquote>The paperwork was never lost. It was simply never looked for, which is a different thing and a worse one.</blockquote><h2>What returns and what does not</h2><p>Nine hundred objects go home. Four hundred more remain, because their provenance is genuinely unclear, and the museum has for the first time published the list of them — with the gaps marked, rather than filled.</p><p>It is not a resolution. It is the first honest catalogue in a hundred and twenty-eight years.</p>"
+            }
+          },
+          {
+            "id": "mag-p4-cta-en",
+            "type": "core/cta",
+            "props": {
+              "heading": "Read the full provenance list",
+              "body": "Published in the open, with the gaps marked rather than filled.",
+              "ctaLabel": "Open the archive",
+              "ctaHref": "/news"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "ja",
+        "slug": "a-museum-gives-back",
+        "title": "美術館が、持ち出すべきでなかったものを返した",
+        "translationGroup": "magazine-post-culture",
+        "excerpt": "返還までに十一年、四つの政権、そして夜通し働いた一人の頑固な文書管理者が必要だった。",
+        "data": {
+          "readingTime": 6,
+          "category": "文化",
+          "kicker": "返還"
+        },
+        "blocks": [
+          {
+            "id": "mag-p4-ja",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>木箱が搬出口を出たのは朝六時。写真に撮られずに済ませたいとき、美術館が選ぶ時刻である。</p><p>中身は九百点。1897 年に目録を作った人物は、その取得の経緯を自らの手で「奪った」と記していた。</p><h2>十一年</h2><p>返還請求は 2015 年に提出され、却下された。再提出され、また却下された。取得台帳を見つけた文書管理者は、それを探していたわけではない。無関係な遺贈の日付を確認していて、六十年間棚を間違えられていた箱の中に、それはあった。</p><blockquote>書類は失われてなどいなかった。ただ、誰も探さなかっただけだ。それは別のことであり、より悪いことだ。</blockquote><h2>戻るもの、戻らないもの</h2><p>九百点が故郷へ帰る。残る四百点は来歴が本当に不明で、美術館は初めてその一覧を公開した——空白を埋めずに、空白として印をつけたまま。</p><p>これは決着ではない。百二十八年で最初の、正直な目録である。</p>"
+            }
+          },
+          {
+            "id": "mag-p4-cta-ja",
+            "type": "core/cta",
+            "props": {
+              "heading": "来歴の全一覧を読む",
+              "body": "空白は埋めずに、空白のまま印をつけて公開しています。",
+              "ctaLabel": "アーカイブを開く",
+              "ctaHref": "/news"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "vi",
+        "slug": "bao-tang-tra-lai-hien-vat",
+        "title": "Một bảo tàng trả lại thứ lẽ ra chưa bao giờ nên lấy",
+        "translationGroup": "magazine-post-culture",
+        "excerpt": "Cuộc hồi hương ấy mất mười một năm, bốn đời chính phủ và một người lưu trữ cực kỳ cứng đầu làm việc thâu đêm.",
+        "data": {
+          "readingTime": 6,
+          "category": "Văn hóa",
+          "kicker": "Hồi hương hiện vật"
+        },
+        "blocks": [
+          {
+            "id": "mag-p4-vi",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>Chiếc thùng gỗ rời khu bốc dỡ lúc sáu giờ sáng — cái giờ mà các bảo tàng vẫn chọn khi họ muốn một việc diễn ra mà không có tấm ảnh nào ghi lại.</p><p>Bên trong là chín trăm hiện vật, được lập mục lục năm 1897 bởi một người đã tự tay ghi rằng chúng được \"lấy đi\".</p><h2>Mười một năm</h2><p>Đơn đòi lại nộp năm 2015 và bị bác. Nộp lại, lại bị bác. Người lưu trữ cuối cùng tìm ra cuốn sổ ghi nguồn gốc hiện vật vốn không hề đi tìm nó; bà đang đối chiếu một cái ngày trong một di sản chẳng liên quan, và nó nằm đó, trong một chiếc hộp bị xếp nhầm giá suốt sáu mươi năm.</p><blockquote>Hồ sơ chưa bao giờ mất. Chỉ là chưa bao giờ có ai đi tìm — đó là chuyện khác, và tệ hơn.</blockquote><h2>Thứ trở về và thứ ở lại</h2><p>Chín trăm hiện vật hồi hương. Bốn trăm hiện vật khác ở lại, vì nguồn gốc thực sự chưa rõ, và lần đầu tiên bảo tàng công bố danh sách ấy — với những khoảng trống được đánh dấu, thay vì được lấp đầy.</p><p>Đó chưa phải một lời kết. Đó là bản mục lục trung thực đầu tiên sau một trăm hai mươi tám năm.</p>"
+            }
+          },
+          {
+            "id": "mag-p4-cta-vi",
+            "type": "core/cta",
+            "props": {
+              "heading": "Đọc toàn bộ danh sách nguồn gốc",
+              "body": "Công bố công khai, với những khoảng trống được đánh dấu thay vì lấp đầy.",
+              "ctaLabel": "Mở kho lưu trữ",
+              "ctaHref": "/news"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "en",
+        "slug": "a-city-that-plans-for-cars",
+        "title": "A city that plans for cars will get cars",
+        "translationGroup": "magazine-post-opinion",
+        "excerpt": "Every road we widen fills within a year, and every time we act surprised. The traffic is not weather. It is a decision, taken repeatedly.",
+        "data": {
+          "readingTime": 4,
+          "category": "Opinion",
+          "kicker": "Comment"
+        },
+        "blocks": [
+          {
+            "id": "mag-p5-en",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>The ring road opened in March, four lanes wider than the one it replaced, and by the following spring the queue at the eastern junction was exactly as long as it had been before. This is not a failure of engineering. It is the engineering working as designed.</p><h2>Induced demand is not a theory</h2><p>Build capacity and it is used; that is the entire finding, replicated in every city that has bothered to measure it since the 1960s. The road did not fail to fix the traffic. The road was the traffic, arriving later.</p><blockquote>A city that plans for cars will get cars. A city that plans for people will get a city.</blockquote><h2>The choice we keep not making</h2><p>The money for the ring road would have paid for a tram line and eleven years of running it. That was on the table. It was not chosen, and it was not chosen the time before that either.</p><p>We are not stuck in traffic. We are the traffic, and we voted for it.</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "ja",
+        "slug": "a-city-that-plans-for-cars",
+        "title": "車のために設計された都市は、車を手に入れる",
+        "translationGroup": "magazine-post-opinion",
+        "excerpt": "道路を広げれば一年で埋まる。そのたびに私たちは驚いてみせる。渋滞は天候ではない。繰り返し下されてきた「決定」である。",
+        "data": {
+          "readingTime": 4,
+          "category": "オピニオン",
+          "kicker": "論説"
+        },
+        "blocks": [
+          {
+            "id": "mag-p5-ja",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>環状道路が開通したのは三月だった。以前より四車線広い。それなのに翌年の春には、東側の合流部の車列は以前とまったく同じ長さになっていた。これは工学の失敗ではない。設計どおりに機能した結果である。</p><h2>誘発需要は仮説ではない</h2><p>容量をつくれば使われる——それが結論のすべてであり、1960 年代以降、真面目に計測したあらゆる都市で再現されてきた。道路が渋滞を解消し損ねたのではない。道路こそが渋滞であり、それが遅れて到着しただけだ。</p><blockquote>車のために設計された都市は、車を手に入れる。人のために設計された都市は、都市を手に入れる。</blockquote><h2>私たちが選ばずにいる選択</h2><p>環状道路の予算があれば、路面電車を一路線敷き、十一年間運行できた。それは選択肢として卓上にあった。選ばれなかった。その前の機会にも、選ばれなかった。</p><p>私たちは渋滞に「はまっている」のではない。私たちが渋滞であり、それに票を投じてきたのだ。</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "vi",
+        "slug": "thanh-pho-quy-hoach-cho-o-to",
+        "title": "Thành phố quy hoạch cho ô tô sẽ nhận về ô tô",
+        "translationGroup": "magazine-post-opinion",
+        "excerpt": "Cứ mở rộng một con đường là nó đầy lại trong vòng một năm, và lần nào chúng ta cũng tỏ ra ngạc nhiên. Kẹt xe không phải thời tiết. Nó là một quyết định, được lặp đi lặp lại.",
+        "data": {
+          "readingTime": 4,
+          "category": "Quan điểm",
+          "kicker": "Bình luận"
+        },
+        "blocks": [
+          {
+            "id": "mag-p5-vi",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>Đường vành đai thông xe vào tháng Ba, rộng hơn con đường cũ bốn làn. Đến mùa xuân năm sau, hàng xe chờ ở nút giao phía đông dài đúng bằng trước đó. Đây không phải một thất bại kỹ thuật. Đây là kỹ thuật vận hành đúng như thiết kế.</p><h2>Nhu cầu cảm ứng không phải một giả thuyết</h2><p>Cứ tạo ra năng lực thông hành thì nó sẽ được dùng hết; toàn bộ phát hiện chỉ có vậy, và nó được lặp lại ở mọi thành phố chịu khó đo đạc kể từ thập niên 1960. Con đường không hề thất bại trong việc chữa kẹt xe. Con đường chính là dòng xe ấy, chỉ đến muộn hơn.</p><blockquote>Thành phố quy hoạch cho ô tô sẽ nhận về ô tô. Thành phố quy hoạch cho con người sẽ nhận về một thành phố.</blockquote><h2>Lựa chọn chúng ta cứ mãi không chọn</h2><p>Số tiền làm đường vành đai đủ để xây một tuyến tàu điện và vận hành nó trong mười một năm. Phương án ấy đã nằm trên bàn. Nó đã không được chọn — và lần trước cũng vậy.</p><p>Chúng ta không mắc kẹt trong dòng xe. Chúng ta chính là dòng xe đó, và chúng ta đã bỏ phiếu cho nó.</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "en",
+        "slug": "a-small-country-bets-its-grid-on-the-wind",
+        "title": "A small country bets its grid on the wind, and the wind holds",
+        "translationGroup": "magazine-post-energy",
+        "excerpt": "Four winters in, the lights have not gone out once. The engineers are relieved. The economists are still arguing about who pays for the calm days.",
+        "data": {
+          "readingTime": 6,
+          "category": "Business",
+          "kicker": "Energy"
+        },
+        "blocks": [
+          {
+            "id": "mag-p6-en",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>The control room in Esbjerg has a wall of screens and, on the day we visited, a chart that ought to be impossible: seventy-one per cent of the national grid, running on weather.</p><h2>The problem was never the wind</h2><p>Turbines are the easy part, and have been for a decade. The hard part is the fifteen days a year when the North Sea goes still, and the grid needs a plan that does not begin with the word “hopefully”.</p><p>The plan, in the end, was interconnectors, a great deal of Norwegian water held behind a dam, and a market that pays generously for the boredom of being available.</p><h2>The bill for the calm days</h2><p>That last item is what the argument is about. Capacity payments are a subsidy to plants that mostly do not run, and every year somebody proposes cutting them. Every year the operators explain, patiently, what happens the first winter after they do.</p><h2>What the neighbours are copying</h2><p>Three countries have now written the same market design into law, and none of them have the dam.</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "ja",
+        "slug": "a-small-country-bets-its-grid-on-the-wind",
+        "title": "小国が電力網を風に賭けた。そして風は裏切らなかった",
+        "translationGroup": "magazine-post-energy",
+        "excerpt": "四度の冬を越え、停電は一度も起きていない。技術者たちは胸をなでおろす。経済学者たちは、風の凪いだ日の費用を誰が払うのかで、いまも言い争っている。",
+        "data": {
+          "readingTime": 6,
+          "category": "経済",
+          "kicker": "エネルギー"
+        },
+        "blocks": [
+          {
+            "id": "mag-p6-ja",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>エスビャウの中央制御室には モニターの壁がある。取材に訪れた日、そこにはあり得ないはずの数字が出ていた。国内送電網の 71 パーセントが、天候で動いていた。</p><h2>問題は風ではなかった</h2><p>風車は簡単なほうだ。この十年ずっとそうだった。難しいのは、北海が凪ぐ年に十五日ほどの日々であり、そのとき送電網には「たぶん大丈夫」で始まらない計画が要る。</p><p>結局その計画は、国際連系線と、ダムの背後に蓄えられた大量のノルウェーの水と、そして「待機しているという退屈」に手厚く支払う市場だった。</p><h2>凪の日の請求書</h2><p>争点は最後の項目である。容量支払いとは、ほとんど動かない発電所への補助金だ。毎年、誰かがその削減を提案する。そして毎年、系統運用者が辛抱強く説明する——削減した翌年の冬に何が起きるのかを。</p><h2>隣国が真似しているもの</h2><p>すでに三か国が同じ市場設計を法律に書き込んだ。そのいずれも、あのダムを持っていない。</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "vi",
+        "slug": "mot-quoc-gia-nho-dat-cuoc-vao-gio",
+        "title": "Một quốc gia nhỏ đặt cược lưới điện vào gió, và gió đã không phụ",
+        "translationGroup": "magazine-post-energy",
+        "excerpt": "Bốn mùa đông trôi qua, đèn chưa tắt lần nào. Các kỹ sư thở phào. Các nhà kinh tế thì vẫn cãi nhau xem ai trả tiền cho những ngày lặng gió.",
+        "data": {
+          "readingTime": 6,
+          "category": "Kinh doanh",
+          "kicker": "Năng lượng"
+        },
+        "blocks": [
+          {
+            "id": "mag-p6-vi",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>Phòng điều độ ở Esbjerg có cả một bức tường màn hình, và vào ngày chúng tôi tới, trên đó là một con số lẽ ra không thể có: 71 phần trăm lưới điện quốc gia đang chạy bằng thời tiết.</p><h2>Vấn đề chưa bao giờ là gió</h2><p>Tua-bin là phần dễ, và đã dễ suốt một thập kỷ. Phần khó là mười lăm ngày mỗi năm khi Biển Bắc lặng như tờ, và lưới điện cần một kế hoạch không bắt đầu bằng chữ “hy vọng”.</p><p>Kế hoạch ấy, rốt cuộc, là các đường liên kết xuyên biên giới, một lượng rất lớn nước Na Uy giữ sau đập, và một thị trường trả hậu hĩnh cho sự buồn tẻ của việc luôn sẵn sàng.</p><h2>Hóa đơn cho những ngày lặng gió</h2><p>Chính khoản cuối cùng ấy là thứ người ta tranh cãi. Trả tiền cho công suất dự phòng là trợ cấp cho những nhà máy phần lớn thời gian không chạy, và năm nào cũng có người đề nghị cắt. Năm nào các đơn vị vận hành cũng kiên nhẫn giải thích điều gì sẽ xảy ra vào mùa đông đầu tiên sau khi cắt.</p><h2>Thứ các nước láng giềng đang sao chép</h2><p>Ba quốc gia đã đưa đúng thiết kế thị trường này vào luật. Không nước nào trong số đó có con đập.</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "en",
+        "slug": "why-your-browser-refuses-to-load-that-font",
+        "title": "Why your browser refuses to load that font",
+        "translationGroup": "magazine-post-fonts",
+        "excerpt": "A single header, added by a security team on a Tuesday, can take the typography off a newspaper's front page. An explainer for people who do not write code.",
+        "data": {
+          "readingTime": 5,
+          "category": "Technology",
+          "kicker": "Explainer"
+        },
+        "blocks": [
+          {
+            "id": "mag-p7-en",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>The page loads. The words are all there. But they are in the wrong typeface — a plain, default one — and the whole thing looks like a fax of itself.</p><h2>The browser is not being difficult</h2><p>A font is a file, and it usually lives on a different machine from the page that asks for it. Fetching something across that line requires the machine that holds the file to say, explicitly, that it is willing to hand it over. That permission is a header, and if nobody set it, the browser declines — quietly, and by design.</p><h2>Why quietly</h2><p>Because the alternative is worse. The rule that stops one site from reading another's files is the rule that stops the tab with your bank in it from being read by the tab with the crossword.</p><h2>The three-line fix, and the reason it is not always applied</h2><p>Somebody has to own the machine holding the font. On a newspaper's site, that is often a supplier, and the supplier's security team has a policy that predates the redesign.</p><p>So the front page goes out in the wrong typeface, and a ticket is opened.</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "ja",
+        "slug": "why-your-browser-refuses-to-load-that-font",
+        "title": "なぜブラウザは、そのフォントの読み込みを拒むのか",
+        "translationGroup": "magazine-post-fonts",
+        "excerpt": "ある火曜日にセキュリティ担当が足したヘッダー一行が、新聞の一面から書体を奪うことがある。コードを書かない人のための解説。",
+        "data": {
+          "readingTime": 5,
+          "category": "テクノロジー",
+          "kicker": "解説"
+        },
+        "blocks": [
+          {
+            "id": "mag-p7-ja",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>ページは表示される。文字もすべてある。けれど書体が違う——味気ない既定のフォントで、紙面全体が自分自身のファックスのように見える。</p><h2>ブラウザは意地悪をしていない</h2><p>フォントはファイルであり、たいていはそのページを配信するのとは別のマシンに置かれている。その境界をまたいで何かを取りに行くには、ファイルを持つ側が「渡してよい」と明示的に述べる必要がある。その許可がヘッダーであり、誰も設定していなければ、ブラウザは静かに、そして設計どおりに、断る。</p><h2>なぜ静かに断るのか</h2><p>そうしないほうが危ういからだ。あるサイトが別のサイトのファイルを読めないようにする規則は、あなたの銀行のタブがクロスワードのタブに読まれないようにしている規則と同じものである。</p><h2>三行で直る。それでも直らない理由</h2><p>フォントを置いているマシンの持ち主が動かなければならない。新聞社のサイトでは、それはしばしば外部の業者であり、その業者のセキュリティ方針は、今回のリニューアルより前から存在している。</p><p>こうして一面は違う書体で出稿され、チケットが一件起票される。</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "vi",
+        "slug": "vi-sao-trinh-duyet-tu-choi-tai-phong-chu",
+        "title": "Vì sao trình duyệt từ chối tải phông chữ đó",
+        "translationGroup": "magazine-post-fonts",
+        "excerpt": "Một dòng header, do một đội an ninh thêm vào một ngày thứ Ba, có thể lấy đi toàn bộ kiểu chữ trên trang nhất của một tờ báo. Bài giải thích cho người không viết code.",
+        "data": {
+          "readingTime": 5,
+          "category": "Công nghệ",
+          "kicker": "Giải thích"
+        },
+        "blocks": [
+          {
+            "id": "mag-p7-vi",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>Trang vẫn tải. Chữ vẫn đủ. Nhưng kiểu chữ thì sai — một phông mặc định trơ trọi — và cả tờ báo trông như bản fax của chính nó.</p><h2>Trình duyệt không hề khó tính</h2><p>Một phông chữ là một tệp, và nó thường nằm trên một máy khác với máy phục vụ trang web. Muốn lấy thứ gì qua ranh giới đó, máy đang giữ tệp phải nói ra một cách rõ ràng rằng nó đồng ý trao. Lời cho phép ấy là một header; nếu không ai đặt nó, trình duyệt sẽ từ chối — lặng lẽ, và đúng như thiết kế.</p><h2>Vì sao lại lặng lẽ</h2><p>Vì phương án còn lại tệ hơn. Cái quy tắc ngăn một trang web đọc tệp của trang khác cũng chính là quy tắc ngăn tab đang mở ngân hàng của bạn bị đọc bởi tab đang mở ô chữ.</p><h2>Bản vá ba dòng, và lý do nó không phải lúc nào cũng được áp</h2><p>Phải có người sở hữu cái máy đang giữ phông chữ. Trên website của một tòa soạn, đó thường là một nhà cung cấp, và đội an ninh của nhà cung cấp ấy có một chính sách ra đời trước cả đợt thiết kế lại này.</p><p>Thế là trang nhất lên khuôn với sai kiểu chữ, và một phiếu hỗ trợ được mở.</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "en",
+        "slug": "the-orchestra-that-plays-in-the-dark",
+        "title": "The orchestra that plays in the dark",
+        "translationGroup": "magazine-post-orchestra",
+        "excerpt": "No stage lights, no printed programme, no applause until the end. A hundred musicians have spent three years unlearning the concert hall.",
+        "data": {
+          "readingTime": 7,
+          "category": "Culture",
+          "kicker": "Profile"
+        },
+        "blocks": [
+          {
+            "id": "mag-p8-en",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>The hall goes black at eight, and stays black. There is no conductor to watch, because you cannot see one, and the players have long since stopped trying.</p><h2>Learning to listen sideways</h2><p>Playing without sight means playing by ear alone, which is what an orchestra claims to do and does not: half of ensemble playing is watching the desk in front of you. Taking that away took the strings eighteen months, and the brass rather longer.</p><blockquote>We thought we were an orchestra that could see. It turned out we were an orchestra that was looking.</blockquote><h2>The audience, also in the dark</h2><p>Nobody checks a phone, because a screen in a dark hall is a small act of vandalism and everybody knows it. The coughing, the ushers report, has fallen by about half.</p><h2>What happens next</h2><p>Three other ensembles have asked for the rehearsal notes. The principal cellist, who lost most of her sight in 2019 and proposed the whole thing, says she is not interested in being an inspiration. She is interested in the second movement.</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "ja",
+        "slug": "the-orchestra-that-plays-in-the-dark",
+        "title": "暗闇で演奏するオーケストラ",
+        "translationGroup": "magazine-post-orchestra",
+        "excerpt": "舞台照明なし、印刷されたプログラムなし、拍手は最後まで一度もなし。百人の楽団員は、三年をかけてコンサートホールを忘れ去ろうとしてきた。",
+        "data": {
+          "readingTime": 7,
+          "category": "文化",
+          "kicker": "人物"
+        },
+        "blocks": [
+          {
+            "id": "mag-p8-ja",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>八時にホールは暗転し、そのまま明かりはつかない。見るべき指揮者はいない——見えないからだ。奏者たちは、とうに見ようとするのをやめた。</p><h2>横で聴くことを学ぶ</h2><p>視覚なしで弾くとは、耳だけで弾くということだ。オーケストラは自分たちがそうしていると言うが、実際にはしていない。アンサンブルの半分は、前のプルトを見ることで成り立っている。それを取り上げられて、弦は十八か月かかった。金管はもっとかかった。</p><blockquote>私たちは「見えるオーケストラ」だと思っていた。実際には「見ているオーケストラ」だったのです。</blockquote><h2>客席もまた、暗闇のなかに</h2><p>誰も携帯を確認しない。暗いホールで光る画面は小さな破壊行為であり、それは全員が知っている。案内係によれば、咳の数はおよそ半分に減ったという。</p><h2>これから起きること</h2><p>すでに三つの楽団がリハーサル記録を求めてきた。2019 年に視力の大半を失い、この試みを発案した首席チェロ奏者は言う。「感動の物語」になるつもりはない、と。彼女の関心は、第二楽章にある。</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "vi",
+        "slug": "dan-nhac-choi-trong-bong-toi",
+        "title": "Dàn nhạc chơi trong bóng tối",
+        "translationGroup": "magazine-post-orchestra",
+        "excerpt": "Không đèn sân khấu, không chương trình in sẵn, không một tràng vỗ tay cho tới phút cuối. Một trăm nhạc công đã dành ba năm để quên đi thói quen của phòng hòa nhạc.",
+        "data": {
+          "readingTime": 7,
+          "category": "Văn hóa",
+          "kicker": "Chân dung"
+        },
+        "blocks": [
+          {
+            "id": "mag-p8-vi",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>Tám giờ tối, khán phòng tắt đèn, và cứ tối như thế. Không có nhạc trưởng nào để nhìn, bởi bạn không thể nhìn thấy ông; các nhạc công thì đã thôi cố nhìn từ lâu.</p><h2>Học cách nghe bằng hai bên tai</h2><p>Chơi mà không nhìn nghĩa là chơi hoàn toàn bằng tai — điều mà mọi dàn nhạc đều tuyên bố mình làm, và thực ra không làm: một nửa việc hòa tấu là liếc sang bè trước mặt. Bỏ đi phần ấy, bè dây mất mười tám tháng, bè kèn đồng còn lâu hơn.</p><blockquote>Chúng tôi tưởng mình là một dàn nhạc biết nhìn. Hóa ra chúng tôi chỉ là một dàn nhạc đang nhìn.</blockquote><h2>Khán giả cũng ngồi trong bóng tối</h2><p>Không ai kiểm tra điện thoại, bởi một màn hình sáng trong khán phòng tối là một hành vi phá hoại nhỏ, và ai cũng biết thế. Theo các nhân viên soát vé, tiếng ho đã giảm khoảng một nửa.</p><h2>Điều sẽ diễn ra tiếp theo</h2><p>Ba dàn nhạc khác đã hỏi xin biên bản tập luyện. Nữ nghệ sĩ cello chính, người mất phần lớn thị lực năm 2019 và là tác giả của ý tưởng này, nói bà không quan tâm tới việc trở thành nguồn cảm hứng. Bà quan tâm tới chương hai.</p>"
+            }
+          }
+        ]
+      }
+    ],
+    "menus": [
+      {
+        "key": "primary",
+        "name": "Section menu",
+        "items": [
+          {
+            "label": "World",
+            "url": "/news"
+          },
+          {
+            "label": "Technology",
+            "url": "/news"
+          },
+          {
+            "label": "Business",
+            "url": "/news"
+          },
+          {
+            "label": "Culture",
+            "url": "/news"
+          },
+          {
+            "label": "Opinion",
+            "url": "/news"
+          }
+        ]
+      },
+      {
+        "key": "footer",
+        "name": "Footer menu",
+        "items": [
+          {
+            "label": "The masthead",
+            "url": "/about"
+          },
+          {
+            "label": "All news",
+            "url": "/news"
+          },
+          {
+            "label": "Corrections",
+            "url": "/about"
+          },
+          {
+            "label": "Z-SOFT",
+            "url": "https://z-soft.com.vn",
+            "target": "_blank"
+          }
+        ]
+      }
+    ]
+  }
+}

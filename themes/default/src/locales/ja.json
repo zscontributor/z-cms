@@ -1,0 +1,166 @@
+{
+  "layout": {
+    "skipToContent": "本文へスキップ",
+    "backToTop": "ページ上部へ戻る"
+  },
+  "colorMode": {
+    "toggle": "ダークモードとライトモードを切り替える"
+  },
+  "language": {
+    "switch": "言語を変更する"
+  },
+  "topbar": {
+    "link": "コミュニティに参加する"
+  },
+  "nav": {
+    "primary": "メインメニュー",
+    "about": "概要",
+    "features": "機能",
+    "ecosystem": "エコシステム",
+    "developers": "開発者",
+    "community": "コミュニティ",
+    "blog": "ブログ",
+    "docs": "ドキュメント",
+    "github": "GitHub"
+  },
+  "search": {
+    "label": "検索",
+    "placeholder": "サイト内を検索"
+  },
+  "hero": {
+    "title": {
+      "first": "ウェブを、",
+      "second": "あなたの方法で。"
+    },
+    "copy": "Z-CMS は次世代のオープンソース・コンテンツ基盤です。従来の CMS の使いやすい編集体験と、Next.js・NestJS・PostgreSQL・Redis によるモダンなアーキテクチャを両立します。",
+    "primary": "Z-CMS を入手",
+    "secondary": "ドキュメントを読む"
+  },
+  "mock": {
+    "aria": "Z-CMS で構築したウェブサイトのプレビュー"
+  },
+  "trust": {
+    "label": "モダンな技術スタックで構築"
+  },
+  "about": {
+    "eyebrow": "Z-CMS とは",
+    "title": "次世代のウェブサイトに備えた、オープンで柔軟な CMS。",
+    "point1": {
+      "title": "使いやすい",
+      "copy": "わかりやすい管理画面、直感的なページビルダー、編集者にも開発者にも合う公開ワークフロー。"
+    },
+    "point2": {
+      "title": "デザインの制約なし",
+      "copy": "独立した Theme Engine により、テーマの構築・インストール・カスタマイズ・共有を思いどおりに行えます。"
+    },
+    "point3": {
+      "title": "プラグインで拡張",
+      "copy": "Plugin SDK、権限モデル、マーケットプレイスにより、コアに手を入れずに安全に拡張できます。"
+    },
+    "point4": {
+      "title": "エンタープライズ対応",
+      "copy": "マルチテナント、RBAC、監査ログ、キャッシュ、ジョブキュー、クラウドネイティブな運用。"
+    }
+  },
+  "features": {
+    "eyebrow": "初日から強力に",
+    "title": "より良い発信に必要なすべてを。",
+    "copy": "コンテンツ管理、サイト設計、機能拡張をひとつの基盤で。特定のテーマやベンダーに縛られることはありません。",
+    "card1": {
+      "title": "Block Page Builder",
+      "copy": "ブロックでページを組み立て、構造をデータとして保存し、あらゆる端末で高速に表示します。"
+    },
+    "card2": {
+      "title": "Theme Engine",
+      "copy": "テンプレート、レイアウト、ブロックスタイル、設定スキーマを、署名済みの独立したテーマとしてパッケージ化。"
+    },
+    "card3": {
+      "title": "Plugin SDK",
+      "copy": "コンテンツタイプ、API、管理画面、バックグラウンドジョブ、フロントエンドのブロックを標準 SDK で拡張。"
+    },
+    "card4": {
+      "title": "Headless API",
+      "copy": "ウェブサイト、モバイルアプリ、キオスク、SaaS のコンテンツバックエンドとして Z-CMS を利用できます。"
+    },
+    "card5": {
+      "title": "開発者体験",
+      "copy": "全面的な TypeScript、CLI、ローカル開発、ホットリロード、パッケージベースのアーキテクチャ。"
+    },
+    "card6": {
+      "title": "既定で安全",
+      "copy": "署名付きパッケージ、サンドボックス化されたプラグイン実行環境、行単位のテナント分離、厳格な CSP。"
+    }
+  },
+  "ecosystem": {
+    "eyebrow": "エコシステムを見る",
+    "title": "美しいテーマから始めましょう。",
+    "copy": "Z-SOFT とコミュニティが作るテーマとプラグイン。そのすべてが署名・検証済みです。管理画面から直接インストールできます。",
+    "tabs": {
+      "themes": "注目のテーマ",
+      "plugins": "人気のプラグイン"
+    }
+  },
+  "latest": {
+    "eyebrow": "ブログから",
+    "title": "いま書いていること。",
+    "all": "記事一覧",
+    "empty": "まだ記事が公開されていません。管理画面で書けば、ここに表示されます。"
+  },
+  "market": {
+    "business": "ビジネス",
+    "commerce": "コマース",
+    "publishing": "パブリッシング",
+    "free": "無料",
+    "byZSoft": "Z-SOFT 提供"
+  },
+  "developers": {
+    "eyebrow": "開発者のために",
+    "title": "コードで拡張し、コアはそのままに。",
+    "copy": "標準化された SDK により、テーマやプラグインを独立したパッケージとして開発・テストし、Marketplace で配布できます。",
+    "cta": "開発者ドキュメントを読む"
+  },
+  "community": {
+    "eyebrow": "オープンに開発",
+    "title": "ともに作るほど、ソフトウェアは良くなる。",
+    "copy": "Z-CMS は、自分たちの基盤を自分たちで持ちたい開発者・デザイナー・制作者・企業のためのオープンソースプロジェクトです。",
+    "github": "ソースコードとロードマップを見る",
+    "docs": "Z-CMS で開発を始める",
+    "forum": "質問し、答え、議論する",
+    "contributeTitle": "コントリビュート",
+    "contribute": "コード・ドキュメント・アイデアを送る"
+  },
+  "cta": {
+    "title": "自由に作る。自由に広げる。",
+    "button": "GitHub で Z-CMS を入手"
+  },
+  "footer": {
+    "product": "プロダクト",
+    "download": "ダウンロード",
+    "documentation": "ドキュメント",
+    "discussions": "ディスカッション",
+    "issues": "イシュー",
+    "about": "運営",
+    "license": "ライセンス"
+  },
+  "archive": {
+    "empty": "まだ公開された記事はありません。",
+    "previous": "前へ",
+    "next": "次へ",
+    "pageOf": "{total} ページ中 {page} ページ目"
+  },
+  "post": {
+    "backToPosts": "記事一覧",
+    "readingTime": "約 {minutes} 分で読めます"
+  },
+  "notFound": {
+    "title": "このページは存在しません",
+    "description": "リンクが古いか、ページが移動または非公開になった可能性があります。",
+    "backHome": "ホームに戻る"
+  },
+  "error": {
+    "title": "問題が発生しました",
+    "description": "このページを表示できませんでした。エラーは記録され、確認を進めています。",
+    "backHome": "ホームに戻る",
+    "reference": "参照 ID"
+  }
+}

@@ -1,0 +1,225 @@
+{
+  "metaFallback": "コンテンツ",
+  "status": {
+    "DRAFT": "下書き",
+    "IN_REVIEW": "レビュー中",
+    "SCHEDULED": "予定されている",
+    "PUBLISHED": "発行済み",
+    "ARCHIVED": "アーカイブ済み"
+  },
+  "list": {
+    "description": "このサイトの{type}を管理します。",
+    "create": "新しい",
+    "createType": "新しい{type}",
+    "denied": "このサイトのコンテンツを表示する権限がありません。",
+    "searchPlaceholder": "タイトルで検索…",
+    "searchLabel": "コンテンツの検索",
+    "languageTabs": "言語でフィルタリング",
+    "statusFilter": "ステータスでフィルタリングする",
+    "allStatuses": "すべてのステータス",
+    "emptyTitle": "まだコンテンツがありません",
+    "emptyDescription": "最初の {type} を作成することから始めます。",
+    "noResultsTitle": "結果はありません",
+    "noResultsDescription": "別のキーワードを試すか、ステータス フィルターをクリアしてください。"
+  },
+  "table": {
+    "title": "タイトル",
+    "status": "状態",
+    "path": "パス",
+    "updated": "更新されました",
+    "actions": "アクション"
+  },
+  "row": {
+    "publish": "公開",
+    "unpublish": "非公開にする",
+    "deleteAria": "{title}を削除"
+  },
+  "delete": {
+    "title": "このコンテンツを削除しますか?",
+    "description": "「{title}」が削除されます。これを元に戻すことはできません。",
+    "descriptionPermanent": "「{title}」は完全に削除されます。"
+  },
+  "new": {
+    "metaTitle": "新しい{type}",
+    "metaFallback": "新しいコンテンツ",
+    "denied": "コンテンツを作成する権限がありません。",
+    "draft": "新しいドラフト",
+    "translating": "「{title}」を翻訳中",
+    "translationOf": "{locale} バージョンの翻訳"
+  },
+  "editor": {
+    "untitled": "(無題)",
+    "translations": {
+      "title": "翻訳",
+      "missing": "まだ翻訳されていません",
+      "translate": "翻訳する"
+    },
+    "title": "タイトル",
+    "titlePlaceholder": "{type} タイトル",
+    "slug": "パス（ナメクジ）",
+    "slugHint": "このページは {path} に存在します。",
+    "slugPlaceholder": "私の記事のパス",
+    "slugInvalid": "小文字、数字、ハイフンのみを使用してください。",
+    "regenerate": "再生する",
+    "regenerateHint": "タイトルから再生成",
+    "excerpt": "抜粋",
+    "excerptHint": "最大 500 文字。",
+    "fields": "フィールド",
+    "blocks": "コンテンツをブロックする",
+    "blockCount": "{count} ブロック",
+    "publishSection": "出版",
+    "status": "状態",
+    "locale": "言語",
+    "save": "変更を保存する",
+    "create": "コンテンツの作成",
+    "saveAndPublish": "保存して公開する",
+    "unpublish": "非公開にする",
+    "readOnly": "このコンテンツを閲覧する権限のみがあります。",
+    "updated": "更新されました",
+    "path": "パス",
+    "delete": "コンテンツの削除",
+    "titleRequired": "タイトルを入力します。",
+    "fieldRequired": "「{label}」フィールドは必須です。",
+    "publishFailed": "コンテンツを公開できませんでした。",
+    "deleteFailed": "コンテンツを削除できませんでした。"
+  },
+  "seo": {
+    "heading": "SEO",
+    "title": "SEOタイトル",
+    "titleHint": "{count}/70文字",
+    "titlePlaceholder": "検索結果に表示されるタイトル",
+    "description": "SEOの説明",
+    "descriptionHint": "{count}/200文字",
+    "ogImage": "共有画像（OG画像）",
+    "canonical": "正規の URL",
+    "noindex": "このページを検索エンジンから非表示にします (noindex)"
+  },
+  "fields": {
+    "jsonInvalid": "それは有効な JSON ではありません。",
+    "richtextPlaceholder": "<p>…</p>",
+    "referencePlaceholder": "「{type}」コンテンツID",
+    "referencePlaceholderGeneric": "コンテンツID"
+  },
+  "richtext": {
+    "toolbar": "書式設定ツールバー",
+    "placeholder": "内容を書いて…",
+    "bold": "大胆な",
+    "italic": "イタリック",
+    "strike": "取り消し線",
+    "code": "インラインコード",
+    "h2": "見出し2",
+    "h3": "見出し 3",
+    "bulletList": "箇条書きリスト",
+    "orderedList": "番号付きリスト",
+    "blockquote": "引用",
+    "codeBlock": "コードブロック",
+    "horizontalRule": "ディバイダー",
+    "link": "リンク",
+    "image": "画像の挿入",
+    "clearFormat": "書式をクリアする",
+    "undo": "元に戻す",
+    "redo": "やり直し",
+    "source": "ソース",
+    "visual": "ビジュアルエディター",
+    "sourceHint": "生の HTML を編集します。ビジュアル エディターが理解できないマークアップは、元に戻すと削除されます。",
+    "linkTitle": "リンクを追加する",
+    "linkHint": "選択したテキストはこのアドレスにリンクします。",
+    "linkApply": "適用する",
+    "linkRemove": "リンクを削除する",
+    "imageLeft": "左揃え",
+    "imageCenter": "中心",
+    "imageRight": "右揃え",
+    "imageWidth": "幅{width}",
+    "imageWidthOriginal": "自動",
+    "imageRemove": "画像を削除"
+  },
+  "blocks": {
+    "empty": "まだブロックはありません。最初のものを以下に追加します。",
+    "add": "ブロックの追加",
+    "delete": "ブロックの削除",
+    "unknownTitle": "ブロック {type} は管理者によって認識されません (テーマまたはプラグインからのものです)。その内容は保存時に保持されます。",
+    "htmlPlaceholder": "<p>内容…</p>",
+    "item": "アイテム",
+    "addItem": "{item}を追加",
+    "noContentTypes": "このサイトにはまだコンテンツタイプがないため、一覧に表示できるものがありません。",
+    "specs": {
+      "hero": {
+        "label": "ヒーロー",
+        "description": "大きな見出し、説明、行動喚起。"
+      },
+      "richtext": {
+        "label": "文章",
+        "description": "自由形式の HTML ブロック。"
+      },
+      "features": {
+        "label": "特徴",
+        "description": "機能エントリのグリッド。",
+        "itemLabel": "特徴"
+      },
+      "image": {
+        "label": "画像",
+        "description": "キャプション付きの 1 つの画像。"
+      },
+      "cta": {
+        "label": "行動喚起",
+        "description": "ボタン付きのCTAバンド。"
+      },
+      "contentList": {
+        "label": "コンテンツ一覧",
+        "description": "最新の投稿など、コンテンツを自動で集めてリストまたはグリッドで表示します。"
+      }
+    },
+    "props": {
+      "heading": "見出し",
+      "subheading": "説明",
+      "description": "説明",
+      "title": "タイトル",
+      "backgroundImage": "背景画像（URL）",
+      "ctaLabel": "ボタンラベル",
+      "ctaHref": "ボタンリンク",
+      "buttonLabel": "ボタンラベル",
+      "buttonHref": "リンク",
+      "align": "位置合わせ",
+      "alignLeft": "左",
+      "alignCenter": "中心",
+      "alignRight": "右",
+      "html": "コンテンツ (HTML)",
+      "items": "エントリー",
+      "icon": "アイコン",
+      "src": "画像URL",
+      "alt": "代替テキスト",
+      "caption": "キャプション",
+      "width": "幅",
+      "widthContained": "含まれている",
+      "widthWide": "広い",
+      "widthFull": "全幅",
+      "inverted": "暗い背景",
+      "contentType": "コンテンツタイプ",
+      "contentTypeUnset": "コンテンツタイプを選択…",
+      "contentTypeUnknown": "{key}（このサイトには存在しません）",
+      "limit": "表示件数",
+      "sort": "並び順",
+      "sortNewest": "新しい順",
+      "sortOldest": "古い順",
+      "sortTitle": "タイトル順",
+      "layout": "レイアウト",
+      "layoutList": "リスト",
+      "layoutGrid": "グリッド"
+    },
+    "hints": {
+      "contentType": "このブロックが一覧表示するコンテンツ。公開済みの項目のみ表示されます。",
+      "limit": "{min}〜{max} 件の範囲で指定します。"
+    },
+    "placeholders": {
+      "heroHeading": "ウェブサイトをより速く構築する",
+      "ctaLabel": "始めましょう",
+      "ctaHref": "/接触",
+      "imageSrc": "https://…",
+      "contentListHeading": "最新のお知らせ"
+    },
+    "defaults": {
+      "heroHeading": "ヒーローの見出し",
+      "featureTitle": "特徴1"
+    }
+  }
+}

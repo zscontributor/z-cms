@@ -1,0 +1,28 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    // Next compiles with a bundler, not tsc: ESM + bundler resolution is what lets
+    // us import the workspace packages' raw ".ts" entry points through "exports".
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "preserve",
+    "allowJs": true,
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "incremental": true,
+    "types": ["node", "react", "react-dom"],
+    "plugins": [{ "name": "next" }],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  // vitest.config.ts imports the shared Vitest preset, whose types are only
+  // resolvable under Vitest's own build — tsc must not try to check it (the other
+  // apps simply never include their vitest config in the tsc program). The setup
+  // file stays in, so its jest-dom matcher augmentation applies to the test files.
+  "exclude": ["node_modules", ".next", "vitest.config.ts"]
+}

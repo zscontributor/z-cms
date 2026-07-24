@@ -1,0 +1,52 @@
+{
+  "name": "@zcmsorg/theme-runner",
+  "version": "0.1.0",
+  "description": "Renders a theme off the request thread, in a worker that can be terminated.",
+  "license": "MIT",
+  "author": "Z-SOFT Co., Ltd. <support@z-cms.org> (https://z-cms.org)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zscontributor/z-cms.git",
+    "directory": "packages/theme-runner"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "verify:theme-sandbox": "tsc -p tsconfig.build.json && node dist/verify-theme-sandbox.js"
+  },
+  "dependencies": {
+    "@zcmsorg/schemas": "workspace:*",
+    "@zcmsorg/theme-sdk": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "typescript": "5.9.3",
+    "vitest": "4.1.10",
+    "@vitest/coverage-v8": "4.1.10"
+  },
+  "homepage": "https://z-cms.org",
+  "bugs": {
+    "url": "https://github.com/zscontributor/z-cms/issues"
+  }
+}

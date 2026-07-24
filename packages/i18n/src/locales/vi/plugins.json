@@ -1,0 +1,237 @@
+{
+  "metaTitle": "Plugin",
+  "title": "Plugin",
+  "description": "Mỗi plugin chạy trong sandbox riêng và chỉ làm được đúng những gì bạn cấp quyền.",
+  "denied": "Bạn không có quyền xem plugin.",
+  "emptyTitle": "Chưa có plugin nào",
+  "emptyDescription": "Kho plugin đang trống hoặc không kết nối được tới API.",
+  "installedHeading": "Đã cài trên site này",
+  "catalogHeading": "Kho plugin",
+  "card": {
+    "core": "Lõi",
+    "noDescription": "Plugin này chưa có mô tả.",
+    "capabilities": "Cung cấp cho giao diện",
+    "grantedHeading": "Quyền đã cấp",
+    "grantedUnknown": "API không trả về danh sách quyền đã cấp. Mở “Thay đổi quyền” để xem và cấp lại.",
+    "grantedNone": "Không có quyền nào được cấp.",
+    "requests": "Xin {count} quyền. Bạn sẽ xem và duyệt từng quyền trước khi cài.",
+    "requestsNone": "Plugin này không xin quyền nào.",
+    "failed": "Lần kích hoạt gần nhất đã thất bại: hàm setup() của plugin ném lỗi. Hãy kiểm tra cấu hình rồi thử bật lại.",
+    "activateFailedTitle": "Không kích hoạt được — setup() của plugin đã lỗi",
+    "install": "Cài đặt",
+    "activate": "Kích hoạt",
+    "deactivate": "Tắt",
+    "configure": "Cấu hình",
+    "changePermissions": "Thay đổi quyền",
+    "installDenied": "Bạn không có quyền cài đặt plugin.",
+    "settingsGenerated": "Biểu mẫu này được sinh tự động từ settingsSchema của plugin."
+  },
+  "settings": {
+    "empty": "Plugin này không có tuỳ chọn cấu hình.",
+    "denied": "Bạn không có quyền cấu hình plugin."
+  },
+  "consent": {
+    "installTitle": "Cài đặt {name}",
+    "updateTitle": "Cập nhật quyền cho {name}",
+    "subtitle": "Do {publisher} phát hành. Hãy xem plugin này xin những gì trước khi đồng ý.",
+    "confirmInstall": "Cài đặt và cấp quyền",
+    "confirmUpdate": "Lưu quyền đã cấp",
+    "requestsHeading": "Plugin xin được phép",
+    "requestsHint": "Bỏ chọn bất kỳ mục nào bạn không muốn cấp. Plugin vẫn cài được, nhưng những tính năng phụ thuộc vào quyền đó có thể ngừng hoạt động hoặc báo lỗi.",
+    "requestsNone": "Plugin này không xin quyền nào. Nó chỉ chạy được trong phạm vi sandbox.",
+    "sensitive": "Quyền nhạy cảm",
+    "deniedHeading": "Plugin KHÔNG thể",
+    "deniedHint": "Những điều sau bị chặn bởi sandbox (V8 isolate), bất kể bạn cấp quyền nào ở trên.",
+    "summaryHeading": "Bạn sắp cấp",
+    "summaryNone": "Không cấp quyền nào. Plugin sẽ được cài nhưng gần như chắc chắn không làm được gì.",
+    "summarySensitive": "Trong đó có {count} quyền nhạy cảm — chỉ cấp nếu bạn tin nhà phát hành {publisher}.",
+    "summaryDeclined": "Bạn từ chối {count} quyền: {list}.",
+    "networkHeading": "Plugin sẽ gọi tới",
+    "networkHint": "Danh sách host này lấy từ manifest của plugin và là những nơi duy nhất nó có thể gọi tới. Cấp quyền ở trên tức là cấp đúng danh sách này — không rộng hơn.",
+    "networkOnlyThese": "và không host nào khác"
+  },
+  "status": {
+    "NOT_INSTALLED": "Chưa cài",
+    "INSTALLING": "Đang cài",
+    "INACTIVE": "Đang tắt",
+    "ACTIVE": "Đang chạy",
+    "FAILED": "Lỗi",
+    "DISABLED": "Đã vô hiệu hoá",
+    "QUARANTINED": "Bị cách ly"
+  },
+  "actions": {
+    "installedWithoutPermissions": "Đã cài đặt plugin, không cấp quyền nào.",
+    "installedWithPermissions": "Đã cài đặt và cấp {count} quyền.",
+    "installFailed": "Không cài đặt được plugin.",
+    "installDenied": "Bạn không có quyền cài đặt plugin.",
+    "activated": "Đã kích hoạt plugin.",
+    "activateFailed": "Không kích hoạt được plugin.",
+    "activateDenied": "Bạn không có quyền bật/tắt plugin.",
+    "setupFailed": "Hàm setup() của plugin đã lỗi khi khởi động.",
+    "deactivated": "Đã tắt plugin.",
+    "deactivateFailed": "Không tắt được plugin.",
+    "settingsSaved": "Đã lưu cấu hình plugin.",
+    "settingsSaveFailed": "Không lưu được cấu hình.",
+    "configureDenied": "Bạn không có quyền cấu hình plugin."
+  },
+  "sandbox": {
+    "database": "Truy cập trực tiếp cơ sở dữ liệu",
+    "filesystem": "Đọc hoặc ghi tệp trên hệ thống",
+    "network": "Mở socket, hoặc gọi tới bất kỳ host nào nó không khai báo",
+    "environment": "Đọc biến môi trường của máy chủ",
+    "crossTenant": "Truy cập dữ liệu của site hoặc khách hàng khác"
+  },
+  "permissions": {
+    "unknown": "Quyền không xác định trong phiên bản này. Hãy kiểm tra kỹ trước khi cấp.",
+    "site:read": {
+      "label": "Xem thông tin website",
+      "detail": "Tên, tên miền và các thông tin cơ bản của site."
+    },
+    "site:create": {
+      "label": "Tạo website mới",
+      "detail": "Tạo site và chiếm một tên miền cho nó. Tên miền là duy nhất trên toàn hệ thống: đã lấy thì không ai khác dùng được nữa."
+    },
+    "site:update": {
+      "label": "Thay đổi thông tin website",
+      "detail": "Sửa tên, tên miền, ngôn ngữ mặc định của site."
+    },
+    "site:delete": {
+      "label": "Xoá website",
+      "detail": "Xoá toàn bộ site. Đây là thao tác không thể hoàn tác."
+    },
+    "content:read": {
+      "label": "Đọc nội dung của website",
+      "detail": "Xem tất cả bài viết, trang và bản nháp."
+    },
+    "content:create": {
+      "label": "Tạo nội dung mới",
+      "detail": "Thêm bài viết hoặc trang mới vào site."
+    },
+    "content:update": {
+      "label": "Chỉnh sửa nội dung",
+      "detail": "Sửa nội dung hiện có, kể cả nội dung do người khác viết."
+    },
+    "content:delete": {
+      "label": "Xoá nội dung",
+      "detail": "Xoá bài viết hoặc trang khỏi site."
+    },
+    "content:publish": {
+      "label": "Xuất bản nội dung",
+      "detail": "Đưa nội dung ra công khai mà không cần ai duyệt."
+    },
+    "content-type:read": {
+      "label": "Xem cấu trúc loại nội dung",
+      "detail": "Đọc định nghĩa các trường của bài viết, trang…"
+    },
+    "content-type:manage": {
+      "label": "Thay đổi cấu trúc loại nội dung",
+      "detail": "Thêm, sửa hoặc xoá trường dữ liệu — có thể ảnh hưởng tới nội dung đã có."
+    },
+    "media:read": {
+      "label": "Xem thư viện ảnh và tệp",
+      "detail": "Duyệt danh sách tệp media đã tải lên."
+    },
+    "media:upload": {
+      "label": "Tải lên tệp media",
+      "detail": "Thêm ảnh và tệp mới vào thư viện của site."
+    },
+    "media:delete": {
+      "label": "Xoá tệp media",
+      "detail": "Xoá ảnh hoặc tệp khỏi thư viện, kể cả tệp đang được dùng."
+    },
+    "menu:read": {
+      "label": "Xem menu điều hướng",
+      "detail": "Đọc cấu trúc các menu của site."
+    },
+    "menu:manage": {
+      "label": "Chỉnh sửa menu điều hướng",
+      "detail": "Thêm, sửa, sắp xếp lại các mục trong menu."
+    },
+    "theme:read": {
+      "label": "Xem giao diện đang dùng",
+      "detail": "Đọc thông tin và cấu hình của giao diện."
+    },
+    "theme:install": {
+      "label": "Cài đặt giao diện",
+      "detail": "Thêm giao diện mới vào site."
+    },
+    "theme:activate": {
+      "label": "Đổi giao diện đang dùng",
+      "detail": "Kích hoạt một giao diện khác — thay đổi toàn bộ diện mạo site."
+    },
+    "theme:configure": {
+      "label": "Thay đổi cấu hình giao diện",
+      "detail": "Sửa các tuỳ chọn màu sắc, bố cục… của giao diện."
+    },
+    "plugin:read": {
+      "label": "Xem danh sách plugin",
+      "detail": "Biết những plugin nào đang được cài trên site."
+    },
+    "plugin:install": {
+      "label": "Cài đặt plugin khác",
+      "detail": "Plugin này có thể tự cài thêm plugin khác và cấp quyền cho chúng."
+    },
+    "plugin:activate": {
+      "label": "Bật / tắt plugin khác",
+      "detail": "Kích hoạt hoặc vô hiệu hoá các plugin đang có trên site."
+    },
+    "plugin:configure": {
+      "label": "Thay đổi cấu hình plugin khác",
+      "detail": "Sửa thiết lập của những plugin khác trên site."
+    },
+    "user:read": {
+      "label": "Xem thông tin người dùng",
+      "detail": "Đọc tên, email và vai trò của các thành viên trong site."
+    },
+    "user:invite": {
+      "label": "Mời người dùng mới",
+      "detail": "Gửi lời mời tham gia site cho địa chỉ email bất kỳ."
+    },
+    "user:manage": {
+      "label": "Quản lý người dùng",
+      "detail": "Đổi vai trò hoặc gỡ thành viên khỏi site."
+    },
+    "settings:read": {
+      "label": "Đọc cấu hình website",
+      "detail": "Xem các thiết lập chung của site."
+    },
+    "settings:update": {
+      "label": "Thay đổi cấu hình website",
+      "detail": "Sửa các thiết lập chung — có thể ảnh hưởng tới toàn bộ site."
+    },
+    "mail:send": {
+      "label": "Gửi email dưới danh nghĩa website này",
+      "detail": "Plugin có thể gửi email qua máy chủ email của bạn, từ địa chỉ của bạn. Nó không đọc được hộp thư đến, không đổi được người gửi và không thấy được mật khẩu SMTP — nhưng email đó mang tên miền và uy tín của bạn. Chỉ cấp quyền này cho những plugin mà bạn thực sự mong đợi sẽ gửi email cho người dùng."
+    },
+    "network:fetch": {
+      "label": "Gọi tới các dịch vụ mà plugin đã khai báo",
+      "detail": "Plugin có thể gửi request tới đúng những host liệt kê bên dưới, và không tới bất kỳ đâu khác. Plugin không bao giờ tự mở kết nối — máy chủ mở hộ nó, và từ chối mọi địa chỉ nằm trong mạng nội bộ của bạn. Những gì bạn nhập vào ô mật khẩu trong cài đặt của plugin sẽ được dùng để gọi các host đó mà bản thân plugin không bao giờ đọc được."
+    },
+    "audit:read": {
+      "label": "Đọc nhật ký hoạt động",
+      "detail": "Xem lịch sử thao tác của mọi thành viên trên site."
+    },
+    "package:review": {
+      "label": "Duyệt package bị cách ly",
+      "detail": "Chấp nhận hoặc từ chối theme/plugin bị trình quét mã độc gắn cờ — tức là quyết định cho code đáng ngờ được chạy."
+    },
+    "theme:sideload": {
+      "label": "Cài theme từ file",
+      "detail": "Thêm mã theme chưa qua kiểm duyệt marketplace — và theme chạy không sandbox."
+    },
+    "theme:author": {
+      "label": "Thiết kế theme",
+      "detail": "Tạo và sửa bản thiết kế theme trong trình soạn thảo. Bản thiết kế không hiển thị ở đâu cho tới khi có người build nó."
+    },
+    "plugin:sideload": {
+      "label": "Cài plugin từ file",
+      "detail": "Thêm mã plugin chưa qua kiểm duyệt marketplace. Nó vẫn chạy trong sandbox."
+    },
+    "theme:publish": {
+      "label": "Phát hành theme lên marketplace",
+      "detail": "Đưa theme lên marketplace công khai dưới tên công ty này. Đã được duyệt thì không thu hồi được."
+    }
+  },
+  "sideloadHint": "Các plugin bạn cài từ file. Sau khi duyệt, chúng chạy trong sandbox như mọi plugin khác.",
+  "sideloadApprovedHint": "Đã duyệt. Cài nó lên site từ danh mục ở trên để cấp quyền cho nó."
+}

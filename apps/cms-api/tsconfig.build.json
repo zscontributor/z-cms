@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  // Tests are not part of the running API, and compiling them with it made a type
+  // error in a *spec* file stop the server from picking up a change to *source*:
+  // `nest start --watch` would report the error, decline to emit, and keep serving
+  // the previous dist. The API silently ran stale code for as long as any spec was
+  // red — which is the worst possible failure mode for a watch mode, because it
+  // looks exactly like a change that did not work.
+  //
+  // Vitest typechecks and runs the specs, under the config they actually run in.
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts", "src/**/*.spec.ts"]
+}

@@ -1,0 +1,63 @@
+{
+  "metaTitle": "Cài đặt email",
+  "title": "Email",
+  "description": "Máy chủ SMTP mà website này dùng để gửi email. Lời mời, thông báo, và mọi email do plugin bạn đã cấp quyền \"mail:send\" yêu cầu gửi đều đi từ đây.",
+  "denied": "Bạn không có quyền xem cài đặt email của website này.",
+  "readOnly": "Bạn có thể xem cấu hình này nhưng không thể thay đổi. Việc đó cần quyền settings:update.",
+  "test": {
+    "subject": "Email thử nghiệm từ Z-CMS",
+    "body": "Đây là email thử nghiệm từ Z-CMS. Nếu bạn đọc được nó, cài đặt email của website này đã hoạt động."
+  },
+  "server": {
+    "legend": "Máy chủ email",
+    "hint": "Nhà cung cấp email sẽ cho bạn bốn thông số này. Thường gặp nhất là cổng 587 với STARTTLS; cổng 465 cần bật \"TLS ngầm định\"."
+  },
+  "sender": {
+    "legend": "Người gửi",
+    "hint": "Địa chỉ đứng tên gửi email. Plugin không thể thay đổi phần này — đó chính là thứ ngăn một plugin gửi email mạo danh bất kỳ ai trên tên miền của bạn."
+  },
+  "fields": {
+    "enabled": "Cho phép website này gửi email",
+    "enabledHint": "Tắt sẽ giữ nguyên mọi cấu hình bên dưới và từ chối mọi lượt gửi. Đây là công tắc cần dùng khi email đang đi tới nơi không nên đến.",
+    "host": "Máy chủ SMTP",
+    "port": "Cổng",
+    "secure": "TLS ngầm định (SMTPS)",
+    "secureHint": "Bật cho cổng 465. Tắt không có nghĩa là gửi thô — kết nối vẫn được nâng cấp bằng STARTTLS nếu máy chủ hỗ trợ.",
+    "username": "Tên đăng nhập",
+    "password": "Mật khẩu",
+    "passwordSet": "Đã lưu một mật khẩu. Để trống để giữ nguyên, hoặc nhập mật khẩu mới để thay thế.",
+    "passwordUnset": "Chưa lưu mật khẩu nào. Để trống nếu máy chủ của bạn không yêu cầu.",
+    "passwordClear": "Xoá mật khẩu đã lưu",
+    "fromName": "Tên người gửi",
+    "fromEmail": "Địa chỉ gửi",
+    "replyTo": "Địa chỉ nhận phản hồi",
+    "replyToHint": "Không bắt buộc. Nơi thư trả lời sẽ được gửi đến, khi đó không phải là địa chỉ gửi."
+  },
+  "fromEnv": {
+    "title": "Đang dùng SMTP_* từ biến môi trường",
+    "body": "Website này chưa lưu cấu hình nào, nên các giá trị dưới đây lấy từ biến môi trường — trong môi trường phát triển đó là Mailpit, công cụ giữ lại email thay vì gửi đi thật. Lưu biểu mẫu này sẽ tạo cấu hình riêng cho website và thay thế biến môi trường."
+  },
+  "status": {
+    "never": "Chưa từng thử nghiệm.",
+    "ok": "Lần thử gần nhất thành công {when}.",
+    "failed": "Lần thử gần nhất thất bại {when}."
+  },
+  "actions": {
+    "save": "Lưu cài đặt",
+    "saved": "Đã lưu cài đặt email.",
+    "saveFailed": "Không thể lưu cài đặt email.",
+    "sendTest": "Gửi email thử nghiệm",
+    "sending": "Đang gửi…",
+    "testTo": "Gửi thử đến",
+    "testSent": "Đã gửi email thử nghiệm đến {to}. Nếu không thấy, hãy kiểm tra thư mục spam trước khi thay đổi gì ở đây.",
+    "testFailed": "Máy chủ email từ chối: {error}",
+    "testDenied": "Bạn không có quyền gửi email từ website này.",
+    "saveFirst": "Hãy lưu cài đặt trước khi gửi thử — bản thử dùng cấu hình đã lưu, không phải nội dung đang hiển thị trên màn hình."
+  },
+  "plugins": {
+    "legend": "Plugin có thể gửi email",
+    "none": "Chưa plugin nào trên website này được cấp quyền mail:send.",
+    "quota": "Các plugin được gửi tối đa {limit} email mỗi giờ từ website này, tính tổng. Email của chính Z-CMS — lời mời, đặt lại mật khẩu — không bị tính vào hạn mức.",
+    "manage": "Quản lý"
+  }
+}

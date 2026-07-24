@@ -1,0 +1,77 @@
+name: ✨ Feature or change proposal
+description: Propose something Z-CMS should do, or should do differently.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Open this **before** you write the code. A proposal we agree on takes an hour;
+        a large PR we cannot merge wastes your weekend. If you are only asking whether
+        an idea has legs, [Discussions](../../discussions) is the cheaper room.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: >-
+        What can you not do today, and what are you doing instead? Describe the
+        situation, not the solution — the best design often is not the one either of
+        us thought of first.
+      placeholder: |
+        Editors keep pasting the same three-block promo section into every landing page
+        and it drifts out of sync. There is no way to reuse a group of blocks.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you propose
+      description: The change as you would explain it to someone who has to maintain it.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of the platform
+      options:
+        - Admin dashboard (admin-web)
+        - Public site (site-runtime)
+        - API (cms-api)
+        - Plugin SDK / sandbox
+        - Theme SDK
+        - Marketplace, packages or signing
+        - i18n and translations
+        - Jobs, worker or infrastructure
+        - Cross-cutting / not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: Does it touch a security boundary?
+      description: >-
+        Tenant isolation, the plugin sandbox, package signing, auth. If it does, say
+        which one and what an attacker gains if the change is wrong. "No" is a
+        perfectly good answer — we ask because the answer is load-bearing, and a
+        feature that widens a boundary needs a test written from the attacker's side.
+      placeholder: No — this is admin-side UI only, no new capability reaches plugin code.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+      description: >-
+        Including the one where Z-CMS does nothing and this lives in a plugin. Z-CMS
+        has an extension system precisely so the core does not have to grow forever.
+
+  - type: checkboxes
+    id: offer
+    attributes:
+      label: Would you like to build it?
+      options:
+        - label: I am willing to open the PR (with tests) if the design is agreed.

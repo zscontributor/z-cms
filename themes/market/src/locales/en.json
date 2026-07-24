@@ -1,0 +1,160 @@
+{
+  "layout": {
+    "skipToContent": "Skip to content",
+    "backToTop": "Back to top"
+  },
+  "colorMode": {
+    "toggle": "Switch between dark and light mode"
+  },
+  "language": {
+    "switch": "Change language"
+  },
+  "topbar": {
+    "link": "Shop now"
+  },
+  "nav": {
+    "primary": "Primary",
+    "shop": "Shop",
+    "about": "Our story",
+    "journal": "Journal",
+    "cart": "Bag",
+    "menu": "Menu"
+  },
+  "search": {
+    "label": "Search",
+    "placeholder": "Search the shop"
+  },
+  "hero": {
+    "eyebrow": "New season · Skin first",
+    "title": {
+      "first": "Radiance,",
+      "second": "honestly made."
+    },
+    "copy": "Short ingredient lists, refillable glass, and percentages printed where you can read them. Skincare that says exactly what it does — and then does it.",
+    "primary": "Shop all",
+    "secondary": "Read our story",
+    "note": "Cruelty-free · Dermatologist-tested · Refillable",
+    "aria": "A bottle of serum on a soft blush backdrop"
+  },
+  "categories": {
+    "eyebrow": "Shop by category",
+    "title": "Find where your routine begins.",
+    "one": "Skincare",
+    "two": "Makeup",
+    "three": "Body & bath",
+    "four": "Refills",
+    "link": "Explore"
+  },
+  "products": {
+    "eyebrow": "The edit",
+    "title": "Loved, and worth it.",
+    "copy": "The formulas that account for most of what we make, and almost all of what people come back for.",
+    "viewAll": "View all products",
+    "aria": "Product photograph",
+    "empty": "No products have been published yet. Add one in the admin and it appears on this shelf."
+  },
+  "journal": {
+    "eyebrow": "The journal",
+    "title": "Notes from the formulation bench.",
+    "all": "All journal entries",
+    "empty": "Nothing has been written yet. Publish a journal entry in the admin and it appears here."
+  },
+  "values": {
+    "eyebrow": "Our promises",
+    "title": "Four things we will not trade away.",
+    "one": {
+      "title": "Cruelty-free",
+      "copy": "Never tested on animals, anywhere, by anyone acting for us. Certified, not merely claimed."
+    },
+    "two": {
+      "title": "Dermatologist-tested",
+      "copy": "Patch-tested on real skin across every tone and type before a single bottle is sold."
+    },
+    "three": {
+      "title": "Refillable",
+      "copy": "Heavy pharmaceutical glass built to outlive its contents. Send it back, or refill it at home."
+    },
+    "four": {
+      "title": "Vegan",
+      "copy": "No ingredient of animal origin. No exceptions hidden three lines down the list."
+    }
+  },
+  "quote": {
+    "eyebrow": "In the press",
+    "text": "The rare beauty brand that puts the number on the bottle. You always know what you are buying, and it is always what it says.",
+    "author": "Élise Moreau",
+    "source": "Editor, Atelier Magazine"
+  },
+  "newsletter": {
+    "eyebrow": "The letter",
+    "title": "Skin notes, once a month.",
+    "copy": "What we are formulating, what the research actually says, and first access to a restock. No daily nonsense.",
+    "label": "Email address",
+    "placeholder": "you@example.com",
+    "button": "Subscribe",
+    "note": "Unsubscribe in one click. We never sell your address."
+  },
+  "footer": {
+    "shop": "Shop",
+    "brand": "Brand",
+    "help": "Help",
+    "follow": "Follow",
+    "newArrivals": "New arrivals",
+    "bestsellers": "Bestsellers",
+    "giftSets": "Gift sets",
+    "refills": "Refills",
+    "ourStory": "Our story",
+    "journal": "Journal",
+    "ingredients": "Ingredients",
+    "sustainability": "Sustainability",
+    "shipping": "Shipping",
+    "returns": "Returns",
+    "faq": "FAQ",
+    "contact": "Contact us"
+  },
+  "product": {
+    "back": "All products",
+    "addToCart": "Add to bag",
+    "oldPriceLabel": "Original price",
+    "aria": "Product photograph",
+    "details": {
+      "ingredients": {
+        "title": "Ingredients",
+        "body": "The full list, with the percentage of every active, is printed on the carton and repeated in the description below. No undeclared fragrance, no proprietary blends."
+      },
+      "howToUse": {
+        "title": "How to use",
+        "body": "Apply to clean, dry skin. Introduce one new active at a time and give it four weeks before you judge it — skin turns over slowly, and so does the evidence."
+      },
+      "shipping": {
+        "title": "Shipping & returns",
+        "body": "Complimentary shipping on orders over $50, dispatched within one working day. If it does not suit your skin, send it back within 60 days — opened is fine."
+      }
+    }
+  },
+  "archive": {
+    "intro": "Every formula we make, in one place.",
+    "empty": "Nothing has been published here yet.",
+    "previous": "Previous",
+    "next": "Next",
+    "pageOf": "Page {page} of {total}"
+  },
+  "post": {
+    "backToPosts": "All journal entries",
+    "readingTime": "{minutes} min read"
+  },
+  "notFound": {
+    "title": "This page does not exist",
+    "description": "The link may be out of date, or the product may have sold out and been retired.",
+    "backHome": "Back to the shop"
+  },
+  "error": {
+    "title": "Something went wrong",
+    "description": "The page could not be rendered. The problem has been logged and we are looking into it.",
+    "backHome": "Back to the shop",
+    "reference": "Reference"
+  },
+  "list": {
+    "empty": "There is nothing to show here yet."
+  }
+}

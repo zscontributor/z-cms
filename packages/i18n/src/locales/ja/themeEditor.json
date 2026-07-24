@@ -1,0 +1,218 @@
+{
+  "metaTitle": "テーマエディター",
+  "title": "テーマエディター",
+  "description": "ウィジェットをページにドラッグしてテーマをデザインします。コードは不要です。",
+  "saved": "保存しました",
+  "unsaved": "未保存の変更があります",
+  "actions": {
+    "save": "保存",
+    "saving": "保存中…",
+    "undo": "元に戻す",
+    "redo": "やり直す",
+    "duplicate": "複製",
+    "delete": "削除",
+    "addSection": "セクションを追加",
+    "addRow": "行を追加",
+    "addColumn": "列を追加",
+    "create": "新しいデザイン",
+    "open": "開く",
+    "build": "ビルド"
+  },
+  "templates": {
+    "label": "テンプレート",
+    "home": "ホーム",
+    "page": "ページ",
+    "post": "投稿",
+    "archive": "アーカイブ"
+  },
+  "categories": {
+    "content": "コンテンツ",
+    "media": "メディア",
+    "layout": "レイアウト",
+    "dynamic": "ダイナミック"
+  },
+  "containers": {
+    "section": "セクション",
+    "row": "行",
+    "column": "列"
+  },
+  "canvas": {
+    "emptyTemplate": "まだ何もありません。セクションを追加して始めましょう。",
+    "dropHere": "ここにウィジェットをドロップ",
+    "unknownWidget": "不明なウィジェット: {type}"
+  },
+  "inspector": {
+    "themeTitle": "テーマ",
+    "themeHint": "テーマ全体の色・書体・余白。インストール後にサイト所有者が変更できます。",
+    "unknownWidget": "このビルドは「{type}」を認識しません。そのまま保持されます。",
+    "currentBinding": "このウィジェットは表示中のページを描画します。ホームとアーカイブには単一のページがないため、何も表示されません。",
+    "dataSource": "データ",
+    "budget": "コンテンツリスト {used}/{max} を使用中。",
+    "budgetFull": "コンテンツリストを {max} 件すべて使用しています。既存の条件（同じ種類・件数・並び順）を再利用するか、1つ空けてください。"
+  },
+  "a11y": {
+    "drag": "{label} をドラッグ",
+    "moveUp": "{label} を上へ",
+    "moveDown": "{label} を下へ",
+    "duplicate": "{label} を複製",
+    "delete": "{label} を削除"
+  },
+  "errors": {
+    "denied": "テーマをデザインする権限がありません。",
+    "createFailed": "デザインを作成できませんでした。",
+    "saveFailed": "デザインを保存できませんでした。",
+    "deleteFailed": "デザインを削除できませんでした。",
+    "noColumn": "先にセクションを追加してください。ウィジェットは列の中に入ります。",
+    "buildDenied": "未審査のテーマコードをインストールする権限がありません。デザインのビルドはそれに当たります。",
+    "buildFailed": "ビルドを開始できませんでした。"
+  },
+  "props": {
+    "text": "テキスト",
+    "html": "内容",
+    "label": "ラベル",
+    "href": "リンク",
+    "heading": "見出し",
+    "align": "配置",
+    "alignLeft": "左",
+    "alignCenter": "中央",
+    "alignRight": "右",
+    "alignStart": "上",
+    "alignStretch": "引き伸ばす",
+    "headingLevel": {
+      "label": "レベル",
+      "h1": "H1",
+      "h2": "H2",
+      "h3": "H3",
+      "h4": "H4",
+      "h5": "H5",
+      "h6": "H6"
+    },
+    "variant": "スタイル",
+    "variantPrimary": "プライマリ",
+    "variantSecondary": "セカンダリ",
+    "variantLink": "リンク",
+    "src": "画像",
+    "alt": "代替テキスト",
+    "caption": "キャプション",
+    "width": "幅",
+    "widthContained": "コンテナ内",
+    "widthWide": "ワイド",
+    "widthFull": "全幅",
+    "height": "高さ",
+    "menuLocation": "メニューの位置",
+    "orientation": "方向",
+    "orientationHorizontal": "横",
+    "orientationVertical": "縦",
+    "layout": "レイアウト",
+    "layoutList": "リスト",
+    "layoutGrid": "グリッド",
+    "showExcerpt": "抜粋を表示",
+    "background": "背景",
+    "contentWidth": "コンテンツ幅",
+    "paddingY": "上下の余白",
+    "gap": "間隔",
+    "verticalAlign": "垂直配置",
+    "span": "幅（12分の）",
+    "contentType": "コンテンツタイプ",
+    "contentTypeNone": "タイプを選択…",
+    "limit": "件数",
+    "sort": "並び順",
+    "sortNewest": "新しい順",
+    "sortOldest": "古い順",
+    "sortTitle": "タイトル順"
+  },
+  "hints": {
+    "contentType": "このサイトに実在するタイプ。そのタイプがないサイトにインストールすると、リストは空になります。",
+    "limit": "最大 {max} 件。"
+  },
+  "tokens": {
+    "colorPrimary": "メインカラー",
+    "colorText": "文字色",
+    "colorBackground": "背景色",
+    "fontHeading": "見出しフォント",
+    "fontBody": "本文フォント",
+    "radius": "角の丸み",
+    "maxWidth": "最大コンテンツ幅",
+    "unset": "デフォルト",
+    "clear": "クリア"
+  },
+  "widgets": {
+    "heading": {
+      "label": "見出し",
+      "description": "タイトル。ここに入力する固定テキストです。"
+    },
+    "richtext": {
+      "label": "テキスト",
+      "description": "書式付きの段落。"
+    },
+    "button": {
+      "label": "ボタン",
+      "description": "ボタンに見えるリンク。"
+    },
+    "image": {
+      "label": "画像",
+      "description": "テーマ同梱またはサイトがアップロードした画像。"
+    },
+    "logo": {
+      "label": "ロゴ",
+      "description": "サイトのロゴ。ない場合はサイト名。"
+    },
+    "menu": {
+      "label": "メニュー",
+      "description": "サイトが位置に割り当てたメニュー。"
+    },
+    "spacer": {
+      "label": "スペーサー",
+      "description": "縦の空白。"
+    },
+    "postTitle": {
+      "label": "ページタイトル",
+      "description": "表示中のページのタイトル。"
+    },
+    "postContent": {
+      "label": "ページ内容",
+      "description": "表示中のページに編集者が書いたブロック。"
+    },
+    "postList": {
+      "label": "コンテンツリスト",
+      "description": "サイトの実際のページや投稿（例：最新6件）。"
+    }
+  },
+  "publish": {
+    "heading": "公開",
+    "noKey": "テーマに署名するにはパブリッシャーキーが必要です。マーケットプレイス上のあなたの身元です。",
+    "passphrase": "パスフレーズ",
+    "passphraseHint": "ブラウザから出ることはありません。キーを守る唯一のものです。関連のない単語をいくつか使ってください。",
+    "passphraseStrong": "強力です。",
+    "createKey": "キーを作成",
+    "importExisting": "`zcms keygen` のキーが既にある",
+    "importHint": "publisher-private.pem を貼り付けてください。ここでパスフレーズにより暗号化され、平文で送信されることはありません。",
+    "importKey": "キーを取り込む",
+    "keySaved": "キーを保存しました。マーケットプレイスで公開鍵を登録してパブリッシャーになってください。",
+    "publicKey": "公開鍵",
+    "publicKeyHint": "marketplace.z-cms.org で登録してください。共有して問題ありません。",
+    "buildFirst": "先にデザインをビルドしてください。署名はビルドされたものに対して行われます。",
+    "sign": "署名してダウンロード",
+    "signed": "署名しました。マーケットプレイスの開発者ポータルで .zcms をアップロードしてください。",
+    "submitHint": "署名済みパッケージは開発者ポータルからアップロードし、公開前にレビュー担当者が確認します。",
+    "manage": "キーの管理",
+    "forget": "このキーを削除",
+    "forgetHint": "保存された暗号文を削除します。公開済みのテーマは動作し続けます（読者が検証するのはマーケットプレイスの署名であってあなたの署名ではありません）。ただしキーがないと更新を公開できません。",
+    "unsupported": "このブラウザは Ed25519 署名に対応していません。最新の Chrome / Safari / Firefox を使うか、`zcms pack` で署名してください。",
+    "keyLoadFailed": "パブリッシャーキーを読み込めませんでした。",
+    "keySaveFailed": "パブリッシャーキーを保存できませんでした。",
+    "keyDeleteFailed": "パブリッシャーキーを削除できませんでした。",
+    "sealFailed": "署名済みパッケージを作成できませんでした。",
+    "noBuild": "署名できるビルドがありません。",
+    "submit": "署名して申請",
+    "submitted": "レビューに申請しました（{status}）。",
+    "submitFailed": "テーマを申請できませんでした。",
+    "publishDenied": "マーケットプレイスに公開する権限がありません。",
+    "connectToken": "マーケットプレイスのアカウントを接続",
+    "tokenConnected": "マーケットプレイスのアカウントを接続済み",
+    "tokenDisconnect": "接続を解除",
+    "tokenConnect": "接続",
+    "tokenHint": "マーケットプレイスの開発者ポータルの「Tokens」で API トークンを作成し、ここに貼り付けてください。暗号化して保存され、二度と表示されません。パッケージの申請以外には使えません。",
+    "tokenSaveFailed": "マーケットプレイストークンを保存できませんでした。"
+  }
+}

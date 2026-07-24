@@ -1,0 +1,19 @@
+{
+  // ESM half of the dual build. A generated theme is bundled to ESM with React
+  // left external; handed the CJS build, esbuild cannot statically resolve
+  // `require("react/jsx-runtime")` and emits a `__require` shim that throws at load
+  // ("Dynamic require of react/jsx-runtime is not supported"). See
+  // theme-sdk/tsconfig.build.esm.json — this library hits the same wall.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": false,
+    "declaration": false,
+    "declarationMap": false,
+    "rootDir": "./src",
+    "outDir": "./dist/esm"
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts", "src/**/*.test.tsx"]
+}

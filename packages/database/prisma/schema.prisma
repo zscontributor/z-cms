@@ -1,0 +1,1288 @@
+// Z-CMS core schema.
+//
+// Two classes of tables live here, and the distinction drives everything:
+//
+//   PLATFORM tables (Theme, ThemeVersion, Plugin, PluginVersion, User, Tenant)
+//     The shared catalog + identity. Not tenant-scoped, no RLS. Every tenant
+//     sees the same marketplace.
+//
+//   TENANT tables (everything with `tenantId`)
+//     Customer data. Row-Level Security is enabled on all of them and the app
+//     connects as `zcms_app`, a role that cannot bypass RLS. A forgotten
+//     `where: { tenantId }` therefore returns zero rows instead of leaking.
+//
+// The policies themselves are not expressible in Prisma schema language; they
+// live in prisma/migrations/*/rls.sql and are applied by migrate.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated"
+
+  // cms-api runs on NestJS, which needs CommonJS + decorator metadata. Emitting
+  // a CJS client with bare (extensionless) imports lets Nest's tsc compile this
+  // generated source directly, so there is no separate build step for the DB
+  // package. Bundlers on the Next.js side resolve bare imports fine too.
+  moduleFormat        = "cjs"
+  importFileExtension = ""
+}
+
+datasource db {
+  provider = "postgresql"
+  // No `url` — Prisma 7 reads it from prisma.config.ts.
+}
+
+// ---------------------------------------------------------------------------
+// Tenancy
+// ---------------------------------------------------------------------------
+
+model Tenant {
+  id        String   @id @default(uuid()) @db.Uuid
+  slug      String   @unique
+  name      String
+  status    String   @default("ACTIVE")
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  sites         Site[]
+  memberships   Membership[]
+  users         User[]
+  contents      Content[]
+  contentTypes  ContentType[]
+  media         Media[]
+  mediaFolders  MediaFolder[]
+  menus         Menu[]
+  taxonomies    Taxonomy[]
+  terms         Term[]
+  siteThemes    SiteTheme[]
+  sitePlugins   SitePlugin[]
+  auditLogs     AuditLog[]
+  invitations   Invitation[]
+  recoveryCodes RecoveryCode[]
+  mailSettings  SiteMailSettings[]
+  themeDrafts   ThemeDraft[]
+  publisherKeys PublisherKeyVault[]
+
+  @@map("tenants")
+}
+
+model Site {
+  id            String     @id @default(uuid()) @db.Uuid
+  tenantId      String     @map("tenant_id") @db.Uuid
+  slug          String
+  name          String
+  status        SiteStatus @default(DRAFT)
+  defaultLocale String     @default("vi") @map("default_locale")
+  locales       String[]   @default(["vi"])
+  settings      Json       @default("{}")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+
+  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  domains      Domain[]
+  contentTypes ContentType[]
+  contents     Content[]
+  media        Media[]
+  mediaFolders MediaFolder[]
+  menus        Menu[]
+  taxonomies   Taxonomy[]
+  terms        Term[]
+  memberships  Membership[]
+  themes       SiteTheme[]
+  plugins      SitePlugin[]
+  invitations  Invitation[]
+  mailSettings SiteMailSettings?
+  themeDrafts  ThemeDraft[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@map("sites")
+}
+
+/**
+ * How this site sends email. One row per site, or none.
+ * A table of its own rather than a corner of `Site.settings`, and the password is
+ * the whole reason. A JSONB blob is read wholesale — every `select: { settings:
+ * true }` anywhere in the codebase would be carrying an SMTP password around, and
+ * one of them would eventually put it in a response. Here the secret is a column,
+ * it is encrypted, and the DTO that leaves the API does not have a field for it.
+ * `passwordEncrypted` holds AES-256-GCM ciphertext (`v1.<iv>.<tag>.<ct>`, the
+ * same envelope as a TOTP secret), keyed by MAIL_ENCRYPTION_KEY from the
+ * environment. A stolen database dump is not, on its own, a working mail relay.
+ */
+model SiteMailSettings {
+  id       String  @id @default(uuid()) @db.Uuid
+  tenantId String  @map("tenant_id") @db.Uuid
+  siteId   String  @unique @map("site_id") @db.Uuid
+  /**
+   * The kill switch. False leaves the configuration intact but refuses every
+   * send — which is what an operator wants at 3am, and it is not the same as
+   * deleting the row and having to type the password back in.
+   */
+  enabled  Boolean @default(false)
+
+  host   String
+  port   Int     @default(587)
+  /**
+   * Implicit TLS from the first byte (SMTPS/465). Off still STARTTLSes when offered.
+   */
+  secure Boolean @default(false)
+
+  username          String?
+  passwordEncrypted String? @map("password_encrypted")
+
+  /**
+   * The envelope sender. Not a field any sender may set — see @zcmsorg/schemas.
+   */
+  fromName  String  @map("from_name")
+  fromEmail String  @map("from_email")
+  replyTo   String? @map("reply_to")
+
+  /**
+   * The last "send a test" — the only evidence anyone has that this works.
+   */
+  lastTestAt    DateTime? @map("last_test_at")
+  lastTestError String?   @map("last_test_error")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("site_mail_settings")
+}
+
+model Domain {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  siteId    String   @map("site_id") @db.Uuid
+  // Globally unique: one hostname can only ever point at one site, across all
+  // tenants. This is checked by the DB, not by application code.
+  hostname  String   @unique
+  isPrimary Boolean  @default(false) @map("is_primary")
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@index([siteId])
+  @@map("domains")
+}
+
+// ---------------------------------------------------------------------------
+// Identity & access
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String    @id @default(uuid()) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  // Globally unique so login needs only an email, no tenant hint. A person who
+  // belongs to two tenants uses two accounts; revisit if that becomes common.
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  name         String
+  avatarUrl    String?   @map("avatar_url")
+  isPlatform   Boolean   @default(false) @map("is_platform")
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  /**
+   * The TOTP shared secret, ENCRYPTED (AES-256-GCM, see auth/totp.ts).
+   * Not a hash — a second factor has to be recomputed on every login, so it has
+   * to be recoverable, which is exactly what makes it dangerous at rest. A leaked
+   * database with plaintext secrets in it hands an attacker every second factor
+   * on the instance, and 2FA's entire premise is that it survives the compromise
+   * of the credential store. So it is encrypted under a key that lives in the
+   * environment, not in the database: a stolen dump alone is not enough.
+   */
+  totpSecret        String?   @map("totp_secret")
+  /**
+   * The secret being enrolled, not yet proven. Encrypted the same way.
+   * Enrollment is two steps because a one-step enrollment locks people out: if
+   * the secret is switched on the moment it is generated and the authenticator
+   * never actually scanned it, the account now demands a code nobody can produce.
+   * This column is the gap between "generated" and "proven".
+   */
+  totpPendingSecret String?   @map("totp_pending_secret")
+  /**
+   * Null means no second factor. Its presence is the switch.
+   */
+  totpEnabledAt     DateTime? @map("totp_enabled_at")
+  /**
+   * The last TOTP time-step this user successfully consumed.
+   * A TOTP code stays valid for its whole 30-second window, so without this a
+   * code shoulder-surfed (or replayed from a proxied request) works a second
+   * time. Codes are accepted strictly ascending: once a step is spent, it and
+   * every step before it are dead.
+   */
+  totpLastStep      BigInt?   @map("totp_last_step")
+
+  tenant        Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  memberships   Membership[]
+  contents      Content[]
+  versions      ContentVersion[]
+  media         Media[]
+  auditLogs     AuditLog[]
+  refreshTokens RefreshToken[]
+  publishers    Publisher[]
+  invitesSent   Invitation[]
+  recoveryCodes RecoveryCode[]
+  themeDrafts   ThemeDraft[]
+  publisherKey  PublisherKeyVault?
+
+  @@index([tenantId])
+  @@map("users")
+}
+
+/**
+ * One single-use way back in when the authenticator is gone.
+ * A row per code rather than an array on the user, because a code has a life of
+ * its own: it is spent, and "which of them are left" is a question the profile
+ * screen asks. Only the SHA-256 is stored — they are high-entropy random strings,
+ * so a fast hash is the right one; bcrypt exists to slow down guessing a *human*
+ * choice, and there is no human choice here.
+ * Spent codes are kept, not deleted. "This account was accessed with a recovery
+ * code at 03:12" is precisely the row an incident starts from.
+ */
+model RecoveryCode {
+  id        String    @id @default(uuid()) @db.Uuid
+  // Carried so the table falls under the same RLS policy as everything else that
+  // holds customer rows. The login path reads it with the system client (it has
+  // no tenant context yet, by definition), but any tenant-scoped code that ever
+  // touches it is fenced in by Postgres rather than by good intentions.
+  tenantId  String    @map("tenant_id") @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  /**
+   * SHA-256 of the code, hex. The code itself is shown once and never stored.
+   */
+  codeHash  String    @map("code_hash")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, codeHash])
+  @@index([userId])
+  @@index([tenantId])
+  @@map("recovery_codes")
+}
+
+/**
+ * An offer of a role, made to an email address that may not have an account yet.
+ * Why an invitation and not "create the user with a temporary password": a
+ * password an admin chooses is a password an admin knows, and one that travels
+ * through whatever channel they use to pass it on. The invitee sets their own,
+ * once, and nobody else ever sees it.
+ * Z-CMS ships no mailer, so the link is returned to the inviter to deliver. That
+ * makes the token exactly as sensitive as a password reset link, and it is
+ * treated like one: single-use, expiring, and stored only as a SHA-256 — the raw
+ * token exists only in the response that created it. There is deliberately no
+ * endpoint that can show it again.
+ * The row is kept after `acceptedAt`: "who let this person in, and as what" is
+ * the question an audit of a compromised account starts from, and deleting the
+ * invitation would delete the answer.
+ */
+model Invitation {
+  id        String  @id @default(uuid()) @db.Uuid
+  tenantId  String  @map("tenant_id") @db.Uuid
+  // NULL = the invited role applies to every site in the tenant, matching Membership.
+  siteId    String? @map("site_id") @db.Uuid
+  email     String
+  role      Role
+  /**
+   * SHA-256 of the invite token, hex. The raw token is never stored.
+   */
+  tokenHash String  @unique @map("token_hash")
+
+  invitedById String? @map("invited_by_id") @db.Uuid
+
+  expiresAt  DateTime  @map("expires_at")
+  /**
+   * Set once redeemed. A second redemption of the same token is refused.
+   */
+  acceptedAt DateTime? @map("accepted_at")
+  /**
+   * Withdrawn before it was used.
+   */
+  revokedAt  DateTime? @map("revoked_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  site      Site?  @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  invitedBy User?  @relation(fields: [invitedById], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([email])
+  @@map("invitations")
+}
+
+/**
+ * A refresh token, stored so it can be ROTATED and REVOKED.
+ * Before this table, refresh tokens were stateless JWTs: a leaked one worked
+ * until it expired (30 days) with no way to kill it, and logout was a fiction.
+ * Now every refresh consumes its token and issues a new one in the same
+ * `familyId`. Two properties fall out of that:
+ * - Logout / revoke-all works: mark the family revoked and no descendant is
+ * accepted again.
+ * - Theft is detectable. A refresh token is meant to be used exactly once. If
+ * an already-consumed token is presented again, either the legitimate client
+ * or an attacker is replaying it — we cannot tell which, so we revoke the
+ * WHOLE family. The thief and the victim are both logged out; the victim logs
+ * back in, the thief cannot.
+ * Only the SHA-256 of the token is stored. A database leak does not hand out
+ * usable tokens, the same reason passwords are hashed.
+ */
+model RefreshToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  tenantId   String    @map("tenant_id") @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  /**
+   * SHA-256 of the signed token string, hex. The raw token is never stored.
+   */
+  tokenHash  String    @unique @map("token_hash")
+  /**
+   * Rotation lineage. Reuse of any consumed member revokes the whole family.
+   */
+  familyId   String    @map("family_id") @db.Uuid
+  expiresAt  DateTime  @map("expires_at")
+  /**
+   * Set when this token has been rotated. A second use of a consumed token is theft.
+   */
+  consumedAt DateTime? @map("consumed_at")
+  /**
+   * Set when the family was killed (logout, or reuse detected).
+   */
+  revokedAt  DateTime? @map("revoked_at")
+  userAgent  String?   @map("user_agent")
+  ip         String?
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+  @@index([tenantId])
+  @@map("refresh_tokens")
+}
+
+model Membership {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  // NULL = the role applies to every site in the tenant (an org-wide admin).
+  siteId    String?  @map("site_id") @db.Uuid
+  role      Role
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  site   Site?  @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  // Covers per-site roles only: Postgres treats NULLs as distinct, so this does
+  // NOT stop duplicate tenant-wide rows. A partial unique index in
+  // migrations/20260712110000_membership_tenant_wide_unique handles that case.
+  @@unique([userId, siteId])
+  @@index([tenantId])
+  @@index([siteId])
+  @@map("memberships")
+}
+
+// ---------------------------------------------------------------------------
+// Content modelling
+// ---------------------------------------------------------------------------
+
+model ContentType {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  siteId      String   @map("site_id") @db.Uuid
+  // Machine key used in URLs and APIs, e.g. "post", "page", "product".
+  key         String
+  name        String
+  pluralName  String   @map("plural_name")
+  description String?
+  // Whether there is exactly one of these (e.g. a "homepage" or "settings").
+  isSingleton Boolean  @default(false) @map("is_singleton")
+  // Does this type render as its own URL? Pages/posts do; a "banner" may not.
+  isRoutable  Boolean  @default(true) @map("is_routable")
+  // URL prefix for routable types: "" for pages, "blog" for posts.
+  routePrefix String   @default("") @map("route_prefix")
+  // Field definitions, validated against packages/schemas at write time.
+  fields      Json     @default("[]")
+  // Does this type use the block editor in addition to its fields?
+  hasBlocks   Boolean  @default(true) @map("has_blocks")
+  icon        String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  site     Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  contents Content[]
+
+  @@unique([siteId, key])
+  @@index([tenantId])
+  @@map("content_types")
+}
+
+model Content {
+  id                 String        @id @default(uuid()) @db.Uuid
+  tenantId           String        @map("tenant_id") @db.Uuid
+  siteId             String        @map("site_id") @db.Uuid
+  contentTypeId      String        @map("content_type_id") @db.Uuid
+  locale             String        @default("vi")
+  // The same piece of content, across locales. Every row has one; a row with no
+  // translations is simply the only member of its group. Non-null on purpose —
+  // a nullable "is this a translation of anything" column means every query that
+  // looks for siblings has to handle two shapes, and one of them will be missed.
+  //
+  // This, and not the slug, is what makes /about and /vi/gioi-thieu the same page:
+  // a translation is free to have a completely different slug, which it must be,
+  // because a Vietnamese URL that reads as English is not a translated URL.
+  translationGroupId String        @default(uuid()) @map("translation_group_id") @db.Uuid
+  title              String
+  slug               String
+  excerpt            String?
+  // Typed field values, shaped by ContentType.fields.
+  data               Json          @default("{}")
+  // Block-editor document: [{ id, type, props, children? }]
+  blocks             Json          @default("[]")
+  // SEO + Open Graph. Owned by core; the SEO plugin will extend it later.
+  seo                Json          @default("{}")
+  // Null = normal site content. Non-null = demo content owned by one theme and
+  // visible only while that theme is active.
+  demoThemeKey       String?       @map("demo_theme_key")
+  status             ContentStatus @default(DRAFT)
+  publishedAt        DateTime?     @map("published_at")
+  authorId           String?       @map("author_id") @db.Uuid
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
+
+  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  site        Site             @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  contentType ContentType      @relation(fields: [contentTypeId], references: [id], onDelete: Restrict)
+  author      User?            @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  versions    ContentVersion[]
+  terms       ContentTerm[]
+
+  // A slug is unique per site + locale, which is what the router resolves on.
+  @@unique([siteId, locale, slug, demoThemeKey])
+  // One row per locale within a group: a page cannot have two Vietnamese
+  // translations, and the database is where that is settled rather than in the
+  // admin, which is not the only thing that writes here.
+  @@unique([siteId, translationGroupId, locale])
+  @@index([tenantId])
+  @@index([siteId, demoThemeKey])
+  @@index([siteId, contentTypeId, status])
+  @@index([siteId, status, publishedAt])
+  // Fetching a page's siblings is on the public render path — it happens on every
+  // request that resolves to content, to emit hreflang and the language switcher.
+  @@index([siteId, translationGroupId])
+  @@map("contents")
+}
+
+model ContentVersion {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  contentId String   @map("content_id") @db.Uuid
+  version   Int
+  // Full snapshot of the content row at save time; restore = copy back.
+  snapshot  Json
+  message   String?
+  authorId  String?  @map("author_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  author  User?   @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@unique([contentId, version])
+  @@index([tenantId])
+  @@map("content_versions")
+}
+
+model Taxonomy {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  siteId       String   @map("site_id") @db.Uuid
+  key          String
+  name         String
+  hierarchical Boolean  @default(false)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  terms  Term[]
+
+  @@unique([siteId, key])
+  @@index([tenantId])
+  @@map("taxonomies")
+}
+
+model Term {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  siteId      String   @map("site_id") @db.Uuid
+  taxonomyId  String   @map("taxonomy_id") @db.Uuid
+  parentId    String?  @map("parent_id") @db.Uuid
+  name        String
+  slug        String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tenant   Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  site     Site          @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  taxonomy Taxonomy      @relation(fields: [taxonomyId], references: [id], onDelete: Cascade)
+  parent   Term?         @relation("TermTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children Term[]        @relation("TermTree")
+  contents ContentTerm[]
+
+  @@unique([taxonomyId, slug])
+  @@index([tenantId])
+  @@map("terms")
+}
+
+model ContentTerm {
+  contentId String @map("content_id") @db.Uuid
+  termId    String @map("term_id") @db.Uuid
+  tenantId  String @map("tenant_id") @db.Uuid
+
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  term    Term    @relation(fields: [termId], references: [id], onDelete: Cascade)
+
+  @@id([contentId, termId])
+  @@index([tenantId])
+  @@map("content_terms")
+}
+
+// ---------------------------------------------------------------------------
+// Media & navigation
+// ---------------------------------------------------------------------------
+
+/// A folder in the media library.
+///
+/// Filing, not storage. The tree lives here and nowhere else: object keys stay
+/// flat (`sites/<id>/<uuid>.ext`), so moving a file between folders is one
+/// column update and never a copy in S3 — and a file's public URL survives every
+/// reorganisation of the library. Mapping folders onto key prefixes would also
+/// mean taking the path from the client, which is the one thing the upload path
+/// refuses to do.
+model MediaFolder {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  siteId    String   @map("site_id") @db.Uuid
+  // Null at the root of the tree.
+  parentId  String?  @map("parent_id") @db.Uuid
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant   Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  site     Site          @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  parent   MediaFolder?  @relation("MediaFolderTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children MediaFolder[] @relation("MediaFolderTree")
+  media    Media[]
+
+  // Sibling names are unique. Postgres treats NULLs as distinct, so this does
+  // NOT cover the root — a partial index in the migration does that.
+  @@unique([siteId, parentId, name])
+  @@index([tenantId])
+  @@index([siteId, parentId])
+  @@map("media_folders")
+}
+
+model Media {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  siteId       String   @map("site_id") @db.Uuid
+  // Object key in S3/MinIO, not a URL — the public URL is derived at read time
+  // so the CDN or bucket can change without rewriting every row.
+  storageKey   String   @map("storage_key")
+  filename     String
+  mimeType     String   @map("mime_type")
+  size         Int
+  width        Int?
+  height       Int?
+  alt          String?
+  // Null means the root of the library. SetNull on folder delete, never Cascade:
+  // deleting a folder is a filing decision, and it must not destroy assets that
+  // live pages are still rendering.
+  folderId     String?  @map("folder_id") @db.Uuid
+  // Generated derivatives: { thumb: "key", medium: "key", ... }
+  variants     Json     @default("{}")
+  uploadedById String?  @map("uploaded_by_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  tenant     Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  site       Site         @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  folder     MediaFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  uploadedBy User?        @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@unique([siteId, storageKey])
+  @@index([tenantId])
+  @@index([siteId, createdAt])
+  @@index([siteId, folderId, createdAt])
+  @@map("media")
+}
+
+model Menu {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  siteId       String   @map("site_id") @db.Uuid
+  // Matches a theme's declared menu location, e.g. "primary", "footer".
+  key          String
+  name         String
+  // Null = normal menu. Non-null = a theme-owned demo menu, visible only while
+  // that theme is active.
+  demoThemeKey String?  @map("demo_theme_key")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  tenant Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  site   Site       @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  items  MenuItem[]
+
+  @@unique([siteId, key, demoThemeKey])
+  @@index([tenantId])
+  @@index([siteId, demoThemeKey])
+  @@map("menus")
+}
+
+model MenuItem {
+  id       String  @id @default(uuid()) @db.Uuid
+  tenantId String  @map("tenant_id") @db.Uuid
+  menuId   String  @map("menu_id") @db.Uuid
+  parentId String? @map("parent_id") @db.Uuid
+  label    String
+  url      String
+  target   String  @default("_self")
+  order    Int     @default(0)
+
+  menu     Menu       @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  parent   MenuItem?  @relation("MenuTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children MenuItem[] @relation("MenuTree")
+
+  @@index([tenantId])
+  @@index([menuId, order])
+  @@map("menu_items")
+}
+
+/**
+ * Who is allowed to publish to the marketplace.
+ * A publisher is the reviewed identity. Its signing keys are separate rows below
+ * because keys rotate, get retired, and sometimes get compromised. Treating the
+ * key as the publisher would make rotation either impossible or destructive.
+ * `verified` is separate from `trusted` on purpose:
+ * verified — we confirmed the human/company is who they claim (email, VAT id)
+ * trusted  — their code may run with fewer restrictions (first-party only)
+ * A verified publisher is still sandboxed. Identity is not permission.
+ */
+model Publisher {
+  id        String   @id @default(uuid()) @db.Uuid
+  slug      String   @unique
+  name      String
+  email     String?
+  /**
+   * The marketplace has confirmed this publisher is who they say they are.
+   * An UNVERIFIED publisher can register and hold a key, but cannot publish: the
+   * upload endpoint refuses them. Verification is what makes the publisher
+   * signature mean something — without it, "signed by publisher X" only says the
+   * uploader controls a key, not that X is anyone in particular.
+   */
+  verified  Boolean  @default(false)
+  /**
+   * Distinct from `verified`, and deliberately so: identity is not permission.
+   * A verified publisher is still sandboxed and still scanned. `trusted` is
+   * reserved for first-party code that may skip parts of that.
+   */
+  trusted   Boolean  @default(false)
+  /**
+   * The user who registered this publisher and may manage its signing keys.
+   */
+  ownerId   String?  @map("owner_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  owner   User?          @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  keys    PublisherKey[]
+  themes  Theme[]
+  plugins Plugin[]
+
+  @@index([ownerId])
+  @@map("publishers")
+}
+
+/**
+ * A public signing key controlled by a publisher.
+ * Only ACTIVE keys may sign new submissions. RETIRED keys remain attached to
+ * old versions for audit/history but cannot be used for new uploads. COMPROMISED
+ * is stronger than RETIRED: it means reviewers should inspect or revoke versions
+ * signed by that key. REVOKED is for keys that were rejected or removed before
+ * becoming a valid signing key.
+ */
+model PublisherKey {
+  id           String             @id @default(uuid()) @db.Uuid
+  publisherId  String             @map("publisher_id") @db.Uuid
+  /**
+   * Ed25519 public key, SPKI PEM.
+   */
+  publicKey    String             @unique @map("public_key")
+  status       PublisherKeyStatus @default(PENDING)
+  label        String?
+  verifiedAt   DateTime?          @map("verified_at")
+  retiredAt    DateTime?          @map("retired_at")
+  revokedAt    DateTime?          @map("revoked_at")
+  revokeReason String?            @map("revoke_reason")
+  createdAt    DateTime           @default(now()) @map("created_at")
+
+  publisher      Publisher       @relation(fields: [publisherId], references: [id], onDelete: Cascade)
+  themeVersions  ThemeVersion[]
+  pluginVersions PluginVersion[]
+
+  @@index([publisherId])
+  @@index([status])
+  @@map("publisher_keys")
+}
+
+// ---------------------------------------------------------------------------
+// Theme registry (PLATFORM catalog — no tenant_id, no RLS)
+// ---------------------------------------------------------------------------
+
+model Theme {
+  id          String   @id @default(uuid()) @db.Uuid
+  // Reverse-DNS identifier from theme.json, e.g. "vn.zsoft.theme.default".
+  key         String   @unique
+  name        String
+  description String?
+  author      String
+  previewUrl  String?  @map("preview_url")
+  isCore      Boolean  @default(false) @map("is_core")
+  publisherId String?  @map("publisher_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  publisher  Publisher?     @relation(fields: [publisherId], references: [id], onDelete: SetNull)
+  versions   ThemeVersion[]
+  siteThemes SiteTheme[]
+
+  @@map("themes")
+}
+
+model ThemeVersion {
+  id                   String       @id @default(uuid()) @db.Uuid
+  themeId              String       @map("theme_id") @db.Uuid
+  version              String
+  // The engine range this build is compatible with, e.g. ">=1.0.0 <2.0.0".
+  engine               String       @default(">=0.1.0")
+  // Full theme.json: templates, features, menu locations, settings schema.
+  manifest             Json
+  // Where this version came from. Decides which pinned key verifies it and how the
+  // admin classifies it — see the Origin enum. No default: register* and the seed
+  // each state it explicitly.
+  origin               Origin
+  // Storage key of the signed .zcms package. NULL only for BUILTIN versions, which
+  // ship inside site-runtime and therefore need no distribution.
+  bundleUrl            String?      @map("bundle_url")
+  /**
+   * SHA-256 of the package payload. Re-checked on disk before every load.
+   */
+  checksum             String?
+  /**
+   * Ed25519 signature by the PUBLISHER over the checksum.
+   */
+  publisherSignature   String?      @map("publisher_signature")
+  /**
+   * Which publisher key signed this version. Null for legacy/imported packages.
+   */
+  publisherKeyId       String?      @map("publisher_key_id") @db.Uuid
+  /**
+   * Ed25519 signature by the MARKETPLACE. This is the one runtimes verify, using
+   * a public key pinned in their own config — so a compromised cms-api still
+   * cannot make a runtime execute code it did not sign.
+   */
+  marketplaceSignature String?      @map("marketplace_signature")
+  /**
+   * Outcome of the static scan run at upload. APPROVED versions are servable;
+   * QUARANTINED ones are stored but the bundle endpoint refuses to serve them
+   * until a human clears them. A REJECTED package is never stored, so it never
+   * reaches this table.
+   */
+  reviewStatus         ReviewStatus @default(PENDING) @map("review_status")
+  scanReport           Json?        @map("scan_report")
+  /**
+   * The kill switch. Set when a version already live on real sites is pulled.
+   * REJECTED alone only stops NEW downloads — a runtime that already cached the
+   * bundle keeps serving it, possibly for months. Revoking additionally purges
+   * the runtimes' caches and falls affected sites back to safety.
+   */
+  revokedAt            DateTime?    @map("revoked_at")
+  revokedReason        String?      @map("revoked_reason")
+  createdAt            DateTime     @default(now()) @map("created_at")
+
+  theme        Theme         @relation(fields: [themeId], references: [id], onDelete: Cascade)
+  publisherKey PublisherKey? @relation(fields: [publisherKeyId], references: [id], onDelete: SetNull)
+  siteThemes   SiteTheme[]
+
+  @@unique([themeId, version])
+  @@map("theme_versions")
+}
+
+// Installation of a theme onto one site (TENANT table — RLS applies).
+model SiteTheme {
+  id        String        @id @default(uuid()) @db.Uuid
+  tenantId  String        @map("tenant_id") @db.Uuid
+  siteId    String        @map("site_id") @db.Uuid
+  themeId   String        @map("theme_id") @db.Uuid
+  versionId String        @map("version_id") @db.Uuid
+  status    InstallStatus @default(INACTIVE)
+  // Values for the keys declared in the theme's settingsSchema. Kept as JSONB
+  // so installing a theme never requires a migration.
+  settings  Json          @default("{}")
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  tenant  Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  site    Site         @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  theme   Theme        @relation(fields: [themeId], references: [id], onDelete: Restrict)
+  version ThemeVersion @relation(fields: [versionId], references: [id], onDelete: Restrict)
+
+  @@unique([siteId, themeId])
+  @@index([tenantId])
+  @@map("site_themes")
+}
+
+// ---------------------------------------------------------------------------
+// Theme drafts — the GUI Theme Editor's working document (TENANT table, RLS)
+//
+// A draft is a DRAWING, not a theme: the LayoutDocument a person built by dragging
+// widgets onto a canvas. It becomes a theme only when the build job generates code
+// from it, signs the package, and registers a ThemeVersion — which is why this
+// table is nowhere near ThemeVersion and shares none of its columns.
+//
+// It is TENANT data, not platform catalog. Somebody's unfinished, unpublished
+// design is theirs; the marketplace's shared registry starts at submission. That
+// distinction is the whole reason this is a separate table rather than a nullable
+// corner of ThemeVersion: an unbuilt drawing has no bundle, no checksum, and no
+// signature, and a row in the catalog that has none of those is a row every
+// signature check has to special-case.
+// ---------------------------------------------------------------------------
+
+model ThemeDraft {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  // The site whose content types, menus and locales the editor previews against.
+  // A drawing is authored for a site even though the theme it becomes is portable:
+  // an author binding a list to "post" needs to know whether "post" exists here.
+  siteId   String @map("site_id") @db.Uuid
+  // Nullable + SetNull: a draft outlives the person who left the company.
+  authorId String? @map("author_id") @db.Uuid
+
+  name        String
+  /**
+   * The reverse-DNS key the generated theme will claim, e.g. "com.acme.theme.shop".
+   * Proposed, not owned: nothing is reserved until a package is registered, and the
+   * sideload/marketplace paths independently refuse `vn.zsoft.` and any key already
+   * held by a built-in or marketplace theme (see assertNotImpersonating). Stored
+   * here so the editor can warn early rather than at the end of a build.
+   */
+  key         String
+  version     String  @default("0.1.0")
+  description String?
+
+  /**
+   * The LayoutDocument (see packages/schemas/src/layout.ts). JSONB, because the
+   * node model grows as widgets are added and a drawing must never require a
+   * migration. Validated against LayoutDocumentSchema on every write — this column
+   * is data that the code generator later turns into a signed package, so the
+   * validator is the fence, not a formality.
+   */
+  document Json
+
+  status     ThemeDraftStatus @default(DRAFT)
+  /**
+   * Why the last build failed, for the author to read. Cleared on the next attempt.
+   */
+  buildError String?          @map("build_error")
+  lastBuiltAt DateTime?       @map("last_built_at")
+
+  /**
+   * SHA-256 of the last build's payload — the digest the AUTHOR signs.
+   *
+   * Stored because signing happens in the author's browser, in a request that comes
+   * later: the build packs the payload, this records what it hashed to, and the
+   * browser signs exactly this string. Recomputing it at seal time would not work —
+   * a tar carries mtimes, so building twice yields two different digests and the
+   * signature would be over a payload that no longer exists.
+   */
+  payloadChecksum String? @map("payload_checksum")
+  /**
+   * Storage key of that payload, kept until it is sealed into a .zcms. Null once
+   * there is nothing staged.
+   */
+  payloadRef      String? @map("payload_ref")
+  submittedAt DateTime?       @map("submitted_at")
+  /**
+   * The marketplace's id for the submission, so the editor can show review state.
+   * Null until a submit succeeds.
+   */
+  submissionRef String?       @map("submission_ref")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  author User?  @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  // One draft per proposed key per tenant: two drawings claiming the same theme key
+  // would race to register the same ThemeVersion, and the loser's build would fail
+  // at the very end with an error about a key its author never typed twice.
+  @@unique([tenantId, key])
+  @@index([tenantId])
+  @@index([siteId])
+  @@map("theme_drafts")
+}
+
+// ---------------------------------------------------------------------------
+// Publisher key vault (TENANT table, RLS)
+//
+// The author's marketplace identity — the Ed25519 key that says "I wrote this" on
+// a package a stranger downloads.
+//
+// What is stored here is CIPHERTEXT THIS SERVER CANNOT OPEN. The key is wrapped in
+// the author's browser with a key derived from a passphrase that never leaves it,
+// so cms-api holds an opaque blob: compromising it yields an offline guessing
+// problem, not an identity.
+//
+// That is the whole reason this is not encrypted with an env key like the SMTP
+// password or the TOTP secret. Those protect against a stolen database dump, and
+// cms-api can read them — which is right, because cms-api is the thing that has to
+// USE them. Nothing on the server ever needs to use this key: only the author does.
+// A server that could open it would be a server that could sign as them, and the
+// marketplace's own design assumes exactly that key ends up somewhere it should not
+// (see packages.service.ts: "keys leak: a publisher's key ends up in a CI secret").
+//
+// It exists at all because the alternative — a key that lives only in one browser —
+// is lost the day somebody clears their site data.
+// ---------------------------------------------------------------------------
+
+model PublisherKeyVault {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  /**
+   * One key per person, not per tenant. The marketplace binds a Publisher to a
+   * single developer account, so a shared team key would need a shared passphrase —
+   * and a shared passphrase is a passphrase that ends up pasted into a chat.
+   */
+  userId   String @unique @map("user_id") @db.Uuid
+
+  /** SPKI PEM. Public by definition: this is what the author registers upstream. */
+  publicKeyPem String @map("public_key_pem")
+
+  /** The PKCS#8 private key, AES-GCM sealed under the passphrase-derived key. Base64. */
+  wrappedPrivateKey String @map("wrapped_private_key")
+  /** Base64. Random per key; makes a precomputed table useless. */
+  kdfSalt           String @map("kdf_salt")
+  /** Base64. Random per wrap. */
+  kdfIv             String @map("kdf_iv")
+  /**
+   * The KDF, recorded rather than assumed. The cost of a guess is what stands
+   * between a stolen row and the key, and that cost has to be raised over time —
+   * a stored parameter is what lets an old blob still open after the default moves.
+   */
+  kdf               String @default("PBKDF2-SHA256")
+  kdfIterations     Int    @map("kdf_iterations")
+
+  /**
+   * The marketplace API token this person minted for this instance, encrypted with
+   * MARKETPLACE_TOKEN_ENCRYPTION_KEY (AES-256-GCM, `common/secret-box`).
+   *
+   * Encrypted the way the SMTP password is, and NOT the way the key above is — the
+   * difference is the whole point. Nothing on this server ever needs the private
+   * key, so it is sealed under a passphrase the server does not have. cms-api DOES
+   * need this token: it is what authenticates the POST to the marketplace. A secret
+   * the server must use is a secret the server can read, and pretending otherwise
+   * would be theatre.
+   *
+   * The two live in one row because they are one thing — this person's identity
+   * upstream — but they are guarded differently on purpose, and that asymmetry is
+   * what makes stealing one of them insufficient: the token submits, the key signs,
+   * and `accept()` needs both.
+   */
+  marketplaceToken String? @map("marketplace_token")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("publisher_key_vaults")
+}
+
+enum ThemeDraftStatus {
+  DRAFT
+  // A theme.build job is running. Set by the enqueue, cleared by the worker, so a
+  // second Build press while one is in flight is refused rather than queued twice.
+  BUILDING
+  // Built and signed at least once — a bundle exists to preview or submit.
+  BUILT
+  SUBMITTED
+  FAILED
+}
+
+// ---------------------------------------------------------------------------
+// Plugin registry (Phase 3 — tables exist now so the schema does not churn)
+// ---------------------------------------------------------------------------
+
+model Plugin {
+  id          String   @id @default(uuid()) @db.Uuid
+  key         String   @unique
+  name        String
+  description String?
+  publisher   String
+  isCore      Boolean  @default(false) @map("is_core")
+  publisherId String?  @map("publisher_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  publisherRef Publisher?      @relation(fields: [publisherId], references: [id], onDelete: SetNull)
+  versions     PluginVersion[]
+  sitePlugins  SitePlugin[]
+  data         PluginData[]
+
+  @@map("plugins")
+}
+
+model PluginVersion {
+  id                   String       @id @default(uuid()) @db.Uuid
+  pluginId             String       @map("plugin_id") @db.Uuid
+  version              String
+  engine               String       @default(">=0.1.0")
+  manifest             Json
+  // Permissions the plugin requests; the admin approves these at install time.
+  permissions          String[]     @default([])
+  // Where this version came from — see the Origin enum. No default; set on insert.
+  origin               Origin
+  bundleUrl            String?      @map("bundle_url")
+  checksum             String?
+  publisherSignature   String?      @map("publisher_signature")
+  /**
+   * Which publisher key signed this version. Null for legacy/imported packages.
+   */
+  publisherKeyId       String?      @map("publisher_key_id") @db.Uuid
+  marketplaceSignature String?      @map("marketplace_signature")
+  reviewStatus         ReviewStatus @default(PENDING) @map("review_status")
+  scanReport           Json?        @map("scan_report")
+  revokedAt            DateTime?    @map("revoked_at")
+  revokedReason        String?      @map("revoked_reason")
+  createdAt            DateTime     @default(now()) @map("created_at")
+
+  plugin       Plugin        @relation(fields: [pluginId], references: [id], onDelete: Cascade)
+  publisherKey PublisherKey? @relation(fields: [publisherKeyId], references: [id], onDelete: SetNull)
+  sitePlugins  SitePlugin[]
+
+  @@unique([pluginId, version])
+  @@map("plugin_versions")
+}
+
+model SitePlugin {
+  id                 String        @id @default(uuid()) @db.Uuid
+  tenantId           String        @map("tenant_id") @db.Uuid
+  siteId             String        @map("site_id") @db.Uuid
+  pluginId           String        @map("plugin_id") @db.Uuid
+  versionId          String        @map("version_id") @db.Uuid
+  status             InstallStatus @default(INACTIVE)
+  settings           Json          @default("{}")
+  // Permissions the admin actually granted — may be a subset of those requested.
+  grantedPermissions String[]      @default([]) @map("granted_permissions")
+  lastError          String?       @map("last_error")
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
+
+  tenant  Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  site    Site          @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  plugin  Plugin        @relation(fields: [pluginId], references: [id], onDelete: Restrict)
+  version PluginVersion @relation(fields: [versionId], references: [id], onDelete: Restrict)
+
+  @@unique([siteId, pluginId])
+  @@index([tenantId])
+  @@map("site_plugins")
+}
+
+/**
+ * Scoped key-value storage for plugins.
+ * A marketplace plugin does NOT get to run migrations against the core schema —
+ * that is how one bad plugin corrupts a CMS for everyone. It gets rows here,
+ * namespaced by (plugin, site), and it can only ever see its own: the gateway
+ * stamps plugin_id from the plugin's token, not from anything the plugin sends.
+ * Trusted first-party plugins that genuinely need tables get their own Postgres
+ * schema (plugin_<name>) with a role scoped to it. Community plugins get this.
+ */
+model PluginData {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  siteId    String   @map("site_id") @db.Uuid
+  pluginId  String   @map("plugin_id") @db.Uuid
+  key       String
+  value     Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  plugin Plugin @relation(fields: [pluginId], references: [id], onDelete: Cascade)
+
+  @@unique([siteId, pluginId, key])
+  @@index([tenantId])
+  @@map("plugin_data")
+}
+
+// ---------------------------------------------------------------------------
+// Audit
+// ---------------------------------------------------------------------------
+
+model AuditLog {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  siteId       String?  @map("site_id") @db.Uuid
+  actorId      String?  @map("actor_id") @db.Uuid
+  action       String
+  resourceType String   @map("resource_type")
+  resourceId   String?  @map("resource_id")
+  metadata     Json     @default("{}")
+  ip           String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  actor  User?  @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, createdAt])
+  @@map("audit_logs")
+}
+
+/**
+ * What this instance knows about the marketplace it consumes from — and, above
+ * all, WHEN it last knew it.
+ * A single row. It exists because the revocation sync is fail-open: an instance
+ * that cannot reach the marketplace keeps serving the packages it has, because a
+ * marketplace outage must not take a thousand customers' sites down with it.
+ * The price of that choice is that "no revocations to apply" and "I have not been
+ * able to ask for six weeks" look identical from the inside — so the age of the
+ * answer is recorded and surfaced. An attacker who can hold an instance off the
+ * network can delay a revocation; they cannot do it invisibly.
+ * Platform-level, like themes and publishers: no tenant column, no RLS. And in
+ * the database rather than Redis, because staleness is a security signal and must
+ * not be erased by a cache flush.
+ */
+model MarketplaceSync {
+  id            String    @id @default("singleton")
+  /**
+   * When we last completed a sync — successfully or not.
+   */
+  lastAttemptAt DateTime? @map("last_attempt_at")
+  /**
+   * When we last ACCEPTED a signed list. This is the number that means anything.
+   */
+  lastSyncedAt  DateTime? @map("last_synced_at")
+  /**
+   * `issuedAt` of the newest list accepted. Anything older is a rollback and is refused.
+   */
+  lastIssuedAt  DateTime? @map("last_issued_at")
+  /**
+   * Why the last attempt failed, if it did. Unreachable, unsigned, forged, rolled back.
+   */
+  lastError     String?   @map("last_error")
+  /**
+   * How many revocations the last accepted list carried.
+   */
+  revokedCount  Int       @default(0) @map("revoked_count")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@map("marketplace_sync")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum SiteStatus {
+  DRAFT
+  PUBLISHED
+  SUSPENDED
+  ARCHIVED
+}
+
+enum ContentStatus {
+  DRAFT
+  IN_REVIEW
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  EDITOR
+  AUTHOR
+  VIEWER
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  QUARANTINED
+  REJECTED
+}
+
+enum PublisherKeyStatus {
+  /**
+   * Uploaded by a developer, waiting for Z-SOFT verification.
+   */
+  PENDING
+  /**
+   * May sign new package submissions.
+   */
+  ACTIVE
+  /**
+   * Kept for history, but refused for new submissions.
+   */
+  RETIRED
+  /**
+   * Removed or rejected before it was trusted for publishing.
+   */
+  REVOKED
+  /**
+   * Private half may be exposed; reviewers should inspect packages it signed.
+   */
+  COMPROMISED
+}
+
+enum InstallStatus {
+  INSTALLING
+  INACTIVE
+  ACTIVE
+  FAILED
+  DISABLED
+  QUARANTINED
+}
+
+/**
+ * Where a package version came from — the single source of truth for how a runtime
+ * verifies it and how the admin UI classifies it.
+ * It replaces two fragile proxies the code used to infer origin from: `bundleUrl IS
+ * NULL` (meant "built-in") and `isCore` (seed-only). Both were binary and could not
+ * express a third, genuinely different source. A runtime picks WHICH pinned key to
+ * verify a version against from this column, and the admin groups Verified (BUILTIN,
+ * MARKETPLACE) apart from Unverified (SIDELOAD) from it. Deliberately has NO default:
+ * every insert must state the origin, so a new code path cannot let a package fall
+ * into the wrong trust class by omission.
+ */
+enum Origin {
+  // Ships inside the runtime image, signed by the first party, verified against
+  // FIRST_PARTY_PUBLIC_KEY. Has no bundleUrl — read from THEME_DIR/PLUGIN_DIR.
+  BUILTIN
+  // Downloaded from the marketplace, counter-signed by it, verified against
+  // MARKETPLACE_PUBLIC_KEY. The reviewed, community-visible path.
+  MARKETPLACE
+  // Sideloaded by this instance's operator, signed by them, verified against
+  // OPERATOR_PUBLIC_KEY. Local to this instance; never surfaced to the community.
+  SIDELOAD
+}

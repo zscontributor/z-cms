@@ -1,0 +1,157 @@
+{
+  "auth": {
+    "missingToken": "Missing access token.",
+    "invalidToken": "The access token is invalid or has expired.",
+    "invalidRefreshToken": "The refresh token is invalid or has expired.",
+    "invalidInternalToken": "The internal token is not valid.",
+    "invalidCredentials": "Email or password is incorrect.",
+    "accountNotFound": "This account no longer exists.",
+    "invalidSiteHeader": "The X-Site-Id header is not a valid site id.",
+    "siteRequired": "This request needs a valid X-Site-Id header for a site you have a role on.",
+    "noRole": "This account has not been given a role on this tenant.",
+    "missingPermissions": "Missing permissions: {permissions}. Your current role is {role}.",
+    "refreshReused": "This session has been signed out for your security. Please sign in again.",
+    "sessionRevoked": "This session has been signed out. Please sign in again."
+  },
+  "validation": {
+    "invalidPayload": "The data you sent is not valid.",
+    "invalidFields": "One or more field values are not valid.",
+    "requiredParam": "The \"{name}\" parameter is required."
+  },
+  "content": {
+    "notFound": "Content not found.",
+    "contentTypeNotFound": "That content type does not exist on this site.",
+    "singletonExists": "\"{name}\" is a singleton content type, so it can only have one entry.",
+    "translationExists": "This page already has a {locale} translation. Edit that one instead of creating a second.",
+    "publishForbidden": "You do not have permission to publish content.",
+    "draftOnly": "You can only save drafts — publishing requires the Editor role or above.",
+    "editOwnOnly": "You may only edit content you created yourself."
+  },
+  "contentTypes": {
+    "keyTaken": "A content type with the key \"{key}\" already exists.",
+    "routePrefixTaken": "The route prefix \"{prefix}\" is already used by \"{name}\"."
+  },
+  "media": {
+    "noFile": "No file was uploaded.",
+    "tooLarge": "The file is larger than the {limit} limit.",
+    "unsupportedType": "The format \"{mimeType}\" is not supported.",
+    "notFound": "Media not found.",
+    "folderNotFound": "Folder not found.",
+    "folderNameTaken": "A folder called \"{name}\" already exists here.",
+    "folderCycle": "A folder cannot be moved inside itself.",
+    "folderTooDeep": "Folders can be nested {max} levels deep at most."
+  },
+  "sites": {
+    "defaultLocaleNotPublished": "The default locale must be one of the site's locales.",
+    "hostnameTaken": "That hostname is already in use.",
+    "notFound": "Site not found.",
+    "slugTaken": "A site with that slug already exists."
+  },
+  "themes": {
+    "notFound": "The theme \"{key}\" does not exist.",
+    "noVersion": "The theme \"{key}\" has no published version yet.",
+    "notInstalled": "That theme is not installed on this site."
+  },
+  "plugins": {
+    "notFound": "The plugin \"{key}\" does not exist.",
+    "noVersion": "The plugin \"{key}\" has no published version yet.",
+    "notInstalled": "That plugin is not installed on this site.",
+    "unknownPermissions": "Unknown permissions: {permissions}.",
+    "permissionNotRequested": "The plugin did not request these permissions, so they cannot be granted: {permissions}.",
+    "missingToken": "Missing plugin token.",
+    "invalidToken": "The plugin token is invalid or has expired.",
+    "unknownMethod": "The plugin API has no method called \"{method}\".",
+    "methodNotSupported": "The method \"{method}\" is not supported yet.",
+    "scopeNotGranted": "The plugin \"{plugin}\" has not been granted the \"{scope}\" permission.",
+    "invalidTables": "A plugin may only create tables prefixed with \"{prefix}\". Refused: {tables}.",
+    "invalidHosts": "A plugin may only declare real hostnames it will reach. Refused: {hosts}. Wildcards on their own, IP addresses, ports and schemes are not allowed.",
+    "noNetworkHosts": "The plugin \"{plugin}\" was granted network access but its manifest declares no hosts, so there is nowhere it may go.",
+    "secretNotConfigured": "The plugin used the secret \"{secret}\", but its \"{setting}\" setting is empty. Fill it in under the plugin's settings.",
+    "egressFailed": "The plugin's request could not be completed: {reason}",
+    "egressQuotaExceeded": "This site has made more than {limit} plugin requests this hour. Try again in {retryAfterSec} seconds.",
+    "egressQuotaUnavailable": "Plugin requests cannot be counted right now, so they are refused. Try again shortly."
+  },
+  "packages": {
+    "tooLarge": "The package is larger than the {limit} limit.",
+    "unreadable": "The package could not be read: {reason}",
+    "invalidKind": "\"{kind}\" is not a valid package kind.",
+    "unknownPublisher": "This publisher key is not registered on the marketplace. Register the publisher, and its public key, before submitting a package.",
+    "invalidSignature": "The publisher signature is not valid: {reason}",
+    "versionImmutable": "{key}@{version} already exists with different contents. Bump the version — a released version is immutable.",
+    "bundleNotFound": "There is no bundle for {key}@{version}.",
+    "noFile": "The package file is missing.",
+    "kindRequired": "kind must be either \"theme\" or \"plugin\".",
+    "scanRejected": "The package was rejected by the malware scan: {reason}",
+    "notApproved": "{key}@{version} is under review ({status}) and cannot be loaded yet."
+  },
+  "render": {
+    "missingHostname": "The hostname parameter is required.",
+    "hostNotFound": "No site serves the hostname \"{hostname}\".",
+    "noActiveTheme": "This site has no active theme."
+  },
+  "marketplace": {
+    "unreachable": "The marketplace at {url} could not be reached: {reason}",
+    "unverified": "This package was not signed by the marketplace this instance trusts, so it was not installed: {reason}",
+    "mismatch": "The marketplace was asked for {asked} and answered with {got}. Refusing to install it.",
+    "bundleNotFound": "The marketplace has no servable bundle for {key}@{version} (HTTP {status}). It may have been revoked.",
+    "notConfigured": "No marketplace is configured. Set MARKETPLACE_URL to the registry this instance should install from.",
+    "noPinnedKey": "MARKETPLACE_PUBLIC_KEY is not configured. Without a pinned key there is nothing to verify a package against, so nothing can be installed.",
+    "scanRejected": "This package failed this instance's own security scan and was not installed: {findings}"
+  },
+  "sideload": {
+    "notEnabled": "Sideloading is not enabled on this instance. Set OPERATOR_PUBLIC_KEY to the operator key that signs local packages.",
+    "themeDisabled": "Sideloading a theme is disabled. A theme runs unsandboxed in site-runtime, so it must be turned on deliberately with ALLOW_THEME_SIDELOAD=true.",
+    "unverified": "This package was not signed by this instance's operator key, so it was not installed: {reason}",
+    "operatorKeyMissing": "No operator public key is configured.",
+    "operatorChecksumMismatch": "The package contents were modified after signing.",
+    "operatorSignatureMissing": "This package carries no operator signature and did not arrive through the sideload route.",
+    "operatorSignatureInvalid": "The operator signature is invalid or was created with a different key.",
+    "kindMismatch": "This endpoint installs a {asked}, but the file is a {got}.",
+    "scanRejected": "This package failed the security scan and was not installed: {findings}",
+    "reservedNamespace": "\"{key}\" uses the reserved namespace \"{prefix}\", which belongs to the platform's own packages. Choose a different id.",
+    "keyTaken": "\"{key}\" is already the id of a built-in or marketplace package. A sideload cannot take a name that is not its own.",
+    "notSideload": "{key}@{version} was not sideloaded, so it cannot be approved or removed through this path.",
+    "zipNotEnabled": "This instance only accepts pre-signed .zcms files. To upload a raw .zip, the operator must configure OPERATOR_PRIVATE_KEY so the server can sign it.",
+    "zipUnreadable": "The .zip could not be packaged: {reason}"
+  },
+  "docs": {
+    "title": "API documentation is off",
+    "body": "This instance does not serve the API documentation. That is a deliberate setting, not a fault — the API itself is running normally.",
+    "hint": "If you run this instance, set SWAGGER_ENABLED=true and restart cms-api to serve the docs at {path}.",
+    "health": "The API is up: {url}"
+  },
+  "users": {
+    "notFound": "User not found.",
+    "membershipNotFound": "That user does not hold that role.",
+    "emailTaken": "{email} already has an account.",
+    "alreadyInvited": "{email} has already been invited. Withdraw that invitation first.",
+    "alreadyRegistered": "This address already has an account. Sign in instead.",
+    "inviteInvalid": "This invitation link is not valid. It may have been used, withdrawn, or expired.",
+    "inviteNotFound": "Invitation not found.",
+    "inviteAlreadyAccepted": "This invitation has already been accepted. Remove the user instead.",
+    "wrongPassword": "Your current password is not correct.",
+    "notYourself": "You cannot do this to your own account.",
+    "outranked": "You cannot act on someone whose role is above your own.",
+    "cannotGrant": "You cannot grant {role} — your own role is {actorRole}.",
+    "needTenantWide": "Only someone with a tenant-wide role can grant one.",
+    "notYourSite": "You have no role on that site.",
+    "siteNotFound": "Site not found.",
+    "lastOwner": "This is the last owner. Promote someone else first, or nobody will be able to administer this tenant."
+  },
+  "mfa": {
+    "alreadyEnabled": "Two-factor authentication is already on for this account.",
+    "notEnabled": "This account has no second factor.",
+    "noSetup": "Start the setup first — there is no pending authenticator to confirm.",
+    "invalidCode": "That code is not right.",
+    "challengeExpired": "This sign-in attempt has expired. Enter your password again.",
+    "tooManyAttempts": "Too many wrong codes. This account will not accept a code for the next 15 minutes.",
+    "throttleUnavailable": "Cannot verify a code right now. A rate limiter that cannot count cannot protect a six-digit secret, so the attempt is refused rather than waved through."
+  },
+  "mail": {
+    "notConfigured": "This site has no mail server configured, so it cannot send email. An administrator sets one up in Settings → Mail.",
+    "invalidMessage": "The message is not valid: {detail}",
+    "quotaExceeded": "This site's plugins have sent their hourly limit of {limit} emails. The next one will be accepted in about {retryAfterSec} seconds.",
+    "quotaUnavailable": "The mail quota cannot be checked right now, so the send was refused. Plugin email is deliberately blocked rather than sent uncounted.",
+    "cancelledByPlugin": "A plugin's mail.sending filter cancelled the message before it was sent."
+  }
+}

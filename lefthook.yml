@@ -1,0 +1,42 @@
+# Git hooks, managed by lefthook (a single binary, runs commands in parallel).
+# Installed automatically by the `prepare` script on `pnpm install`; wire them by
+# hand with `pnpm lefthook install`.
+#
+# Two layers of the same convention. These local hooks give fast feedback and can
+# be bypassed with `--no-verify`; the AUTHORITATIVE gate is CI (ci.yml), which runs
+# the same secret scan plus the full test + security suites and cannot be skipped.
+#
+# The secret scan needs the `gitleaks` binary on PATH. Install it once:
+#   macOS   brew install gitleaks
+#   Linux   see https://github.com/gitleaks/gitleaks#installing
+# The hook fails loudly (not silently) if it is missing — a scan that does not run
+# is worse than one that fails.
+
+pre-commit:
+  commands:
+    # Catch a secret before it ever enters a commit — the cheapest place to stop it.
+    gitleaks-staged:
+      run: |
+        command -v gitleaks >/dev/null || { echo "gitleaks not installed — see CONTRIBUTING.md (brew install gitleaks)"; exit 1; }
+        gitleaks git --staged --redact --no-banner --config .gitleaks.toml
+
+pre-push:
+  # Sequential, and stop at the first failure. NOT parallel: `pnpm typecheck` and
+  # `pnpm test` each start their own turbo process, both of them run the i18n build,
+  # and that build rewrites apps/*/public/z-flags in place — two of them at once race
+  # on the same directory and one dies with ENOTEMPTY. Turbo dedupes tasks within a
+  # run, not across two runs we started ourselves.
+  piped: true
+  commands:
+    # Scan the commits about to be pushed (those not yet on any remote) for secrets.
+    gitleaks-history:
+      run: |
+        command -v gitleaks >/dev/null || { echo "gitleaks not installed — see CONTRIBUTING.md (brew install gitleaks)"; exit 1; }
+        gitleaks git --log-opts="--not --remotes" --redact --no-banner --config .gitleaks.toml
+    # Type safety across the workspace.
+    typecheck:
+      run: pnpm typecheck
+    # Unit suites — no database, Redis or S3 needed. The DB-backed security suites
+    # (pnpm verify) and the dependency audit run in CI, where the infra exists.
+    test:
+      run: pnpm test

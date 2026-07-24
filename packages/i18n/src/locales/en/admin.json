@@ -1,0 +1,490 @@
+{
+  "appDescription": "Z-CMS content administration",
+  "backToDashboard": "Back to dashboard",
+  "nav": {
+    "overview": "Overview",
+    "dashboard": "Dashboard",
+    "content": "Content",
+    "library": "Library",
+    "media": "Media library",
+    "appearance": "Appearance",
+    "plugins": "Plugins",
+    "operations": "Operations",
+    "marketplace": "Marketplace",
+    "jobs": "Background jobs",
+    "users": "Users",
+    "mail": "Mail",
+    "sites": "Sites"
+  },
+  "sidebar": {
+    "currentSite": "Current site",
+    "noSite": "No site yet"
+  },
+  "siteSwitcher": {
+    "label": "Site",
+    "empty": "No sites",
+    "notFound": "That site does not exist, or you do not have access to it."
+  },
+  "themeToggle": {
+    "toLight": "Switch to the light theme",
+    "toDark": "Switch to the dark theme",
+    "light": "Light theme",
+    "dark": "Dark theme"
+  },
+  "language": {
+    "label": "Language"
+  },
+  "roles": {
+    "OWNER": "Owner",
+    "ADMIN": "Administrator",
+    "EDITOR": "Editor",
+    "AUTHOR": "Author",
+    "VIEWER": "Viewer"
+  },
+  "dashboard": {
+    "metaTitle": "Dashboard",
+    "greeting": "Hello, {name}",
+    "summary": "{site} · {total} items, {published} published",
+    "activeTheme": "Theme: {name}",
+    "noTheme": "No theme active",
+    "noSiteTitle": "No site yet",
+    "noSiteDescription": "Your account is not assigned to a site. Ask an administrator for access.",
+    "typeCounts": "{published} published · {drafts} unpublished",
+    "noTypes": "This site has not declared any content types yet.",
+    "recent": "Recently updated",
+    "recentEmpty": "No content yet.",
+    "shortcuts": "Shortcuts",
+    "createType": "New {type}",
+    "domain": "Domain",
+    "languages": "Languages",
+    "status": "Status"
+  },
+  "marketplace": {
+    "metaTitle": "Marketplace review",
+    "title": "Marketplace review",
+    "description": "Decide what the marketplace is allowed to serve, and pull a version out of circulation when it turns out it should not have been served.",
+    "denied": "You do not have permission to review marketplace packages.",
+    "kind": {
+      "theme": "Theme",
+      "plugin": "Plugin"
+    },
+    "status": {
+      "PENDING": "Pending review",
+      "APPROVED": "Approved",
+      "QUARANTINED": "Quarantined",
+      "REJECTED": "Rejected"
+    },
+    "severity": {
+      "block": "Blocking",
+      "warn": "Warning",
+      "info": "Info"
+    },
+    "queue": {
+      "heading": "Review queue",
+      "description": "Packages waiting for a decision. Read the scanner findings before you approve: an approval is what lets this code run on live sites.",
+      "emptyTitle": "Nothing to review",
+      "emptyDescription": "Every submitted package has been decided on.",
+      "submitted": "Submitted {date}",
+      "checksum": "Checksum",
+      "findingsHeading": "Scanner findings",
+      "findingsCount": "{blocking} blocking · {warnings} warnings · {infos} informational",
+      "noFindingsTitle": "The scanner flagged nothing",
+      "noFindingsDescription": "A clean scan is not a review. The scanner only catches what it has rules for — read the code before approving it.",
+      "approve": "Approve",
+      "reject": "Reject",
+      "unknownLocation": "Location unknown"
+    },
+    "decision": {
+      "approveTitle": "Approve {name} v{version}?",
+      "rejectTitle": "Reject {name} v{version}?",
+      "approveBody": "Approving publishes this version. Sites will be able to install it, and its code will run inside their runtimes.",
+      "rejectBody": "Rejecting keeps this version out of the marketplace. The publisher can submit a new version once the findings are addressed.",
+      "blockingWarning": "The scanner raised {count} blocking finding(s). Approving overrides it. Only do that if you have read the code and know why the rule does not apply.",
+      "note": "Note",
+      "noteHint": "Optional. Goes to the publisher with your decision — say what convinced you, or what has to change.",
+      "confirmApprove": "Approve version",
+      "confirmReject": "Reject version"
+    },
+    "published": {
+      "heading": "Published versions",
+      "description": "Everything the marketplace serves today, and what each version is running on.",
+      "emptyTitle": "Nothing published yet",
+      "emptyDescription": "Approved packages appear here once they are published.",
+      "colKind": "Kind",
+      "colName": "Name",
+      "colKey": "Key",
+      "colVersion": "Version",
+      "colPublisher": "Publisher",
+      "colStatus": "Status",
+      "colSites": "Sites",
+      "colPublished": "Published",
+      "colActions": "Actions",
+      "revoke": "Revoke",
+      "revokedBadge": "Revoked",
+      "revokedOn": "Revoked {date}",
+      "revokedReason": "Reason: {reason}",
+      "revokedNoReason": "No reason was recorded."
+    },
+    "revoke": {
+      "title": "Revoke {name} v{version}?",
+      "runningWarning": "This is not a takedown of something waiting to be installed. This version is already installed and running — revoking pulls code that live sites are executing right now.",
+      "blastRadius": "{count} live site(s) will be moved off this version.",
+      "blastRadiusNone": "No site is running this version at the moment. Revoking still prevents any new install of it.",
+      "effectsHeading": "What happens the moment you confirm",
+      "effectTheme": "Every site on this theme falls back to the built-in default theme. Their pages keep rendering, but they will not look the same.",
+      "effectPlugin": "The plugin is quarantined on every site that installed it. It stops handling hooks; the site keeps running without it.",
+      "effectCaches": "The theme and plugin runtime caches are purged, so the revoked code stops executing immediately rather than at the next deploy.",
+      "irreversible": "This cannot be undone. There is no un-revoke: if the package is later cleared, it has to be republished as a new version.",
+      "reason": "Reason",
+      "reasonHint": "Required. Recorded against the version and shown to the publisher — the next person to look at this will have only what you write here.",
+      "reasonPlaceholder": "e.g. Reads process.env and posts the values to an external host during setup()",
+      "confirm": "Revoke this version"
+    },
+    "actions": {
+      "reviewDenied": "You do not have permission to review marketplace packages.",
+      "approved": "{name} v{version} approved.",
+      "rejected": "{name} v{version} rejected.",
+      "reviewFailed": "The decision could not be recorded.",
+      "revoked": "{name} v{version} revoked. {count} site(s) were moved off this version.",
+      "revokeFailed": "The version could not be revoked.",
+      "reasonRequired": "A reason is required to revoke a version."
+    },
+    "publisherUnknown": "Unknown publisher",
+    "publisherVerified": "Verified publisher",
+    "publisherUnverified": "Unverified publisher",
+    "browse": {
+      "metaTitle": "Marketplace",
+      "title": "Marketplace",
+      "description": "Browse themes and plugins and install them into this site.",
+      "denied": "You do not have permission to browse the marketplace.",
+      "emptyTitle": "The marketplace is empty",
+      "emptyDescription": "No packages have been published to the marketplace this instance points at.",
+      "searchPlaceholder": "Search themes and plugins…",
+      "noMatch": "Nothing matches your search.",
+      "wants": "This plugin asks for",
+      "updated": "Updated {date}",
+      "install": "Install",
+      "installing": "Installing…",
+      "update": "Update",
+      "installed": "Installed {name} {version}.",
+      "installedBadge": "Installed",
+      "updateBadge": "Update to {version}",
+      "installFailed": "The package could not be installed.",
+      "installDenied": "You do not have permission to install this.",
+      "tabsLabel": "Marketplace package type",
+      "categoriesLabel": "Marketplace categories",
+      "tabs": {
+        "plugin": "Plugins",
+        "theme": "Themes"
+      },
+      "categories": {
+        "plugin": {
+          "all": "All plugins",
+          "seo": "SEO",
+          "security": "Security",
+          "performance": "Performance",
+          "ecommerce": "Ecommerce",
+          "forms": "Forms",
+          "analytics": "Analytics",
+          "marketing": "Marketing",
+          "media": "Media",
+          "membership": "Membership",
+          "developer": "Developer",
+          "other": "Other"
+        },
+        "theme": {
+          "all": "All themes",
+          "blog": "Blog",
+          "business": "Business",
+          "ecommerce": "Ecommerce",
+          "portfolio": "Portfolio",
+          "news": "News",
+          "education": "Education",
+          "entertainment": "Entertainment",
+          "food": "Food",
+          "photography": "Photography",
+          "community": "Community",
+          "other": "Other"
+        }
+      },
+      "filter": {
+        "all": "All",
+        "theme": "Themes",
+        "plugin": "Plugins"
+      }
+    },
+    "sync": {
+      "local": "This instance is its own marketplace — packages are installed from its own catalogue.",
+      "never": "never",
+      "fresh": "Shopping at {url}. Revocation feed current as of {synced} — {count} package(s) revoked.",
+      "staleTitle": "The revocation feed is stale",
+      "staleBody": "This instance has not heard from {url} since {synced}. Installed packages keep running (revocation is fail-open), but a package pulled by the marketplace since then would still be executing here. Check that the worker and the marketplace are reachable."
+    },
+    "media": {
+      "viewShot": "Screenshot {n} of {name}",
+      "watchVideo": "Watch the video",
+      "previous": "Previous screenshot",
+      "next": "Next screenshot"
+    }
+  },
+  "jobs": {
+    "metaTitle": "Background jobs",
+    "title": "Background jobs",
+    "description": "The dead-letter queue: jobs that failed every attempt and were parked here. Nothing will run them again unless you say so.",
+    "denied": "You do not have permission to manage background jobs.",
+    "emptyTitle": "No failed jobs.",
+    "emptyDescription": "Every background job has run to completion.",
+    "colName": "Job",
+    "colId": "ID",
+    "colAttempts": "Attempts",
+    "colReason": "Failure",
+    "colFailedAt": "Failed at",
+    "colActions": "Actions",
+    "noReason": "No reason was recorded.",
+    "showFullReason": "Full error",
+    "payload": "Payload",
+    "retry": "Retry",
+    "discard": "Discard",
+    "discardDialog": {
+      "title": "Discard {name}?",
+      "body": "Discarding deletes the job. The work it was going to do will never be done — it is not retried, and nothing is left behind except what you already see here. If it was going to send an email, the email is never sent.",
+      "retryFirst": "If there is any chance the failure was transient, retry it instead. A retry that fails again lands back on this list; a discard does not come back.",
+      "confirm": "Discard permanently"
+    },
+    "actions": {
+      "denied": "You do not have permission to manage background jobs.",
+      "retried": "{name} was queued for another attempt.",
+      "retryFailed": "The job could not be retried.",
+      "discarded": "{name} was discarded.",
+      "discardFailed": "The job could not be discarded."
+    },
+    "truncated": "Showing {shown} of {total} failed jobs. Retrying everything on this page will not empty the queue."
+  },
+  "error": {
+    "title": "Something went wrong"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "This content, or this content type, does not exist on the current site."
+  },
+  "users": {
+    "metaTitle": "Users",
+    "title": "Users",
+    "description": "Who has access to this tenant, and as what. A role can be granted on one site or across every site.",
+    "columns": {
+      "user": "User",
+      "roles": "Roles",
+      "lastLogin": "Last sign-in",
+      "actions": ""
+    },
+    "tenantWide": "All sites",
+    "never": "Never signed in",
+    "you": "You",
+    "noRoles": "No role — cannot sign in to anything",
+    "emptyTitle": "No one else has access yet",
+    "emptyDescription": "Create a user to give them a role on this site or across the tenant.",
+    "changeRole": "Change role",
+    "removeRole": "Take away this role",
+    "remove": "Remove from tenant",
+    "role": {
+      "title": "Set a role for {name}",
+      "body": "Granting a role on a site replaces any role they already hold there. Granting one across the tenant applies it to every site.",
+      "scope": "Applies to",
+      "scopeHint": "A tenant-wide role covers every site, including ones created later.",
+      "role": "Role",
+      "submit": "Save role",
+      "success": "{name} is now {role}.",
+      "failed": "Could not change the role."
+    },
+    "removeDialog": {
+      "title": "Remove {name}?",
+      "body": "They lose access immediately and every session of theirs is signed out. Their pages, uploads and audit trail stay exactly where they are — this removes the person, not their work.",
+      "confirm": "Remove",
+      "success": "{name} has been removed.",
+      "failed": "Could not remove the user."
+    },
+    "removeRoleDialog": {
+      "title": "Take away {role} on {scope}?",
+      "body": "They keep their account and any other roles. They are signed out, so the change takes effect at once.",
+      "confirm": "Take it away",
+      "success": "The role has been taken away.",
+      "failed": "Could not take away the role."
+    },
+    "edit": {
+      "button": "Edit user",
+      "title": "Edit {name}",
+      "name": "Name",
+      "avatarUrl": "Avatar URL",
+      "submit": "Save changes",
+      "success": "{name} has been updated.",
+      "failed": "Could not update the user."
+    },
+    "invite": {
+      "heading": "Create user",
+      "description": "The account can sign in immediately. Email is only a notification with the login details.",
+      "name": "Name",
+      "namePlaceholder": "Their name",
+      "email": "Email",
+      "emailPlaceholder": "them@company.com",
+      "emailInvalid": "Enter a valid email address.",
+      "password": "Temporary password",
+      "passwordHint": "Leave blank to generate one.",
+      "passwordPlaceholder": "Generate automatically",
+      "role": "Role",
+      "scope": "Applies to",
+      "submit": "Create user",
+      "submitting": "Creating...",
+      "failed": "Could not create the user.",
+      "login": "Login",
+      "createdHeading": "Account created",
+      "createdBodyQueued": "The account is active now. A notification email with these login details has been queued.",
+      "createdBodyManual": "The account is active now, but email was not queued. Copy these login details and send them securely.",
+      "copyDetails": "Copy details",
+      "linkHeading": "Copy this link now",
+      "linkBody": "This is the only time it will be shown. Only its hash is stored, so it cannot be looked up again — if it is lost, withdraw the invitation and send a new one. It works once and expires in 7 days.",
+      "copy": "Copy link",
+      "copied": "Copied",
+      "done": "Done"
+    },
+    "pending": {
+      "heading": "Pending invitations",
+      "description": "Sent, not yet accepted.",
+      "emptyTitle": "No pending invitations",
+      "invitedBy": "Invited by {name}",
+      "expires": "Expires {date}",
+      "revoke": "Withdraw",
+      "revokeSuccess": "The invitation has been withdrawn.",
+      "revokeFailed": "Could not withdraw the invitation."
+    },
+    "denied": "You do not have permission to manage users.",
+    "twoFactor": {
+      "on": "2FA",
+      "off": "No 2FA"
+    },
+    "resetTwoFactor": "Reset two-factor",
+    "resetTwoFactorDialog": {
+      "title": "Reset two-factor for {name}?",
+      "body": "For the colleague whose phone is gone and whose recovery codes are somewhere they can no longer reach. They keep their account, their role and their password, and are signed out so they will see the change at once.",
+      "warning": "Until they enroll again, their account is defended by a password alone — the exact situation two-factor exists to survive. Only do this when you are sure who you are talking to.",
+      "confirm": "Reset it",
+      "success": "Two-factor has been reset for {name}. Ask them to enroll again.",
+      "failed": "Could not reset their two-factor."
+    }
+  },
+  "profile": {
+    "metaTitle": "Your profile",
+    "title": "Your profile",
+    "description": "Your name, and the password you sign in with.",
+    "nav": "Profile",
+    "details": {
+      "heading": "Details",
+      "email": "Email",
+      "emailHint": "Your email is your sign-in name and cannot be changed here.",
+      "name": "Name",
+      "avatarUrl": "Avatar URL",
+      "avatarUrlHint": "Optional. A link to an image — upload one to the media library and paste its URL.",
+      "submit": "Save profile",
+      "success": "Your profile has been saved.",
+      "failed": "Could not save your profile."
+    },
+    "password": {
+      "heading": "Change password",
+      "description": "Changing your password signs you out of every device, this one included. That is the point: the usual reason to change it is that someone else may have it.",
+      "current": "Current password",
+      "new": "New password",
+      "newHint": "At least {min} characters.",
+      "confirm": "Confirm new password",
+      "submit": "Change password",
+      "submitting": "Changing…",
+      "mismatch": "The two passwords do not match.",
+      "tooShort": "Use at least {min} characters.",
+      "failed": "Could not change your password."
+    },
+    "roles": {
+      "heading": "Your access",
+      "description": "The roles you hold, and where."
+    },
+    "twoFactor": {
+      "heading": "Two-factor authentication",
+      "on": "On",
+      "off": "Off",
+      "enabledBody": "Signing in takes your password and a code from your authenticator. A password on its own — leaked, phished, or reused from somewhere else — is no longer enough to get in.",
+      "disabledBody": "Your account is defended by a password alone. Add an authenticator app and a leaked password stops being enough to sign in as you.",
+      "enable": "Turn on two-factor",
+      "disable": "Turn off",
+      "regenerate": "New recovery codes",
+      "disabled": "Two-factor is off. Your account is back to a password alone.",
+      "setupFailed": "Could not start the setup.",
+      "disableFailed": "Could not turn two-factor off.",
+      "regenerateFailed": "Could not issue new recovery codes.",
+      "setup": {
+        "title": "Set up your authenticator",
+        "body": "Scan this with Google Authenticator, 1Password, or any other TOTP app. Then type the six digits it shows, so we both know it worked.",
+        "qrAlt": "QR code for your authenticator app",
+        "manual": "Cannot scan? Type this into the app instead:",
+        "code": "Code from the app",
+        "codeHint": "Two-factor is not on until this code checks out — a QR you never scanned cannot lock you out.",
+        "confirm": "Turn it on"
+      },
+      "disableDialog": {
+        "title": "Turn off two-factor?",
+        "body": "Takes your password AND a code. Either one on its own would be enough to strip the very protection that exists because the other can be stolen."
+      },
+      "regenerateDialog": {
+        "title": "Issue new recovery codes?",
+        "body": "The old codes stop working the moment the new ones exist. If you have them written down somewhere, that copy becomes worthless."
+      },
+      "codes": {
+        "heading": "Your recovery codes",
+        "body": "This is the only time they are shown — only their hashes are stored, so there is no way to see them again. Each works once, and they are what gets you in when your phone does not. Save them somewhere that is not your phone.",
+        "copy": "Copy all",
+        "done": "I have saved them"
+      }
+    }
+  },
+  "sites": {
+    "title": "Sites",
+    "subtitle": "Every site in your tenant. A site serves nothing until it is published.",
+    "created": "Site created. It is a draft — publish it when it is ready.",
+    "saved": "Site saved.",
+    "empty": "No sites yet. Create the first one below.",
+    "new": "New site",
+    "create": "Create site",
+    "creating": "Creating…",
+    "save": "Save",
+    "saving": "Saving…",
+    "publish": "Publish",
+    "unpublish": "Unpublish",
+    "name": "Name",
+    "slug": "Slug",
+    "slugHelp": "Lowercase letters, digits and hyphens. Unique within your tenant.",
+    "hostname": "Hostname",
+    "hostnameHelp": "The address visitors use, port included in development — e.g. localhost:3100. Unique across the platform.",
+    "hostnameInvalid": "That is not an address we can serve. Use a hostname such as example.com, or localhost:3100 in development.",
+    "hostnameNormalized": "Will be saved as {hostname}",
+    "publishNow": "Publish this site immediately",
+    "publishNowHelp": "{hostname} starts answering requests as soon as the site is created.",
+    "draftHelp": "The site will be created as a draft. Drafts are not served — its address will return 404 until you publish it.",
+    "defaultLocale": "Default language",
+    "status": "Status",
+    "domains": "Domains",
+    "theme": "Theme",
+    "noTheme": "No theme",
+    "brand": "Brand",
+    "brandHelp": "Your site's colour and logo. Every theme reads these, so they survive a theme change — a theme may still override them in its own settings.",
+    "primaryColor": "Brand colour",
+    "logo": "Logo",
+    "logoHelp": "Shown by the theme wherever it draws your logo. A transparent PNG or SVG reads best.",
+    "noLogo": "No logo set",
+    "draftNotice": "This site is a draft: it answers no requests until you publish it.",
+    "errors": {
+      "createDenied": "You do not have permission to create a site.",
+      "createFailed": "Could not create the site.",
+      "updateDenied": "You do not have permission to change this site.",
+      "updateFailed": "Could not save the site.",
+      "nameRequired": "A name is required.",
+      "slugRequired": "A slug is required.",
+      "hostnameRequired": "A hostname is required."
+    }
+  }
+}

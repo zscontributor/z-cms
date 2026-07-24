@@ -1,0 +1,43 @@
+# Keep the build context small and reproducible: the image installs from the
+# lockfile, so nothing generated on a developer's machine should ride along.
+# A stray node_modules or .next here is both slow to send and a source of
+# "works on my laptop" drift.
+
+# Everything installed or generated — rebuilt inside the image.
+**/node_modules
+**/dist
+**/.next
+**/out
+**/.turbo
+**/coverage
+**/generated
+**/*.tsbuildinfo
+
+# Runtime bundle caches — downloaded and re-verified at runtime, never source.
+**/.zcms-themes
+**/.zcms-plugins
+
+# Secrets and local env. The image gets its config from the environment, never
+# from a baked-in file; only the checked-in example is ever safe to copy.
+**/.env
+**/.env.local
+**/.env.*.local
+!**/.env.example
+
+# VCS, editor, CI, and docs that no build step reads.
+.git
+.github
+.gitlab-ci.yml
+**/*.log
+.DS_Store
+# The API runtime reads the checked-in docs directory at runtime for grounding
+# text and prompt context, so it must remain available in the build context.
+docs/
+!docs/
+!docs/**
+*.md
+z-cms-portal.html
+
+# The compiled sandbox worker is emitted into src/ by the test harness; the
+# image builds its own.
+apps/plugin-runtime/src/sandbox/worker.js

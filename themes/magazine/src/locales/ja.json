@@ -1,0 +1,88 @@
+{
+  "layout": {
+    "skipToContent": "本文へスキップ",
+    "backToTop": "ページ上部へ戻る"
+  },
+  "colorMode": {
+    "toggle": "ダークモードとライトモードを切り替える"
+  },
+  "language": {
+    "switch": "言語を変更する"
+  },
+  "breaking": {
+    "label": "速報"
+  },
+  "dateline": {
+    "edition": "デジタル版",
+    "price": "無料公開"
+  },
+  "nav": {
+    "primary": "セクション",
+    "news": "ニュース",
+    "about": "本紙について"
+  },
+  "search": {
+    "label": "検索",
+    "placeholder": "記事を検索",
+    "submit": "検索"
+  },
+  "common": {
+    "seeAll": "一覧を見る"
+  },
+  "front": {
+    "label": "本日の一面",
+    "caption": "この記事のために描き下ろしたイラストです。写真を使用する場合はその場でクレジットを記載します。"
+  },
+  "latest": {
+    "title": "最新のニュース",
+    "empty": "まだ記事が公開されていません。管理画面で記事を書けば、それが一面のトップになります。"
+  },
+  "mostRead": {
+    "title": "よく読まれている記事",
+    "noteKicker": "編集部より",
+    "note": "本紙の取材は広告ではなく読者に支えられています。このページに、対価を払って置かれたものは一つもありません。"
+  },
+  "newsletter": {
+    "kicker": "モーニング・エディション",
+    "title": "その日の取材を、朝八時までに受信箱へ。",
+    "copy": "平日は毎日一通。何が起き、何を意味し、いま何を追っているのか。広告もトラッキングピクセルもありません。",
+    "label": "メールアドレス",
+    "placeholder": "you@example.com",
+    "submit": "購読する",
+    "note": "配信は一日一通。ワンクリックでいつでも解除できます。"
+  },
+  "footer": {
+    "sections": "セクション",
+    "about": "本紙について",
+    "follow": "フォロー",
+    "newsletter": "ニュースレター"
+  },
+  "post": {
+    "kicker": "レポート",
+    "byline": "文 = {author}",
+    "bylineStaff": "本紙記者",
+    "readingTime": "約 {minutes} 分で読めます",
+    "moreFrom": "このセクションの他の記事",
+    "allNews": "ニュース一覧"
+  },
+  "archive": {
+    "eyebrow": "セクション",
+    "empty": "このセクションにはまだ記事がありません。",
+    "previous": "新しい記事",
+    "next": "古い記事",
+    "pageOf": "{total} ページ中 {page} ページ目",
+    "pagination": "ページ送り"
+  },
+  "notFound": {
+    "title": "このページは掲載されていません",
+    "description": "リンクが古いか、記事が移動または取り下げられた可能性があります。",
+    "backHome": "一面へ戻る",
+    "browseNews": "最新ニュースを見る"
+  },
+  "error": {
+    "title": "輪転機が止まりました",
+    "description": "このページを表示できませんでした。エラーは記録され、確認を進めています。",
+    "backHome": "一面へ戻る",
+    "reference": "参照 ID"
+  }
+}

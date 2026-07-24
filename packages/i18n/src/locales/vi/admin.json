@@ -1,0 +1,490 @@
+{
+  "appDescription": "Bảng quản trị nội dung Z-CMS",
+  "backToDashboard": "Về bảng điều khiển",
+  "nav": {
+    "overview": "Tổng quan",
+    "dashboard": "Bảng điều khiển",
+    "content": "Nội dung",
+    "library": "Thư viện",
+    "media": "Thư viện ảnh",
+    "appearance": "Giao diện",
+    "plugins": "Plugin",
+    "operations": "Vận hành",
+    "marketplace": "Marketplace",
+    "jobs": "Tác vụ nền",
+    "users": "Người dùng",
+    "mail": "Email",
+    "sites": "Site"
+  },
+  "sidebar": {
+    "currentSite": "Site hiện tại",
+    "noSite": "Chưa có site"
+  },
+  "siteSwitcher": {
+    "label": "Site",
+    "empty": "Không có site nào",
+    "notFound": "Site không tồn tại hoặc bạn không có quyền truy cập."
+  },
+  "themeToggle": {
+    "toLight": "Chuyển sang giao diện sáng",
+    "toDark": "Chuyển sang giao diện tối",
+    "light": "Giao diện sáng",
+    "dark": "Giao diện tối"
+  },
+  "language": {
+    "label": "Ngôn ngữ"
+  },
+  "roles": {
+    "OWNER": "Chủ sở hữu",
+    "ADMIN": "Quản trị viên",
+    "EDITOR": "Biên tập viên",
+    "AUTHOR": "Tác giả",
+    "VIEWER": "Người xem"
+  },
+  "dashboard": {
+    "metaTitle": "Bảng điều khiển",
+    "greeting": "Xin chào, {name}",
+    "summary": "{site} · {total} nội dung, {published} đã xuất bản",
+    "activeTheme": "Giao diện: {name}",
+    "noTheme": "Chưa kích hoạt giao diện",
+    "noSiteTitle": "Chưa có site nào",
+    "noSiteDescription": "Tài khoản của bạn chưa được gán vào site nào. Liên hệ quản trị viên để được cấp quyền.",
+    "typeCounts": "{published} đã xuất bản · {drafts} chưa xuất bản",
+    "noTypes": "Site này chưa khai báo loại nội dung nào.",
+    "recent": "Cập nhật gần đây",
+    "recentEmpty": "Chưa có nội dung nào.",
+    "shortcuts": "Lối tắt",
+    "createType": "Tạo {type}",
+    "domain": "Tên miền",
+    "languages": "Ngôn ngữ",
+    "status": "Trạng thái"
+  },
+  "marketplace": {
+    "metaTitle": "Duyệt marketplace",
+    "title": "Duyệt marketplace",
+    "description": "Quyết định marketplace được phép phân phối những gì, và gỡ một phiên bản khỏi lưu hành khi phát hiện ra nó không nên được phân phối.",
+    "denied": "Bạn không có quyền duyệt gói trên marketplace.",
+    "kind": {
+      "theme": "Giao diện",
+      "plugin": "Plugin"
+    },
+    "status": {
+      "PENDING": "Chờ duyệt",
+      "APPROVED": "Đã duyệt",
+      "QUARANTINED": "Đã cách ly",
+      "REJECTED": "Đã từ chối"
+    },
+    "severity": {
+      "block": "Chặn",
+      "warn": "Cảnh báo",
+      "info": "Thông tin"
+    },
+    "queue": {
+      "heading": "Hàng chờ duyệt",
+      "description": "Các gói đang chờ quyết định. Hãy đọc kết quả quét trước khi duyệt: chính lượt duyệt này cho phép mã đó chạy trên các site đang hoạt động.",
+      "emptyTitle": "Không có gì để duyệt",
+      "emptyDescription": "Mọi gói đã gửi đều đã được xử lý.",
+      "submitted": "Gửi lúc {date}",
+      "checksum": "Checksum",
+      "findingsHeading": "Kết quả quét",
+      "findingsCount": "{blocking} chặn · {warnings} cảnh báo · {infos} thông tin",
+      "noFindingsTitle": "Trình quét không phát hiện gì",
+      "noFindingsDescription": "Quét sạch không có nghĩa là đã được thẩm định. Trình quét chỉ bắt được những gì nó có luật — hãy đọc mã trước khi duyệt.",
+      "approve": "Duyệt",
+      "reject": "Từ chối",
+      "unknownLocation": "Không rõ vị trí"
+    },
+    "decision": {
+      "approveTitle": "Duyệt {name} v{version}?",
+      "rejectTitle": "Từ chối {name} v{version}?",
+      "approveBody": "Duyệt tức là xuất bản phiên bản này. Các site sẽ cài được nó, và mã của nó sẽ chạy bên trong runtime của họ.",
+      "rejectBody": "Từ chối sẽ giữ phiên bản này ngoài marketplace. Nhà phát hành có thể gửi phiên bản mới sau khi xử lý các phát hiện.",
+      "blockingWarning": "Trình quét báo {count} phát hiện ở mức chặn. Duyệt là bạn đang bỏ qua nó. Chỉ làm vậy nếu bạn đã đọc mã và biết vì sao luật đó không áp dụng ở đây.",
+      "note": "Ghi chú",
+      "noteHint": "Không bắt buộc. Được gửi kèm quyết định cho nhà phát hành — hãy nói rõ điều gì thuyết phục bạn, hoặc cần sửa gì.",
+      "confirmApprove": "Duyệt phiên bản",
+      "confirmReject": "Từ chối phiên bản"
+    },
+    "published": {
+      "heading": "Phiên bản đã xuất bản",
+      "description": "Toàn bộ những gì marketplace đang phân phối, và mỗi phiên bản đang chạy ở đâu.",
+      "emptyTitle": "Chưa xuất bản gì",
+      "emptyDescription": "Các gói đã duyệt sẽ xuất hiện ở đây sau khi được xuất bản.",
+      "colKind": "Loại",
+      "colName": "Tên",
+      "colKey": "Khoá",
+      "colVersion": "Phiên bản",
+      "colPublisher": "Nhà phát hành",
+      "colStatus": "Trạng thái",
+      "colSites": "Site",
+      "colPublished": "Xuất bản",
+      "colActions": "Thao tác",
+      "revoke": "Thu hồi",
+      "revokedBadge": "Đã thu hồi",
+      "revokedOn": "Thu hồi lúc {date}",
+      "revokedReason": "Lý do: {reason}",
+      "revokedNoReason": "Không có lý do nào được ghi lại."
+    },
+    "revoke": {
+      "title": "Thu hồi {name} v{version}?",
+      "runningWarning": "Đây không phải là gỡ một thứ đang chờ được cài. Phiên bản này đã được cài và đang chạy — thu hồi là rút mã mà các site đang thực thi ngay lúc này.",
+      "blastRadius": "{count} site đang chạy sẽ bị chuyển khỏi phiên bản này.",
+      "blastRadiusNone": "Hiện không có site nào chạy phiên bản này. Thu hồi vẫn ngăn mọi lượt cài mới.",
+      "effectsHeading": "Điều gì xảy ra ngay khi bạn xác nhận",
+      "effectTheme": "Mọi site đang dùng giao diện này sẽ quay về giao diện mặc định có sẵn. Trang vẫn hiển thị, nhưng sẽ không còn giống như trước.",
+      "effectPlugin": "Plugin bị cách ly trên mọi site đã cài. Nó ngừng xử lý hook; site vẫn chạy nhưng không có nó.",
+      "effectCaches": "Cache của runtime giao diện và plugin bị xoá, nên mã bị thu hồi ngừng thực thi ngay lập tức chứ không đợi tới lần triển khai sau.",
+      "irreversible": "Không thể hoàn tác. Không có thao tác bỏ thu hồi: nếu sau này gói được xác định là an toàn, nó phải được xuất bản lại thành một phiên bản mới.",
+      "reason": "Lý do",
+      "reasonHint": "Bắt buộc. Được ghi lại cùng phiên bản và hiển thị cho nhà phát hành — người xem lại việc này sau bạn chỉ có đúng những gì bạn viết ở đây.",
+      "reasonPlaceholder": "ví dụ: Đọc process.env rồi gửi giá trị ra máy chủ bên ngoài trong setup()",
+      "confirm": "Thu hồi phiên bản này"
+    },
+    "actions": {
+      "reviewDenied": "Bạn không có quyền duyệt gói trên marketplace.",
+      "approved": "Đã duyệt {name} v{version}.",
+      "rejected": "Đã từ chối {name} v{version}.",
+      "reviewFailed": "Không ghi nhận được quyết định.",
+      "revoked": "Đã thu hồi {name} v{version}. {count} site đã được chuyển khỏi phiên bản này.",
+      "revokeFailed": "Không thu hồi được phiên bản.",
+      "reasonRequired": "Phải có lý do thì mới thu hồi được phiên bản."
+    },
+    "publisherUnknown": "Không rõ nhà phát hành",
+    "publisherVerified": "Nhà phát hành đã xác minh",
+    "publisherUnverified": "Nhà phát hành chưa xác minh",
+    "browse": {
+      "metaTitle": "Chợ ứng dụng",
+      "title": "Chợ ứng dụng",
+      "description": "Duyệt giao diện và plugin rồi cài vào site này.",
+      "denied": "Bạn không có quyền duyệt chợ ứng dụng.",
+      "emptyTitle": "Chợ ứng dụng trống",
+      "emptyDescription": "Chưa có gói nào được publish lên marketplace mà máy chủ này trỏ tới.",
+      "searchPlaceholder": "Tìm giao diện và plugin…",
+      "noMatch": "Không có gì khớp tìm kiếm.",
+      "wants": "Plugin này yêu cầu",
+      "updated": "Cập nhật {date}",
+      "install": "Cài đặt",
+      "installing": "Đang cài…",
+      "update": "Cập nhật",
+      "installed": "Đã cài {name} {version}.",
+      "installedBadge": "Đã cài",
+      "updateBadge": "Cập nhật lên {version}",
+      "installFailed": "Không cài được gói.",
+      "installDenied": "Bạn không có quyền cài cái này.",
+      "tabsLabel": "Loại gói marketplace",
+      "categoriesLabel": "Danh mục marketplace",
+      "tabs": {
+        "plugin": "Plugins",
+        "theme": "Themes"
+      },
+      "categories": {
+        "plugin": {
+          "all": "Tất cả plugin",
+          "seo": "SEO",
+          "security": "Bảo mật",
+          "performance": "Hiệu năng",
+          "ecommerce": "Thương mại",
+          "forms": "Biểu mẫu",
+          "analytics": "Phân tích",
+          "marketing": "Marketing",
+          "media": "Media",
+          "membership": "Thành viên",
+          "developer": "Lập trình",
+          "other": "Khác"
+        },
+        "theme": {
+          "all": "Tất cả theme",
+          "blog": "Blog",
+          "business": "Doanh nghiệp",
+          "ecommerce": "Bán hàng",
+          "portfolio": "Portfolio",
+          "news": "Tin tức",
+          "education": "Giáo dục",
+          "entertainment": "Giải trí",
+          "food": "Ẩm thực",
+          "photography": "Nhiếp ảnh",
+          "community": "Cộng đồng",
+          "other": "Khác"
+        }
+      },
+      "filter": {
+        "all": "Tất cả",
+        "theme": "Giao diện",
+        "plugin": "Plugin"
+      }
+    },
+    "sync": {
+      "local": "Máy chủ này tự là marketplace của mình — gói được cài từ catalogue của chính nó.",
+      "never": "chưa bao giờ",
+      "fresh": "Đang lấy từ {url}. Danh sách thu hồi cập nhật lúc {synced} — {count} gói đã thu hồi.",
+      "staleTitle": "Danh sách thu hồi đã cũ",
+      "staleBody": "Máy chủ này chưa liên lạc được với {url} kể từ {synced}. Các gói đã cài vẫn chạy (thu hồi là fail-open), nhưng một gói bị marketplace thu hồi sau mốc đó vẫn đang chạy ở đây. Hãy kiểm tra worker và marketplace có kết nối được không."
+    },
+    "media": {
+      "viewShot": "Ảnh chụp màn hình {n} của {name}",
+      "watchVideo": "Xem video",
+      "previous": "Ảnh trước",
+      "next": "Ảnh sau"
+    }
+  },
+  "jobs": {
+    "metaTitle": "Tác vụ nền",
+    "title": "Tác vụ nền",
+    "description": "Hàng đợi thất bại: những tác vụ đã thử hết số lần cho phép và bị đưa về đây. Sẽ không có gì chạy lại chúng trừ khi bạn yêu cầu.",
+    "denied": "Bạn không có quyền quản lý tác vụ nền.",
+    "emptyTitle": "Không có tác vụ nào thất bại.",
+    "emptyDescription": "Mọi tác vụ nền đều đã chạy xong.",
+    "colName": "Tác vụ",
+    "colId": "ID",
+    "colAttempts": "Số lần thử",
+    "colReason": "Lỗi",
+    "colFailedAt": "Thất bại lúc",
+    "colActions": "Thao tác",
+    "noReason": "Không có lý do nào được ghi lại.",
+    "showFullReason": "Lỗi đầy đủ",
+    "payload": "Dữ liệu",
+    "retry": "Chạy lại",
+    "discard": "Bỏ",
+    "discardDialog": {
+      "title": "Bỏ {name}?",
+      "body": "Bỏ là xoá hẳn tác vụ. Việc mà nó định làm sẽ không bao giờ được làm — không chạy lại, và không còn gì ngoài những gì bạn đang thấy ở đây. Nếu nó định gửi một email, email đó sẽ không bao giờ được gửi.",
+      "retryFirst": "Nếu có khả năng lỗi chỉ là nhất thời, hãy chạy lại thay vì bỏ. Chạy lại mà vẫn hỏng thì tác vụ quay về danh sách này; còn đã bỏ thì không lấy lại được.",
+      "confirm": "Bỏ vĩnh viễn"
+    },
+    "actions": {
+      "denied": "Bạn không có quyền quản lý tác vụ nền.",
+      "retried": "Đã đưa {name} vào hàng đợi để chạy lại.",
+      "retryFailed": "Không chạy lại được tác vụ.",
+      "discarded": "Đã bỏ {name}.",
+      "discardFailed": "Không bỏ được tác vụ."
+    },
+    "truncated": "Đang hiện {shown} trong tổng số {total} job lỗi. Thử lại hết trang này vẫn chưa làm rỗng hàng đợi."
+  },
+  "error": {
+    "title": "Đã xảy ra lỗi"
+  },
+  "notFound": {
+    "title": "Không tìm thấy trang",
+    "description": "Nội dung hoặc loại nội dung này không tồn tại trong site hiện tại."
+  },
+  "users": {
+    "metaTitle": "Người dùng",
+    "title": "Người dùng",
+    "description": "Ai có quyền truy cập tenant này, và với vai trò gì. Một vai trò có thể được cấp cho một site, hoặc cho toàn bộ các site.",
+    "columns": {
+      "user": "Người dùng",
+      "roles": "Vai trò",
+      "lastLogin": "Đăng nhập gần nhất",
+      "actions": ""
+    },
+    "tenantWide": "Toàn bộ site",
+    "never": "Chưa đăng nhập lần nào",
+    "you": "Bạn",
+    "noRoles": "Không có vai trò — không truy cập được gì",
+    "emptyTitle": "Chưa có ai khác được cấp quyền",
+    "emptyDescription": "Tạo người dùng để cấp cho họ vai trò trên site này hoặc trên toàn tenant.",
+    "changeRole": "Đổi vai trò",
+    "removeRole": "Thu hồi vai trò này",
+    "remove": "Xoá khỏi tenant",
+    "role": {
+      "title": "Đặt vai trò cho {name}",
+      "body": "Cấp vai trò trên một site sẽ thay thế vai trò họ đang có ở site đó. Cấp vai trò toàn tenant sẽ áp dụng cho mọi site.",
+      "scope": "Áp dụng cho",
+      "scopeHint": "Vai trò toàn tenant áp dụng cho mọi site, kể cả site tạo sau này.",
+      "role": "Vai trò",
+      "submit": "Lưu vai trò",
+      "success": "{name} giờ là {role}.",
+      "failed": "Không đổi được vai trò."
+    },
+    "removeDialog": {
+      "title": "Xoá {name}?",
+      "body": "Họ mất quyền truy cập ngay lập tức và mọi phiên đăng nhập của họ bị chấm dứt. Bài viết, tệp tải lên và nhật ký của họ vẫn nguyên vẹn — thao tác này xoá con người, không xoá công việc của họ.",
+      "confirm": "Xoá",
+      "success": "Đã xoá {name}.",
+      "failed": "Không xoá được người dùng."
+    },
+    "removeRoleDialog": {
+      "title": "Thu hồi vai trò {role} trên {scope}?",
+      "body": "Họ vẫn giữ tài khoản và các vai trò khác. Họ sẽ bị đăng xuất, nên thay đổi có hiệu lực ngay.",
+      "confirm": "Thu hồi",
+      "success": "Đã thu hồi vai trò.",
+      "failed": "Không thu hồi được vai trò."
+    },
+    "edit": {
+      "button": "Sửa người dùng",
+      "title": "Sửa {name}",
+      "name": "Tên",
+      "avatarUrl": "URL ảnh đại diện",
+      "submit": "Lưu thay đổi",
+      "success": "Đã cập nhật {name}.",
+      "failed": "Không cập nhật được người dùng."
+    },
+    "invite": {
+      "heading": "Tạo người dùng",
+      "description": "Tài khoản đăng nhập được ngay. Email chỉ là thông báo kèm thông tin đăng nhập.",
+      "name": "Tên",
+      "namePlaceholder": "Tên người dùng",
+      "email": "Email",
+      "emailPlaceholder": "nguoiay@congty.vn",
+      "emailInvalid": "Email không hợp lệ.",
+      "password": "Mật khẩu tạm",
+      "passwordHint": "Để trống để hệ thống tự sinh.",
+      "passwordPlaceholder": "Tự động sinh",
+      "role": "Vai trò",
+      "scope": "Áp dụng cho",
+      "submit": "Tạo người dùng",
+      "submitting": "Đang tạo…",
+      "failed": "Không tạo được người dùng.",
+      "login": "Đăng nhập",
+      "createdHeading": "Đã tạo tài khoản",
+      "createdBodyQueued": "Tài khoản đã active và đăng nhập được ngay. Email thông báo kèm thông tin đăng nhập đã được đưa vào hàng đợi gửi.",
+      "createdBodyManual": "Tài khoản đã active và đăng nhập được ngay, nhưng email chưa được đưa vào hàng đợi gửi. Hãy sao chép thông tin đăng nhập và gửi bằng kênh an toàn.",
+      "copyDetails": "Sao chép thông tin",
+      "linkHeading": "Sao chép liên kết này ngay",
+      "linkBody": "Đây là lần duy nhất liên kết được hiển thị. Hệ thống chỉ lưu bản băm của nó nên không tra lại được — nếu làm mất, hãy thu hồi lời mời và tạo lời mời mới. Liên kết dùng được một lần và hết hạn sau 7 ngày.",
+      "copy": "Sao chép liên kết",
+      "copied": "Đã sao chép",
+      "done": "Xong"
+    },
+    "pending": {
+      "heading": "Lời mời đang chờ",
+      "description": "Đã gửi, chưa được chấp nhận.",
+      "emptyTitle": "Không có lời mời nào đang chờ",
+      "invitedBy": "Mời bởi {name}",
+      "expires": "Hết hạn {date}",
+      "revoke": "Thu hồi",
+      "revokeSuccess": "Đã thu hồi lời mời.",
+      "revokeFailed": "Không thu hồi được lời mời."
+    },
+    "denied": "Bạn không có quyền quản lý người dùng.",
+    "twoFactor": {
+      "on": "2FA",
+      "off": "Chưa 2FA"
+    },
+    "resetTwoFactor": "Đặt lại xác thực hai lớp",
+    "resetTwoFactorDialog": {
+      "title": "Đặt lại xác thực hai lớp cho {name}?",
+      "body": "Dành cho đồng nghiệp đã mất điện thoại và không còn chỗ nào lấy được mã khôi phục. Họ vẫn giữ tài khoản, vai trò và mật khẩu, và sẽ bị đăng xuất để thấy thay đổi này ngay.",
+      "warning": "Cho tới khi họ thiết lập lại, tài khoản của họ chỉ còn mật khẩu bảo vệ — đúng tình huống mà xác thực hai lớp sinh ra để chống. Chỉ làm việc này khi bạn chắc chắn mình đang nói chuyện với ai.",
+      "confirm": "Đặt lại",
+      "success": "Đã đặt lại xác thực hai lớp cho {name}. Hãy nhắc họ thiết lập lại.",
+      "failed": "Không đặt lại được xác thực hai lớp."
+    }
+  },
+  "profile": {
+    "metaTitle": "Hồ sơ của bạn",
+    "title": "Hồ sơ của bạn",
+    "description": "Tên của bạn và mật khẩu bạn dùng để đăng nhập.",
+    "nav": "Hồ sơ",
+    "details": {
+      "heading": "Thông tin",
+      "email": "Email",
+      "emailHint": "Email là tên đăng nhập của bạn và không đổi được ở đây.",
+      "name": "Tên",
+      "avatarUrl": "URL ảnh đại diện",
+      "avatarUrlHint": "Không bắt buộc. Là liên kết tới một ảnh — hãy tải ảnh lên thư viện rồi dán URL vào đây.",
+      "submit": "Lưu hồ sơ",
+      "success": "Đã lưu hồ sơ.",
+      "failed": "Không lưu được hồ sơ."
+    },
+    "password": {
+      "heading": "Đổi mật khẩu",
+      "description": "Đổi mật khẩu sẽ đăng xuất bạn khỏi mọi thiết bị, kể cả thiết bị này. Đó là chủ đích: lý do thường gặp nhất để đổi mật khẩu là nghi ngờ người khác đang giữ nó.",
+      "current": "Mật khẩu hiện tại",
+      "new": "Mật khẩu mới",
+      "newHint": "Tối thiểu {min} ký tự.",
+      "confirm": "Nhập lại mật khẩu mới",
+      "submit": "Đổi mật khẩu",
+      "submitting": "Đang đổi…",
+      "mismatch": "Hai mật khẩu không khớp.",
+      "tooShort": "Dùng ít nhất {min} ký tự.",
+      "failed": "Không đổi được mật khẩu."
+    },
+    "roles": {
+      "heading": "Quyền của bạn",
+      "description": "Các vai trò bạn đang giữ, và ở đâu."
+    },
+    "twoFactor": {
+      "heading": "Xác thực hai lớp",
+      "on": "Đang bật",
+      "off": "Đang tắt",
+      "enabledBody": "Đăng nhập cần mật khẩu và một mã từ ứng dụng xác thực. Chỉ riêng mật khẩu — dù bị lộ, bị lừa lấy, hay dùng lại từ nơi khác — không còn đủ để vào được.",
+      "disabledBody": "Tài khoản của bạn hiện chỉ có mật khẩu bảo vệ. Thêm một ứng dụng xác thực thì mật khẩu bị lộ sẽ không còn đủ để đăng nhập thay bạn.",
+      "enable": "Bật xác thực hai lớp",
+      "disable": "Tắt",
+      "regenerate": "Tạo mã khôi phục mới",
+      "disabled": "Đã tắt xác thực hai lớp. Tài khoản của bạn quay lại chỉ có mật khẩu.",
+      "setupFailed": "Không bắt đầu được thiết lập.",
+      "disableFailed": "Không tắt được xác thực hai lớp.",
+      "regenerateFailed": "Không tạo được mã khôi phục mới.",
+      "setup": {
+        "title": "Thiết lập ứng dụng xác thực",
+        "body": "Quét mã này bằng Google Authenticator, 1Password, hoặc bất kỳ ứng dụng TOTP nào. Sau đó nhập sáu chữ số nó hiện ra, để cả hai bên cùng biết là đã chạy đúng.",
+        "qrAlt": "Mã QR cho ứng dụng xác thực",
+        "manual": "Không quét được? Nhập chuỗi này vào ứng dụng:",
+        "code": "Mã từ ứng dụng",
+        "codeHint": "Xác thực hai lớp chưa bật cho tới khi mã này đúng — một mã QR bạn chưa từng quét thì không thể khoá bạn ở ngoài.",
+        "confirm": "Bật lên"
+      },
+      "disableDialog": {
+        "title": "Tắt xác thực hai lớp?",
+        "body": "Cần cả mật khẩu VÀ một mã. Nếu chỉ cần một trong hai thì thứ bị đánh cắp đó đủ để gỡ bỏ chính lớp bảo vệ sinh ra vì nó có thể bị đánh cắp."
+      },
+      "regenerateDialog": {
+        "title": "Tạo mã khôi phục mới?",
+        "body": "Các mã cũ ngừng hoạt động ngay khi mã mới tồn tại. Nếu bạn đã ghi chúng ra đâu đó, bản ghi ấy sẽ thành vô dụng."
+      },
+      "codes": {
+        "heading": "Mã khôi phục của bạn",
+        "body": "Đây là lần duy nhất chúng được hiển thị — hệ thống chỉ lưu bản băm nên không có cách nào xem lại. Mỗi mã dùng được một lần, và chúng là thứ đưa bạn vào khi điện thoại không giúp được. Hãy lưu ở nơi không phải chính điện thoại đó.",
+        "copy": "Sao chép tất cả",
+        "done": "Tôi đã lưu lại"
+      }
+    }
+  },
+  "sites": {
+    "title": "Site",
+    "subtitle": "Tất cả site trong tenant của bạn. Site chưa xuất bản thì chưa phục vụ ai.",
+    "created": "Đã tạo site. Site đang ở bản nháp — xuất bản khi sẵn sàng.",
+    "saved": "Đã lưu site.",
+    "empty": "Chưa có site nào. Tạo site đầu tiên bên dưới.",
+    "new": "Site mới",
+    "create": "Tạo site",
+    "creating": "Đang tạo…",
+    "save": "Lưu",
+    "saving": "Đang lưu…",
+    "publish": "Xuất bản",
+    "unpublish": "Gỡ xuất bản",
+    "name": "Tên",
+    "slug": "Slug",
+    "slugHelp": "Chữ thường, số và dấu gạch ngang. Không trùng trong tenant.",
+    "hostname": "Tên miền",
+    "hostnameHelp": "Địa chỉ người dùng truy cập, kèm cổng khi chạy dev — ví dụ localhost:3100. Không trùng trên toàn hệ thống.",
+    "hostnameInvalid": "Địa chỉ này không phục vụ được. Hãy dùng tên miền như example.com, hoặc localhost:3100 khi chạy dev.",
+    "hostnameNormalized": "Sẽ được lưu thành {hostname}",
+    "publishNow": "Xuất bản site ngay",
+    "publishNowHelp": "{hostname} sẽ phục vụ truy cập ngay khi site được tạo.",
+    "draftHelp": "Site sẽ được tạo ở trạng thái nháp. Bản nháp không được phục vụ — địa chỉ của nó trả về 404 cho tới khi bạn xuất bản.",
+    "defaultLocale": "Ngôn ngữ mặc định",
+    "status": "Trạng thái",
+    "domains": "Tên miền",
+    "theme": "Giao diện",
+    "noTheme": "Chưa có giao diện",
+    "brand": "Thương hiệu",
+    "brandHelp": "Màu và logo của site. Mọi theme đều đọc được, nên đổi theme không mất thương hiệu — theme vẫn có thể ghi đè trong cài đặt riêng của nó.",
+    "primaryColor": "Màu thương hiệu",
+    "logo": "Logo",
+    "logoHelp": "Theme sẽ hiển thị ở nơi nó vẽ logo. Nên dùng PNG nền trong suốt hoặc SVG.",
+    "noLogo": "Chưa đặt logo",
+    "draftNotice": "Site đang là bản nháp: chưa phản hồi truy cập nào cho tới khi bạn xuất bản.",
+    "errors": {
+      "createDenied": "Bạn không có quyền tạo site.",
+      "createFailed": "Không tạo được site.",
+      "updateDenied": "Bạn không có quyền thay đổi site này.",
+      "updateFailed": "Không lưu được site.",
+      "nameRequired": "Cần nhập tên.",
+      "slugRequired": "Cần nhập slug.",
+      "hostnameRequired": "Cần nhập tên miền."
+    }
+  }
+}

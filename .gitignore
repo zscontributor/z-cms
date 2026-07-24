@@ -1,0 +1,68 @@
+node_modules/
+dist/
+.next/
+out/
+
+# Verified-bundle caches: downloaded and re-verified at runtime, never source.
+.zcms-themes/
+.zcms-plugins/
+.turbo/
+coverage/
+test-results.junit.xml
+*.tsbuildinfo
+
+# Compiled sandbox worker: runner.ts loads it from beside itself, so the test
+# harness builds it into src/. It is output, not source.
+apps/plugin-runtime/src/sandbox/worker.js
+
+# Generated from the route table by `pnpm openapi`; never hand-edited.
+apps/cms-api/openapi.json
+
+# Deny every .env by default and re-admit only the template. The narrower list
+# (.env, .env.local) leaves .env.production and .env.staging tracked — the two
+# files that actually hold live credentials on a self-hosted install.
+.env*
+!.env.example
+
+# Key material. Nothing in this repo is meant to hold a private key: the
+# marketplace signs in a separate operator service, and the encryption keys come
+# from the environment. Anything matching these is somebody's mistake, so catch it
+# here rather than in a disclosure email.
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+id_rsa*
+
+# ...with one exception, and it is only safe because of what a PUBLIC key is for.
+#
+# `keys/*.pub.pem` is the first-party signing key's public half. It is not a secret
+# — it is the thing every runtime PINS in order to refuse code the operator did not
+# sign, and it has to travel with the repo for that to mean anything. The private
+# half lives in `.keys/`, which is ignored below and must never leave a secret
+# manager. The two-character difference between the filenames is load-bearing, so
+# the rule is narrow on purpose: `.pub.pem`, in `keys/`, and nothing else.
+!keys/*.pub.pem
+
+# Where `pnpm keygen:first-party` drops the private half. Never commit this.
+.keys/
+
+# Prisma generated client (regenerated from schema)
+packages/database/generated/
+
+.DS_Store
+*.log
+
+# Static landing-page export, not part of the build.
+z-cms-portal.html
+
+# Stray source art. Brand assets live in apps/admin-web/public/brand/ and themes/*/assets/.
+/logo.png
+
+# Signed .zcms artefacts produced by scripts/publish-themes.mts — build output, not source.
+.packages/
+z-soft-page-2027.html
+
+# Private theme — z-soft company site only; shipped via marketplace, never public.
+themes/z-soft/

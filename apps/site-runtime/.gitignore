@@ -1,0 +1,5 @@
+public/z-flags/
+# Built-in themes' assets, copied in by themes/*/scripts/sync-assets.ts — which
+# also plants the root favicon that answers a browser's implicit request.
+public/z-theme-assets/
+public/favicon.ico

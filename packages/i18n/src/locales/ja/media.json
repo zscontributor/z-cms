@@ -1,0 +1,96 @@
+{
+  "metaTitle": "メディアライブラリ",
+  "title": "メディアライブラリ",
+  "description": "このサイトの {count} ファイル。",
+  "denied": "メディア ライブラリを表示する権限がありません。",
+  "emptyTitle": "図書館は空です",
+  "emptyDescription": "コンテンツやテーマで使用する画像やドキュメントをアップロードします。",
+  "uploader": {
+    "hint": "ここにファイルをドラッグするか、コンピュータからファイルを選択します (ファイルあたり最大 20 MB)。",
+    "choose": "ファイルの選択",
+    "uploading": "アップロード中…",
+    "progress": "{index}/{total}をアップロード中: {name}"
+  },
+  "copyUrl": {
+    "action": "URLをコピー",
+    "copied": "コピーされました",
+    "title": "ファイルのURLをコピーする"
+  },
+  "picker": {
+    "title": "ライブラリからファイルを選択します",
+    "idPlaceholder": "ファイルID",
+    "empty": "図書館は空です。",
+    "loadFailed": "ライブラリをロードできませんでした。",
+    "insert": "インサート ({count})"
+  },
+  "errors": {
+    "uploadDenied": "ファイルをアップロードする権限がありません。",
+    "noFile": "最初にファイルを選択します。",
+    "tooLarge": "ファイルが 20 MB を超えています。",
+    "uploadFailed": "アップロードに失敗しました。もう一度試してください。"
+  },
+  "noResultsTitle": "一致するファイルはありません",
+  "noResultsDescription": "別の検索語を試すか、フィルターをクリアしてください。",
+  "list": {
+    "searchPlaceholder": "ファイルを検索…",
+    "searchLabel": "図書館を検索する",
+    "kindFilter": "タイプでフィルタリングする",
+    "allKinds": "全種類",
+    "images": "画像",
+    "documents": "書類",
+    "searchingAll": "すべてのフォルダーにわたる「{term}」の結果。",
+    "clearSearch": "クリア"
+  },
+  "folders": {
+    "title": "フォルダー",
+    "breadcrumb": "フォルダーパス",
+    "root": "図書館",
+    "new": "新しいフォルダー",
+    "empty": "ここにはまだフォルダーがありません。",
+    "count": "{files} ファイル · {folders} フォルダー",
+    "edit": "名前の変更または移動",
+    "editAria": "フォルダ {name} の名前を変更または移動します",
+    "deleteAria": "{name}フォルダを削除します。",
+    "name": "名前",
+    "namePlaceholder": "例えば製品写真",
+    "parent": "内部",
+    "newTitle": "新しいフォルダー",
+    "newDescription": "フォルダーはライブラリを整理します。ファイルはどこにファイルされてもその URL を保持します。",
+    "create": "作成する",
+    "editTitle": "フォルダーの名前を変更または移動する",
+    "editDescription": "フォルダーの名前を変更しても、フォルダー内のファイルは何も変更されません。",
+    "deleteTitle": "「{name}」フォルダを削除しますか？",
+    "deleteDescription": "ファイルは削除されません。ファイルは 1 つ上のレベルに移動し、ライブラリに残ります。",
+    "deleteSummary": "このフォルダーには、{files} ファイルと {folders} サブフォルダーが保持されます。サブフォルダーも移動します。ファイルが上に移動します。",
+    "deleteMoved": "{count} ファイルが上に移動されました。"
+  },
+  "file": {
+    "edit": "詳細の編集",
+    "editAria": "{name}の詳細を編集します",
+    "deleteAria": "{name}を削除",
+    "editTitle": "ファイルの詳細",
+    "editDescription": "ファイルの名前を変更したり移動しても URL は変更されないため、公開されたページは改ページされません。",
+    "name": "ファイル名",
+    "alt": "代替テキスト",
+    "altHint": "スクリーン リーダーと検索エンジンに対して、画像が何を示すか。",
+    "altPlaceholder": "例えば壁に立てかけられた赤い自転車",
+    "folder": "フォルダ",
+    "deleteTitle": "このファイルを削除しますか?",
+    "deleteDescription": "「{name}」はライブラリから削除されます。",
+    "deleteWarning": "ライブラリは、どのページがファイルを使用しているかを追跡しません。公開されたページにこれが埋め込まれている場合、その画像は失われます。"
+  },
+  "bulk": {
+    "selectAll": "すべて選択",
+    "selectNone": "選択をクリア",
+    "selectAria": "{name}を選択してください",
+    "none": "ファイルを選択してまとめて移動または削除します。",
+    "count": "{count}が選択されました",
+    "move": "に移動します…",
+    "delete": "削除 ({count})",
+    "moveTitle": "{count} ファイルを移動する",
+    "moveConfirm": "動く",
+    "moveDescription": "ファイルのみ - ファイルは URL を保持するため、ファイルを埋め込むものは何も壊れません。",
+    "deleteTitle": "{count} ファイルを削除しますか?",
+    "deleteDescription": "{count} ファイルはライブラリから削除されます。"
+  }
+}

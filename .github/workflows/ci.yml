@@ -1,0 +1,211 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Dev-only values. Real deployments rotate every one of these; see docs/security.md.
+  DATABASE_URL: postgresql://zcms:zcms@localhost:5432/zcms?schema=public
+  APP_DATABASE_URL: postgresql://zcms_app:zcms_app@localhost:5432/zcms?schema=public
+  REDIS_URL: redis://localhost:6379
+  JWT_SECRET: ci-only-secret
+  JWT_ACCESS_TTL: 15m
+  JWT_REFRESH_TTL: 30d
+  # 32 bytes, base64. TOTP secrets are stored encrypted under it; see .env.example.
+  TOTP_ENCRYPTION_KEY: emNtcy1kZXYtdG90cC1rZXktZG8tbm90LXVzZS1pbi0=
+  MFA_ISSUER: Z-CMS
+  CMS_INTERNAL_TOKEN: ci-internal-token
+  CMS_API_URL: http://localhost:4100
+  CMS_API_PORT: "4100"
+  SITE_RUNTIME_URL: http://localhost:3100
+  ADMIN_WEB_URL: http://localhost:3101
+  PLUGIN_RUNTIME_URL: http://localhost:4200
+  S3_ENDPOINT: http://localhost:9000
+  S3_REGION: us-east-1
+  S3_BUCKET: zcms-media
+  S3_ACCESS_KEY: zcms
+  S3_SECRET_KEY: zcms-secret
+  S3_PUBLIC_URL: http://localhost:9000/zcms-media
+  SEED_ADMIN_EMAIL: admin@z-cms.org
+  SEED_ADMIN_PASSWORD: admin123
+
+jobs:
+  # Type errors and lint are cheap; fail fast before spinning up a database.
+  static:
+    name: Typecheck & build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Validate lockfile
+        run: pnpm verify:lockfile
+      - run: pnpm verify:test-convention
+      - run: pnpm build
+      - run: pnpm typecheck
+      # Builds the OpenAPI document from the real route table (no server, no
+      # database) and fails on an unresolved $ref — a broken document is a
+      # broken client, and it should not survive review.
+      - run: pnpm openapi
+
+  # Every package's unit suite, with its coverage floor enforced. Needs no
+  # database, Redis or S3 — units mock those — so it runs in parallel with the
+  # (slow) security suites rather than behind them. A change that drops a package
+  # below its floor, or deletes a test, fails here. This is the "all platforms
+  # pass their tests" signal the community sees on every commit.
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Validate lockfile
+        run: pnpm verify:lockfile
+      # ^build: some suites import a sibling package's built output (e.g. the
+      # scanner builds real .zcms files with @zcmsorg/package).
+      - run: pnpm build
+      - run: pnpm test
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: coverage
+          path: "**/coverage/coverage-summary.json"
+          if-no-files-found: ignore
+
+  # The point of this file. Every security property this project claims is a
+  # script that tries to break it — and a suite nobody runs is a suite that has
+  # already silently regressed.
+  verify:
+    name: Security suites
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: zcms
+          POSTGRES_PASSWORD: zcms
+          POSTGRES_DB: zcms
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U zcms -d zcms"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:8-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Validate lockfile
+        run: pnpm verify:lockfile
+
+      # RLS is enforced by a role that owns nothing and cannot bypass policies.
+      # The GitHub service container does not run our init SQL, so create it here
+      # — and if this step is ever removed, verify:rls fails, which is the point.
+      - name: Create the RLS-enforced app role
+        run: |
+          PGPASSWORD=zcms psql -h localhost -U zcms -d zcms <<'SQL'
+          CREATE ROLE zcms_app WITH LOGIN PASSWORD 'zcms_app' NOBYPASSRLS;
+          GRANT CONNECT ON DATABASE zcms TO zcms_app;
+          GRANT USAGE ON SCHEMA public TO zcms_app;
+          ALTER DEFAULT PRIVILEGES FOR ROLE zcms IN SCHEMA public
+            GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO zcms_app;
+          ALTER DEFAULT PRIVILEGES FOR ROLE zcms IN SCHEMA public
+            GRANT USAGE, SELECT ON SEQUENCES TO zcms_app;
+          REVOKE CREATE ON SCHEMA public FROM zcms_app;
+          SQL
+
+      - run: pnpm build
+      - run: pnpm db:migrate
+
+      # A built-in only runs if it is signed, and the private half of the first-party
+      # key is not in the repo and must not be — so CI mints its own throwaway pair.
+      # A secret would not work either: a pull request from a fork cannot read one,
+      # and this job has to pass on a fork. The signing path is exercised end to end
+      # against a key nobody else holds, which is a better test than a shared key.
+      - name: Mint a CI-only first-party keypair
+        run: |
+          pnpm keygen:first-party --force
+          {
+            echo 'FIRST_PARTY_PUBLIC_KEY<<PEM'
+            cat keys/zsoft-publisher.pub.pem
+            echo 'PEM'
+          } >> "$GITHUB_ENV"
+
+      # db:seed reads the default theme out of the catalogue rather than transcribing
+      # the manifest, and the catalogue rows come from the SIGNED packages. So the
+      # built-ins have to be signed and registered before the seed, exactly as in
+      # `pnpm bootstrap`. Skip these and db:seed fails, by design.
+      - run: pnpm sign:builtins
+      - run: pnpm seed:builtins
+      - run: pnpm db:seed
+
+      # RLS · sandbox escape · package signing · malware scan · plugin tables.
+      - name: Attack suites
+        run: pnpm verify
+
+      # The auth suite drives a live API: rotation, theft detection, brute-force
+      # limits, security headers. It cannot be faked with a unit test.
+      - name: Auth suite (against a running API)
+        run: |
+          node apps/cms-api/dist/main.js &
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:4100/api/v1/health && break
+            sleep 1
+          done
+          pnpm verify:auth
+
+  # The authoritative secret scan. The local pre-commit/pre-push hooks run the
+  # same gitleaks over the same .gitleaks.toml, but a hook can be skipped with
+  # --no-verify — this job cannot. fetch-depth: 0 so the whole history is scanned,
+  # not just the tip, and a secret buried in an older commit is still caught.
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        run: |
+          docker run --rm -v "$PWD:/repo" -w /repo ghcr.io/gitleaks/gitleaks:v8.30.1 \
+            git --redact --verbose --no-banner --config .gitleaks.toml
+
+  # Advisory, not blocking: a transitive CVE with no patch available should not
+  # stop a security fix from shipping. It should still be loudly visible.
+  #
+  # `pnpm audit` is not used: it POSTs to npm's quick-audit endpoint
+  # (/-/npm/v1/security/audits), which npm retired (HTTP 410). osv-scanner reads
+  # the lockfile directly against the OSV database instead — no install needed.
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v5
+      - uses: google/osv-scanner-action/osv-scanner-action@v2.3.8
+        with:
+          scan-args: |-
+            --lockfile=pnpm-lock.yaml

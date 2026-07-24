@@ -1,0 +1,21 @@
+# A blank issue is almost always a question in disguise, and a question in an
+# issue tracker gets a slower answer than a question in Discussions. Route both
+# deliberately.
+blank_issues_enabled: false
+
+contact_links:
+  - name: 🔒 Security vulnerability (do not open an issue)
+    url: https://github.com/zscontributor/z-cms/security/advisories/new
+    about: >-
+      A boundary bug exposes every site on an instance. Report it privately —
+      via a security advisory, or by email to support@z-cms.org. See SECURITY.md.
+
+  - name: 💬 Question, idea or help with your install
+    url: https://github.com/zscontributor/z-cms/discussions
+    about: >-
+      "How do I…", "is this supposed to…", "would you accept a PR that…" — ask in
+      Discussions. Issues are for a defect or an agreed piece of work.
+
+  - name: 📖 Documentation
+    url: https://z-cms.org/docs
+    about: Architecture, the security model, theme and plugin authoring, i18n.

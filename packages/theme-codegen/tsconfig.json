@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // CommonJS for the typecheck too, not only for the build.
+    //
+    // This package has to find the widget library's real path on disk (see
+    // generate.ts) and does it with `require.resolve` + `__dirname`. Typechecking as
+    // ESM would happily accept `import.meta.url` instead — which the CommonJS emit
+    // then turns into a runtime error inside the worker. Passing tsc and dying in
+    // production is exactly the gap this closes.
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts"]
+}

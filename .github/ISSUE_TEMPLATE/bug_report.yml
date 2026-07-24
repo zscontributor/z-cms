@@ -1,0 +1,106 @@
+name: 🐛 Bug report
+description: Something behaves differently from how it is documented or intended.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **If the bug is a security boundary — tenant isolation, the plugin sandbox,
+        package signing, auth — stop and read [SECURITY.md](../blob/main/SECURITY.md).**
+        Report it privately. A public issue hands operators' sites to whoever reads it first.
+
+        For everything else: the more of this form you fill in, the sooner someone can
+        reproduce it, and a bug that cannot be reproduced cannot be fixed.
+
+  - type: textarea
+    id: what-happens
+    attributes:
+      label: What happens
+      description: What you observed, and what you expected instead.
+      placeholder: |
+        Publishing an entry with a scheduled date in the past returns 200 but the page
+        never appears on the site. I expected it to publish immediately.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce it
+      description: >-
+        Numbered steps from a fresh `pnpm bootstrap`, or the smallest request that
+        triggers it. If you can write a failing test, link the branch — that is the
+        fastest possible bug report.
+      placeholder: |
+        1. pnpm bootstrap
+        2. Sign in at localhost:3001, create a Post
+        3. Set the publish date to yesterday, click Publish
+        4. Open localhost:3000/blog — the post is not listed
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs, stack trace or failing output
+      description: >-
+        API, worker or browser console output. Redact anything that looks like a
+        credential before you paste it. This is rendered as code, so no backticks needed.
+      render: shell
+
+  - type: input
+    id: version
+    attributes:
+      label: Z-CMS version
+      description: A release tag, or the commit SHA you are on (`git rev-parse --short HEAD`).
+      placeholder: v0.1.0 / 9f95155
+    validations:
+      required: true
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where does it happen
+      options:
+        - Admin dashboard (admin-web)
+        - Public site (site-runtime)
+        - API (cms-api)
+        - Plugin runtime / sandbox
+        - Worker / background jobs
+        - Themes or plugins (authoring an extension)
+        - CLI, database or infrastructure
+        - Not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: How are you running it
+      options:
+        - Local development (pnpm bootstrap)
+        - Docker Compose (production compose file)
+        - Self-hosted, other setup
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Node version, OS, and browser if the bug is in a UI.
+      placeholder: Node 22.14, macOS 15.3, Chrome 133
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I searched existing issues and this is not already reported.
+          required: true
+        - label: This is not a security vulnerability (those go to SECURITY.md, privately).
+          required: true
+        - label: I am on a recent commit of `main`, or I have said which version above.
+          required: true

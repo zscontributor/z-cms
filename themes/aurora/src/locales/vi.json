@@ -1,0 +1,23 @@
+{
+  "nav": {
+    "primary": "Menu chính",
+    "footer": "Menu chân trang"
+  },
+  "archive": {
+    "empty": "Chưa có bài viết nào.",
+    "previous": "Trước",
+    "next": "Sau",
+    "pageOf": "Trang {page}/{total}"
+  },
+  "notFound": {
+    "title": "Không tìm thấy trang",
+    "description": "Đường dẫn này không tồn tại hoặc đã bị gỡ.",
+    "backHome": "Về trang chủ"
+  },
+  "error": {
+    "title": "Đã có lỗi xảy ra",
+    "description": "Trang này chưa thể hiển thị ngay lúc này.",
+    "backHome": "Về trang chủ",
+    "reference": "Mã tham chiếu"
+  }
+}

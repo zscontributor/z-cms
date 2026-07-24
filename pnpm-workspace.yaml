@@ -1,0 +1,10 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+  - "themes/*"
+  - "plugins/*"
+
+# Keep a single copy of these across the workspace so that themes/plugins
+# never bundle their own React against the site-runtime's React.
+publicHoistPattern:
+  - "*"

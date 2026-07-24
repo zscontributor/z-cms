@@ -1,0 +1,166 @@
+{
+  "layout": {
+    "skipToContent": "Tới nội dung chính",
+    "backToTop": "Lên đầu trang"
+  },
+  "colorMode": {
+    "toggle": "Chuyển giữa chế độ sáng và tối"
+  },
+  "language": {
+    "switch": "Đổi ngôn ngữ"
+  },
+  "topbar": {
+    "link": "Tham gia cộng đồng"
+  },
+  "nav": {
+    "primary": "Menu chính",
+    "about": "Giới thiệu",
+    "features": "Tính năng",
+    "ecosystem": "Hệ sinh thái",
+    "developers": "Developers",
+    "community": "Cộng đồng",
+    "blog": "Blog",
+    "docs": "Tài liệu",
+    "github": "GitHub"
+  },
+  "search": {
+    "label": "Tìm kiếm",
+    "placeholder": "Tìm trong trang này"
+  },
+  "hero": {
+    "title": {
+      "first": "Xây dựng web,",
+      "second": "theo cách của bạn."
+    },
+    "copy": "Z-CMS là nền tảng quản trị nội dung mã nguồn mở thế hệ mới, kết hợp trải nghiệm biên tập thân thiện của CMS truyền thống với kiến trúc hiện đại dựa trên Next.js, NestJS, PostgreSQL và Redis.",
+    "primary": "Tải Z-CMS",
+    "secondary": "Đọc tài liệu"
+  },
+  "mock": {
+    "aria": "Bản xem trước một website xây bằng Z-CMS"
+  },
+  "trust": {
+    "label": "Xây trên nền tảng công nghệ hiện đại"
+  },
+  "about": {
+    "eyebrow": "Về Z-CMS",
+    "title": "Một CMS mở, linh hoạt, sẵn sàng cho thế hệ website tiếp theo.",
+    "point1": {
+      "title": "Dễ sử dụng",
+      "copy": "Trang quản trị rõ ràng, page builder trực quan và quy trình xuất bản phù hợp cho cả biên tập viên lẫn developer."
+    },
+    "point2": {
+      "title": "Không giới hạn giao diện",
+      "copy": "Theme Engine độc lập cho phép xây dựng, cài đặt, tùy biến và chia sẻ theme theo cách bạn đã quen."
+    },
+    "point3": {
+      "title": "Mở rộng bằng plugin",
+      "copy": "Plugin SDK, mô hình phân quyền và marketplace giúp mở rộng Z-CMS an toàn mà không cần sửa CMS Core."
+    },
+    "point4": {
+      "title": "Sẵn sàng cho doanh nghiệp",
+      "copy": "Multi-tenant, RBAC, audit log, cache, job queue và kiến trúc triển khai cloud-native."
+    }
+  },
+  "features": {
+    "eyebrow": "Mạnh mẽ ngay từ đầu",
+    "title": "Mọi thứ bạn cần để xuất bản tốt hơn.",
+    "copy": "Một nền tảng duy nhất để quản lý nội dung, thiết kế website và mở rộng tính năng — mà không khóa bạn vào một giao diện hay một nhà cung cấp nào.",
+    "card1": {
+      "title": "Block Page Builder",
+      "copy": "Tạo trang bằng các block, lưu cấu trúc dưới dạng dữ liệu và render nhanh trên mọi thiết bị."
+    },
+    "card2": {
+      "title": "Theme Engine",
+      "copy": "Template, layout, block style và settings schema được đóng gói thành một theme độc lập, có chữ ký số."
+    },
+    "card3": {
+      "title": "Plugin SDK",
+      "copy": "Mở rộng content type, API, màn hình quản trị, background job và block frontend bằng một SDK chuẩn hóa."
+    },
+    "card4": {
+      "title": "Headless API",
+      "copy": "Dùng Z-CMS làm backend nội dung cho website, ứng dụng di động, kiosk hay sản phẩm SaaS."
+    },
+    "card5": {
+      "title": "Trải nghiệm developer",
+      "copy": "TypeScript toàn hệ thống, CLI, môi trường phát triển cục bộ, hot reload và kiến trúc theo package."
+    },
+    "card6": {
+      "title": "An toàn mặc định",
+      "copy": "Package có chữ ký, plugin chạy trong sandbox, cô lập tenant ở mức dòng dữ liệu và CSP nghiêm ngặt."
+    }
+  },
+  "ecosystem": {
+    "eyebrow": "Khám phá hệ sinh thái",
+    "title": "Bắt đầu với một giao diện đẹp.",
+    "copy": "Theme và plugin do Z-SOFT cùng cộng đồng xây dựng, tất cả đều được ký và xác minh. Cài đặt trực tiếp từ trang quản trị.",
+    "tabs": {
+      "themes": "Theme nổi bật",
+      "plugins": "Plugin phổ biến"
+    }
+  },
+  "latest": {
+    "eyebrow": "Từ blog",
+    "title": "Những gì chúng tôi đang viết.",
+    "all": "Tất cả bài viết",
+    "empty": "Chưa có bài viết nào được xuất bản. Viết một bài trong trang quản trị là nó hiện ở đây."
+  },
+  "market": {
+    "business": "Doanh nghiệp",
+    "commerce": "Thương mại",
+    "publishing": "Xuất bản",
+    "free": "Miễn phí",
+    "byZSoft": "Bởi Z-SOFT"
+  },
+  "developers": {
+    "eyebrow": "Dành cho developer",
+    "title": "Mở rộng bằng code. Không phá vỡ Core.",
+    "copy": "SDK chuẩn hóa giúp bạn xây theme và plugin thành các package riêng, kiểm thử độc lập và phân phối qua Marketplace.",
+    "cta": "Đọc tài liệu cho developer"
+  },
+  "community": {
+    "eyebrow": "Phát triển công khai",
+    "title": "Phần mềm tốt hơn khi cùng nhau xây dựng.",
+    "copy": "Z-CMS là dự án mã nguồn mở dành cho developer, designer, người làm nội dung và các doanh nghiệp muốn làm chủ nền tảng của mình.",
+    "github": "Xem source code và roadmap",
+    "docs": "Bắt đầu phát triển với Z-CMS",
+    "forum": "Hỏi đáp và thảo luận",
+    "contributeTitle": "Đóng góp",
+    "contribute": "Gửi code, tài liệu và ý tưởng"
+  },
+  "cta": {
+    "title": "Tự do xây dựng. Tự do mở rộng.",
+    "button": "Tải Z-CMS trên GitHub"
+  },
+  "footer": {
+    "product": "Sản phẩm",
+    "download": "Tải về",
+    "documentation": "Tài liệu",
+    "discussions": "Thảo luận",
+    "issues": "Báo lỗi",
+    "about": "Về chúng tôi",
+    "license": "Giấy phép"
+  },
+  "archive": {
+    "empty": "Chưa có nội dung nào được xuất bản ở đây.",
+    "previous": "Trước",
+    "next": "Sau",
+    "pageOf": "Trang {page} / {total}"
+  },
+  "post": {
+    "backToPosts": "Tất cả bài viết",
+    "readingTime": "Đọc {minutes} phút"
+  },
+  "notFound": {
+    "title": "Trang này không tồn tại",
+    "description": "Có thể liên kết đã cũ, hoặc trang đã được chuyển đi hoặc gỡ xuất bản.",
+    "backHome": "Về trang chủ"
+  },
+  "error": {
+    "title": "Đã có lỗi xảy ra",
+    "description": "Không thể hiển thị trang này. Sự cố đã được ghi nhận và chúng tôi đang xử lý.",
+    "backHome": "Về trang chủ",
+    "reference": "Mã tham chiếu"
+  }
+}

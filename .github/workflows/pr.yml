@@ -1,0 +1,55 @@
+# The pull-request title becomes the squash-merge commit message, so it is the line
+# that survives in `git log` forever. This job holds it to the same Conventional
+# Commits convention the history already follows.
+#
+# Deliberately implemented in bash rather than a marketplace action: a third-party
+# action is arbitrary code with a token in its environment, and a project that runs
+# untrusted plugins in a V8 isolate should not import strangers into its CI to check
+# a string.
+name: Pull request
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  title:
+    name: Conventional title
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the PR title
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          TYPES='feat|fix|perf|refactor|docs|test|build|ci|chore|revert'
+          SCOPES='api|admin|site-runtime|plugin-runtime|worker|database|schemas|i18n|queue|package|scanner|plugin-sdk|theme-sdk|cli|themes|plugins|marketplace|docs|infra|deps'
+
+          if printf '%s' "$TITLE" | grep -qE "^($TYPES)(\(($SCOPES)\))?!?: [a-z].{0,80}$"; then
+            echo "OK: $TITLE"
+            exit 0
+          fi
+
+          cat <<EOF
+          The pull request title does not follow the convention.
+
+            $TITLE
+
+          Expected:  type(scope): summary in lower case, imperative mood
+
+            feat(admin): add bulk publish to the content list
+            fix(api): reject a refresh token that was already rotated
+            docs: explain the revocation kill switch
+
+          type   $TYPES
+          scope  optional, one of: $SCOPES
+          !      append to type/scope for a breaking change: feat(theme-sdk)!: ...
+
+          Summary starts lower case, no trailing period, under 80 characters, and says
+          what the change does — not what you did to the files.
+
+          Edit the title; this check re-runs by itself.
+          EOF
+          exit 1

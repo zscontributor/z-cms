@@ -1,0 +1,41 @@
+# gitleaks config — the secret scanner used by the pre-commit/pre-push hooks
+# (lefthook.yml) and by CI. Real secrets never live in git; they arrive through
+# the environment. This file's job is to make that rule enforceable WITHOUT
+# tripping over the throwaway dev/CI values that are committed on purpose.
+#
+#   gitleaks git --config .gitleaks.toml            # scan history
+#   gitleaks git --staged --config .gitleaks.toml   # scan what is staged
+
+title = "Z-CMS secret scanning"
+
+[extend]
+# Start from gitleaks' full built-in ruleset (private keys, cloud tokens, high
+# entropy strings, …), then only carve out the intentional exceptions below.
+useDefault = true
+
+[allowlist]
+description = "Intentional throwaway dev/CI values. A real credential must never match these."
+
+# .env.example is, by definition, the file of example values. Every secret in it
+# is a placeholder shipped for local bring-up. The real .env is gitignored and
+# never scanned.
+paths = [
+  '''(^|/)\.env\.example$''',
+]
+
+# Values that also appear outside .env.example (CI workflow files) and are known
+# to be non-secrets. Keep this list tight — anything not listed here still fails.
+regexes = [
+  # Dev TOTP/mail encryption keys (base64 of "zcms-dev-…"), also in CI env.
+  '''emNtcy1kZXYt[A-Za-z0-9+/=]+''',
+  # Well-known placeholder strings, never valid credentials.
+  '''dev-only-change-me-in-production''',
+  '''dev-internal-token-change-me''',
+  '''ci-only-secret''',
+  '''ci-internal-token''',
+  # A deliberately fake API key in the plugin egress tests. Its whole job is to be a
+  # realistic-LOOKING key so the test can prove the gateway substitutes it into a
+  # request and then redacts it out of every error — see plugin-egress.test.ts. The
+  # value is sequential ("abcdef123456") precisely so it cannot be a real one.
+  '''sk-live-abcdef123456''',
+]

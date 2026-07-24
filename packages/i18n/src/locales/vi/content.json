@@ -1,0 +1,225 @@
+{
+  "metaFallback": "Nội dung",
+  "status": {
+    "DRAFT": "Bản nháp",
+    "IN_REVIEW": "Chờ duyệt",
+    "SCHEDULED": "Đã lên lịch",
+    "PUBLISHED": "Đã xuất bản",
+    "ARCHIVED": "Lưu trữ"
+  },
+  "list": {
+    "description": "Quản lý {type} của site.",
+    "create": "Tạo mới",
+    "createType": "Tạo {type}",
+    "denied": "Bạn không có quyền xem nội dung của site này.",
+    "searchPlaceholder": "Tìm theo tiêu đề…",
+    "searchLabel": "Tìm kiếm nội dung",
+    "languageTabs": "Lọc theo ngôn ngữ",
+    "statusFilter": "Lọc theo trạng thái",
+    "allStatuses": "Mọi trạng thái",
+    "emptyTitle": "Chưa có nội dung",
+    "emptyDescription": "Bắt đầu bằng cách tạo {type} đầu tiên.",
+    "noResultsTitle": "Không tìm thấy kết quả",
+    "noResultsDescription": "Thử đổi từ khoá hoặc bỏ bộ lọc trạng thái."
+  },
+  "table": {
+    "title": "Tiêu đề",
+    "status": "Trạng thái",
+    "path": "Đường dẫn",
+    "updated": "Cập nhật",
+    "actions": "Thao tác"
+  },
+  "row": {
+    "publish": "Xuất bản",
+    "unpublish": "Gỡ xuất bản",
+    "deleteAria": "Xoá {title}"
+  },
+  "delete": {
+    "title": "Xoá nội dung?",
+    "description": "\"{title}\" sẽ bị xoá. Hành động này không thể hoàn tác.",
+    "descriptionPermanent": "\"{title}\" sẽ bị xoá vĩnh viễn."
+  },
+  "new": {
+    "metaTitle": "Tạo {type}",
+    "metaFallback": "Tạo nội dung",
+    "denied": "Bạn không có quyền tạo nội dung.",
+    "draft": "Bản nháp mới",
+    "translating": "Đang dịch “{title}”",
+    "translationOf": "Bản dịch của phiên bản {locale}"
+  },
+  "editor": {
+    "untitled": "(Chưa có tiêu đề)",
+    "translations": {
+      "title": "Bản dịch",
+      "missing": "Chưa có bản dịch",
+      "translate": "Dịch"
+    },
+    "title": "Tiêu đề",
+    "titlePlaceholder": "Tiêu đề {type}",
+    "slug": "Đường dẫn (slug)",
+    "slugHint": "Trang sẽ nằm tại {path}",
+    "slugPlaceholder": "duong-dan-bai-viet",
+    "slugInvalid": "Chỉ dùng chữ thường, số và dấu gạch ngang.",
+    "regenerate": "Tạo lại",
+    "regenerateHint": "Tạo lại từ tiêu đề",
+    "excerpt": "Tóm tắt",
+    "excerptHint": "Tối đa 500 ký tự.",
+    "fields": "Trường dữ liệu",
+    "blocks": "Nội dung khối",
+    "blockCount": "{count} khối",
+    "publishSection": "Xuất bản",
+    "status": "Trạng thái",
+    "locale": "Ngôn ngữ",
+    "save": "Lưu thay đổi",
+    "create": "Tạo nội dung",
+    "saveAndPublish": "Lưu & xuất bản",
+    "unpublish": "Gỡ xuất bản",
+    "readOnly": "Bạn chỉ có quyền xem nội dung này.",
+    "updated": "Cập nhật",
+    "path": "Đường dẫn",
+    "delete": "Xoá nội dung",
+    "titleRequired": "Vui lòng nhập tiêu đề.",
+    "fieldRequired": "Trường \"{label}\" là bắt buộc.",
+    "publishFailed": "Không xuất bản được.",
+    "deleteFailed": "Không xoá được nội dung."
+  },
+  "seo": {
+    "heading": "SEO",
+    "title": "Tiêu đề SEO",
+    "titleHint": "{count}/70 ký tự",
+    "titlePlaceholder": "Tiêu đề hiển thị trên trang kết quả tìm kiếm",
+    "description": "Mô tả SEO",
+    "descriptionHint": "{count}/200 ký tự",
+    "ogImage": "Ảnh chia sẻ (OG image)",
+    "canonical": "Canonical URL",
+    "noindex": "Không cho công cụ tìm kiếm lập chỉ mục (noindex)"
+  },
+  "fields": {
+    "jsonInvalid": "JSON không hợp lệ.",
+    "richtextPlaceholder": "<p>…</p>",
+    "referencePlaceholder": "ID nội dung \"{type}\"",
+    "referencePlaceholderGeneric": "ID nội dung"
+  },
+  "richtext": {
+    "toolbar": "Thanh định dạng",
+    "placeholder": "Soạn nội dung…",
+    "bold": "In đậm",
+    "italic": "In nghiêng",
+    "strike": "Gạch ngang",
+    "code": "Mã trong dòng",
+    "h2": "Tiêu đề 2",
+    "h3": "Tiêu đề 3",
+    "bulletList": "Danh sách dấu đầu dòng",
+    "orderedList": "Danh sách đánh số",
+    "blockquote": "Trích dẫn",
+    "codeBlock": "Khối mã",
+    "horizontalRule": "Đường kẻ ngang",
+    "link": "Liên kết",
+    "image": "Chèn ảnh",
+    "clearFormat": "Xoá định dạng",
+    "undo": "Hoàn tác",
+    "redo": "Làm lại",
+    "source": "Mã nguồn",
+    "visual": "Trình soạn thảo",
+    "sourceHint": "Đang sửa HTML thô. Những thẻ mà trình soạn thảo không hiểu sẽ bị loại bỏ khi quay lại chế độ soạn thảo.",
+    "linkTitle": "Thêm liên kết",
+    "linkHint": "Phần văn bản đang chọn sẽ trỏ tới địa chỉ này.",
+    "linkApply": "Áp dụng",
+    "linkRemove": "Bỏ liên kết",
+    "imageLeft": "Canh trái",
+    "imageCenter": "Canh giữa",
+    "imageRight": "Canh phải",
+    "imageWidth": "Rộng {width}",
+    "imageWidthOriginal": "Tự động",
+    "imageRemove": "Xoá ảnh"
+  },
+  "blocks": {
+    "empty": "Chưa có khối nào. Thêm khối đầu tiên bên dưới.",
+    "add": "Thêm khối",
+    "delete": "Xoá khối",
+    "unknownTitle": "Khối {type} không được admin nhận diện (do theme hoặc plugin cung cấp). Nội dung được giữ nguyên khi lưu.",
+    "htmlPlaceholder": "<p>Nội dung…</p>",
+    "item": "Mục",
+    "addItem": "Thêm {item}",
+    "noContentTypes": "Site này chưa có loại nội dung nào, nên không có gì để liệt kê.",
+    "specs": {
+      "hero": {
+        "label": "Hero",
+        "description": "Tiêu đề lớn, mô tả và nút hành động."
+      },
+      "richtext": {
+        "label": "Văn bản",
+        "description": "Khối HTML tự do."
+      },
+      "features": {
+        "label": "Tính năng",
+        "description": "Danh sách tính năng dạng lưới.",
+        "itemLabel": "Tính năng"
+      },
+      "image": {
+        "label": "Hình ảnh",
+        "description": "Một ảnh kèm chú thích."
+      },
+      "cta": {
+        "label": "Kêu gọi hành động",
+        "description": "Dải CTA với nút."
+      },
+      "contentList": {
+        "label": "Danh sách nội dung",
+        "description": "Danh sách hoặc lưới nội dung được lấy tự động, ví dụ các bài viết mới nhất."
+      }
+    },
+    "props": {
+      "heading": "Tiêu đề",
+      "subheading": "Mô tả",
+      "description": "Mô tả",
+      "title": "Tiêu đề",
+      "backgroundImage": "Ảnh nền (URL)",
+      "ctaLabel": "Nhãn nút",
+      "ctaHref": "Liên kết nút",
+      "buttonLabel": "Nhãn nút",
+      "buttonHref": "Liên kết",
+      "align": "Căn lề",
+      "alignLeft": "Trái",
+      "alignCenter": "Giữa",
+      "alignRight": "Phải",
+      "html": "Nội dung (HTML)",
+      "items": "Danh sách",
+      "icon": "Biểu tượng",
+      "src": "Đường dẫn ảnh",
+      "alt": "Văn bản thay thế",
+      "caption": "Chú thích",
+      "width": "Chiều rộng",
+      "widthContained": "Trong khung",
+      "widthWide": "Rộng",
+      "widthFull": "Toàn màn hình",
+      "inverted": "Nền tối",
+      "contentType": "Loại nội dung",
+      "contentTypeUnset": "Chọn loại nội dung…",
+      "contentTypeUnknown": "{key} (không còn trên site này)",
+      "limit": "Số lượng",
+      "sort": "Thứ tự",
+      "sortNewest": "Mới nhất trước",
+      "sortOldest": "Cũ nhất trước",
+      "sortTitle": "Theo tiêu đề",
+      "layout": "Bố cục",
+      "layoutList": "Danh sách",
+      "layoutGrid": "Lưới"
+    },
+    "hints": {
+      "contentType": "Nội dung mà khối này liệt kê. Chỉ hiển thị các mục đã xuất bản.",
+      "limit": "Từ {min} đến {max} mục."
+    },
+    "placeholders": {
+      "heroHeading": "Xây dựng website nhanh hơn",
+      "ctaLabel": "Bắt đầu ngay",
+      "ctaHref": "/lien-he",
+      "imageSrc": "https://…",
+      "contentListHeading": "Tin mới nhất"
+    },
+    "defaults": {
+      "heroHeading": "Tiêu đề hero",
+      "featureTitle": "Tính năng 1"
+    }
+  }
+}

@@ -1,0 +1,56 @@
+name: 📦 Report a marketplace theme or plugin
+description: A published package is broken, misleading, or abusing the permissions it was granted.
+labels: [marketplace]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Every package is signed, scanned and reviewed before it is published — and none
+        of that is a guarantee. This is how a package gets taken off the shelf.
+
+        **If the package is actively malicious** — exfiltrating data, escaping the
+        sandbox, using a permission to do something it did not declare — do not describe
+        the exploit here. Email **support@z-cms.org**. A signed revocation can disable it
+        on every installation within the hour, and that works best if the author learns
+        about it at the same time as everyone else.
+
+  - type: input
+    id: package
+    attributes:
+      label: Package
+      description: Name and version, as shown on the marketplace listing.
+      placeholder: "@acme/seo-boost 1.4.2"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of problem
+      options:
+        - It is broken (errors, does not do what it says)
+        - It asks for permissions it does not need
+        - The listing is misleading (description, screenshots, licence)
+        - It is abandoned and no longer works with current Z-CMS
+        - Licence or attribution problem
+    validations:
+      required: true
+
+  - type: textarea
+    id: detail
+    attributes:
+      label: What you observed
+      description: >-
+        What the package does, what it claims, and how you noticed the gap. Include the
+        permissions listed in its manifest if the complaint is about permissions.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I have contacted the package author first, or the author is unreachable.
+        - label: This is not an active exploit (those go privately to support@z-cms.org).
+          required: true

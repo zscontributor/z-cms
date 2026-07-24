@@ -1,0 +1,33 @@
+{
+  "name": "@zcmsorg/worker",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/main.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "3.1085.0",
+    "@zcmsorg/database": "workspace:*",
+    "@zcmsorg/package": "workspace:*",
+    "@zcmsorg/queue": "workspace:*",
+    "@zcmsorg/scanner": "workspace:*",
+    "@zcmsorg/theme-codegen": "workspace:*",
+    "bullmq": "5.80.2",
+    "dotenv": "17.2.3",
+    "ioredis": "5.11.1",
+    "sharp": "0.35.3"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "@vitest/coverage-v8": "4.1.10",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3",
+    "vitest": "4.1.10"
+  }
+}

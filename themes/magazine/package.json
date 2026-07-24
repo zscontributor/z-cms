@@ -1,0 +1,34 @@
+{
+  "name": "@zcmsorg/theme-magazine",
+  "version": "1.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Z Magazine — an editorial theme for news sites, magazines and publications.",
+  "exports": {
+    ".": "./src/index.tsx"
+  },
+  "files": [
+    "src",
+    "assets",
+    "screenshots",
+    "dist",
+    "theme.json"
+  ],
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@zcmsorg/schemas": "workspace:*",
+    "@zcmsorg/theme-sdk": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.17",
+    "esbuild": "0.25.12",
+    "react": "19.2.7",
+    "typescript": "5.9.3"
+  }
+}

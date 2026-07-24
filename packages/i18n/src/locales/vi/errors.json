@@ -1,0 +1,157 @@
+{
+  "auth": {
+    "missingToken": "Thiếu access token.",
+    "invalidToken": "Access token không hợp lệ hoặc đã hết hạn.",
+    "invalidRefreshToken": "Refresh token không hợp lệ hoặc đã hết hạn.",
+    "invalidInternalToken": "Internal token không hợp lệ.",
+    "invalidCredentials": "Email hoặc mật khẩu không đúng.",
+    "accountNotFound": "Tài khoản không tồn tại.",
+    "invalidSiteHeader": "Header X-Site-Id không hợp lệ.",
+    "siteRequired": "Yêu cầu cần header X-Site-Id hợp lệ và bạn phải có quyền trên site đó.",
+    "noRole": "Tài khoản chưa được cấp quyền trên tenant này.",
+    "missingPermissions": "Thiếu quyền: {permissions}. Vai trò hiện tại của bạn là {role}.",
+    "refreshReused": "Phiên đăng nhập đã bị thu hồi vì lý do an toàn. Vui lòng đăng nhập lại.",
+    "sessionRevoked": "Phiên đăng nhập đã kết thúc. Vui lòng đăng nhập lại."
+  },
+  "validation": {
+    "invalidPayload": "Dữ liệu không hợp lệ.",
+    "invalidFields": "Dữ liệu trường không hợp lệ.",
+    "requiredParam": "Tham số \"{name}\" là bắt buộc."
+  },
+  "content": {
+    "notFound": "Không tìm thấy nội dung.",
+    "contentTypeNotFound": "Content type không tồn tại trên site này.",
+    "singletonExists": "\"{name}\" là content type singleton, chỉ được phép có một bản ghi.",
+    "translationExists": "Trang này đã có bản dịch {locale}. Hãy sửa bản đó thay vì tạo thêm một bản nữa.",
+    "publishForbidden": "Bạn không có quyền xuất bản nội dung.",
+    "draftOnly": "Bạn chỉ có thể lưu nháp — quyền xuất bản thuộc về Editor trở lên.",
+    "editOwnOnly": "Bạn chỉ được sửa nội dung do mình tạo."
+  },
+  "contentTypes": {
+    "keyTaken": "Content type với key \"{key}\" đã tồn tại.",
+    "routePrefixTaken": "Route prefix \"{prefix}\" đã được dùng bởi \"{name}\"."
+  },
+  "media": {
+    "noFile": "Không có file nào được gửi lên.",
+    "tooLarge": "File vượt quá giới hạn {limit}.",
+    "unsupportedType": "Định dạng \"{mimeType}\" không được hỗ trợ.",
+    "notFound": "Không tìm thấy media.",
+    "folderNotFound": "Không tìm thấy thư mục.",
+    "folderNameTaken": "Đã có thư mục tên \"{name}\" ở đây.",
+    "folderCycle": "Không thể chuyển một thư mục vào bên trong chính nó.",
+    "folderTooDeep": "Thư mục chỉ được lồng tối đa {max} cấp."
+  },
+  "sites": {
+    "defaultLocaleNotPublished": "Ngôn ngữ mặc định phải nằm trong danh sách ngôn ngữ của site.",
+    "hostnameTaken": "Tên miền này đã được sử dụng.",
+    "notFound": "Không tìm thấy site.",
+    "slugTaken": "Đã có site dùng slug này."
+  },
+  "themes": {
+    "notFound": "Theme \"{key}\" không tồn tại.",
+    "noVersion": "Theme \"{key}\" chưa có phiên bản nào.",
+    "notInstalled": "Theme chưa được cài trên site này."
+  },
+  "plugins": {
+    "notFound": "Plugin \"{key}\" không tồn tại.",
+    "noVersion": "Plugin \"{key}\" chưa có phiên bản nào.",
+    "notInstalled": "Plugin chưa được cài trên site này.",
+    "unknownPermissions": "Quyền không hợp lệ: {permissions}.",
+    "permissionNotRequested": "Plugin không yêu cầu các quyền sau, không thể cấp: {permissions}.",
+    "missingToken": "Thiếu plugin token.",
+    "invalidToken": "Plugin token không hợp lệ hoặc đã hết hạn.",
+    "unknownMethod": "Plugin API không có method \"{method}\".",
+    "methodNotSupported": "Method \"{method}\" chưa được hỗ trợ.",
+    "scopeNotGranted": "Plugin \"{plugin}\" không được cấp quyền \"{scope}\".",
+    "invalidTables": "Plugin chỉ được tạo bảng có tiền tố \"{prefix}\". Bị từ chối: {tables}.",
+    "invalidHosts": "Plugin chỉ được khai báo hostname có thật mà nó sẽ gọi tới. Bị từ chối: {hosts}. Không chấp nhận ký tự đại diện đứng một mình, địa chỉ IP, cổng hay scheme.",
+    "noNetworkHosts": "Plugin \"{plugin}\" được cấp quyền gọi mạng nhưng manifest không khai báo host nào, nên nó không có nơi nào để gọi tới.",
+    "secretNotConfigured": "Plugin dùng secret \"{secret}\", nhưng cài đặt \"{setting}\" của nó đang trống. Hãy điền giá trị trong phần cài đặt của plugin.",
+    "egressFailed": "Không thực hiện được request của plugin: {reason}",
+    "egressQuotaExceeded": "Site này đã thực hiện quá {limit} request từ plugin trong một giờ. Thử lại sau {retryAfterSec} giây.",
+    "egressQuotaUnavailable": "Hiện không đếm được số request của plugin, nên chúng bị từ chối. Vui lòng thử lại sau ít phút."
+  },
+  "packages": {
+    "tooLarge": "Package vượt quá giới hạn {limit}.",
+    "unreadable": "Không đọc được package: {reason}",
+    "invalidKind": "Loại package không hợp lệ: \"{kind}\".",
+    "unknownPublisher": "Khoá publisher không được đăng ký trên marketplace. Hãy đăng ký publisher (và khoá công khai) trước khi nộp package.",
+    "invalidSignature": "Chữ ký publisher không hợp lệ: {reason}",
+    "versionImmutable": "{key}@{version} đã tồn tại với nội dung khác. Hãy tăng version — một version đã phát hành là bất biến.",
+    "bundleNotFound": "Không có bundle cho {key}@{version}.",
+    "noFile": "Thiếu file package.",
+    "kindRequired": "kind phải là theme hoặc plugin.",
+    "scanRejected": "Package bị từ chối bởi trình quét mã độc: {reason}",
+    "notApproved": "{key}@{version} đang chờ kiểm duyệt ({status}), chưa thể nạp."
+  },
+  "render": {
+    "missingHostname": "Thiếu tham số hostname.",
+    "hostNotFound": "Không có site nào phục vụ hostname \"{hostname}\".",
+    "noActiveTheme": "Site chưa kích hoạt theme nào."
+  },
+  "marketplace": {
+    "unreachable": "Không kết nối được tới marketplace tại {url}: {reason}",
+    "unverified": "Gói này không được ký bởi marketplace mà máy chủ này tin, nên không được cài: {reason}",
+    "mismatch": "Đã yêu cầu marketplace gói {asked} nhưng nhận về {got}. Từ chối cài.",
+    "bundleNotFound": "Marketplace không có bản {key}@{version} để phục vụ (HTTP {status}). Có thể nó đã bị thu hồi.",
+    "notConfigured": "Chưa cấu hình marketplace. Đặt MARKETPLACE_URL trỏ tới registry mà máy chủ này sẽ cài đặt từ đó.",
+    "noPinnedKey": "Chưa cấu hình MARKETPLACE_PUBLIC_KEY. Không có khoá đã ghim thì không có gì để đối chiếu, nên không cài được gói nào.",
+    "scanRejected": "Gói này không qua được quét bảo mật cục bộ của máy chủ này, nên không được cài: {findings}"
+  },
+  "sideload": {
+    "notEnabled": "Máy chủ này chưa bật cài từ file. Đặt OPERATOR_PUBLIC_KEY là khóa của người vận hành dùng để ký các gói cục bộ.",
+    "themeDisabled": "Cài theme từ file đang bị tắt. Theme chạy không sandbox trong site-runtime, nên phải bật có chủ đích bằng ALLOW_THEME_SIDELOAD=true.",
+    "unverified": "Gói này không được ký bằng khóa người vận hành của máy chủ này, nên không được cài: {reason}",
+    "operatorKeyMissing": "Chưa cấu hình khóa công khai của người vận hành.",
+    "operatorChecksumMismatch": "Nội dung gói đã bị thay đổi sau khi ký.",
+    "operatorSignatureMissing": "Gói này không có chữ ký của người vận hành và không được gửi qua luồng cài từ file.",
+    "operatorSignatureInvalid": "Chữ ký của người vận hành không hợp lệ hoặc được tạo bằng một khóa khác.",
+    "kindMismatch": "Endpoint này cài {asked}, nhưng file lại là {got}.",
+    "scanRejected": "Gói này không qua được quét bảo mật nên không được cài: {findings}",
+    "reservedNamespace": "\"{key}\" dùng namespace dành riêng \"{prefix}\" thuộc về các gói của nền tảng. Hãy chọn id khác.",
+    "keyTaken": "\"{key}\" đã là id của một gói dựng sẵn hoặc gói marketplace. Gói cài từ file không được lấy tên không phải của nó.",
+    "notSideload": "{key}@{version} không phải gói cài từ file, nên không thể duyệt hay gỡ qua đường này.",
+    "zipNotEnabled": "Máy chủ này chỉ nhận file .zcms đã ký sẵn. Để tải lên .zip thô, người vận hành phải cấu hình OPERATOR_PRIVATE_KEY để máy chủ tự ký.",
+    "zipUnreadable": "Không thể đóng gói .zip: {reason}"
+  },
+  "docs": {
+    "title": "Tài liệu API đang tắt",
+    "body": "Máy chủ này không phục vụ tài liệu API. Đây là thiết lập có chủ đích, không phải lỗi — bản thân API vẫn chạy bình thường.",
+    "hint": "Nếu bạn là người vận hành máy chủ này, đặt SWAGGER_ENABLED=true rồi khởi động lại cms-api để mở tài liệu tại {path}.",
+    "health": "API vẫn hoạt động: {url}"
+  },
+  "users": {
+    "notFound": "Không tìm thấy người dùng.",
+    "membershipNotFound": "Người dùng này không giữ vai trò đó.",
+    "emailTaken": "{email} đã có tài khoản.",
+    "alreadyInvited": "{email} đã được mời rồi. Hãy thu hồi lời mời cũ trước.",
+    "alreadyRegistered": "Email này đã có tài khoản. Vui lòng đăng nhập.",
+    "inviteInvalid": "Liên kết mời không hợp lệ. Có thể nó đã được dùng, đã bị thu hồi, hoặc đã hết hạn.",
+    "inviteNotFound": "Không tìm thấy lời mời.",
+    "inviteAlreadyAccepted": "Lời mời này đã được chấp nhận. Hãy xoá người dùng thay vì thu hồi.",
+    "wrongPassword": "Mật khẩu hiện tại không đúng.",
+    "notYourself": "Bạn không thể thực hiện thao tác này với chính tài khoản của mình.",
+    "outranked": "Bạn không thể tác động lên người có vai trò cao hơn mình.",
+    "cannotGrant": "Bạn không thể cấp vai trò {role} — vai trò của bạn là {actorRole}.",
+    "needTenantWide": "Chỉ người có vai trò toàn tenant mới cấp được vai trò toàn tenant.",
+    "notYourSite": "Bạn không có vai trò nào trên site đó.",
+    "siteNotFound": "Không tìm thấy site.",
+    "lastOwner": "Đây là chủ sở hữu cuối cùng. Hãy cấp quyền chủ sở hữu cho người khác trước, nếu không sẽ không còn ai quản trị được tenant này."
+  },
+  "mfa": {
+    "alreadyEnabled": "Tài khoản này đã bật xác thực hai lớp.",
+    "notEnabled": "Tài khoản này chưa có lớp bảo vệ thứ hai.",
+    "noSetup": "Hãy bắt đầu thiết lập trước — chưa có ứng dụng xác thực nào đang chờ xác nhận.",
+    "invalidCode": "Mã không đúng.",
+    "challengeExpired": "Lượt đăng nhập này đã hết hạn. Vui lòng nhập lại mật khẩu.",
+    "tooManyAttempts": "Sai mã quá nhiều lần. Tài khoản này sẽ không nhận mã nào trong 15 phút tới.",
+    "throttleUnavailable": "Hiện không kiểm tra được mã. Một bộ giới hạn không đếm được thì không bảo vệ nổi một bí mật 6 chữ số, nên yêu cầu bị từ chối thay vì cho qua."
+  },
+  "mail": {
+    "notConfigured": "Website này chưa cấu hình máy chủ email nên không thể gửi. Quản trị viên cấu hình tại Cài đặt → Email.",
+    "invalidMessage": "Nội dung email không hợp lệ: {detail}",
+    "quotaExceeded": "Các plugin của website này đã gửi hết hạn mức {limit} email mỗi giờ. Email tiếp theo sẽ được chấp nhận sau khoảng {retryAfterSec} giây.",
+    "quotaUnavailable": "Hiện không kiểm tra được hạn mức gửi email nên lượt gửi bị từ chối. Email của plugin bị chặn có chủ đích, thay vì gửi mà không đếm được.",
+    "cancelledByPlugin": "Một bộ lọc mail.sending của plugin đã huỷ email này trước khi gửi."
+  }
+}

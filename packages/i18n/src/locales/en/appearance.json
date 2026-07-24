@@ -1,0 +1,68 @@
+{
+  "metaTitle": "Appearance",
+  "title": "Appearance",
+  "description": "Activate a theme and adjust the settings it declares.",
+  "denied": "You do not have permission to view themes.",
+  "drafts": {
+    "heading": "Your designs",
+    "hint": "Themes drawn in the editor. A design renders nowhere until it is built and installed.",
+    "empty": "No designs yet.",
+    "name": "Name",
+    "key": "Theme key",
+    "keyHint": "Reverse-DNS, e.g. com.acme.theme.shop. Cannot start with vn.zsoft.",
+    "status": {
+      "DRAFT": "Draft",
+      "BUILDING": "Building",
+      "BUILT": "Built",
+      "SUBMITTED": "Submitted",
+      "FAILED": "Failed"
+    }
+  },
+  "emptyTitle": "No theme installed",
+  "emptyDescription": "This site has no theme installed yet.",
+  "active": "In use",
+  "activate": "Activate",
+  "activating": "Activating…",
+  "edit": "Edit",
+  "available": "Available themes",
+  "settings": {
+    "heading": "Settings: {name}",
+    "generated": "This form is generated from the theme's settingsSchema.",
+    "empty": "This theme has no settings.",
+    "denied": "You do not have permission to configure themes.",
+    "saved": "Theme settings saved.",
+    "saveFailed": "Could not save the settings."
+  },
+  "demo": {
+    "seed": "Seed demo",
+    "reseed": "Reseed demo",
+    "seeding": "Seeding…",
+    "availableHint": "This active theme provides demo content. Seeding it will not touch your real content.",
+    "seededHint": "Demo content for this active theme has been seeded. You can reseed it safely.",
+    "seeded": "Seeded demo data: {content} content items and {menus} menus.",
+    "seedFailed": "Could not seed demo data.",
+    "denied": "You do not have permission to seed theme demo data."
+  },
+  "errors": {
+    "missingKey": "The theme key is missing.",
+    "activateDenied": "You do not have permission to activate a theme.",
+    "activateFailed": "Could not activate {name}."
+  },
+  "sideload": {
+    "heading": "Install from file",
+    "hint": "Upload a signed .zcms your operator produced. It is verified against the operator key, scanned, and held for approval before it can run.",
+    "upload": "Upload .zcms",
+    "uploading": "Uploading…",
+    "noFile": "Choose a .zcms file first.",
+    "uploaded": "Uploaded {name} v{version}. It is quarantined until you approve it.",
+    "uploadFailed": "The package could not be installed.",
+    "denied": "You do not have permission to sideload packages.",
+    "unverified": "Unverified",
+    "pending": "Awaiting approval",
+    "approve": "Approve",
+    "uninstall": "Uninstall",
+    "approved": "Approved {name}.",
+    "removed": "Removed {name}.",
+    "actionFailed": "That action could not be completed."
+  }
+}

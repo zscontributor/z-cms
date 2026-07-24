@@ -1,0 +1,55 @@
+{
+  "name": "@zcmsorg/i18n",
+  "version": "0.1.0",
+  "description": "Core message catalogue for Z-CMS. English is the base locale; every other locale falls back to it.",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "default": "./dist/client.js"
+    }
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "locales.json",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsx scripts/sync-flags.ts && tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
+    "typecheck": "tsc --noEmit",
+    "sync": "tsx scripts/generate-catalog.ts",
+    "check": "tsx scripts/generate-catalog.ts --check && tsx scripts/check-locales.ts",
+    "test": "tsx scripts/generate-catalog.ts --check && tsx scripts/check-locales.ts && vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "flags:sync": "tsx scripts/sync-flags.ts"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "4.1.10",
+    "flag-icons": "^7.5.0",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3",
+    "vitest": "4.1.10"
+  },
+  "author": "Z-SOFT Co., Ltd. <support@z-cms.org> (https://z-cms.org)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zscontributor/z-cms.git",
+    "directory": "packages/i18n"
+  },
+  "homepage": "https://z-cms.org",
+  "bugs": {
+    "url": "https://github.com/zscontributor/z-cms/issues"
+  }
+}

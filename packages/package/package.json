@@ -1,0 +1,38 @@
+{
+  "name": "@zcmsorg/package",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "verify:packages": "tsx src/verify-packages.ts",
+    "verify:revocations": "tsx src/verify-revocations.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "tar-stream": "3.1.7",
+    "yauzl": "3.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "@types/tar-stream": "3.1.4",
+    "@types/yauzl": "2.10.3",
+    "@vitest/coverage-v8": "4.1.10",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3",
+    "vitest": "4.1.10"
+  }
+}

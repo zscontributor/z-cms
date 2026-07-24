@@ -1,0 +1,225 @@
+{
+  "metaFallback": "Content",
+  "status": {
+    "DRAFT": "Draft",
+    "IN_REVIEW": "In review",
+    "SCHEDULED": "Scheduled",
+    "PUBLISHED": "Published",
+    "ARCHIVED": "Archived"
+  },
+  "list": {
+    "description": "Manage this site's {type}.",
+    "create": "New",
+    "createType": "New {type}",
+    "denied": "You do not have permission to view this site's content.",
+    "searchPlaceholder": "Search by title…",
+    "searchLabel": "Search content",
+    "languageTabs": "Filter by language",
+    "statusFilter": "Filter by status",
+    "allStatuses": "All statuses",
+    "emptyTitle": "No content yet",
+    "emptyDescription": "Start by creating your first {type}.",
+    "noResultsTitle": "No results",
+    "noResultsDescription": "Try another keyword, or clear the status filter."
+  },
+  "table": {
+    "title": "Title",
+    "status": "Status",
+    "path": "Path",
+    "updated": "Updated",
+    "actions": "Actions"
+  },
+  "row": {
+    "publish": "Publish",
+    "unpublish": "Unpublish",
+    "deleteAria": "Delete {title}"
+  },
+  "delete": {
+    "title": "Delete this content?",
+    "description": "\"{title}\" will be deleted. This cannot be undone.",
+    "descriptionPermanent": "\"{title}\" will be permanently deleted."
+  },
+  "new": {
+    "metaTitle": "New {type}",
+    "metaFallback": "New content",
+    "denied": "You do not have permission to create content.",
+    "draft": "New draft",
+    "translating": "Translating “{title}”",
+    "translationOf": "Translation of the {locale} version"
+  },
+  "editor": {
+    "untitled": "(Untitled)",
+    "translations": {
+      "title": "Translations",
+      "missing": "Not translated yet",
+      "translate": "Translate"
+    },
+    "title": "Title",
+    "titlePlaceholder": "{type} title",
+    "slug": "Path (slug)",
+    "slugHint": "The page will live at {path}",
+    "slugPlaceholder": "my-article-path",
+    "slugInvalid": "Use lowercase letters, numbers and hyphens only.",
+    "regenerate": "Regenerate",
+    "regenerateHint": "Regenerate from the title",
+    "excerpt": "Excerpt",
+    "excerptHint": "Up to 500 characters.",
+    "fields": "Fields",
+    "blocks": "Block content",
+    "blockCount": "{count} blocks",
+    "publishSection": "Publishing",
+    "status": "Status",
+    "locale": "Language",
+    "save": "Save changes",
+    "create": "Create content",
+    "saveAndPublish": "Save & publish",
+    "unpublish": "Unpublish",
+    "readOnly": "You only have permission to view this content.",
+    "updated": "Updated",
+    "path": "Path",
+    "delete": "Delete content",
+    "titleRequired": "Enter a title.",
+    "fieldRequired": "The \"{label}\" field is required.",
+    "publishFailed": "Could not publish the content.",
+    "deleteFailed": "Could not delete the content."
+  },
+  "seo": {
+    "heading": "SEO",
+    "title": "SEO title",
+    "titleHint": "{count}/70 characters",
+    "titlePlaceholder": "Title shown in search results",
+    "description": "SEO description",
+    "descriptionHint": "{count}/200 characters",
+    "ogImage": "Share image (OG image)",
+    "canonical": "Canonical URL",
+    "noindex": "Hide this page from search engines (noindex)"
+  },
+  "fields": {
+    "jsonInvalid": "That is not valid JSON.",
+    "richtextPlaceholder": "<p>…</p>",
+    "referencePlaceholder": "\"{type}\" content id",
+    "referencePlaceholderGeneric": "Content id"
+  },
+  "richtext": {
+    "toolbar": "Formatting toolbar",
+    "placeholder": "Write the content…",
+    "bold": "Bold",
+    "italic": "Italic",
+    "strike": "Strikethrough",
+    "code": "Inline code",
+    "h2": "Heading 2",
+    "h3": "Heading 3",
+    "bulletList": "Bullet list",
+    "orderedList": "Numbered list",
+    "blockquote": "Quote",
+    "codeBlock": "Code block",
+    "horizontalRule": "Divider",
+    "link": "Link",
+    "image": "Insert image",
+    "clearFormat": "Clear formatting",
+    "undo": "Undo",
+    "redo": "Redo",
+    "source": "Source",
+    "visual": "Visual editor",
+    "sourceHint": "Editing raw HTML. Markup the visual editor does not understand is dropped when you switch back.",
+    "linkTitle": "Add a link",
+    "linkHint": "The selected text will link to this address.",
+    "linkApply": "Apply",
+    "linkRemove": "Remove link",
+    "imageLeft": "Align left",
+    "imageCenter": "Center",
+    "imageRight": "Align right",
+    "imageWidth": "Width {width}",
+    "imageWidthOriginal": "Auto",
+    "imageRemove": "Remove image"
+  },
+  "blocks": {
+    "empty": "No blocks yet. Add the first one below.",
+    "add": "Add block",
+    "delete": "Delete block",
+    "unknownTitle": "The block {type} is not recognised by the admin (it comes from a theme or a plugin). Its content is preserved on save.",
+    "htmlPlaceholder": "<p>Content…</p>",
+    "item": "Item",
+    "addItem": "Add {item}",
+    "noContentTypes": "This site has no content types yet, so there is nothing to list.",
+    "specs": {
+      "hero": {
+        "label": "Hero",
+        "description": "A large heading, a description and a call to action."
+      },
+      "richtext": {
+        "label": "Text",
+        "description": "A free-form HTML block."
+      },
+      "features": {
+        "label": "Features",
+        "description": "A grid of feature entries.",
+        "itemLabel": "Feature"
+      },
+      "image": {
+        "label": "Image",
+        "description": "One image with a caption."
+      },
+      "cta": {
+        "label": "Call to action",
+        "description": "A CTA band with a button."
+      },
+      "contentList": {
+        "label": "Content list",
+        "description": "A list or grid of content, filled in automatically — the latest posts, say."
+      }
+    },
+    "props": {
+      "heading": "Heading",
+      "subheading": "Description",
+      "description": "Description",
+      "title": "Title",
+      "backgroundImage": "Background image (URL)",
+      "ctaLabel": "Button label",
+      "ctaHref": "Button link",
+      "buttonLabel": "Button label",
+      "buttonHref": "Link",
+      "align": "Alignment",
+      "alignLeft": "Left",
+      "alignCenter": "Center",
+      "alignRight": "Right",
+      "html": "Content (HTML)",
+      "items": "Entries",
+      "icon": "Icon",
+      "src": "Image URL",
+      "alt": "Alternative text",
+      "caption": "Caption",
+      "width": "Width",
+      "widthContained": "Contained",
+      "widthWide": "Wide",
+      "widthFull": "Full width",
+      "inverted": "Dark background",
+      "contentType": "Content type",
+      "contentTypeUnset": "Choose a content type…",
+      "contentTypeUnknown": "{key} (no longer on this site)",
+      "limit": "How many",
+      "sort": "Order",
+      "sortNewest": "Newest first",
+      "sortOldest": "Oldest first",
+      "sortTitle": "By title",
+      "layout": "Layout",
+      "layoutList": "List",
+      "layoutGrid": "Grid"
+    },
+    "hints": {
+      "contentType": "Which content this block lists. Only published items appear.",
+      "limit": "Between {min} and {max} items."
+    },
+    "placeholders": {
+      "heroHeading": "Build websites faster",
+      "ctaLabel": "Get started",
+      "ctaHref": "/contact",
+      "imageSrc": "https://…",
+      "contentListHeading": "Latest news"
+    },
+    "defaults": {
+      "heroHeading": "Hero heading",
+      "featureTitle": "Feature 1"
+    }
+  }
+}

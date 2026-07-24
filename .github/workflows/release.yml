@@ -1,0 +1,91 @@
+name: Release images
+
+# Builds and pushes every service image to the GitHub Container Registry.
+# CI (ci.yml) proves the code; this ships it. Runs on a push to main (tagged
+# `main` + the short SHA) and on a semver tag like v1.2.3 (tagged with the
+# release version). Nothing is pushed for pull requests — they build only, so a
+# fork cannot publish an image.
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  images:
+    name: ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: cms-api
+            target: cms-api
+            dockerfile: infrastructure/docker/Dockerfile
+          - service: worker
+            target: worker
+            dockerfile: infrastructure/docker/Dockerfile
+          - service: admin-web
+            target: admin-web
+            dockerfile: infrastructure/docker/Dockerfile
+          - service: site-runtime
+            target: site-runtime
+            dockerfile: infrastructure/docker/Dockerfile
+          - service: migrate
+            target: migrate
+            dockerfile: infrastructure/docker/Dockerfile
+          # Untrusted-code sandbox: its own minimal, credential-free image.
+          - service: plugin-runtime
+            target: ""
+            dockerfile: infrastructure/docker/plugin-runtime.Dockerfile
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: docker/setup-buildx-action@v4
+
+      # No login (so no push) on pull requests — the build still runs as a check.
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Image metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/z-cms-${{ matrix.service }}
+          tags: |
+            type=ref,event=branch
+            type=sha,format=short
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.target }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Per-service layer cache; the shared install/build layers are reused
+          # across a service's own runs.
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}

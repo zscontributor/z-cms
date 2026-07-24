@@ -1,0 +1,32 @@
+{
+  "save": "Lưu",
+  "saving": "Đang lưu…",
+  "cancel": "Huỷ",
+  "delete": "Xoá",
+  "deleting": "Đang xoá…",
+  "close": "Đóng",
+  "select": "Chọn",
+  "clear": "Xoá",
+  "retry": "Thử lại",
+  "working": "Đang xử lý…",
+  "loading": "Đang tải…",
+  "on": "Bật",
+  "off": "Tắt",
+  "selectPlaceholder": "— Chọn —",
+  "moveUp": "Di chuyển lên",
+  "moveDown": "Di chuyển xuống",
+  "duplicate": "Nhân bản",
+  "saveSettings": "Lưu cấu hình",
+  "restoreDefaults": "Khôi phục mặc định",
+  "actionFailed": "Thao tác thất bại.",
+  "unknownError": "Đã xảy ra lỗi không xác định.",
+  "invalidData": "Dữ liệu không hợp lệ.",
+  "pagination": {
+    "label": "Phân trang",
+    "previous": "Trước",
+    "next": "Sau",
+    "results": "{total} kết quả",
+    "summary": "Trang {page}/{totalPages} · {total} kết quả",
+    "page": "Trang {page}/{totalPages}"
+  }
+}

@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+/**
+ * The built-in theme's stylesheet.
+ *
+ * A downloaded theme serves its own compiled CSS out of its verified bundle
+ * (`manifest.styles` -> /theme-assets/<key>/<version>/theme.css). The built-in one
+ * has no bundle — it was compiled into this app — so `theme-loader` reports
+ * `stylesheet: null` for it and there is nothing to link. Its CSS has to arrive the
+ * only other way it can: compiled in here, next to the code.
+ *
+ * It costs a site running some other theme almost nothing. Every rule the theme
+ * ships is scoped under `.zdefault`, an element that site never renders.
+ */
+@import "../../../../themes/default/src/theme.css";
+
+/* Site chrome is the theme's job. The runtime only sets what a document needs. */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+
+    /* Replaced per visitor by the colour-mode script, which also sets
+       `data-theme` (see lib/color-mode.ts). Declaring both here is what a reader
+       with JavaScript disabled gets: the OS decides, and the theme's own
+       `prefers-color-scheme` rule agrees with it rather than fighting it. */
+    color-scheme: light dark;
+  }
+
+  body {
+    min-height: 100vh;
+    text-rendering: optimizeLegibility;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+}

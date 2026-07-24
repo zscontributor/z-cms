@@ -1,0 +1,218 @@
+{
+  "metaTitle": "Trình thiết kế theme",
+  "title": "Trình thiết kế theme",
+  "description": "Thiết kế theme bằng cách kéo widget vào trang. Không cần code.",
+  "saved": "Đã lưu",
+  "unsaved": "Có thay đổi chưa lưu",
+  "actions": {
+    "save": "Lưu",
+    "saving": "Đang lưu…",
+    "undo": "Hoàn tác",
+    "redo": "Làm lại",
+    "duplicate": "Nhân bản",
+    "delete": "Xoá",
+    "addSection": "Thêm section",
+    "addRow": "Thêm hàng",
+    "addColumn": "Thêm cột",
+    "create": "Thiết kế mới",
+    "open": "Mở",
+    "build": "Build"
+  },
+  "templates": {
+    "label": "Mẫu trang",
+    "home": "Trang chủ",
+    "page": "Trang",
+    "post": "Bài viết",
+    "archive": "Danh sách"
+  },
+  "categories": {
+    "content": "Nội dung",
+    "media": "Ảnh & media",
+    "layout": "Bố cục",
+    "dynamic": "Động"
+  },
+  "containers": {
+    "section": "Section",
+    "row": "Hàng",
+    "column": "Cột"
+  },
+  "canvas": {
+    "emptyTemplate": "Chưa có gì. Thêm một section để bắt đầu.",
+    "dropHere": "Thả widget vào đây",
+    "unknownWidget": "Widget lạ: {type}"
+  },
+  "inspector": {
+    "themeTitle": "Theme",
+    "themeHint": "Màu, phông chữ và khoảng cách cho cả theme. Chủ site có thể đổi lại sau khi cài.",
+    "unknownWidget": "Bản dựng này không biết \"{type}\". Nó được giữ nguyên.",
+    "currentBinding": "Widget này hiển thị trang đang xem. Ở Trang chủ và Danh sách không có trang cụ thể nào, nên nó không hiển thị gì.",
+    "dataSource": "Dữ liệu",
+    "budget": "Đã dùng {used}/{max} danh sách nội dung.",
+    "budgetFull": "Đã dùng hết {max} danh sách nội dung. Hãy dùng lại một câu hỏi đã có — cùng loại, cùng số lượng, cùng thứ tự — hoặc bỏ bớt một cái."
+  },
+  "a11y": {
+    "drag": "Kéo {label}",
+    "moveUp": "Chuyển {label} lên",
+    "moveDown": "Chuyển {label} xuống",
+    "duplicate": "Nhân bản {label}",
+    "delete": "Xóa {label}"
+  },
+  "errors": {
+    "denied": "Bạn không có quyền thiết kế theme.",
+    "createFailed": "Không tạo được bản thiết kế.",
+    "saveFailed": "Không lưu được bản thiết kế.",
+    "deleteFailed": "Không xoá được bản thiết kế.",
+    "noColumn": "Thêm một section trước đã — widget phải nằm trong cột.",
+    "buildDenied": "Bạn không có quyền cài mã theme chưa kiểm duyệt. Build một bản thiết kế chính là việc đó.",
+    "buildFailed": "Không khởi động được build."
+  },
+  "props": {
+    "text": "Nội dung",
+    "html": "Nội dung",
+    "label": "Nhãn",
+    "href": "Liên kết",
+    "heading": "Tiêu đề",
+    "align": "Canh lề",
+    "alignLeft": "Trái",
+    "alignCenter": "Giữa",
+    "alignRight": "Phải",
+    "alignStart": "Trên",
+    "alignStretch": "Giãn đều",
+    "headingLevel": {
+      "label": "Cấp",
+      "h1": "H1",
+      "h2": "H2",
+      "h3": "H3",
+      "h4": "H4",
+      "h5": "H5",
+      "h6": "H6"
+    },
+    "variant": "Kiểu",
+    "variantPrimary": "Chính",
+    "variantSecondary": "Phụ",
+    "variantLink": "Liên kết",
+    "src": "Ảnh",
+    "alt": "Văn bản thay thế",
+    "caption": "Chú thích",
+    "width": "Chiều rộng",
+    "widthContained": "Trong khung",
+    "widthWide": "Rộng",
+    "widthFull": "Tràn màn hình",
+    "height": "Chiều cao",
+    "menuLocation": "Vị trí menu",
+    "orientation": "Hướng",
+    "orientationHorizontal": "Ngang",
+    "orientationVertical": "Dọc",
+    "layout": "Bố cục",
+    "layoutList": "Danh sách",
+    "layoutGrid": "Lưới",
+    "showExcerpt": "Hiện tóm tắt",
+    "background": "Nền",
+    "contentWidth": "Bề rộng nội dung",
+    "paddingY": "Đệm trên/dưới",
+    "gap": "Khoảng cách",
+    "verticalAlign": "Canh dọc",
+    "span": "Bề rộng (trên 12)",
+    "contentType": "Loại nội dung",
+    "contentTypeNone": "Chọn một loại…",
+    "limit": "Số lượng",
+    "sort": "Thứ tự",
+    "sortNewest": "Mới nhất trước",
+    "sortOldest": "Cũ nhất trước",
+    "sortTitle": "Theo tiêu đề"
+  },
+  "hints": {
+    "contentType": "Một loại site này thực sự có. Theme cài ở site khác sẽ ra danh sách rỗng nếu site đó không có loại này.",
+    "limit": "Tối đa {max}."
+  },
+  "tokens": {
+    "colorPrimary": "Màu chính",
+    "colorText": "Màu chữ",
+    "colorBackground": "Màu nền",
+    "fontHeading": "Phông tiêu đề",
+    "fontBody": "Phông nội dung",
+    "radius": "Bo góc",
+    "maxWidth": "Bề rộng tối đa",
+    "unset": "Mặc định",
+    "clear": "Xoá"
+  },
+  "widgets": {
+    "heading": {
+      "label": "Tiêu đề",
+      "description": "Một dòng tiêu đề. Chữ cố định bạn tự nhập."
+    },
+    "richtext": {
+      "label": "Văn bản",
+      "description": "Một đoạn văn bản có định dạng."
+    },
+    "button": {
+      "label": "Nút",
+      "description": "Một liên kết trông như cái nút."
+    },
+    "image": {
+      "label": "Ảnh",
+      "description": "Ảnh theme mang theo hoặc site đã tải lên."
+    },
+    "logo": {
+      "label": "Logo",
+      "description": "Logo của site, hoặc tên site nếu chưa có logo."
+    },
+    "menu": {
+      "label": "Menu",
+      "description": "Menu mà site gán cho một vị trí."
+    },
+    "spacer": {
+      "label": "Khoảng trống",
+      "description": "Khoảng trống dọc."
+    },
+    "postTitle": {
+      "label": "Tiêu đề trang",
+      "description": "Tiêu đề của trang đang xem."
+    },
+    "postContent": {
+      "label": "Nội dung trang",
+      "description": "Các block biên tập viên đã viết trên trang đang xem."
+    },
+    "postList": {
+      "label": "Danh sách nội dung",
+      "description": "Trang hoặc bài viết thật từ site — ví dụ 6 bài mới nhất."
+    }
+  },
+  "publish": {
+    "heading": "Phát hành",
+    "noKey": "Bạn cần một publisher key để ký theme. Đây là danh tính của bạn trên marketplace.",
+    "passphrase": "Passphrase",
+    "passphraseHint": "Nó không bao giờ rời trình duyệt. Đây là thứ duy nhất bảo vệ key của bạn — hãy dùng vài từ không liên quan.",
+    "passphraseStrong": "Mạnh.",
+    "createKey": "Tạo key",
+    "importExisting": "Tôi đã có key từ `zcms keygen`",
+    "importHint": "Dán publisher-private.pem. Nó được mã hoá bằng passphrase ngay tại đây, không bao giờ gửi đi dạng thô.",
+    "importKey": "Nhập key",
+    "keySaved": "Đã lưu key. Đăng ký public key ở marketplace để trở thành publisher.",
+    "publicKey": "Public key",
+    "publicKeyHint": "Đăng ký cái này ở marketplace.z-cms.org. Chia sẻ thoải mái.",
+    "buildFirst": "Build bản thiết kế trước đã — chữ ký ký lên đúng thứ đã build.",
+    "sign": "Ký & tải về",
+    "signed": "Đã ký. Tải file .zcms lên developer portal của marketplace.",
+    "submitHint": "Gói đã ký được tải lên ở developer portal của marketplace, nơi có người duyệt đọc trước khi phát hành.",
+    "manage": "Quản lý key",
+    "forget": "Quên key này",
+    "forgetHint": "Xoá cục ciphertext đã lưu. Theme bạn đã phát hành vẫn chạy — người dùng verify chữ ký của marketplace, không phải của bạn. Nhưng không có key thì không phát hành bản cập nhật được.",
+    "unsupported": "Trình duyệt này không ký được Ed25519. Hãy dùng Chrome/Safari/Firefox bản mới — hoặc ký bằng `zcms pack`.",
+    "keyLoadFailed": "Không tải được publisher key.",
+    "keySaveFailed": "Không lưu được publisher key.",
+    "keyDeleteFailed": "Không xoá được publisher key.",
+    "sealFailed": "Không tạo được gói đã ký.",
+    "noBuild": "Chưa có bản build nào để ký.",
+    "submit": "Ký & gửi duyệt",
+    "submitted": "Đã gửi duyệt ({status}).",
+    "submitFailed": "Không gửi được theme.",
+    "publishDenied": "Bạn không có quyền phát hành lên marketplace.",
+    "connectToken": "Kết nối tài khoản marketplace",
+    "tokenConnected": "Đã kết nối tài khoản marketplace",
+    "tokenDisconnect": "Ngắt kết nối",
+    "tokenConnect": "Kết nối",
+    "tokenHint": "Tạo API token ở mục Tokens trong developer portal của marketplace rồi dán vào đây. Token được lưu mã hoá và không hiện lại lần nào nữa. Nó chỉ gửi được gói, không làm gì khác.",
+    "tokenSaveFailed": "Không lưu được token marketplace."
+  }
+}

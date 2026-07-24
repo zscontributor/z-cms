@@ -1,0 +1,96 @@
+{
+  "metaTitle": "Media library",
+  "title": "Media library",
+  "description": "{count} files on this site.",
+  "denied": "You do not have permission to view the media library.",
+  "emptyTitle": "The library is empty",
+  "emptyDescription": "Upload images or documents to use in your content and your theme.",
+  "uploader": {
+    "hint": "Drag files here, or pick them from your computer (20 MB per file at most).",
+    "choose": "Choose files",
+    "uploading": "Uploading…",
+    "progress": "Uploading {index}/{total}: {name}"
+  },
+  "copyUrl": {
+    "action": "Copy URL",
+    "copied": "Copied",
+    "title": "Copy the file URL"
+  },
+  "picker": {
+    "title": "Choose a file from the library",
+    "idPlaceholder": "File id",
+    "empty": "The library is empty.",
+    "loadFailed": "Could not load the library.",
+    "insert": "Insert ({count})"
+  },
+  "errors": {
+    "uploadDenied": "You do not have permission to upload files.",
+    "noFile": "Choose a file first.",
+    "tooLarge": "The file is larger than 20 MB.",
+    "uploadFailed": "The upload failed. Please try again."
+  },
+  "noResultsTitle": "No files match",
+  "noResultsDescription": "Try a different search term, or clear the filter.",
+  "list": {
+    "searchPlaceholder": "Search files…",
+    "searchLabel": "Search the library",
+    "kindFilter": "Filter by type",
+    "allKinds": "All types",
+    "images": "Images",
+    "documents": "Documents",
+    "searchingAll": "Results for “{term}” across every folder.",
+    "clearSearch": "Clear"
+  },
+  "folders": {
+    "title": "Folders",
+    "breadcrumb": "Folder path",
+    "root": "Library",
+    "new": "New folder",
+    "empty": "No folders here yet.",
+    "count": "{files} files · {folders} folders",
+    "edit": "Rename or move",
+    "editAria": "Rename or move the folder {name}",
+    "deleteAria": "Delete the folder {name}",
+    "name": "Name",
+    "namePlaceholder": "e.g. Product photos",
+    "parent": "Inside",
+    "newTitle": "New folder",
+    "newDescription": "Folders organise the library. A file keeps its URL wherever it is filed.",
+    "create": "Create",
+    "editTitle": "Rename or move folder",
+    "editDescription": "Renaming a folder changes nothing about the files inside it.",
+    "deleteTitle": "Delete the folder “{name}”?",
+    "deleteDescription": "The files are not deleted — they move up one level and stay in the library.",
+    "deleteSummary": "This folder holds {files} files and {folders} subfolders. The subfolders go too; the files move up.",
+    "deleteMoved": "{count} files were moved up."
+  },
+  "file": {
+    "edit": "Edit details",
+    "editAria": "Edit the details of {name}",
+    "deleteAria": "Delete {name}",
+    "editTitle": "File details",
+    "editDescription": "Renaming or moving a file does not change its URL, so no published page breaks.",
+    "name": "File name",
+    "alt": "Alt text",
+    "altHint": "What the image shows, for screen readers and search engines.",
+    "altPlaceholder": "e.g. A red bicycle leaning on a wall",
+    "folder": "Folder",
+    "deleteTitle": "Delete this file?",
+    "deleteDescription": "“{name}” will be removed from the library.",
+    "deleteWarning": "The library does not track which pages use a file. If a published page embeds this one, its image will go missing."
+  },
+  "bulk": {
+    "selectAll": "Select all",
+    "selectNone": "Clear selection",
+    "selectAria": "Select {name}",
+    "none": "Select files to move or delete them together.",
+    "count": "{count} selected",
+    "move": "Move to…",
+    "delete": "Delete ({count})",
+    "moveTitle": "Move {count} files",
+    "moveConfirm": "Move",
+    "moveDescription": "Filing only — the files keep their URLs, so nothing that embeds them breaks.",
+    "deleteTitle": "Delete {count} files?",
+    "deleteDescription": "{count} files will be removed from the library."
+  }
+}

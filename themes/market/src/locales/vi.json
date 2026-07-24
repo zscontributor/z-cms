@@ -1,0 +1,160 @@
+{
+  "layout": {
+    "skipToContent": "Tới nội dung chính",
+    "backToTop": "Lên đầu trang"
+  },
+  "colorMode": {
+    "toggle": "Chuyển giữa chế độ sáng và tối"
+  },
+  "language": {
+    "switch": "Đổi ngôn ngữ"
+  },
+  "topbar": {
+    "link": "Mua ngay"
+  },
+  "nav": {
+    "primary": "Menu chính",
+    "shop": "Cửa hàng",
+    "about": "Về chúng tôi",
+    "journal": "Nhật ký",
+    "cart": "Giỏ hàng",
+    "menu": "Menu"
+  },
+  "search": {
+    "label": "Tìm kiếm",
+    "placeholder": "Tìm trong cửa hàng"
+  },
+  "hero": {
+    "eyebrow": "Mùa mới · Ưu tiên làn da",
+    "title": {
+      "first": "Rạng rỡ,",
+      "second": "một cách thành thật."
+    },
+    "copy": "Bảng thành phần ngắn, chai thủy tinh tái nạp, và nồng độ được in ở nơi bạn đọc được. Dưỡng da nói đúng những gì nó làm — rồi làm đúng như vậy.",
+    "primary": "Xem tất cả sản phẩm",
+    "secondary": "Đọc câu chuyện của chúng tôi",
+    "note": "Không thử trên động vật · Kiểm nghiệm da liễu · Tái nạp được",
+    "aria": "Một chai serum trên nền hồng phấn dịu"
+  },
+  "categories": {
+    "eyebrow": "Mua theo danh mục",
+    "title": "Nơi chu trình của bạn bắt đầu.",
+    "one": "Dưỡng da",
+    "two": "Trang điểm",
+    "three": "Cơ thể & tắm gội",
+    "four": "Túi nạp",
+    "link": "Khám phá"
+  },
+  "products": {
+    "eyebrow": "Tuyển chọn",
+    "title": "Được yêu thích, và xứng đáng.",
+    "copy": "Những công thức chiếm phần lớn những gì chúng tôi làm ra, và gần như toàn bộ lý do khách hàng quay lại.",
+    "viewAll": "Xem tất cả sản phẩm",
+    "aria": "Ảnh sản phẩm",
+    "empty": "Chưa có sản phẩm nào được xuất bản. Thêm một sản phẩm trong trang quản trị là nó hiện trên kệ này."
+  },
+  "journal": {
+    "eyebrow": "Nhật ký",
+    "title": "Ghi chép từ bàn pha chế.",
+    "all": "Tất cả bài viết",
+    "empty": "Chưa có bài viết nào được xuất bản. Viết một bài nhật ký trong trang quản trị là nó hiện ở đây."
+  },
+  "values": {
+    "eyebrow": "Cam kết của chúng tôi",
+    "title": "Bốn điều chúng tôi không bao giờ đánh đổi.",
+    "one": {
+      "title": "Không thử trên động vật",
+      "copy": "Không thử nghiệm trên động vật, ở bất cứ đâu, bởi bất cứ ai làm thay chúng tôi. Có chứng nhận, không chỉ là lời nói."
+    },
+    "two": {
+      "title": "Kiểm nghiệm da liễu",
+      "copy": "Thử nghiệm áp da trên người thật, đủ mọi tông da và loại da, trước khi bán ra dù chỉ một chai."
+    },
+    "three": {
+      "title": "Tái nạp được",
+      "copy": "Thủy tinh dược phẩm dày, làm ra để sống lâu hơn thứ đựng bên trong. Gửi về cho chúng tôi, hoặc tự nạp tại nhà."
+    },
+    "four": {
+      "title": "Thuần chay",
+      "copy": "Không thành phần nào có nguồn gốc động vật. Không ngoại lệ nào được giấu ở dòng thứ ba của bảng thành phần."
+    }
+  },
+  "quote": {
+    "eyebrow": "Báo chí nói gì",
+    "text": "Một trong số hiếm hoi thương hiệu làm đẹp dám in con số lên chai. Bạn luôn biết mình đang mua gì, và nó luôn đúng như những gì được ghi.",
+    "author": "Élise Moreau",
+    "source": "Tổng biên tập, Atelier Magazine"
+  },
+  "newsletter": {
+    "eyebrow": "Bản tin",
+    "title": "Chuyện làn da, mỗi tháng một lần.",
+    "copy": "Chúng tôi đang phát triển công thức gì, nghiên cứu thực sự nói điều gì, và ưu tiên mua trước khi hàng về. Không phiền bạn mỗi ngày.",
+    "label": "Địa chỉ email",
+    "placeholder": "ban@example.com",
+    "button": "Đăng ký",
+    "note": "Hủy đăng ký chỉ với một cú nhấp. Chúng tôi không bao giờ bán địa chỉ của bạn."
+  },
+  "footer": {
+    "shop": "Cửa hàng",
+    "brand": "Thương hiệu",
+    "help": "Hỗ trợ",
+    "follow": "Theo dõi",
+    "newArrivals": "Hàng mới về",
+    "bestsellers": "Bán chạy nhất",
+    "giftSets": "Set quà tặng",
+    "refills": "Túi nạp",
+    "ourStory": "Câu chuyện của chúng tôi",
+    "journal": "Nhật ký",
+    "ingredients": "Thành phần",
+    "sustainability": "Phát triển bền vững",
+    "shipping": "Vận chuyển",
+    "returns": "Đổi trả",
+    "faq": "Câu hỏi thường gặp",
+    "contact": "Liên hệ"
+  },
+  "product": {
+    "back": "Tất cả sản phẩm",
+    "addToCart": "Thêm vào giỏ",
+    "oldPriceLabel": "Giá gốc",
+    "aria": "Ảnh sản phẩm",
+    "details": {
+      "ingredients": {
+        "title": "Thành phần",
+        "body": "Bảng thành phần đầy đủ, kèm nồng độ của từng hoạt chất, được in trên vỏ hộp và nhắc lại trong phần mô tả bên dưới. Không hương liệu giấu tên, không hỗn hợp độc quyền."
+      },
+      "howToUse": {
+        "title": "Cách dùng",
+        "body": "Thoa lên da sạch và khô. Mỗi lần chỉ thêm một hoạt chất mới, và cho nó bốn tuần trước khi đánh giá — da thay mới chậm, và bằng chứng cũng vậy."
+      },
+      "shipping": {
+        "title": "Vận chuyển & đổi trả",
+        "body": "Miễn phí vận chuyển cho đơn từ $50, gửi đi trong vòng một ngày làm việc. Nếu không hợp da, gửi lại trong 60 ngày — đã mở nắp vẫn được."
+      }
+    }
+  },
+  "archive": {
+    "intro": "Mọi công thức chúng tôi làm ra, ở cùng một nơi.",
+    "empty": "Chưa có nội dung nào được xuất bản ở đây.",
+    "previous": "Trước",
+    "next": "Sau",
+    "pageOf": "Trang {page} / {total}"
+  },
+  "post": {
+    "backToPosts": "Tất cả bài viết",
+    "readingTime": "Đọc {minutes} phút"
+  },
+  "notFound": {
+    "title": "Trang này không tồn tại",
+    "description": "Có thể liên kết đã cũ, hoặc sản phẩm đã bán hết và ngừng kinh doanh.",
+    "backHome": "Về cửa hàng"
+  },
+  "error": {
+    "title": "Đã có lỗi xảy ra",
+    "description": "Không thể hiển thị trang này. Sự cố đã được ghi nhận và chúng tôi đang xử lý.",
+    "backHome": "Về cửa hàng",
+    "reference": "Mã tham chiếu"
+  },
+  "list": {
+    "empty": "Chưa có gì để hiển thị ở đây."
+  }
+}

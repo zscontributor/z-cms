@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "noEmit": false,
+    "declaration": true,
+    "rootDir": ".",
+    "outDir": "./dist",
+    // The Prisma-generated client is large and already type-safe; skipping its
+    // deep type instantiation keeps the API build fast.
+    "skipLibCheck": true
+  },
+  // `generated/` is emitted by `prisma generate` and compiled alongside src, so
+  // the published dist carries a runnable client with no extra build step.
+  "include": ["src/**/*.ts", "generated/**/*.ts"],
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts", "src/**/*.test.tsx"]
+}

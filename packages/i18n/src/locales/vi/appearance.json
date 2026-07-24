@@ -1,0 +1,68 @@
+{
+  "metaTitle": "Giao diện",
+  "title": "Giao diện",
+  "description": "Kích hoạt giao diện và tuỳ chỉnh các thiết lập do giao diện khai báo.",
+  "denied": "Bạn không có quyền xem giao diện.",
+  "drafts": {
+    "heading": "Bản thiết kế của bạn",
+    "hint": "Theme vẽ trong trình soạn thảo. Bản thiết kế chưa hiển thị ở đâu cho tới khi được build và cài.",
+    "empty": "Chưa có bản thiết kế nào.",
+    "name": "Tên",
+    "key": "Khoá theme",
+    "keyHint": "Dạng reverse-DNS, ví dụ com.acme.theme.shop. Không được bắt đầu bằng vn.zsoft.",
+    "status": {
+      "DRAFT": "Nháp",
+      "BUILDING": "Đang build",
+      "BUILT": "Đã build",
+      "SUBMITTED": "Đã gửi duyệt",
+      "FAILED": "Lỗi"
+    }
+  },
+  "emptyTitle": "Chưa cài giao diện nào",
+  "emptyDescription": "Site này chưa có giao diện được cài đặt.",
+  "active": "Đang dùng",
+  "activate": "Kích hoạt",
+  "activating": "Đang kích hoạt…",
+  "edit": "Sửa",
+  "available": "Giao diện có sẵn",
+  "settings": {
+    "heading": "Cấu hình: {name}",
+    "generated": "Biểu mẫu này được sinh tự động từ settingsSchema của giao diện.",
+    "empty": "Giao diện này không có tuỳ chọn cấu hình.",
+    "denied": "Bạn không có quyền cấu hình giao diện.",
+    "saved": "Đã lưu cấu hình giao diện.",
+    "saveFailed": "Không lưu được cấu hình."
+  },
+  "demo": {
+    "seed": "Seed demo",
+    "reseed": "Seed lại demo",
+    "seeding": "Đang seed…",
+    "availableHint": "Theme đang active có nội dung demo. Seed demo sẽ không đụng vào nội dung thật.",
+    "seededHint": "Demo của theme đang active đã được seed. Bạn có thể seed lại an toàn.",
+    "seeded": "Đã seed demo: {content} nội dung và {menus} menu.",
+    "seedFailed": "Không seed được demo.",
+    "denied": "Bạn không có quyền seed demo cho theme."
+  },
+  "errors": {
+    "missingKey": "Thiếu mã giao diện.",
+    "activateDenied": "Bạn không có quyền kích hoạt giao diện.",
+    "activateFailed": "Không kích hoạt được {name}."
+  },
+  "sideload": {
+    "heading": "Cài từ file",
+    "hint": "Tải lên một file .zcms đã được người vận hành ký. File được xác minh bằng khóa người vận hành, quét bảo mật, và giữ chờ duyệt trước khi được chạy.",
+    "upload": "Tải lên .zcms",
+    "uploading": "Đang tải…",
+    "noFile": "Hãy chọn một file .zcms trước.",
+    "uploaded": "Đã tải {name} v{version}. Gói bị cách ly cho tới khi bạn duyệt.",
+    "uploadFailed": "Không thể cài gói này.",
+    "denied": "Bạn không có quyền cài gói từ file.",
+    "unverified": "Chưa kiểm chứng",
+    "pending": "Chờ duyệt",
+    "approve": "Duyệt",
+    "uninstall": "Gỡ",
+    "approved": "Đã duyệt {name}.",
+    "removed": "Đã gỡ {name}.",
+    "actionFailed": "Không thực hiện được thao tác này."
+  }
+}

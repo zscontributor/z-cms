@@ -1,0 +1,96 @@
+{
+  "metaTitle": "Thư viện ảnh",
+  "title": "Thư viện ảnh",
+  "description": "{count} tệp trong site này.",
+  "denied": "Bạn không có quyền xem thư viện.",
+  "emptyTitle": "Thư viện trống",
+  "emptyDescription": "Tải lên ảnh hoặc tài liệu để dùng trong nội dung và giao diện.",
+  "uploader": {
+    "hint": "Kéo thả tệp vào đây, hoặc chọn từ máy của bạn (tối đa 20 MB mỗi tệp).",
+    "choose": "Chọn tệp",
+    "uploading": "Đang tải lên…",
+    "progress": "Đang tải {index}/{total}: {name}"
+  },
+  "copyUrl": {
+    "action": "Sao chép URL",
+    "copied": "Đã sao chép",
+    "title": "Sao chép đường dẫn"
+  },
+  "picker": {
+    "title": "Chọn tệp từ thư viện",
+    "idPlaceholder": "ID tệp",
+    "empty": "Thư viện trống.",
+    "loadFailed": "Không tải được thư viện.",
+    "insert": "Chèn ({count})"
+  },
+  "errors": {
+    "uploadDenied": "Bạn không có quyền tải lên tệp.",
+    "noFile": "Vui lòng chọn một tệp.",
+    "tooLarge": "Tệp vượt quá 20 MB.",
+    "uploadFailed": "Tải lên thất bại. Vui lòng thử lại."
+  },
+  "noResultsTitle": "Không có tệp nào khớp",
+  "noResultsDescription": "Thử từ khoá khác, hoặc bỏ bộ lọc.",
+  "list": {
+    "searchPlaceholder": "Tìm tệp…",
+    "searchLabel": "Tìm trong thư viện",
+    "kindFilter": "Lọc theo loại",
+    "allKinds": "Mọi loại",
+    "images": "Ảnh",
+    "documents": "Tài liệu",
+    "searchingAll": "Kết quả cho “{term}” trong toàn bộ thư mục.",
+    "clearSearch": "Bỏ tìm kiếm"
+  },
+  "folders": {
+    "title": "Thư mục",
+    "breadcrumb": "Đường dẫn thư mục",
+    "root": "Thư viện",
+    "new": "Thư mục mới",
+    "empty": "Chưa có thư mục nào ở đây.",
+    "count": "{files} tệp · {folders} thư mục",
+    "edit": "Đổi tên hoặc di chuyển",
+    "editAria": "Đổi tên hoặc di chuyển thư mục {name}",
+    "deleteAria": "Xoá thư mục {name}",
+    "name": "Tên",
+    "namePlaceholder": "ví dụ: Ảnh sản phẩm",
+    "parent": "Nằm trong",
+    "newTitle": "Thư mục mới",
+    "newDescription": "Thư mục chỉ để sắp xếp thư viện. Tệp giữ nguyên URL dù nằm ở đâu.",
+    "create": "Tạo",
+    "editTitle": "Đổi tên hoặc di chuyển thư mục",
+    "editDescription": "Đổi tên thư mục không ảnh hưởng gì tới các tệp bên trong.",
+    "deleteTitle": "Xoá thư mục “{name}”?",
+    "deleteDescription": "Các tệp KHÔNG bị xoá — chúng được chuyển lên một cấp và vẫn nằm trong thư viện.",
+    "deleteSummary": "Thư mục này chứa {files} tệp và {folders} thư mục con. Thư mục con sẽ bị xoá theo; các tệp được chuyển lên trên.",
+    "deleteMoved": "Đã chuyển {count} tệp lên cấp trên."
+  },
+  "file": {
+    "edit": "Sửa thông tin",
+    "editAria": "Sửa thông tin của {name}",
+    "deleteAria": "Xoá {name}",
+    "editTitle": "Thông tin tệp",
+    "editDescription": "Đổi tên hay di chuyển tệp không làm thay đổi URL, nên không trang nào bị vỡ ảnh.",
+    "name": "Tên tệp",
+    "alt": "Alt text",
+    "altHint": "Mô tả ảnh, dành cho trình đọc màn hình và công cụ tìm kiếm.",
+    "altPlaceholder": "ví dụ: Chiếc xe đạp đỏ dựng bên tường",
+    "folder": "Thư mục",
+    "deleteTitle": "Xoá tệp này?",
+    "deleteDescription": "“{name}” sẽ bị gỡ khỏi thư viện.",
+    "deleteWarning": "Thư viện không theo dõi trang nào đang dùng tệp. Nếu một trang đã xuất bản có nhúng tệp này, ảnh ở đó sẽ mất."
+  },
+  "bulk": {
+    "selectAll": "Chọn tất cả",
+    "selectNone": "Bỏ chọn",
+    "selectAria": "Chọn {name}",
+    "none": "Chọn các tệp để di chuyển hoặc xoá cùng lúc.",
+    "count": "Đã chọn {count}",
+    "move": "Chuyển vào…",
+    "delete": "Xoá ({count})",
+    "moveTitle": "Chuyển {count} tệp",
+    "moveConfirm": "Chuyển",
+    "moveDescription": "Chỉ là sắp xếp — các tệp giữ nguyên URL, nên không trang nào bị vỡ ảnh.",
+    "deleteTitle": "Xoá {count} tệp?",
+    "deleteDescription": "{count} tệp sẽ bị gỡ khỏi thư viện."
+  }
+}

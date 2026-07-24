@@ -1,0 +1,237 @@
+@import "tailwindcss";
+
+/*
+ * The widget library's stylesheet, exactly as a generated theme ships it.
+ *
+ * The Theme Editor's canvas draws the real widget components, and they are styled
+ * by plain CSS the theme carries rather than by Tailwind classes — Tailwind never
+ * scans a downloaded theme, so the library cannot rely on it. Importing the same
+ * file here is what makes the canvas show what the theme will actually render; a
+ * separate set of editor styles would be a second implementation to drift.
+ */
+@import "@zcmsorg/theme-widgets/widgets.css";
+
+/*
+ * Tailwind v4 is CSS-first: the design tokens below ARE the config. The dark
+ * palette is applied by a `.dark` class on <html> (set by the theme toggle,
+ * defaulted from prefers-color-scheme by an inline script in the root layout),
+ * so the choice survives a reload and does not flash.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-brand-50: #fff3ec;
+  --color-brand-100: #ffe1cf;
+  --color-brand-200: #ffbf9f;
+  --color-brand-300: #ff9a6b;
+  --color-brand-400: #fd7838;
+  --color-brand-500: #fa5600;
+  --color-brand-600: #e04c00;
+  --color-brand-700: #b83e00;
+  --color-brand-800: #8f3100;
+  --color-brand-900: #6b2500;
+
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    "Noto Sans", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  --radius-card: 0.625rem;
+}
+
+/*
+ * Semantic surface tokens. Components reference these instead of hard-coding
+ * a slate scale twice, which is what keeps light and dark from drifting apart.
+ */
+@layer base {
+  :root {
+    --surface: #f7f7f8;
+    --surface-raised: #ffffff;
+    --surface-sunken: #f0f0f2;
+    --border: #e3e3e7;
+    --border-strong: #cfcfd6;
+    --text: #17171a;
+    --text-muted: #6b6b76;
+    --ring: #fa5600;
+  }
+
+  .dark {
+    --surface: #0e0e11;
+    --surface-raised: #17171b;
+    --surface-sunken: #101014;
+    --border: #26262c;
+    --border-strong: #35353d;
+    --text: #ececf1;
+    --text-muted: #9a9aa6;
+    --ring: #fa5600;
+  }
+
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--surface);
+    color: var(--text);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background-color: var(--color-brand-500);
+    color: #fff;
+  }
+}
+
+@layer components {
+  .z-card {
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+  }
+
+  .z-input {
+    width: 100%;
+    background-color: var(--surface-raised);
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+    border-radius: 0.375rem;
+    padding: 0.4375rem 0.625rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    outline: none;
+    transition:
+      border-color 120ms ease,
+      box-shadow 120ms ease;
+  }
+
+  .z-input::placeholder {
+    color: var(--text-muted);
+  }
+
+  .z-input:focus-visible {
+    border-color: var(--color-brand-500);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand-500) 22%, transparent);
+  }
+
+  .z-input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .z-muted {
+    color: var(--text-muted);
+  }
+
+  .z-scroll-thin {
+    scrollbar-width: thin;
+  }
+}
+
+/* Rich-text preview inside the block editor. */
+.z-prose :where(h1, h2, h3, h4) {
+  font-weight: 600;
+  margin-block: 0.5em 0.25em;
+}
+.z-prose :where(h2) {
+  font-size: 1.35em;
+}
+.z-prose :where(h3) {
+  font-size: 1.15em;
+}
+.z-prose :where(p) {
+  margin-block: 0.5em;
+}
+.z-prose :where(ul, ol) {
+  margin-block: 0.5em;
+  padding-inline-start: 1.25em;
+  list-style: revert;
+}
+.z-prose :where(a) {
+  color: var(--color-brand-500);
+  text-decoration: underline;
+}
+.z-prose :where(strong) {
+  font-weight: 600;
+}
+.z-prose :where(em) {
+  font-style: italic;
+}
+.z-prose :where(blockquote) {
+  margin-block: 0.75em;
+  padding-inline-start: 0.875em;
+  border-inline-start: 3px solid var(--border-strong);
+  color: var(--text-muted);
+}
+.z-prose :where(code) {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.875em;
+  background-color: var(--surface-sunken);
+  border-radius: 0.25rem;
+  padding: 0.1em 0.3em;
+}
+.z-prose :where(pre) {
+  margin-block: 0.75em;
+  padding: 0.75em;
+  overflow-x: auto;
+  background-color: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  font-size: 0.8125em;
+}
+.z-prose :where(pre code) {
+  background: none;
+  padding: 0;
+}
+.z-prose :where(img) {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.375rem;
+  margin-block: 0.5em;
+}
+.z-prose :where(hr) {
+  margin-block: 1em;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+/* The writable surface of the rich-text editor (TipTap/ProseMirror). */
+.z-richtext-content {
+  min-height: inherit;
+  outline: none;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+/* Placeholder text on the first line while the document is empty. Rendered by
+   TipTap's Placeholder extension, which only tags the node — the text itself has
+   to be drawn here. */
+.z-richtext-content p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: var(--text-muted);
+}
+
+.z-richtext-content .ProseMirror-selectednode {
+  outline: 2px solid var(--color-brand-500);
+  border-radius: 0.375rem;
+}
+
+/* An image is drawn by a node view whose root element spans the whole text
+   column (it has to, for text-align to place the image left/centre/right). The
+   selected-node outline — ours above, and prosemirror-view's own default — would
+   therefore box the column rather than the picture. The image draws its own
+   outline on the <img>, so silence the wrapper's. */
+.z-richtext-content .ProseMirror-selectednode:has(img) {
+  outline: none;
+}

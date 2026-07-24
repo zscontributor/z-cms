@@ -1,0 +1,237 @@
+{
+  "metaTitle": "Plugins",
+  "title": "Plugins",
+  "description": "Every plugin runs in its own sandbox and can do exactly what you allow it to, and nothing more.",
+  "denied": "You do not have permission to view plugins.",
+  "emptyTitle": "No plugins",
+  "emptyDescription": "The catalogue is empty, or it could not be reached.",
+  "installedHeading": "Installed on this site",
+  "catalogHeading": "Catalogue",
+  "card": {
+    "core": "Core",
+    "noDescription": "This plugin has no description.",
+    "capabilities": "Offers to themes",
+    "grantedHeading": "Granted permissions",
+    "grantedUnknown": "The API did not return the granted permissions. Open “Change permissions” to review and grant them again.",
+    "grantedNone": "No permissions granted.",
+    "requests": "Asks for {count} permissions. You will review and approve each one before it is installed.",
+    "requestsNone": "This plugin asks for no permissions.",
+    "failed": "The last activation failed: the plugin's setup() threw. Check its configuration and try again.",
+    "activateFailedTitle": "Could not activate — the plugin's setup() threw",
+    "install": "Install",
+    "activate": "Activate",
+    "deactivate": "Turn off",
+    "configure": "Configure",
+    "changePermissions": "Change permissions",
+    "installDenied": "You do not have permission to install plugins.",
+    "settingsGenerated": "This form is generated from the plugin's settingsSchema."
+  },
+  "settings": {
+    "empty": "This plugin has no settings.",
+    "denied": "You do not have permission to configure plugins."
+  },
+  "consent": {
+    "installTitle": "Install {name}",
+    "updateTitle": "Update the permissions of {name}",
+    "subtitle": "Published by {publisher}. Read what this plugin asks for before you agree.",
+    "confirmInstall": "Install and grant",
+    "confirmUpdate": "Save granted permissions",
+    "requestsHeading": "The plugin asks to",
+    "requestsHint": "Uncheck anything you do not want to grant. The plugin still installs, but the features that depend on that permission may stop working or report an error.",
+    "requestsNone": "This plugin asks for no permissions. It can only act inside the sandbox.",
+    "sensitive": "Sensitive permission",
+    "deniedHeading": "The plugin CANNOT",
+    "deniedHint": "The sandbox (a V8 isolate) blocks the following, no matter which permissions you grant above.",
+    "summaryHeading": "You are about to grant",
+    "summaryNone": "No permissions granted. The plugin will be installed, but it will almost certainly not be able to do anything.",
+    "summarySensitive": "{count} of them are sensitive — only grant them if you trust the publisher {publisher}.",
+    "summaryDeclined": "You declined {count} permissions: {list}.",
+    "networkHeading": "The plugin will reach",
+    "networkHint": "These hosts come from the plugin's manifest and are the only ones it can ever reach. Granting the permission above grants exactly this list — nothing wider.",
+    "networkOnlyThese": "and no other host"
+  },
+  "status": {
+    "NOT_INSTALLED": "Not installed",
+    "INSTALLING": "Installing",
+    "INACTIVE": "Off",
+    "ACTIVE": "Running",
+    "FAILED": "Failed",
+    "DISABLED": "Disabled",
+    "QUARANTINED": "Quarantined"
+  },
+  "actions": {
+    "installedWithoutPermissions": "Plugin installed with no permissions granted.",
+    "installedWithPermissions": "Installed and granted {count} permissions.",
+    "installFailed": "Could not install the plugin.",
+    "installDenied": "You do not have permission to install plugins.",
+    "activated": "Plugin activated.",
+    "activateFailed": "Could not activate the plugin.",
+    "activateDenied": "You do not have permission to turn plugins on or off.",
+    "setupFailed": "The plugin's setup() threw while starting up.",
+    "deactivated": "Plugin turned off.",
+    "deactivateFailed": "Could not turn the plugin off.",
+    "settingsSaved": "Plugin settings saved.",
+    "settingsSaveFailed": "Could not save the settings.",
+    "configureDenied": "You do not have permission to configure plugins."
+  },
+  "sandbox": {
+    "database": "Reach the database directly",
+    "filesystem": "Read or write files on the host",
+    "network": "Open a socket, or reach any host it did not declare",
+    "environment": "Read the server's environment variables",
+    "crossTenant": "Reach another site's or another customer's data"
+  },
+  "permissions": {
+    "unknown": "This version does not know this permission. Check it carefully before granting it.",
+    "site:read": {
+      "label": "See the website's details",
+      "detail": "The name, the domains and the basic details of the site."
+    },
+    "site:create": {
+      "label": "Create new websites",
+      "detail": "Create a site and claim a hostname for it. A hostname is unique across the whole platform: once taken, nobody else can use it."
+    },
+    "site:update": {
+      "label": "Change the website's details",
+      "detail": "Edit the site's name, domains and default language."
+    },
+    "site:delete": {
+      "label": "Delete the website",
+      "detail": "Delete the whole site. This cannot be undone."
+    },
+    "content:read": {
+      "label": "Read the website's content",
+      "detail": "See every post, page and draft."
+    },
+    "content:create": {
+      "label": "Create new content",
+      "detail": "Add new posts or pages to the site."
+    },
+    "content:update": {
+      "label": "Edit content",
+      "detail": "Change existing content, including content written by other people."
+    },
+    "content:delete": {
+      "label": "Delete content",
+      "detail": "Remove posts or pages from the site."
+    },
+    "content:publish": {
+      "label": "Publish content",
+      "detail": "Make content public without anyone reviewing it."
+    },
+    "content-type:read": {
+      "label": "See the structure of content types",
+      "detail": "Read the field definitions of posts, pages and the rest."
+    },
+    "content-type:manage": {
+      "label": "Change the structure of content types",
+      "detail": "Add, edit or remove fields — this can affect content that already exists."
+    },
+    "media:read": {
+      "label": "See the media library",
+      "detail": "Browse the images and files that have been uploaded."
+    },
+    "media:upload": {
+      "label": "Upload media files",
+      "detail": "Add new images and files to the site's library."
+    },
+    "media:delete": {
+      "label": "Delete media files",
+      "detail": "Remove images or files from the library, including ones that are in use."
+    },
+    "menu:read": {
+      "label": "See the navigation menus",
+      "detail": "Read the structure of the site's menus."
+    },
+    "menu:manage": {
+      "label": "Edit the navigation menus",
+      "detail": "Add, edit and reorder menu entries."
+    },
+    "theme:read": {
+      "label": "See the theme in use",
+      "detail": "Read the theme's details and its settings."
+    },
+    "theme:install": {
+      "label": "Install themes",
+      "detail": "Add a new theme to the site."
+    },
+    "theme:activate": {
+      "label": "Change the theme in use",
+      "detail": "Activate a different theme — this changes how the whole site looks."
+    },
+    "theme:configure": {
+      "label": "Change the theme's settings",
+      "detail": "Edit the theme's colours, layout and other options."
+    },
+    "plugin:read": {
+      "label": "See the list of plugins",
+      "detail": "Know which plugins are installed on the site."
+    },
+    "plugin:install": {
+      "label": "Install other plugins",
+      "detail": "This plugin can install further plugins and grant them permissions."
+    },
+    "plugin:activate": {
+      "label": "Turn other plugins on and off",
+      "detail": "Activate or disable the plugins already on the site."
+    },
+    "plugin:configure": {
+      "label": "Change other plugins' settings",
+      "detail": "Edit the settings of the other plugins on the site."
+    },
+    "user:read": {
+      "label": "See user details",
+      "detail": "Read the name, email address and role of every member of the site."
+    },
+    "user:invite": {
+      "label": "Invite new users",
+      "detail": "Send an invitation to join the site to any email address."
+    },
+    "user:manage": {
+      "label": "Manage users",
+      "detail": "Change a member's role, or remove them from the site."
+    },
+    "settings:read": {
+      "label": "Read the website's settings",
+      "detail": "See the site's general settings."
+    },
+    "settings:update": {
+      "label": "Change the website's settings",
+      "detail": "Edit the general settings — this can affect the whole site."
+    },
+    "mail:send": {
+      "label": "Send email as this site",
+      "detail": "The plugin can send email through your mail server, from your address. It cannot read your inbox, change the sender, or see the SMTP password — but the mail carries your domain's name and reputation. Grant it only to plugins you expect to email people."
+    },
+    "network:fetch": {
+      "label": "Reach the services it named",
+      "detail": "The plugin can make requests to the specific hosts listed below, and to nothing else. It never opens the connection itself — the server does, on its behalf, and refuses any address inside your own network. Anything you type into a password field of its settings is spent on those hosts without the plugin ever being able to read it."
+    },
+    "audit:read": {
+      "label": "Read the activity log",
+      "detail": "See the history of what every member has done on the site."
+    },
+    "package:review": {
+      "label": "Review quarantined packages",
+      "detail": "Approve or reject a theme or plugin the malware scanner flagged — deciding that distrusted code may run."
+    },
+    "theme:sideload": {
+      "label": "Install themes from a file",
+      "detail": "Add theme code that no marketplace reviewed — and a theme runs unsandboxed."
+    },
+    "theme:author": {
+      "label": "Design themes",
+      "detail": "Create and edit theme designs in the editor. A design renders nowhere until somebody builds it."
+    },
+    "plugin:sideload": {
+      "label": "Install plugins from a file",
+      "detail": "Add plugin code that no marketplace reviewed. It still runs in the sandbox."
+    },
+    "theme:publish": {
+      "label": "Publish themes to the marketplace",
+      "detail": "Put a theme on the public marketplace under this company's name. Once approved, it cannot be recalled."
+    }
+  },
+  "sideloadHint": "Plugins you installed from a file. They run in the sandbox like any other, once approved.",
+  "sideloadApprovedHint": "Approved. Install it onto a site from the catalogue above to grant it permissions."
+}

@@ -1,0 +1,218 @@
+{
+  "metaTitle": "Theme editor",
+  "title": "Theme editor",
+  "description": "Design a theme by dragging widgets onto the page. No code.",
+  "saved": "Saved",
+  "unsaved": "Unsaved changes",
+  "actions": {
+    "save": "Save",
+    "saving": "Saving…",
+    "undo": "Undo",
+    "redo": "Redo",
+    "duplicate": "Duplicate",
+    "delete": "Delete",
+    "addSection": "Add section",
+    "addRow": "Add row",
+    "addColumn": "Add column",
+    "create": "New design",
+    "open": "Open",
+    "build": "Build"
+  },
+  "templates": {
+    "label": "Template",
+    "home": "Home",
+    "page": "Page",
+    "post": "Post",
+    "archive": "Archive"
+  },
+  "categories": {
+    "content": "Content",
+    "media": "Media",
+    "layout": "Layout",
+    "dynamic": "Dynamic"
+  },
+  "containers": {
+    "section": "Section",
+    "row": "Row",
+    "column": "Column"
+  },
+  "canvas": {
+    "emptyTemplate": "Nothing here yet. Add a section to start.",
+    "dropHere": "Drop a widget here",
+    "unknownWidget": "Unknown widget: {type}"
+  },
+  "inspector": {
+    "themeTitle": "Theme",
+    "themeHint": "Colours, type and spacing for the whole theme. A site owner can change these after installing it.",
+    "unknownWidget": "This build does not know \"{type}\". It is kept as-is.",
+    "currentBinding": "This widget shows the page being viewed. On Home and Archive there is no single page, so it renders nothing.",
+    "dataSource": "Data",
+    "budget": "{used} of {max} content lists used.",
+    "budgetFull": "All {max} content lists are used. Reuse an existing question — same type, count and order — or free one up."
+  },
+  "a11y": {
+    "drag": "Drag {label}",
+    "moveUp": "Move {label} up",
+    "moveDown": "Move {label} down",
+    "duplicate": "Duplicate {label}",
+    "delete": "Delete {label}"
+  },
+  "errors": {
+    "denied": "You do not have permission to design themes.",
+    "createFailed": "Could not create the design.",
+    "saveFailed": "Could not save the design.",
+    "deleteFailed": "Could not delete the design.",
+    "noColumn": "Add a section first — a widget lives in a column.",
+    "buildDenied": "You do not have permission to install unreviewed theme code. Building a design does that.",
+    "buildFailed": "Could not start the build."
+  },
+  "props": {
+    "text": "Text",
+    "html": "Content",
+    "label": "Label",
+    "href": "Link",
+    "heading": "Heading",
+    "align": "Align",
+    "alignLeft": "Left",
+    "alignCenter": "Centre",
+    "alignRight": "Right",
+    "alignStart": "Top",
+    "alignStretch": "Stretch",
+    "headingLevel": {
+      "label": "Level",
+      "h1": "H1",
+      "h2": "H2",
+      "h3": "H3",
+      "h4": "H4",
+      "h5": "H5",
+      "h6": "H6"
+    },
+    "variant": "Style",
+    "variantPrimary": "Primary",
+    "variantSecondary": "Secondary",
+    "variantLink": "Link",
+    "src": "Image",
+    "alt": "Alt text",
+    "caption": "Caption",
+    "width": "Width",
+    "widthContained": "Contained",
+    "widthWide": "Wide",
+    "widthFull": "Full",
+    "height": "Height",
+    "menuLocation": "Menu location",
+    "orientation": "Direction",
+    "orientationHorizontal": "Horizontal",
+    "orientationVertical": "Vertical",
+    "layout": "Layout",
+    "layoutList": "List",
+    "layoutGrid": "Grid",
+    "showExcerpt": "Show excerpt",
+    "background": "Background",
+    "contentWidth": "Content width",
+    "paddingY": "Vertical padding",
+    "gap": "Gap",
+    "verticalAlign": "Vertical align",
+    "span": "Width (of 12)",
+    "contentType": "Content type",
+    "contentTypeNone": "Choose a type…",
+    "limit": "How many",
+    "sort": "Order",
+    "sortNewest": "Newest first",
+    "sortOldest": "Oldest first",
+    "sortTitle": "By title"
+  },
+  "hints": {
+    "contentType": "A type this site actually has. A theme installed elsewhere shows an empty list if that site has no such type.",
+    "limit": "Up to {max}."
+  },
+  "tokens": {
+    "colorPrimary": "Primary colour",
+    "colorText": "Text colour",
+    "colorBackground": "Background",
+    "fontHeading": "Heading font",
+    "fontBody": "Body font",
+    "radius": "Corner radius",
+    "maxWidth": "Max content width",
+    "unset": "Default",
+    "clear": "Clear"
+  },
+  "widgets": {
+    "heading": {
+      "label": "Heading",
+      "description": "A title. Fixed text you type here."
+    },
+    "richtext": {
+      "label": "Text",
+      "description": "A paragraph of formatted text."
+    },
+    "button": {
+      "label": "Button",
+      "description": "A link that looks like a button."
+    },
+    "image": {
+      "label": "Image",
+      "description": "A picture the theme ships or the site uploaded."
+    },
+    "logo": {
+      "label": "Logo",
+      "description": "The site's own logo, or its name when it has none."
+    },
+    "menu": {
+      "label": "Menu",
+      "description": "The menu the site assigned to a location."
+    },
+    "spacer": {
+      "label": "Spacer",
+      "description": "Empty vertical space."
+    },
+    "postTitle": {
+      "label": "Page title",
+      "description": "The title of the page being viewed."
+    },
+    "postContent": {
+      "label": "Page content",
+      "description": "The blocks an editor wrote on the page being viewed."
+    },
+    "postList": {
+      "label": "Content list",
+      "description": "Real pages or posts from the site — the newest six, say."
+    }
+  },
+  "publish": {
+    "heading": "Publish",
+    "noKey": "You need a publisher key to sign a theme. It is your identity on the marketplace.",
+    "passphrase": "Passphrase",
+    "passphraseHint": "This never leaves your browser. It is the only thing protecting your key — use several unrelated words.",
+    "passphraseStrong": "Strong.",
+    "createKey": "Create key",
+    "importExisting": "I already have a key from `zcms keygen`",
+    "importHint": "Paste publisher-private.pem. It is wrapped with your passphrase here and never sent in the clear.",
+    "importKey": "Import key",
+    "keySaved": "Key saved. Register the public key at the marketplace to become a publisher.",
+    "publicKey": "Public key",
+    "publicKeyHint": "Register this at marketplace.z-cms.org. Safe to share.",
+    "buildFirst": "Build the design first — a signature covers what was built.",
+    "sign": "Sign & download",
+    "signed": "Signed. Upload the .zcms at the marketplace developer portal.",
+    "submitHint": "Signed packages are uploaded at the marketplace developer portal, where a reviewer reads them before release.",
+    "manage": "Manage key",
+    "forget": "Forget this key",
+    "forgetHint": "Removes the stored blob. Themes you already published keep working — readers verify the marketplace's signature, not yours. You cannot publish an update without the key.",
+    "unsupported": "This browser cannot do Ed25519 signing. Use a current Chrome, Safari or Firefox — or sign with `zcms pack`.",
+    "keyLoadFailed": "Could not load your publisher key.",
+    "keySaveFailed": "Could not save your publisher key.",
+    "keyDeleteFailed": "Could not remove your publisher key.",
+    "sealFailed": "Could not build the signed package.",
+    "noBuild": "There is no build to sign.",
+    "submit": "Sign & submit",
+    "submitted": "Submitted for review ({status}).",
+    "submitFailed": "Could not submit the theme.",
+    "publishDenied": "You do not have permission to publish to the marketplace.",
+    "connectToken": "Connect a marketplace account",
+    "tokenConnected": "Marketplace account connected",
+    "tokenDisconnect": "Disconnect",
+    "tokenConnect": "Connect",
+    "tokenHint": "Create an API token under Tokens in the marketplace developer portal, then paste it here. It is stored encrypted and never shown again. It can submit packages and nothing else.",
+    "tokenSaveFailed": "Could not save the marketplace token."
+  }
+}
