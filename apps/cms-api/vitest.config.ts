@@ -10,4 +10,9 @@ import { preset } from "../../vitest.shared";
  */
 export default preset({
   coverage: { lines: 70, functions: 70, branches: 65, statements: 70 },
+  // The auth suites hash and verify with REAL bcryptjs at cost 12 (pure JS, on
+  // purpose — the crypto is the thing under test). A single case can chain three
+  // or four rounds, which overruns the 5s default on a loaded CI runner. Same
+  // allowance the other real-crypto suites take (scanner, package).
+  testTimeout: 20_000,
 });
