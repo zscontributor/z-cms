@@ -2,6 +2,7 @@ import esbuild from "esbuild";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { toDefaultJsxRuntimeImport } from "../../scripts/jsx-runtime-interop.mjs";
 
 /**
  * Builds the distributable bundle: `dist/index.mjs` + `dist/theme.css`.
@@ -26,10 +27,6 @@ await esbuild.build({
   target: "node22",
   jsx: "automatic",
   external: ["react", "react-dom"],
-  // react/jsx-runtime is CommonJS, so its named exports cannot be ESM-imported when
-  // site-runtime import()s this bundle. Redirect it to a small ESM shim (which also
-  // catches theme-sdk's precompiled JSX); react itself stays external and shared.
-  alias: { "react/jsx-runtime": path.resolve(root, "../../scripts/react-jsx-runtime.mjs") },
   // Wrap long lines. The marketplace scanner flags any package containing a line
   // too long for a human to read — minified or obfuscated code is what someone
   // hiding something ships. This bundle trips that rule by accident: theme.json is
@@ -40,6 +37,10 @@ await esbuild.build({
 
   logLevel: "warning",
 });
+
+// Rewrite react/jsx-runtime to a default import — CJS-safe at run time and
+// scanner-safe (no createRequire/node:module). See the helper.
+toDefaultJsxRuntimeImport(path.join(root, "dist/index.mjs"));
 
 // Copied rather than processed: the stylesheet ships as authored. Tailwind never
 // sees a downloaded theme's classes, so a theme that expected to be scanned would

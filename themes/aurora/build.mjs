@@ -1,6 +1,7 @@
 import esbuild from "esbuild";
 import fs from "node:fs";
 import path from "node:path";
+import { toDefaultJsxRuntimeImport } from "../../scripts/jsx-runtime-interop.mjs";
 
 /**
  * Builds Aurora into a distributable bundle.
@@ -33,12 +34,12 @@ await esbuild.build({
   target: "node22",
   jsx: "automatic",
   external: ["react", "react-dom"],
-  // react/jsx-runtime is CommonJS, so its named exports cannot be ESM-imported when
-  // site-runtime import()s this bundle. Redirect it to a small ESM shim (which also
-  // catches theme-sdk's precompiled JSX); react itself stays external and shared.
-  alias: { "react/jsx-runtime": path.resolve(root, "../../scripts/react-jsx-runtime.mjs") },
   logLevel: "warning",
 });
+
+// Rewrite react/jsx-runtime to a default import — CJS-safe at run time and
+// scanner-safe (no createRequire/node:module). See the helper.
+toDefaultJsxRuntimeImport(path.join(root, "dist/index.mjs"));
 
 fs.copyFileSync(path.join(root, "src/theme.css"), path.join(root, "dist/theme.css"));
 
