@@ -311,7 +311,7 @@ export function Storefront({ config, locale }: { config: CommercePublicConfig; l
   async function goToCheckout() {
     setError(null);
     try {
-      const response = await fetch("/api/commerce/quote", {
+      const response = await fetch("/commerce/quote", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -347,7 +347,7 @@ export function Storefront({ config, locale }: { config: CommercePublicConfig; l
     setSubmitting(true);
     setError(null);
     try {
-      const response = await fetch("/api/commerce/checkout", {
+      const response = await fetch("/commerce/checkout", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({

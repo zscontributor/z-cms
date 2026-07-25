@@ -7,7 +7,8 @@ export interface CommerceRouteContext {
 }
 
 /**
- * Same-origin storefront gateway. The browser talks to `/api/commerce/*`; this
+ * Same-origin storefront gateway. The browser talks to `/commerce/*` (kept off
+ * `/api/*`, which the cluster ingress routes to cms-api, not here); this
  * forwards to cms-api's public `commerce` controller with the render token and the
  * request's hostname, exactly as the AI action gateway does. Like that one, it is
  * an explicit allow-list, never an open proxy: only the three storefront endpoints
