@@ -47,6 +47,19 @@ async function main() {
     const themeDir = path.join(root, dir.name);
     if (!fs.existsSync(path.join(themeDir, "theme.json"))) continue;
 
+    // A theme can live under themes/ for its BUILD without being a built-in that
+    // ships in the image. A PRIVATE, marketplace-distributed theme (z-soft) is
+    // exactly that: gitignored, published to the marketplace, and installed from
+    // there. Registering it here as BUILTIN with no bundle STRANDS it — the image
+    // does not carry it, so site-runtime routes it to the marketplace download
+    // path, and this stub then collides with the real install on checksum. The
+    // `.not-builtin` marker keeps such a theme out of the built-in registry; it is
+    // a build-time signal, never part of the signed payload or the manifest.
+    if (fs.existsSync(path.join(themeDir, ".not-builtin"))) {
+      console.log(`  skip ${dir.name} — .not-builtin (marketplace-distributed, installed from the registry)`);
+      continue;
+    }
+
     const packages = fs.readdirSync(themeDir).filter((file) => file.endsWith(".zcms"));
     if (packages.length === 0) {
       throw new Error(

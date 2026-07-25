@@ -92,6 +92,11 @@ const names = fs
   .readdirSync(root, { withFileTypes: true })
   .filter((entry) => entry.isDirectory())
   .filter((entry) => fs.existsSync(path.join(root, entry.name, shape.manifest)))
+  // A `.not-builtin` marker means this directory is a PRIVATE, marketplace-distributed
+  // package that merely builds here — signing it with the FIRST-PARTY key (and letting
+  // seed-themes register it BUILTIN) is exactly what stranded z-soft. It is published
+  // and signed through the marketplace instead (scripts/publish-themes.mts).
+  .filter((entry) => !fs.existsSync(path.join(root, entry.name, ".not-builtin")))
   .map((entry) => entry.name);
 
 if (names.length === 0) {
