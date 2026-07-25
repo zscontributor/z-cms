@@ -18,7 +18,8 @@
     "sites": "サイト",
     "shop": "ショップ",
     "orders": "注文",
-    "commerce": "ストアフロント"
+    "commerce": "ストアフロント",
+    "menus": "メニュー"
   },
   "sidebar": {
     "currentSite": "現在のサイト",
@@ -490,5 +491,33 @@
       "slugRequired": "スラッグが必要です。",
       "hostnameRequired": "ホスト名が必要です。"
     }
+  },
+  "menus": {
+    "title": "メニュー",
+    "description": "このサイトのナビゲーションメニュー。各ロケーション（例: primary、footer）はテーマが描画するリンクのツリーです。",
+    "empty": "メニューがありません。テーマのデモ、またはここで作成したメニューが表示されます。",
+    "location": "ロケーション",
+    "name": "名前",
+    "label": "ラベル",
+    "url": "URL",
+    "target": "開き方",
+    "targetSelf": "同じタブ",
+    "targetBlank": "新しいタブ",
+    "addItem": "項目を追加",
+    "addChild": "サブ項目を追加",
+    "remove": "削除",
+    "up": "上へ",
+    "down": "下へ",
+    "save": "メニューを保存",
+    "saving": "保存中…",
+    "saved": "メニューを保存しました。",
+    "saveError": "メニューを保存できませんでした。",
+    "readOnly": "メニューを編集する権限がありません。",
+    "urlHint": "/about のようなパス、または外部の https:// URL。",
+    "create": "メニューを追加",
+    "newLocation": "ロケーションキー",
+    "newLocationHint": "例: primary または footer",
+    "itemsEmpty": "項目がありません。追加してメニューを作成してください。",
+    "fromTheme": "テーマのデモから — 保存すると自分のメニューになります。"
   }
 }

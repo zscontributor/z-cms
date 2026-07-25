@@ -40,6 +40,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         ...(can(user, "theme:read")
           ? [{ href: "/appearance", label: t("admin.nav.appearance"), icon: "palette" as const }]
           : []),
+        // Navigation menus (primary, footer, …). Gated on menu:read; the editor
+        // inside renders read-only without menu:manage.
+        ...(can(user, "menu:read")
+          ? [{ href: "/menus", label: t("admin.nav.menus"), icon: "link" as const }]
+          : []),
         ...(can(user, "plugin:read")
           ? [{ href: "/plugins", label: t("admin.nav.plugins"), icon: "plug" as const }]
           : []),

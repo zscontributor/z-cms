@@ -18,7 +18,8 @@
     "sites": "Sites",
     "shop": "Shop",
     "orders": "Orders",
-    "commerce": "Storefront"
+    "commerce": "Storefront",
+    "menus": "Menus"
   },
   "sidebar": {
     "currentSite": "Current site",
@@ -499,5 +500,33 @@
       "slugRequired": "A slug is required.",
       "hostnameRequired": "A hostname is required."
     }
+  },
+  "menus": {
+    "title": "Menus",
+    "description": "Navigation menus for this site. Each location (e.g. primary, footer) is a tree of links your theme renders.",
+    "empty": "No menus yet. Your theme's demo, or a menu you create here, will appear.",
+    "location": "Location",
+    "name": "Name",
+    "label": "Label",
+    "url": "URL",
+    "target": "Opens in",
+    "targetSelf": "Same tab",
+    "targetBlank": "New tab",
+    "addItem": "Add item",
+    "addChild": "Add sub-item",
+    "remove": "Remove",
+    "up": "Move up",
+    "down": "Move down",
+    "save": "Save menu",
+    "saving": "Saving…",
+    "saved": "Menu saved.",
+    "saveError": "Could not save the menu.",
+    "readOnly": "You do not have permission to edit menus.",
+    "urlHint": "A path like /about, or an external https:// URL.",
+    "create": "Add menu",
+    "newLocation": "Location key",
+    "newLocationHint": "e.g. primary or footer",
+    "itemsEmpty": "No items yet. Add one to build the menu.",
+    "fromTheme": "From the theme's demo — saving makes it your own."
   }
 }

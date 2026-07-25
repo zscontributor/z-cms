@@ -18,7 +18,8 @@
     "sites": "Site",
     "shop": "Cửa hàng",
     "orders": "Đơn hàng",
-    "commerce": "Cửa hàng"
+    "commerce": "Cửa hàng",
+    "menus": "Menu"
   },
   "sidebar": {
     "currentSite": "Site hiện tại",
@@ -499,5 +500,33 @@
       "slugRequired": "Cần nhập slug.",
       "hostnameRequired": "Cần nhập tên miền."
     }
+  },
+  "menus": {
+    "title": "Menu",
+    "description": "Các menu điều hướng của site. Mỗi vị trí (ví dụ primary, footer) là một cây liên kết do theme hiển thị.",
+    "empty": "Chưa có menu nào. Menu demo của theme, hoặc menu bạn tạo ở đây, sẽ hiện tại đây.",
+    "location": "Vị trí",
+    "name": "Tên",
+    "label": "Nhãn",
+    "url": "Đường dẫn",
+    "target": "Mở ở",
+    "targetSelf": "Cùng tab",
+    "targetBlank": "Tab mới",
+    "addItem": "Thêm mục",
+    "addChild": "Thêm mục con",
+    "remove": "Xóa",
+    "up": "Lên",
+    "down": "Xuống",
+    "save": "Lưu menu",
+    "saving": "Đang lưu…",
+    "saved": "Đã lưu menu.",
+    "saveError": "Không thể lưu menu.",
+    "readOnly": "Bạn không có quyền chỉnh sửa menu.",
+    "urlHint": "Đường dẫn như /about, hoặc URL ngoài https://.",
+    "create": "Thêm menu",
+    "newLocation": "Khóa vị trí",
+    "newLocationHint": "ví dụ primary hoặc footer",
+    "itemsEmpty": "Chưa có mục nào. Thêm mục để tạo menu.",
+    "fromTheme": "Từ menu demo của theme — lưu lại để biến thành menu của bạn."
   }
 }
