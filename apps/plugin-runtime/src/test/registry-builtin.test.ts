@@ -185,6 +185,26 @@ describe("loadBuiltinPlugin", () => {
     );
   });
 
+  it("loads a genuine built-in even when a foreign-signed package for another key shares the dir", async () => {
+    // Defence in depth for the same outage, one layer below the `.not-builtin` marker:
+    // even if a package signed with a key we did not pin lands in PLUGIN_DIR with NO
+    // marker at all, it must only ever fail loading ITS OWN key — never take down the
+    // scan for an unrelated genuine built-in. Candidacy (manifest id) is checked before
+    // the signature, so a package for a different key is skipped without being verified.
+    await publishAs("genuine", "vn.zsoft.plugin.a", "module.exports = 'A';");
+    await publishAs("rogue", "vn.zsoft.plugin.rogue", "module.exports = 'X';", {
+      key: OTHER.privateKey,
+    });
+
+    expect((await loadBuiltinPlugin("vn.zsoft.plugin.a")).code).toBe("module.exports = 'A';");
+
+    // The rogue package still cannot run: asked for by its own key it is a candidate,
+    // gets verified, and fails closed.
+    await expect(loadBuiltinPlugin("vn.zsoft.plugin.rogue")).rejects.toThrow(
+      /Invalid first-party signature/,
+    );
+  });
+
   it("says so when a plugin has no signed package at all", async () => {
     fs.mkdirSync(path.join(dir, "unsigned", "dist"), { recursive: true });
     fs.writeFileSync(

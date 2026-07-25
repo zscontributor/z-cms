@@ -51,6 +51,12 @@ jobs:
         run: pnpm verify:lockfile
       - run: pnpm verify:test-convention
       - run: pnpm build
+      # Against the COMMITTED .zcms and the COMMITTED first-party public key — the
+      # exact bytes and key that ship in the image (the Dockerfile copies these
+      # artefacts, it does not re-sign). This is the tripwire for the content-pack
+      # outage: a built-in signed with the wrong key, or a marketplace package left
+      # in a built-in dir without a `.not-builtin` marker, fails the build here.
+      - run: pnpm verify:builtins
       - run: pnpm typecheck
       # Builds the OpenAPI document from the real route table (no server, no
       # database) and fails on an unresolved $ref — a broken document is a

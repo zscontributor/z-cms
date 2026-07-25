@@ -346,17 +346,27 @@ export async function ensureBuiltinBundle(
   for (const file of files) {
     const { envelope, payload } = await openPackage(fs.readFileSync(file));
 
-    // Before the manifest is read out of it, and long before anything is imported.
-    // Note the order: an attacker's package for the WRONG key still gets verified
-    // rather than skipped on the strength of its own unverified manifest.
-    verifyFirstParty(envelope, payload, cfg.firstPartyPublicKey);
-
+    // Candidacy first: a package that does not even claim to be the key (and, when
+    // one is requested, the version) we are loading is skipped without being
+    // verified. Reading id/version off an UNVERIFIED envelope is safe here because it
+    // decides candidacy ONLY, never trust — a candidate is fully verified below
+    // before a byte of it is imported, and a non-candidate is never executed no
+    // matter what its manifest claims. This ordering is what stops one unrelated
+    // package that is tampered or signed with the wrong key — a marketplace package
+    // that ends up sharing PLUGIN_DIR, say — from throwing and blocking every genuine
+    // built-in in the same scan.
     if (
       envelope.manifest.id !== key ||
       (requestedVersion !== undefined && envelope.manifest.version !== requestedVersion)
     ) {
       continue;
     }
+
+    // This IS the package we intend to run. Verify it now — before the manifest
+    // inside it is trusted and long before anything is imported. A tampered or
+    // foreign-signed package for the REQUESTED key is an error to surface loudly,
+    // never one to skip: failing here is failing closed.
+    verifyFirstParty(envelope, payload, cfg.firstPartyPublicKey);
 
     const version = envelope.manifest.version;
     const dir = bundleDir(
