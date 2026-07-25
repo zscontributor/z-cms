@@ -10,7 +10,7 @@ import {
   Patch,
   Post,
 } from "@nestjs/common";
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { ApiOperation, ApiParam, ApiTags } from "@nestjs/swagger";
 import { db, getSystemDb } from "@zcmsorg/database";
 import { BlockDocumentSchema } from "@zcmsorg/schemas";
@@ -44,6 +44,19 @@ import { CacheService } from "../redis/cache.service";
 const MAX_DEMO_CONTENTS = 200;
 const MAX_DEMO_CONTENT_TYPES = 20;
 const MAX_DEMO_MENUS = 20;
+const MAX_DEMO_ORDERS = 50;
+
+function demoMoney(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+/** A demo product's price, or null when the row is not a priced product. */
+function readDemoPrice(data: unknown): number | null {
+  if (!data || typeof data !== "object") return null;
+  const raw = (data as { price?: unknown }).price;
+  const parsed = typeof raw === "string" ? Number(raw) : raw;
+  return typeof parsed === "number" && Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
 
 // Exported so the OpenAPI schemas can be type-checked against them: a field
 // added here without one added there is a build error, not a stale document.
@@ -145,6 +158,32 @@ interface ThemeDemoData {
     name: string;
     items: ThemeDemoMenuItem[];
   }[];
+  commerce?: {
+    enabled?: boolean;
+    currency?: string;
+    codEnabled?: boolean;
+    shippingFlatFee?: number;
+    freeShippingThreshold?: number | null;
+    storeName?: string;
+    storeEmail?: string;
+  };
+  orders?: {
+    customer: { name: string; email: string; phone: string; address: string; city: string };
+    items: { slug: string; locale?: string; quantity: number }[];
+    status?: string;
+    note?: string;
+    placedAt?: string;
+  }[];
+}
+
+/** A demo product, captured as it is created, so a demo order can be priced from it. */
+interface SeededProduct {
+  id: string;
+  slug: string;
+  locale: string;
+  title: string;
+  price: number;
+  image: string | null;
 }
 
 @ApiTags("Themes")
@@ -405,7 +444,7 @@ export class ThemesController {
   async seedActiveDemo(
     @Actor() actor: RequestActor,
     @SiteId() siteId: string,
-  ): Promise<{ ok: true; themeKey: string; content: number; menus: number }> {
+  ): Promise<{ ok: true; themeKey: string; content: number; menus: number; orders: number }> {
     const active = await db().siteTheme.findFirst({
       where: { siteId, status: "ACTIVE" },
       include: { theme: true, version: true },
@@ -439,6 +478,12 @@ export class ThemesController {
     if (menus.length > MAX_DEMO_MENUS) {
       throw new BadRequestException(
         `Theme "${themeKey}" demo declares ${menus.length} menus; the limit is ${MAX_DEMO_MENUS}.`,
+      );
+    }
+    const demoOrders = demo.orders ?? [];
+    if (demoOrders.length > MAX_DEMO_ORDERS) {
+      throw new BadRequestException(
+        `Theme "${themeKey}" demo declares ${demoOrders.length} orders; the limit is ${MAX_DEMO_ORDERS}.`,
       );
     }
 
@@ -497,6 +542,7 @@ export class ThemesController {
     }
 
     const groups = new Map<string, string>();
+    const seededProducts: SeededProduct[] = [];
     for (const [index, item] of contents.entries()) {
       const contentTypeId = typeByKey.get(item.contentType);
       if (!contentTypeId) {
@@ -509,7 +555,7 @@ export class ThemesController {
       const translationGroupId = groups.get(groupKey) ?? randomUUID();
       groups.set(groupKey, translationGroupId);
 
-      await db().content.create({
+      const created = await db().content.create({
         data: {
           tenantId: actor.tenantId,
           siteId,
@@ -529,6 +575,21 @@ export class ThemesController {
           demoThemeKey: themeKey,
         },
       });
+
+      // Remember priced products so a demo order can be built from real rows and
+      // priced authoritatively, the same as a real checkout would be.
+      const price = readDemoPrice(item.data);
+      if (price !== null) {
+        const image = (item.data as { image?: unknown } | undefined)?.image;
+        seededProducts.push({
+          id: created.id,
+          slug: item.slug,
+          locale: item.locale,
+          title: item.title,
+          price,
+          image: typeof image === "string" && image ? image : null,
+        });
+      }
     }
 
     for (const menu of menus) {
@@ -556,13 +617,165 @@ export class ThemesController {
       });
     }
 
+    // The storefront: seed its configuration, then a few sample orders priced from
+    // the demo products just created. Both are scoped by demoThemeKey, so re-seeding
+    // replaces only this theme's demo commerce and never a real customer's order.
+    const storeCurrency = await this.seedDemoCommerce(actor, siteId, demo.commerce);
+    const ordersCreated = await this.seedDemoOrders(
+      actor,
+      siteId,
+      themeKey,
+      demoOrders,
+      seededProducts,
+      demo.commerce,
+      storeCurrency,
+    );
+
     await this.cache.invalidateSite(siteId);
     await this.audit.record(actor, "theme.demo.seeded", "theme", themeKey, {
       content: contents.length,
       menus: menus.length,
+      orders: ordersCreated,
     });
 
-    return { ok: true, themeKey, content: contents.length, menus: menus.length };
+    return {
+      ok: true,
+      themeKey,
+      content: contents.length,
+      menus: menus.length,
+      orders: ordersCreated,
+    };
+  }
+
+  /** Upserts the demo storefront settings. Returns the resulting currency. */
+  private async seedDemoCommerce(
+    actor: RequestActor,
+    siteId: string,
+    commerce: ThemeDemoData["commerce"],
+  ): Promise<string> {
+    const currency = (commerce?.currency ?? "USD").trim().toUpperCase().slice(0, 3) || "USD";
+    if (!commerce) return currency;
+
+    const data = {
+      enabled: commerce.enabled ?? true,
+      currency,
+      codEnabled: commerce.codEnabled ?? true,
+      shippingFlatFee: Number.isFinite(commerce.shippingFlatFee) ? Number(commerce.shippingFlatFee) : 0,
+      freeShippingThreshold:
+        typeof commerce.freeShippingThreshold === "number" ? commerce.freeShippingThreshold : null,
+      storeName: commerce.storeName?.slice(0, 120) || null,
+      storeEmail: commerce.storeEmail?.slice(0, 320) || null,
+    };
+
+    const existing = await db().commerceSettings.findFirst({ where: { siteId } });
+    if (existing) {
+      await db().commerceSettings.update({ where: { id: existing.id }, data });
+    } else {
+      await db().commerceSettings.create({ data: { tenantId: actor.tenantId, siteId, ...data } });
+    }
+    return currency;
+  }
+
+  /**
+   * Sample orders, priced from the seeded products. Anything a demo order references
+   * that was not seeded (a typo, a product in a locale the demo omitted) is skipped
+   * rather than fabricated — a demo must not invent a price. Existing demo orders for
+   * this theme are removed first, so re-seeding does not pile them up.
+   */
+  private async seedDemoOrders(
+    actor: RequestActor,
+    siteId: string,
+    themeKey: string,
+    orders: NonNullable<ThemeDemoData["orders"]>,
+    products: SeededProduct[],
+    commerce: ThemeDemoData["commerce"],
+    currency: string,
+  ): Promise<number> {
+    await db().order.deleteMany({ where: { siteId, demoThemeKey: themeKey } });
+    if (orders.length === 0) return 0;
+
+    const bySlugLocale = new Map(products.map((p) => [`${p.locale}:${p.slug}`, p]));
+    const flatFee = Number.isFinite(commerce?.shippingFlatFee) ? Number(commerce?.shippingFlatFee) : 0;
+    const threshold =
+      typeof commerce?.freeShippingThreshold === "number" ? commerce.freeShippingThreshold : null;
+
+    let sequence = await db().order.count({ where: { siteId } });
+    let created = 0;
+
+    for (const order of orders) {
+      const lines = (order.items ?? [])
+        .map((line) => {
+          const locale = line.locale ?? products[0]?.locale ?? "en";
+          const product =
+            bySlugLocale.get(`${locale}:${line.slug}`) ??
+            products.find((p) => p.slug === line.slug);
+          if (!product) return null;
+          const quantity = Math.min(99, Math.max(1, Math.round(line.quantity) || 1));
+          return {
+            product,
+            quantity,
+            unitPrice: demoMoney(product.price),
+            lineTotal: demoMoney(product.price * quantity),
+          };
+        })
+        .filter((line): line is NonNullable<typeof line> => line !== null);
+
+      if (lines.length === 0) continue;
+
+      const subtotal = demoMoney(lines.reduce((sum, line) => sum + line.lineTotal, 0));
+      const freeShip = threshold !== null && subtotal >= threshold;
+      const shippingFee = freeShip ? 0 : demoMoney(flatFee);
+      const total = demoMoney(subtotal + shippingFee);
+
+      const status = (order.status ?? "PENDING").toUpperCase();
+      const fulfilled = status === "FULFILLED";
+      const placedAt = order.placedAt ? new Date(order.placedAt) : new Date();
+
+      sequence += 1;
+      await db().order.create({
+        data: {
+          tenantId: actor.tenantId,
+          siteId,
+          orderNumber: String(sequence).padStart(4, "0"),
+          accessToken: randomBytes(24).toString("base64url"),
+          status: (["PENDING", "CONFIRMED", "FULFILLED", "CANCELLED", "REFUNDED"].includes(status)
+            ? status
+            : "PENDING") as never,
+          paymentMethod: "COD" as never,
+          paymentStatus: (fulfilled ? "PAID" : status === "REFUNDED" ? "REFUNDED" : "UNPAID") as never,
+          customerName: order.customer.name.slice(0, 120),
+          customerEmail: order.customer.email.slice(0, 320),
+          customerPhone: order.customer.phone.slice(0, 40),
+          shippingAddress: order.customer.address.slice(0, 500),
+          shippingCity: order.customer.city.slice(0, 120),
+          note: order.note?.slice(0, 1000) ?? null,
+          locale: lines[0]!.product.locale,
+          currency,
+          subtotal,
+          shippingFee,
+          discountTotal: 0,
+          total,
+          placedAt,
+          paidAt: fulfilled ? placedAt : null,
+          demoThemeKey: themeKey,
+          items: {
+            create: lines.map((line) => ({
+              tenantId: actor.tenantId,
+              siteId,
+              productId: line.product.id,
+              productSlug: line.product.slug,
+              title: line.product.title,
+              image: line.product.image,
+              unitPrice: line.unitPrice,
+              quantity: line.quantity,
+              lineTotal: line.lineTotal,
+            })),
+          },
+        },
+      });
+      created += 1;
+    }
+    return created;
   }
 
   private async createDemoMenuItems(

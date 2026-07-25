@@ -9,6 +9,7 @@
   },
   "engine": ">=0.1.0",
   "entry": "dist/index.js",
+  "scope": "site",
   "permissions": [
     "network:fetch"
   ],

@@ -49,13 +49,26 @@ function makeDb(demo: unknown) {
     },
     content: {
       deleteMany: vi.fn().mockResolvedValue({}),
-      create: vi.fn().mockResolvedValue({ id: "c1" }),
+      create: (() => {
+        let n = 0;
+        return vi.fn().mockImplementation(() => Promise.resolve({ id: `c${++n}` }));
+      })(),
     },
     menu: {
       deleteMany: vi.fn().mockResolvedValue({}),
       create: vi.fn().mockResolvedValue({ id: "m1" }),
     },
     menuItem: { create: vi.fn().mockResolvedValue({ id: "mi1" }) },
+    commerceSettings: {
+      findFirst: vi.fn().mockResolvedValue(null),
+      create: vi.fn().mockResolvedValue({ id: "cs1" }),
+      update: vi.fn().mockResolvedValue({ id: "cs1" }),
+    },
+    order: {
+      deleteMany: vi.fn().mockResolvedValue({}),
+      count: vi.fn().mockResolvedValue(0),
+      create: vi.fn().mockResolvedValue({ id: "o1" }),
+    },
   };
 }
 
@@ -268,6 +281,84 @@ describe("ThemesController.seedActiveDemo", () => {
       );
       expect(holder.db.content.deleteMany).not.toHaveBeenCalled();
       expect(holder.db.menu.deleteMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("commerce demo", () => {
+    const productTypes = [
+      { key: "page", name: "Page", pluralName: "Pages" },
+      { key: "product", name: "Product", pluralName: "Products" },
+    ];
+    const products = [
+      demoContent({ contentType: "product", slug: "serum", title: "Serum", data: { price: 48 } }),
+      demoContent({ contentType: "product", slug: "balm", title: "Balm", data: { price: 24 } }),
+    ];
+
+    it("seeds storefront settings and prices sample orders from the seeded products", async () => {
+      holder.db = makeDb({
+        contentTypes: productTypes,
+        contents: products,
+        menus: [],
+        commerce: { currency: "USD", shippingFlatFee: 5, freeShippingThreshold: 50 },
+        orders: [
+          {
+            customer: { name: "Ann", email: "a@x.com", phone: "1", address: "1 St", city: "Hanoi" },
+            items: [{ slug: "serum", quantity: 1 }],
+            status: "FULFILLED",
+          },
+          {
+            customer: { name: "Bo", email: "b@x.com", phone: "2", address: "2 St", city: "Hue" },
+            items: [{ slug: "serum", quantity: 1 }, { slug: "balm", quantity: 1 }],
+            status: "PENDING",
+          },
+        ],
+      });
+
+      const res = await makeController().seedActiveDemo(actor, "s1");
+      expect(res.orders).toBe(2);
+
+      // The settings were written…
+      expect(holder.db.commerceSettings.create).toHaveBeenCalledTimes(1);
+
+      // …one order under the free-shipping threshold pays the flat fee (48 + 5)…
+      const first = holder.db.order.create.mock.calls[0][0].data;
+      expect(first.subtotal).toBe(48);
+      expect(first.shippingFee).toBe(5);
+      expect(first.total).toBe(53);
+      expect(first.status).toBe("FULFILLED");
+      expect(first.paymentStatus).toBe("PAID");
+      expect(first.demoThemeKey).toBe("acme/theme");
+
+      // …and one over the threshold ships free (48 + 24 = 72 ≥ 50).
+      const second = holder.db.order.create.mock.calls[1][0].data;
+      expect(second.subtotal).toBe(72);
+      expect(second.shippingFee).toBe(0);
+      expect(second.total).toBe(72);
+    });
+
+    it("removes previously-seeded demo orders before writing new ones", async () => {
+      holder.db = makeDb({ contentTypes: productTypes, contents: products, menus: [] });
+      await makeController().seedActiveDemo(actor, "s1");
+      expect(holder.db.order.deleteMany).toHaveBeenCalledWith({
+        where: { siteId: "s1", demoThemeKey: "acme/theme" },
+      });
+    });
+
+    it("skips a demo order line whose product was not seeded rather than inventing a price", async () => {
+      holder.db = makeDb({
+        contentTypes: productTypes,
+        contents: products,
+        menus: [],
+        orders: [
+          {
+            customer: { name: "Ann", email: "a@x.com", phone: "1", address: "1 St", city: "Hanoi" },
+            items: [{ slug: "ghost", quantity: 1 }],
+          },
+        ],
+      });
+      const res = await makeController().seedActiveDemo(actor, "s1");
+      expect(res.orders).toBe(0);
+      expect(holder.db.order.create).not.toHaveBeenCalled();
     });
   });
 });

@@ -52,6 +52,14 @@ export interface PackageManifest {
   engine: string;
   /** Entry file inside the package, relative to its root. */
   entry: string;
+  /**
+   * A PLUGIN's activation reach (ignored for themes). "site" (the default) installs
+   * and activates per site; "org" installs once for a tenant and runs on all of its
+   * sites — WordPress's "network-activated" tier. Reach, not authority: an "org"
+   * plugin still asks for consent at the tier it installs at, and never becomes core.
+   * Read from the SIGNED manifest at seed/install and stored on the catalogue row.
+   */
+  scope?: "site" | "org";
   [key: string]: unknown;
 }
 

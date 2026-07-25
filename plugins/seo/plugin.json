@@ -6,6 +6,7 @@
   "author": { "name": "Z-SOFT Co., Ltd", "url": "https://z-soft.com.vn" },
   "engine": ">=0.1.0",
   "entry": "dist/index.js",
+  "scope": "site",
   "permissions": ["content:read"],
   "capabilities": ["seo.metadata"],
   "settingsSchema": {

@@ -903,6 +903,84 @@
           }
         ]
       }
+    ],
+    "commerce": {
+      "enabled": true,
+      "currency": "USD",
+      "codEnabled": true,
+      "shippingFlatFee": 5,
+      "freeShippingThreshold": 50,
+      "storeName": "Lumière",
+      "storeEmail": "orders@lumiere.example"
+    },
+    "orders": [
+      {
+        "customer": {
+          "name": "Mai Lan Nguyen",
+          "email": "mailan@example.com",
+          "phone": "+84 90 123 4567",
+          "address": "12 Nguyễn Huệ, Quận 1",
+          "city": "Hồ Chí Minh"
+        },
+        "items": [{ "slug": "lumiere-glow-serum", "quantity": 1 }],
+        "status": "FULFILLED",
+        "placedAt": "2026-07-18T09:20:00.000Z"
+      },
+      {
+        "customer": {
+          "name": "James Carter",
+          "email": "james.carter@example.com",
+          "phone": "+1 415 555 0132",
+          "address": "480 Valencia Street",
+          "city": "San Francisco"
+        },
+        "items": [{ "slug": "lumiere-milk-cleanser", "quantity": 2 }],
+        "status": "CONFIRMED",
+        "placedAt": "2026-07-20T14:05:00.000Z"
+      },
+      {
+        "customer": {
+          "name": "Yuki Tanaka",
+          "email": "yuki.tanaka@example.com",
+          "phone": "+81 90 1234 5678",
+          "address": "2-11-3 Meguro",
+          "city": "Tokyo"
+        },
+        "items": [
+          { "slug": "lumiere-glow-serum", "quantity": 1 },
+          { "slug": "lumiere-velvet-lip-balm", "quantity": 1 }
+        ],
+        "status": "PENDING",
+        "note": "Please leave at the front desk.",
+        "placedAt": "2026-07-23T02:40:00.000Z"
+      },
+      {
+        "customer": {
+          "name": "Anna Novak",
+          "email": "anna.novak@example.com",
+          "phone": "+420 601 234 567",
+          "address": "Karlova 12",
+          "city": "Prague"
+        },
+        "items": [{ "slug": "lumiere-velvet-lip-balm", "quantity": 1 }],
+        "status": "CANCELLED",
+        "placedAt": "2026-07-22T18:15:00.000Z"
+      },
+      {
+        "customer": {
+          "name": "Trần Bảo",
+          "email": "tranbao@example.com",
+          "phone": "+84 91 765 4321",
+          "address": "88 Bà Triệu, Hoàn Kiếm",
+          "city": "Hà Nội"
+        },
+        "items": [
+          { "slug": "lumiere-glow-serum", "quantity": 2 },
+          { "slug": "lumiere-milk-cleanser", "quantity": 1 }
+        ],
+        "status": "PENDING",
+        "placedAt": "2026-07-24T11:50:00.000Z"
+      }
     ]
   }
 }

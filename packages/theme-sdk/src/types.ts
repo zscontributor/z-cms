@@ -75,11 +75,43 @@ export interface ThemeDemoMenu {
   }[];
 }
 
+/** Storefront configuration a theme's demo seeds, so the shop works out of the box. */
+export interface ThemeDemoCommerce {
+  enabled?: boolean;
+  currency?: string;
+  codEnabled?: boolean;
+  shippingFlatFee?: number;
+  freeShippingThreshold?: number | null;
+  storeName?: string;
+  storeEmail?: string;
+}
+
+/** One sample order a theme's demo creates, priced from the demo products it seeds. */
+export interface ThemeDemoOrder {
+  customer: {
+    name: string;
+    email: string;
+    phone: string;
+    address: string;
+    city: string;
+  };
+  /** Product lines, referenced by the demo product's slug (and optionally locale). */
+  items: { slug: string; locale?: string; quantity: number }[];
+  status?: "PENDING" | "CONFIRMED" | "FULFILLED" | "CANCELLED" | "REFUNDED";
+  note?: string;
+  /** ISO date; defaults to now. Stagger these to make the list look lived-in. */
+  placedAt?: string;
+}
+
 export interface ThemeDemoData {
   settings?: Record<string, unknown>;
   contentTypes?: ThemeDemoContentType[];
   contents?: ThemeDemoContent[];
   menus?: ThemeDemoMenu[];
+  /** Seeds this site's storefront configuration (currency, shipping, COD). */
+  commerce?: ThemeDemoCommerce;
+  /** Sample orders, so the admin Orders screen is not empty in a demo. */
+  orders?: ThemeDemoOrder[];
 }
 
 // ---------------------------------------------------------------------------

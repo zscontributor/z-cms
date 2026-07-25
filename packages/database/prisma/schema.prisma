@@ -266,6 +266,10 @@ model Order {
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 
+  // Non-null = a sample order owned by one theme's demo data, replaced on re-seed.
+  // Null = a real customer order. Mirrors Content.demoThemeKey.
+  demoThemeKey String? @map("demo_theme_key")
+
   tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   site   Site        @relation(fields: [siteId], references: [id], onDelete: Cascade)
   items  OrderItem[]
@@ -273,6 +277,7 @@ model Order {
   @@unique([siteId, orderNumber])
   @@index([tenantId])
   @@index([siteId, status, placedAt])
+  @@index([siteId, demoThemeKey])
   @@map("orders")
 }
 
