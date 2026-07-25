@@ -43,6 +43,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         ...(can(user, "plugin:read")
           ? [{ href: "/plugins", label: t("admin.nav.plugins"), icon: "plug" as const }]
           : []),
+        // Organization-wide plugins are a tenant-admin concern (they touch every
+        // site), so this is gated on plugin:install rather than plugin:read — an
+        // editor who can see a site's plugins has no business here.
+        ...(can(user, "plugin:install")
+          ? [{ href: "/org-plugins", label: t("admin.nav.orgPlugins"), icon: "plug" as const }]
+          : []),
         // The catalogue a site owner installs FROM. Gated on theme:read — the
         // lowest read scope any package touches — because browsing is harmless;
         // the install buttons inside are each gated on their own scope.
@@ -86,6 +92,18 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             ]
           : []),
       ],
+    },
+    {
+      // The shop. `order:read` is held by EDITOR and above, so whoever runs the
+      // shop day to day sees it; the storefront settings page renders read-only
+      // without `commerce:configure`, the same as every other settings screen.
+      label: t("admin.nav.shop"),
+      items: can(user, "order:read")
+        ? [
+            { href: "/orders", label: t("admin.nav.orders"), icon: "storefront" as const },
+            { href: "/settings/commerce", label: t("admin.nav.commerce"), icon: "gear" as const },
+          ]
+        : [],
     },
   ].filter((group) => group.items.length > 0);
 

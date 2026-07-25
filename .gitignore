@@ -63,6 +63,6 @@ z-cms-portal.html
 # Signed .zcms artefacts produced by scripts/publish-themes.mts — build output, not source.
 .packages/
 z-soft-page-2027.html
-
+zsoft-wordpress-theme-mockup
 # Private theme — z-soft company site only; shipped via marketplace, never public.
 themes/z-soft/

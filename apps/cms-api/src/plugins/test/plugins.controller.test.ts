@@ -46,10 +46,11 @@ const actor: RequestActor = {
   siteId: "s1",
 };
 
-function pluginWith(permissions: string[]) {
+function pluginWith(permissions: string[], scope: "SITE" | "ORG" = "SITE") {
   return {
     id: "plugin-1",
     key: "zsoft-seo",
+    scope,
     versions: [{ id: "ver-1", permissions, manifest: {} }],
   };
 }
@@ -92,6 +93,21 @@ describe("PluginsController", () => {
         makeController().install(actor, "s1", "zsoft-seo", {
           grantedPermissions: ["content:read", "content:update"],
         }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+
+      expect(holder.db.sitePlugin.create).not.toHaveBeenCalled();
+    });
+
+    it("refuses an ORG-scoped plugin at the per-site tier", async () => {
+      // A plugin belongs to one tier. An org-wide plugin is installed on the
+      // organization screen; installing it per-site too would give it two install
+      // rows and two consent states for the same plugin.
+      holder.systemDb.plugin.findUnique.mockResolvedValue(
+        pluginWith(["content:read"], "ORG"),
+      );
+
+      await expect(
+        makeController().install(actor, "s1", "zsoft-seo", { grantedPermissions: [] }),
       ).rejects.toBeInstanceOf(BadRequestException);
 
       expect(holder.db.sitePlugin.create).not.toHaveBeenCalled();

@@ -67,6 +67,13 @@ const SENSITIVE: Record<Permission, boolean> = {
   // decision only the admin can make, and they cannot make it unprompted.
   "network:fetch": true,
   "audit:read": true,
+  // Orders carry a customer's name, contact and delivery address — personal data
+  // that leaves the tenant if a plugin can read it.
+  "order:read": true,
+  // Moving an order along includes refunding it, which moves money.
+  "order:manage": true,
+  // Configuring the storefront is site configuration, next to settings:update.
+  "commerce:configure": true,
   // Clearing a quarantined package is deciding that code the scanner distrusted
   // may run. There is no more sensitive permission in the system.
   "package:review": true,

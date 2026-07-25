@@ -426,15 +426,24 @@ export class SideloadService {
         throw new ForbiddenException(t()("errors.sideload.keyTaken", { key }));
       }
 
+      // Reach from the operator-signed manifest, like permissions. Not authority:
+      // `isCore` stays false for a sideload.
+      const scope = String(manifest.scope).toLowerCase() === "org" ? "ORG" : "SITE";
+
       const plugin = await db.plugin.upsert({
         where: { key },
-        update: { name: String(manifest.name), description: (manifest.description as string) ?? null },
+        update: {
+          name: String(manifest.name),
+          description: (manifest.description as string) ?? null,
+          scope: scope as never,
+        },
         create: {
           key,
           name: String(manifest.name),
           description: (manifest.description as string) ?? null,
           publisher: author.name ?? "unknown",
           isCore: false,
+          scope: scope as never,
           publisherId: null,
         },
       });
@@ -528,7 +537,10 @@ export class SideloadService {
       const remaining = await db.themeVersion.count({ where: { themeId: row.parentId } });
       if (remaining === 0) await db.theme.delete({ where: { id: row.parentId } });
     } else {
+      // Both tiers reference the version with an onDelete: Restrict FK, so every
+      // install row — per-site and org-wide — goes before the version can.
       await db.sitePlugin.deleteMany({ where: { versionId: row.id } });
+      await db.orgPlugin.deleteMany({ where: { versionId: row.id } });
       await db.pluginVersion.delete({ where: { id: row.id } });
       const remaining = await db.pluginVersion.count({ where: { pluginId: row.parentId } });
       if (remaining === 0) await db.plugin.delete({ where: { id: row.parentId } });

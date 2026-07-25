@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { cache } from "react";
 import type {
   AuthResult,
+  CommerceSettingsDto,
   ContentDto,
   TranslationDto,
   ContentTypeDto,
@@ -11,6 +12,8 @@ import type {
   MediaDto,
   MediaFolderDto,
   MenuDto,
+  OrderDto,
+  OrderSummaryDto,
   Paginated,
   Permission,
   SessionUser,
@@ -496,6 +499,12 @@ export interface CatalogPluginDto {
   description: string | null;
   publisher: string;
   isCore: boolean;
+  /** Activation reach: per-site or tenant-wide. */
+  scope: "SITE" | "ORG";
+  /** Derived admin-facing tier: PLATFORM (core), ORG (tenant-wide), or SITE. */
+  tier: "PLATFORM" | "ORG" | "SITE";
+  /** True when this plugin is active org-wide — it runs here but is managed on the org screen. */
+  orgActive: boolean;
   latestVersion: string | null;
   /** Origin of the latest version — SIDELOAD means the operator installed it from a file. */
   origin?: PackageOrigin | null;
@@ -514,6 +523,11 @@ export interface CatalogPluginDto {
 
 export const listPlugins = cache(
   async (): Promise<CatalogPluginDto[]> => apiFetch<CatalogPluginDto[]>("/plugins"),
+);
+
+/** The organization-wide plugin catalog (ORG-scoped plugins only). */
+export const listOrgPlugins = cache(
+  async (): Promise<CatalogPluginDto[]> => apiFetch<CatalogPluginDto[]>("/org/plugins"),
 );
 
 // ---------------------------------------------------------------------------
@@ -628,6 +642,36 @@ export interface FailedJobPageDto {
 export async function listFailedJobs(limit = 50): Promise<FailedJobPageDto> {
   return apiFetch<FailedJobPageDto>("/jobs/failed", { query: { limit } });
 }
+
+/** Empties the dead-letter queue, returning how many jobs were removed. */
+export async function clearFailedJobs(): Promise<{ cleared: number }> {
+  return apiFetch<{ cleared: number }>("/jobs/failed", { method: "DELETE" });
+}
+
+// ---------------------------------------------------------------------------
+// Commerce
+// ---------------------------------------------------------------------------
+
+export interface OrderListQuery {
+  status?: string;
+  q?: string;
+  page?: number;
+  perPage?: number;
+}
+
+/** The shop's orders, newest first. Site-scoped, so `X-Site-Id` travels with it. */
+export async function listOrders(query: OrderListQuery): Promise<Paginated<OrderSummaryDto>> {
+  return apiFetch<Paginated<OrderSummaryDto>>("/orders", { query: { ...query } });
+}
+
+export async function getOrder(id: string): Promise<OrderDto> {
+  return apiFetch<OrderDto>(`/orders/${id}`);
+}
+
+/** The storefront configuration: currency, shipping, payment methods. */
+export const getCommerceSettings = cache(
+  async (): Promise<CommerceSettingsDto> => apiFetch<CommerceSettingsDto>("/settings/commerce"),
+);
 
 // ---------------------------------------------------------------------------
 // Mail

@@ -10,6 +10,9 @@ CREATE TYPE "Role" AS ENUM ('OWNER', 'ADMIN', 'EDITOR', 'AUTHOR', 'VIEWER');
 -- CreateEnum
 CREATE TYPE "InstallStatus" AS ENUM ('INSTALLING', 'INACTIVE', 'ACTIVE', 'FAILED', 'DISABLED', 'QUARANTINED');
 
+-- CreateEnum
+CREATE TYPE "PluginScope" AS ENUM ('SITE', 'ORG');
+
 -- CreateTable
 CREATE TABLE "tenants" (
     "id" UUID NOT NULL,
@@ -270,6 +273,7 @@ CREATE TABLE "plugins" (
     "description" TEXT,
     "publisher" TEXT NOT NULL,
     "is_core" BOOLEAN NOT NULL DEFAULT false,
+    "scope" "PluginScope" NOT NULL DEFAULT 'SITE',
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "plugins_pkey" PRIMARY KEY ("id")
@@ -306,6 +310,24 @@ CREATE TABLE "site_plugins" (
     "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "site_plugins_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+-- Tenant-wide plugin activation ("network-activated" tier). Carries tenant_id, so
+-- the row_level_security migration's loop applies tenant_isolation automatically.
+CREATE TABLE "org_plugins" (
+    "id" UUID NOT NULL,
+    "tenant_id" UUID NOT NULL,
+    "plugin_id" UUID NOT NULL,
+    "version_id" UUID NOT NULL,
+    "status" "InstallStatus" NOT NULL DEFAULT 'INACTIVE',
+    "settings" JSONB NOT NULL DEFAULT '{}',
+    "granted_permissions" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "last_error" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "org_plugins_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -436,6 +458,12 @@ CREATE UNIQUE INDEX "plugin_versions_plugin_id_version_key" ON "plugin_versions"
 CREATE INDEX "site_plugins_tenant_id_idx" ON "site_plugins"("tenant_id");
 
 -- CreateIndex
+CREATE INDEX "org_plugins_tenant_id_idx" ON "org_plugins"("tenant_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "org_plugins_tenant_id_plugin_id_key" ON "org_plugins"("tenant_id", "plugin_id");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "site_plugins_site_id_plugin_id_key" ON "site_plugins"("site_id", "plugin_id");
 
 -- CreateIndex
@@ -557,6 +585,15 @@ ALTER TABLE "site_plugins" ADD CONSTRAINT "site_plugins_plugin_id_fkey" FOREIGN 
 
 -- AddForeignKey
 ALTER TABLE "site_plugins" ADD CONSTRAINT "site_plugins_version_id_fkey" FOREIGN KEY ("version_id") REFERENCES "plugin_versions"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "org_plugins" ADD CONSTRAINT "org_plugins_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "org_plugins" ADD CONSTRAINT "org_plugins_plugin_id_fkey" FOREIGN KEY ("plugin_id") REFERENCES "plugins"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "org_plugins" ADD CONSTRAINT "org_plugins_version_id_fkey" FOREIGN KEY ("version_id") REFERENCES "plugin_versions"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "tenants"("id") ON DELETE CASCADE ON UPDATE CASCADE;

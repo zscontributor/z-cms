@@ -1,0 +1,87 @@
+{
+  "metaTitle": "Orders",
+  "list": {
+    "title": "Orders",
+    "description": "Every order placed through the storefront.",
+    "denied": "You do not have permission to view orders.",
+    "emptyTitle": "No orders yet",
+    "emptyDescription": "Orders placed on the storefront will appear here.",
+    "noResultsTitle": "No matching orders",
+    "noResultsDescription": "Try a different search or status.",
+    "searchPlaceholder": "Search order or customer",
+    "searchLabel": "Search orders",
+    "statusFilter": "Filter by status",
+    "allStatuses": "All statuses",
+    "view": "View"
+  },
+  "table": {
+    "order": "Order",
+    "customer": "Customer",
+    "items": "Items",
+    "total": "Total",
+    "status": "Status",
+    "placed": "Placed",
+    "actions": "Actions"
+  },
+  "detail": {
+    "metaTitle": "Order",
+    "back": "All orders",
+    "notFound": "This order does not exist.",
+    "customer": "Customer",
+    "contact": "Contact",
+    "shipping": "Delivery address",
+    "note": "Order note",
+    "items": "Items",
+    "summary": "Summary",
+    "subtotal": "Subtotal",
+    "shippingFee": "Shipping",
+    "discount": "Discount",
+    "total": "Total",
+    "payment": "Payment",
+    "placed": "Placed",
+    "paid": "Paid",
+    "updateStatus": "Update status",
+    "save": "Save status",
+    "saved": "Status updated.",
+    "saveFailed": "Could not update the order.",
+    "free": "Free"
+  },
+  "orderStatus": {
+    "PENDING": "Pending",
+    "CONFIRMED": "Confirmed",
+    "FULFILLED": "Fulfilled",
+    "CANCELLED": "Cancelled",
+    "REFUNDED": "Refunded"
+  },
+  "paymentStatus": {
+    "UNPAID": "Unpaid",
+    "PAID": "Paid",
+    "REFUNDED": "Refunded"
+  },
+  "paymentMethod": {
+    "COD": "Cash on delivery"
+  },
+  "settings": {
+    "metaTitle": "Storefront",
+    "title": "Storefront",
+    "description": "Currency, shipping and payment for the shop.",
+    "denied": "You do not have permission to configure the storefront.",
+    "readOnly": "You can view these settings but not change them.",
+    "enabled": "Accept orders",
+    "enabledHint": "Turn off to take checkout down without losing your settings.",
+    "currency": "Currency",
+    "currencyHint": "ISO code, e.g. USD, VND, JPY.",
+    "cod": "Cash on delivery",
+    "codHint": "Let customers pay in cash when the order arrives.",
+    "shippingFee": "Shipping fee",
+    "shippingFeeHint": "A flat fee added to every order, in the currency above.",
+    "freeShipping": "Free shipping over",
+    "freeShippingHint": "Leave empty to always charge shipping.",
+    "storeName": "Store name",
+    "storeEmail": "Order notification email",
+    "storeEmailHint": "Where new-order notifications go. Optional.",
+    "save": "Save settings",
+    "saved": "Storefront settings saved.",
+    "saveFailed": "Could not save the settings."
+  }
+}

@@ -44,24 +44,28 @@ model Tenant {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  sites         Site[]
-  memberships   Membership[]
-  users         User[]
-  contents      Content[]
-  contentTypes  ContentType[]
-  media         Media[]
-  mediaFolders  MediaFolder[]
-  menus         Menu[]
-  taxonomies    Taxonomy[]
-  terms         Term[]
-  siteThemes    SiteTheme[]
-  sitePlugins   SitePlugin[]
-  auditLogs     AuditLog[]
-  invitations   Invitation[]
-  recoveryCodes RecoveryCode[]
-  mailSettings  SiteMailSettings[]
-  themeDrafts   ThemeDraft[]
-  publisherKeys PublisherKeyVault[]
+  sites            Site[]
+  memberships      Membership[]
+  users            User[]
+  contents         Content[]
+  contentTypes     ContentType[]
+  media            Media[]
+  mediaFolders     MediaFolder[]
+  menus            Menu[]
+  taxonomies       Taxonomy[]
+  terms            Term[]
+  siteThemes       SiteTheme[]
+  sitePlugins      SitePlugin[]
+  orgPlugins       OrgPlugin[]
+  auditLogs        AuditLog[]
+  invitations      Invitation[]
+  recoveryCodes    RecoveryCode[]
+  mailSettings     SiteMailSettings[]
+  themeDrafts      ThemeDraft[]
+  publisherKeys    PublisherKeyVault[]
+  orders           Order[]
+  orderItems       OrderItem[]
+  commerceSettings CommerceSettings[]
 
   @@map("tenants")
 }
@@ -78,21 +82,24 @@ model Site {
   createdAt     DateTime   @default(now()) @map("created_at")
   updatedAt     DateTime   @updatedAt @map("updated_at")
 
-  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  domains      Domain[]
-  contentTypes ContentType[]
-  contents     Content[]
-  media        Media[]
-  mediaFolders MediaFolder[]
-  menus        Menu[]
-  taxonomies   Taxonomy[]
-  terms        Term[]
-  memberships  Membership[]
-  themes       SiteTheme[]
-  plugins      SitePlugin[]
-  invitations  Invitation[]
-  mailSettings SiteMailSettings?
-  themeDrafts  ThemeDraft[]
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  domains          Domain[]
+  contentTypes     ContentType[]
+  contents         Content[]
+  media            Media[]
+  mediaFolders     MediaFolder[]
+  menus            Menu[]
+  taxonomies       Taxonomy[]
+  terms            Term[]
+  memberships      Membership[]
+  themes           SiteTheme[]
+  plugins          SitePlugin[]
+  invitations      Invitation[]
+  mailSettings     SiteMailSettings?
+  themeDrafts      ThemeDraft[]
+  orders           Order[]
+  orderItems       OrderItem[]
+  commerceSettings CommerceSettings?
 
   @@unique([tenantId, slug])
   @@index([tenantId])
@@ -152,6 +159,150 @@ model SiteMailSettings {
 
   @@index([tenantId])
   @@map("site_mail_settings")
+}
+
+// ---------------------------------------------------------------------------
+// Commerce
+//
+// A first-party storefront: the cart lives in the visitor's browser and is
+// materialised into an Order only at checkout. Money amounts are re-derived from
+// the product's own `Content.data.price` server-side at order time — the client
+// sends a product id and a quantity, never a price — so a tampered cart cannot
+// buy anything for less than the shop charges.
+//
+// Order/OrderItem carry a *snapshot* of title/price at purchase time and do NOT
+// foreign-key the product: deleting a product later must never rewrite history or
+// cascade away a paid order.
+// ---------------------------------------------------------------------------
+
+model CommerceSettings {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  siteId   String @unique @map("site_id") @db.Uuid
+
+  /**
+   * The kill switch. Off refuses checkout while keeping the configuration.
+   */
+  enabled  Boolean @default(true)
+  /**
+   * ISO 4217, used to format and stamp every order. Falls back to the theme's.
+   */
+  currency String  @default("USD")
+
+  /**
+   * Cash on delivery — the only payment method shipped today.
+   */
+  codEnabled Boolean @default(true) @map("cod_enabled")
+
+  /**
+   * Flat shipping fee, in `currency` major units.
+   */
+  shippingFlatFee       Decimal  @default(0) @map("shipping_flat_fee") @db.Decimal(12, 2)
+  /**
+   * Order subtotal at or above which shipping is free. Null = never free.
+   */
+  freeShippingThreshold Decimal? @map("free_shipping_threshold") @db.Decimal(12, 2)
+
+  /**
+   * Where new-order notifications go. Empty = the site's mail from-address.
+   */
+  storeName  String? @map("store_name")
+  storeEmail String? @map("store_email")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("commerce_settings")
+}
+
+model Order {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  siteId   String @map("site_id") @db.Uuid
+
+  /**
+   * Human-facing, sequential per site, e.g. "0042". Unique within a site.
+   */
+  orderNumber String @map("order_number")
+
+  /**
+   * An unguessable token the confirmation page uses to fetch this one order
+   * without a login: the shopper is anonymous, so possession of the token minted
+   * at checkout is the only thing that authorises reading their own order back.
+   */
+  accessToken String @unique @map("access_token")
+
+  status        OrderStatus   @default(PENDING)
+  paymentMethod PaymentMethod @default(COD) @map("payment_method")
+  paymentStatus PaymentStatus @default(UNPAID) @map("payment_status")
+  /**
+   * Provider reference once an online gateway is wired in. Null for COD.
+   */
+  paymentRef    String?       @map("payment_ref")
+
+  customerName    String  @map("customer_name")
+  customerEmail   String  @map("customer_email")
+  customerPhone   String  @map("customer_phone")
+  /**
+   * Free-form delivery address as typed; structured fields can come later.
+   */
+  shippingAddress String  @map("shipping_address")
+  shippingCity    String  @map("shipping_city")
+  note            String?
+
+  locale        String
+  currency      String
+  subtotal      Decimal @db.Decimal(12, 2)
+  shippingFee   Decimal @default(0) @map("shipping_fee") @db.Decimal(12, 2)
+  discountTotal Decimal @default(0) @map("discount_total") @db.Decimal(12, 2)
+  total         Decimal @db.Decimal(12, 2)
+
+  placedAt  DateTime  @default(now()) @map("placed_at")
+  paidAt    DateTime? @map("paid_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  site   Site        @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  items  OrderItem[]
+
+  @@unique([siteId, orderNumber])
+  @@index([tenantId])
+  @@index([siteId, status, placedAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  siteId   String @map("site_id") @db.Uuid
+  orderId  String @map("order_id") @db.Uuid
+
+  /**
+   * The Content id at purchase time. Not a FK: history must outlive the product.
+   */
+  productId   String  @map("product_id")
+  productSlug String  @map("product_slug")
+  title       String
+  image       String?
+
+  unitPrice Decimal @map("unit_price") @db.Decimal(12, 2)
+  quantity  Int
+  lineTotal Decimal @map("line_total") @db.Decimal(12, 2)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  order  Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([orderId])
+  @@map("order_items")
 }
 
 model Domain {
@@ -220,7 +371,7 @@ model User {
    */
   totpLastStep      BigInt?   @map("totp_last_step")
 
-  tenant        Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant        Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   memberships   Membership[]
   contents      Content[]
   versions      ContentVersion[]
@@ -866,12 +1017,12 @@ model SiteTheme {
 // ---------------------------------------------------------------------------
 
 model ThemeDraft {
-  id       String @id @default(uuid()) @db.Uuid
-  tenantId String @map("tenant_id") @db.Uuid
+  id       String  @id @default(uuid()) @db.Uuid
+  tenantId String  @map("tenant_id") @db.Uuid
   // The site whose content types, menus and locales the editor previews against.
   // A drawing is authored for a site even though the theme it becomes is portable:
   // an author binding a list to "post" needs to know whether "post" exists here.
-  siteId   String @map("site_id") @db.Uuid
+  siteId   String  @map("site_id") @db.Uuid
   // Nullable + SetNull: a draft outlives the person who left the company.
   authorId String? @map("author_id") @db.Uuid
 
@@ -896,34 +1047,33 @@ model ThemeDraft {
    */
   document Json
 
-  status     ThemeDraftStatus @default(DRAFT)
+  status      ThemeDraftStatus @default(DRAFT)
   /**
    * Why the last build failed, for the author to read. Cleared on the next attempt.
    */
-  buildError String?          @map("build_error")
-  lastBuiltAt DateTime?       @map("last_built_at")
+  buildError  String?          @map("build_error")
+  lastBuiltAt DateTime?        @map("last_built_at")
 
   /**
    * SHA-256 of the last build's payload — the digest the AUTHOR signs.
-   *
    * Stored because signing happens in the author's browser, in a request that comes
    * later: the build packs the payload, this records what it hashed to, and the
    * browser signs exactly this string. Recomputing it at seal time would not work —
    * a tar carries mtimes, so building twice yields two different digests and the
    * signature would be over a payload that no longer exists.
    */
-  payloadChecksum String? @map("payload_checksum")
+  payloadChecksum String?   @map("payload_checksum")
   /**
    * Storage key of that payload, kept until it is sealed into a .zcms. Null once
    * there is nothing staged.
    */
-  payloadRef      String? @map("payload_ref")
-  submittedAt DateTime?       @map("submitted_at")
+  payloadRef      String?   @map("payload_ref")
+  submittedAt     DateTime? @map("submitted_at")
   /**
    * The marketplace's id for the submission, so the editor can show review state.
    * Null until a submit succeeds.
    */
-  submissionRef String?       @map("submission_ref")
+  submissionRef   String?   @map("submission_ref")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -974,14 +1124,22 @@ model PublisherKeyVault {
    */
   userId   String @unique @map("user_id") @db.Uuid
 
-  /** SPKI PEM. Public by definition: this is what the author registers upstream. */
+  /**
+   * SPKI PEM. Public by definition: this is what the author registers upstream.
+   */
   publicKeyPem String @map("public_key_pem")
 
-  /** The PKCS#8 private key, AES-GCM sealed under the passphrase-derived key. Base64. */
+  /**
+   * The PKCS#8 private key, AES-GCM sealed under the passphrase-derived key. Base64.
+   */
   wrappedPrivateKey String @map("wrapped_private_key")
-  /** Base64. Random per key; makes a precomputed table useless. */
+  /**
+   * Base64. Random per key; makes a precomputed table useless.
+   */
   kdfSalt           String @map("kdf_salt")
-  /** Base64. Random per wrap. */
+  /**
+   * Base64. Random per wrap.
+   */
   kdfIv             String @map("kdf_iv")
   /**
    * The KDF, recorded rather than assumed. The cost of a guess is what stands
@@ -994,14 +1152,12 @@ model PublisherKeyVault {
   /**
    * The marketplace API token this person minted for this instance, encrypted with
    * MARKETPLACE_TOKEN_ENCRYPTION_KEY (AES-256-GCM, `common/secret-box`).
-   *
    * Encrypted the way the SMTP password is, and NOT the way the key above is — the
    * difference is the whole point. Nothing on this server ever needs the private
    * key, so it is sealed under a passphrase the server does not have. cms-api DOES
    * need this token: it is what authenticates the POST to the marketplace. A secret
    * the server must use is a secret the server can read, and pretending otherwise
    * would be theatre.
-   *
    * The two live in one row because they are one thing — this person's identity
    * upstream — but they are guarded differently on purpose, and that asymmetry is
    * what makes stealing one of them insufficient: the token submits, the key signs,
@@ -1035,18 +1191,31 @@ enum ThemeDraftStatus {
 // ---------------------------------------------------------------------------
 
 model Plugin {
-  id          String   @id @default(uuid()) @db.Uuid
-  key         String   @unique
+  id          String      @id @default(uuid()) @db.Uuid
+  key         String      @unique
   name        String
   description String?
   publisher   String
-  isCore      Boolean  @default(false) @map("is_core")
-  publisherId String?  @map("publisher_id") @db.Uuid
-  createdAt   DateTime @default(now()) @map("created_at")
+  isCore      Boolean     @default(false) @map("is_core")
+  /**
+   * Where this plugin activates — its REACH, an axis orthogonal to `isCore`
+   * (which is authority: platform-controlled vs third-party).
+   * SITE — installed and activated per site (the default; a SitePlugin row).
+   * ORG  — installed once for a tenant and active across ALL of its sites
+   * (an OrgPlugin row). WordPress's "network-activated" tier.
+   * The admin-facing tier is derived, not stored: `isCore` -> PLATFORM,
+   * else `scope == ORG` -> ORG, else SITE. Platform-controlled like `isCore`:
+   * set from the signed manifest at seed/install, never claimable by a package
+   * at runtime.
+   */
+  scope       PluginScope @default(SITE)
+  publisherId String?     @map("publisher_id") @db.Uuid
+  createdAt   DateTime    @default(now()) @map("created_at")
 
   publisherRef Publisher?      @relation(fields: [publisherId], references: [id], onDelete: SetNull)
   versions     PluginVersion[]
   sitePlugins  SitePlugin[]
+  orgPlugins   OrgPlugin[]
   data         PluginData[]
 
   @@map("plugins")
@@ -1079,6 +1248,7 @@ model PluginVersion {
   plugin       Plugin        @relation(fields: [pluginId], references: [id], onDelete: Cascade)
   publisherKey PublisherKey? @relation(fields: [publisherKeyId], references: [id], onDelete: SetNull)
   sitePlugins  SitePlugin[]
+  orgPlugins   OrgPlugin[]
 
   @@unique([pluginId, version])
   @@map("plugin_versions")
@@ -1106,6 +1276,45 @@ model SitePlugin {
   @@unique([siteId, pluginId])
   @@index([tenantId])
   @@map("site_plugins")
+}
+
+/**
+ * A plugin activated ONCE for a whole tenant — WordPress's "network-activated"
+ * tier. Its lifecycle mirrors SitePlugin (install with consent, activate,
+ * configure) but there is no siteId: the row applies to every site the tenant
+ * owns. The active-plugin resolver unions these with the site's own rows, so a
+ * filter/action/capability an org plugin provides runs on all of them.
+ * Keyed `(tenantId, pluginId)` — one install per plugin per tenant. Only plugins
+ * whose catalogue `scope == ORG` may be installed here; the lifecycle endpoints
+ * reject a SITE-scoped plugin at this tier and vice versa.
+ * RLS: this table carries `tenant_id`, so the row_level_security migration's loop
+ * gives it the standard tenant_isolation policy automatically — no hand-written
+ * policy needed.
+ * On storage: an org plugin still executes in the context of the site currently
+ * being rendered, so any PluginData it writes is keyed per-site, exactly as a
+ * SitePlugin's would be. That is intentional for now; a tenant-wide store is a
+ * separate change if one is ever needed.
+ */
+model OrgPlugin {
+  id                 String        @id @default(uuid()) @db.Uuid
+  tenantId           String        @map("tenant_id") @db.Uuid
+  pluginId           String        @map("plugin_id") @db.Uuid
+  versionId          String        @map("version_id") @db.Uuid
+  status             InstallStatus @default(INACTIVE)
+  settings           Json          @default("{}")
+  // Permissions the admin actually granted — may be a subset of those requested.
+  grantedPermissions String[]      @default([]) @map("granted_permissions")
+  lastError          String?       @map("last_error")
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
+
+  tenant  Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plugin  Plugin        @relation(fields: [pluginId], references: [id], onDelete: Restrict)
+  version PluginVersion @relation(fields: [versionId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, pluginId])
+  @@index([tenantId])
+  @@map("org_plugins")
 }
 
 /**
@@ -1225,6 +1434,24 @@ enum Role {
   VIEWER
 }
 
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  FULFILLED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  COD
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  REFUNDED
+}
+
 enum ReviewStatus {
   PENDING
   APPROVED
@@ -1262,6 +1489,18 @@ enum InstallStatus {
   FAILED
   DISABLED
   QUARANTINED
+}
+
+/**
+ * A plugin's REACH — which tier it installs and activates at. Orthogonal to
+ * `Plugin.isCore` (authority). Platform-controlled: set from the signed manifest,
+ * never claimable by a package at runtime.
+ * SITE — per site (SitePlugin). The default; what every plugin was before.
+ * ORG  — once per tenant, active across all its sites (OrgPlugin).
+ */
+enum PluginScope {
+  SITE
+  ORG
 }
 
 /**

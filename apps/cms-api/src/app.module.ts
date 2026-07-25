@@ -30,6 +30,7 @@ import { PluginsModule } from "./plugins/plugins.module";
 import { QueueModule } from "./queue/queue.module";
 import { RedisModule } from "./redis/redis.module";
 import { RenderModule } from "./render/render.module";
+import { CommerceModule } from "./commerce/commerce.module";
 import { SitesModule } from "./sites/sites.module";
 import { PublisherKeysModule } from "./publisher-keys/publisher-keys.module";
 import { ThemeDraftsModule } from "./theme-drafts/theme-drafts.module";
@@ -90,6 +91,7 @@ class HealthController {
     ThemeDraftsModule,
     ThemesModule,
     RenderModule,
+    CommerceModule,
   ],
   controllers: [HealthController],
   providers: [

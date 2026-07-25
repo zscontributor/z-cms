@@ -126,6 +126,24 @@ export const PERMISSIONS = [
   "network:fetch",
   "audit:read",
   /**
+   * Read the shop's orders — the customer names, contact details and delivery
+   * addresses attached to each. Operational, like reading content, and so it sits
+   * with EDITOR: the person who runs the shop day to day needs to see what sold.
+   */
+  "order:read",
+  /**
+   * Move an order along: confirm it, mark it fulfilled, cancel or refund it.
+   *
+   * Separate from `order:read` because seeing an order and changing its state are
+   * different trusts — a refund moves money. Belongs to ADMIN.
+   */
+  "order:manage",
+  /**
+   * Configure the storefront: currency, shipping, which payment methods are on.
+   * Configuration, so it rides with the other `settings`-class acts in ADMIN.
+   */
+  "commerce:configure",
+  /**
    * Clear or reject a package the malware scanner quarantined.
    *
    * A marketplace duty, not a tenant one: on z-cms.org it belongs to the platform
@@ -172,6 +190,8 @@ const EDITOR: Permission[] = [
   "content:publish",
   "media:delete",
   "menu:manage",
+  // Running the shop is editorial work: an EDITOR sees the orders that come in.
+  "order:read",
 ];
 
 const ADMIN: Permission[] = [
@@ -192,6 +212,10 @@ const ADMIN: Permission[] = [
   // Without this, "send a test email" would be a button no role could press.
   "mail:send",
   "audit:read",
+  // Moving an order along and configuring the storefront are administrative acts:
+  // a refund moves money, and turning off checkout takes the shop down.
+  "order:manage",
+  "commerce:configure",
 ];
 
 const OWNER: Permission[] = [

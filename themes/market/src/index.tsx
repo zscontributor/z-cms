@@ -255,6 +255,89 @@ function MobileNav({ ctx, menu }: { ctx: Ctx; menu?: MenuDto }) {
   );
 }
 
+/**
+ * Add-to-cart.
+ *
+ * When a commerce plugin is active (`ctx.hasCapability("commerce.checkout")`), this
+ * is a plain <button> carrying the product on `data-zc-*` attributes. The theme
+ * ships no JavaScript to make it work — the runtime's storefront widget, mounted at
+ * the "commerce" slot below, listens for clicks on these buttons through event
+ * delegation, exactly the way the colour-mode toggle is wired. With no commerce
+ * plugin it degrades to the old behaviour: a link to `settings.shopUrl`.
+ */
+function AddToCart({
+  ctx,
+  id,
+  title,
+  slug,
+  price,
+  currency,
+  image,
+  className,
+  label,
+  fallbackToLink,
+}: {
+  ctx: Ctx;
+  id: string;
+  title: string;
+  slug: string;
+  price: number | null;
+  currency: string;
+  image?: string;
+  className: string;
+  label: string;
+  fallbackToLink: boolean;
+}) {
+  if (ctx.hasCapability("commerce.checkout") && price !== null) {
+    return (
+      <button
+        type="button"
+        className={className}
+        data-zc-add
+        data-zc-id={id}
+        data-zc-title={title}
+        data-zc-slug={slug}
+        data-zc-price={String(price)}
+        data-zc-currency={currency}
+        {...(image ? { "data-zc-image": image } : {})}
+      >
+        {label}
+      </button>
+    );
+  }
+  if (!fallbackToLink) return null;
+  return (
+    <a className={className} href={shopHref(ctx)}>
+      {label}
+    </a>
+  );
+}
+
+/**
+ * The header bag. A button that opens the cart drawer when commerce is on, a link
+ * to the shop when it is not. `data-zc-cart-count` is the badge the runtime widget
+ * writes the item count into — the theme owns where it sits, the runtime owns the
+ * number.
+ */
+function CartButton({ ctx }: { ctx: Ctx }) {
+  const label = ctx.t("nav.cart");
+  if (ctx.hasCapability("commerce.checkout")) {
+    return (
+      <button type="button" className="zmarket__bag" data-zc-cart-open aria-label={label}>
+        <span aria-hidden="true">◇</span>
+        <span>{label}</span>
+        <span className="zmarket__bag-count" data-zc-cart-count hidden />
+      </button>
+    );
+  }
+  return (
+    <a className="zmarket__bag" href={shopHref(ctx)}>
+      <span aria-hidden="true">◇</span>
+      <span>{label}</span>
+    </a>
+  );
+}
+
 /** Plain GET form: search is a URL, not an app. */
 function SearchBox({ ctx }: { ctx: Ctx }) {
   return (
@@ -323,10 +406,7 @@ function Layout({ ctx, children }: LayoutProps<MarketThemeSettings>) {
                 persistence and the icon swap. It renders nothing at all on a theme that
                 declares a single colour mode, so a theme cannot ship a dead button. */}
             <ColorModeToggle ctx={ctx} className="zmarket__icon-btn" />
-            <a className="zmarket__bag" href={shop}>
-              <span aria-hidden="true">◇</span>
-              <span>{ctx.t("nav.cart")}</span>
-            </a>
+            <CartButton ctx={ctx} />
           </div>
         </div>
       </header>
@@ -448,6 +528,10 @@ function Layout({ ctx, children }: LayoutProps<MarketThemeSettings>) {
         <span aria-hidden="true">↑</span>
       </a>
       {ctx.renderSlot("floating")}
+      {/* The cart, its drawer and checkout — runtime-owned, mounted here so it sits
+          inside `.zmarket` and inherits the shop's palette through the `--zc-*`
+          variables defined in theme.css. */}
+      {ctx.renderSlot("commerce")}
     </div>
   );
 }
@@ -826,13 +910,19 @@ function ProductView({ ctx, content }: PageTemplateProps<MarketThemeSettings>) {
 
             {content.excerpt ? <p className="zmarket__lede">{content.excerpt}</p> : null}
 
-            {/* No cart, because a cart is JavaScript. This is a link to the shop. */}
-            <a
+            {/* A real add-to-cart when a commerce plugin is active; a link to the
+                shop when it is not. The button ships no JavaScript — see AddToCart. */}
+            <AddToCart
+              ctx={ctx}
+              id={content.id}
+              title={content.title}
+              slug={content.slug}
+              price={price}
+              currency={currency}
               className="zmarket__btn zmarket__btn--rose zmarket__btn--block"
-              href={shopHref(ctx)}
-            >
-              {ctx.t("product.addToCart")}
-            </a>
+              label={ctx.t("product.addToCart")}
+              fallbackToLink
+            />
 
             <div className="zmarket__accordion">
               {["ingredients", "howToUse", "shipping"].map((key) => (
@@ -1000,6 +1090,18 @@ function ProductCard({
         ) : item.excerpt ? (
           <p className="zmarket__volume">{item.excerpt}</p>
         ) : null}
+
+        <AddToCart
+          ctx={ctx}
+          id={item.id}
+          title={item.title}
+          slug={item.slug}
+          price={price}
+          currency={currency}
+          className="zmarket__btn zmarket__card-add"
+          label={ctx.t("product.addToCart")}
+          fallbackToLink={false}
+        />
       </div>
     </article>
   );

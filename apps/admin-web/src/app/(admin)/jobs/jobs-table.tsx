@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { discardFailedJobAction, retryFailedJobAction } from "@/app/actions/job";
+import {
+  clearFailedJobsAction,
+  discardFailedJobAction,
+  retryFailedJobAction,
+} from "@/app/actions/job";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
@@ -13,9 +17,18 @@ import { useT } from "@/lib/i18n-provider";
 /** A stack trace is unreadable inline and indispensable when you need it. */
 const REASON_PREVIEW = 120;
 
-export function JobsTable({ jobs, locale }: { jobs: FailedJobDto[]; locale: string }) {
+export function JobsTable({
+  jobs,
+  total,
+  locale,
+}: {
+  jobs: FailedJobDto[];
+  total: number;
+  locale: string;
+}) {
   const t = useT();
   const [target, setTarget] = useState<FailedJobDto | null>(null);
+  const [clearOpen, setClearOpen] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -50,6 +63,20 @@ export function JobsTable({ jobs, locale }: { jobs: FailedJobDto[]; locale: stri
     });
   }
 
+  function confirmClear() {
+    setError(null);
+    setBusyId(null);
+    startTransition(async () => {
+      const result = await clearFailedJobsAction();
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setClearOpen(false);
+      setNotice(result.message);
+    });
+  }
+
   return (
     <>
       {error ? (
@@ -69,6 +96,22 @@ export function JobsTable({ jobs, locale }: { jobs: FailedJobDto[]; locale: stri
           {notice}
         </p>
       ) : null}
+
+      <div className="mb-3 flex items-center justify-end">
+        <Button
+          size="sm"
+          variant="danger"
+          disabled={pending}
+          onClick={() => {
+            setError(null);
+            setNotice(null);
+            setClearOpen(true);
+          }}
+        >
+          <Icon name="trash" size={16} />
+          {t("admin.jobs.clearAll")}
+        </Button>
+      </div>
 
       <Table>
         <THead>
@@ -153,6 +196,36 @@ export function JobsTable({ jobs, locale }: { jobs: FailedJobDto[]; locale: stri
               <code className="font-mono">{target.id}</code>
             </p>
           ) : null}
+        </div>
+      </Dialog>
+
+      <Dialog
+        open={clearOpen}
+        onClose={pending ? () => undefined : () => setClearOpen(false)}
+        title={t("admin.jobs.clearDialog.title")}
+        footer={
+          <>
+            <Button type="button" disabled={pending} onClick={() => setClearOpen(false)}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={pending}
+              onClick={confirmClear}
+            >
+              {pending ? t("common.working") : t("admin.jobs.clearDialog.confirm")}
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-3">
+          <p className="text-xs leading-5">
+            {t("admin.jobs.clearDialog.body", { total: String(total) })}
+          </p>
+          <p className="rounded-md border border-[var(--border)] bg-[var(--surface-sunken)] px-3 py-2 text-[11px] leading-4 z-muted">
+            {t("admin.jobs.clearDialog.retryFirst")}
+          </p>
         </div>
       </Dialog>
     </>

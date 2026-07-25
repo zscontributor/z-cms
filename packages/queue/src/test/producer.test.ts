@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   getFailed: vi.fn(),
   getFailedCount: vi.fn(),
   getJob: vi.fn(),
+  clean: vi.fn(),
   close: vi.fn(),
   quit: vi.fn(),
   RedisCtor: vi.fn(),
@@ -36,6 +37,7 @@ vi.mock("bullmq", () => ({
     getFailed = mocks.getFailed;
     getFailedCount = mocks.getFailedCount;
     getJob = mocks.getJob;
+    clean = mocks.clean;
     close = mocks.close;
     constructor(...args: unknown[]) {
       mocks.QueueCtor(...args);
@@ -303,6 +305,31 @@ describe("QueueProducer", () => {
       mocks.getJob.mockResolvedValue(null);
 
       expect(await producer.discardJob("gone")).toBe(false);
+    });
+  });
+
+  describe("clearFailed", () => {
+    it("empties the whole failed set regardless of age", async () => {
+      // grace 0 ignores age, limit 0 lifts the cap: a stale queue of 1,204 must
+      // come out empty, not leave the oldest failures behind.
+      mocks.clean.mockResolvedValue([]);
+
+      await producer.clearFailed();
+
+      expect(mocks.clean).toHaveBeenCalledWith(0, 0, "failed");
+    });
+
+    it("reports how many jobs it removed", async () => {
+      // The count is what the operator sees; clean() returns the ids it removed.
+      mocks.clean.mockResolvedValue(["1", "2", "3"]);
+
+      expect(await producer.clearFailed()).toBe(3);
+    });
+
+    it("returns zero on an already-empty queue rather than throwing", async () => {
+      mocks.clean.mockResolvedValue([]);
+
+      expect(await producer.clearFailed()).toBe(0);
     });
   });
 

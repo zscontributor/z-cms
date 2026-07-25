@@ -36,7 +36,12 @@ function setup() {
   };
   const plugins = { callCapability: vi.fn() };
   const service = new AiService(contents as any, plugins as any);
-  holder.systemDb = { sitePlugin: { findFirst: vi.fn().mockResolvedValue({ settings: enabled }) } };
+  holder.systemDb = {
+    sitePlugin: { findFirst: vi.fn().mockResolvedValue({ settings: enabled }) },
+    // The trusted-core check falls back to the org tier; default it to "not found"
+    // so the site-tier mock stays the one under test.
+    orgPlugin: { findFirst: vi.fn().mockResolvedValue(null) },
+  };
   holder.withTenant.mockClear();
   holder.withTenant.mockImplementation(async (_tenantId: string, fn: (ctx: { tenantId: string; db: any }) => Promise<any>) =>
     fn({ tenantId: "t1", db: holder.tenantDb }));

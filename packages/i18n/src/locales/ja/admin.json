@@ -9,12 +9,16 @@
     "media": "メディアライブラリ",
     "appearance": "外観",
     "plugins": "プラグイン",
+    "orgPlugins": "組織のプラグイン",
     "operations": "運営",
     "marketplace": "市場",
     "jobs": "バックグラウンドジョブ",
     "users": "ユーザー",
     "mail": "メール",
-    "sites": "サイト"
+    "sites": "サイト",
+    "shop": "ショップ",
+    "orders": "注文",
+    "commerce": "ストアフロント"
   },
   "sidebar": {
     "currentSite": "現在のサイト",

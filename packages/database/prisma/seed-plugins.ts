@@ -47,6 +47,16 @@ async function main() {
     if (!dir.isDirectory()) continue;
 
     const pkgDir = path.join(root, dir.name);
+
+    // A `.not-builtin` marker means this plugin is PRIVATE and marketplace-distributed,
+    // signed with a publisher key (not the first-party key) and installed from the
+    // registry — never registered as a built-in. Skip it, exactly as seed-themes does,
+    // so its publisher-signed .zcms does not fail verifyFirstParty here.
+    if (fs.existsSync(path.join(pkgDir, ".not-builtin"))) {
+      console.log(`  skip ${dir.name} — .not-builtin (marketplace-distributed, installed from the registry)`);
+      continue;
+    }
+
     const packages = fs.readdirSync(pkgDir).filter((file) => file.endsWith(".zcms"));
 
     if (packages.length === 0) {
@@ -64,7 +74,13 @@ async function main() {
       const manifest = envelope.manifest as PackageManifest & {
         permissions?: string[];
         capabilities?: string[];
+        scope?: string;
       };
+
+      // A built-in may declare ORG reach to activate tenant-wide; the default is
+      // per-site. Unlike `isCore` (authority), scope is reach, so a package naming
+      // it is not an escalation — it still consents at whichever tier it installs.
+      const scope = String(manifest.scope).toLowerCase() === "org" ? "ORG" : "SITE";
 
       const plugin = await db.plugin.upsert({
         where: { key: manifest.id },
@@ -72,6 +88,7 @@ async function main() {
           name: manifest.name,
           description: manifest.description ?? null,
           isCore: true,
+          scope: scope as never,
         },
         create: {
           key: manifest.id,
@@ -82,6 +99,7 @@ async function main() {
           // admin content operator uses `isCore` as an identity check, so a
           // marketplace package that could set it would be a privilege escalation.
           isCore: true,
+          scope: scope as never,
         },
       });
 

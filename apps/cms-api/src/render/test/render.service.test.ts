@@ -49,6 +49,9 @@ function makeDb() {
     menu: { findMany: vi.fn().mockResolvedValue([]) },
     contentType: { findFirst: vi.fn().mockResolvedValue(null) },
     content: { findMany: vi.fn().mockResolvedValue([]), count: vi.fn().mockResolvedValue(0) },
+    // Unconfigured storefront: build() reads this to decide whether to contribute
+    // the commerce.checkout capability.
+    commerceSettings: { findFirst: vi.fn().mockResolvedValue(null) },
   };
 }
 

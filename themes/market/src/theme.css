@@ -58,6 +58,18 @@
   --zm-shadow: 0 26px 60px rgba(48, 30, 36, 0.09);
   --zm-shadow-sm: 0 10px 26px rgba(48, 30, 36, 0.07);
 
+  /* The contract the runtime storefront widget reads. Mapping the theme's own
+     palette onto these `--zc-*` names is what makes the cart drawer, the checkout
+     and the confirmation look like part of this shop rather than a generic overlay. */
+  --zc-theme-accent: var(--zm-rose);
+  --zc-theme-accent-ink: var(--zm-on-rose);
+  --zc-theme-surface: var(--zm-card);
+  --zc-theme-ink: var(--zm-ink);
+  --zc-theme-muted: var(--zm-muted);
+  --zc-theme-border: var(--zm-line);
+  --zc-theme-radius: var(--zm-radius);
+  --zc-theme-font: var(--zm-sans);
+
   --zm-serif: "Hoefler Text", "Iowan Old Style", "Palatino Linotype", Palatino,
     Georgia, "Times New Roman", serif;
   --zm-sans: "Avenir Next", "Helvetica Neue", -apple-system, BlinkMacSystemFont,
@@ -338,11 +350,14 @@ a.zmarket__skip:focus {
   border: 1px solid var(--zm-line);
   border-radius: 999px;
   background: var(--zm-card);
+  color: inherit;
+  font-family: inherit;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   white-space: nowrap;
+  cursor: pointer;
   transition:
     border-color 0.25s ease,
     color 0.25s ease;
@@ -350,6 +365,34 @@ a.zmarket__skip:focus {
 .zmarket__bag:hover {
   border-color: var(--zm-accent);
   color: var(--zm-accent);
+}
+
+/* The item-count badge the runtime widget writes into. Hidden while empty (the
+   theme renders it with the `hidden` attribute; the widget removes it when the
+   cart fills). */
+.zmarket__bag-count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--zm-rose);
+  color: var(--zm-on-rose);
+  font-size: 10px;
+  line-height: 18px;
+  text-align: center;
+  letter-spacing: 0;
+}
+.zmarket__bag-count[hidden] {
+  display: none;
+}
+
+/* The add-to-cart button on a product card: quieter than the hero button, sized to
+   sit under the price without crowding the grid. */
+.zmarket__card-add {
+  margin-top: 14px;
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 12px;
 }
 
 .zmarket__search input {

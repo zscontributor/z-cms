@@ -242,6 +242,15 @@ export class MarketplaceService {
 
     await this.packages.installVerified(bundle, { kind, key, version });
 
+    // Updating a theme that is already live means "run the new one": advance this
+    // tenant's ACTIVE installs of it to the version just pulled and drop their
+    // render caches. A first-time install (nothing active yet) is a no-op, so the
+    // two-step pull → activate flow is unchanged there.
+    let applied = 0;
+    if (kind === "theme") {
+      applied = await this.packages.advanceActiveThemeInstalls(actor.tenantId, key, version);
+    }
+
     await getSystemDb().auditLog.create({
       data: {
         tenantId: actor.tenantId,
@@ -249,11 +258,14 @@ export class MarketplaceService {
         action: "marketplace.installed",
         resourceType: kind,
         resourceId: key,
-        metadata: { version, source: remote } as never,
+        metadata: { version, source: remote, appliedToActive: applied } as never,
       },
     });
 
-    this.logger.log(`Installed ${kind} ${key}@${version} from ${remote}`);
+    this.logger.log(
+      `Installed ${kind} ${key}@${version} from ${remote}` +
+        (applied > 0 ? ` — applied to ${applied} active install(s)` : ""),
+    );
     return { ok: true, kind, key, version };
   }
 

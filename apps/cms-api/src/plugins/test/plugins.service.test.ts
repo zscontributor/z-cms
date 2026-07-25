@@ -27,6 +27,12 @@ function makeSystemDb() {
       findMany: vi.fn().mockResolvedValue([]),
       findFirst: vi.fn().mockResolvedValue(null),
     },
+    // The org tier is unioned into every active-plugin read; default to empty so a
+    // test that only cares about site plugins is unaffected.
+    orgPlugin: {
+      findMany: vi.fn().mockResolvedValue([]),
+      findFirst: vi.fn().mockResolvedValue(null),
+    },
     site: { findFirst: vi.fn().mockResolvedValue({ id: "s1", name: "Main", defaultLocale: "en" }) },
   };
 }
@@ -72,6 +78,22 @@ describe("PluginsService", () => {
       const caps = await makeService().capabilitiesFor("t1", "s1");
 
       expect([...caps].sort()).toEqual(["seo.metadata", "sitemap"]);
+    });
+
+    it("unions in the capabilities of org-wide plugins", async () => {
+      // A plugin the tenant activated org-wide contributes to every site, so its
+      // capabilities must appear even when the site has no plugins of its own.
+      holder.systemDb.sitePlugin.findMany.mockResolvedValue([]);
+      holder.systemDb.orgPlugin.findMany.mockResolvedValue([
+        { version: { manifest: { capabilities: ["analytics.track"] } } },
+      ]);
+
+      const caps = await makeService().capabilitiesFor("t1", "s1");
+
+      expect(caps).toEqual(["analytics.track"]);
+      // The org read is tenant-scoped and status-filtered, with no siteId.
+      const where = holder.systemDb.orgPlugin.findMany.mock.calls[0][0].where;
+      expect(where).toEqual({ tenantId: "t1", status: "ACTIVE" });
     });
   });
 

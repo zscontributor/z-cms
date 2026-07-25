@@ -62,7 +62,7 @@ export function buildThemeContext<S = Record<string, unknown>>(
     hasCapability: (capability: string) => payload.capabilities.includes(capability),
     getIntegration: <T = unknown>(capability: string) =>
       integrations[capability] as RenderIntegration<T> | undefined,
-    renderSlot: (slot) => renderIntegrationSlot(slot, integrations),
+    renderSlot: (slot) => renderIntegrationSlot(slot, integrations, payload.site.locale),
     url: (path: string) => buildUrl(payload.site, path),
     asset: (path: string) => resolveAssetUrl(assetBase, path),
     alternates: payload.alternates,

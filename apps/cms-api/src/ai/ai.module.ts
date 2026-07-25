@@ -398,15 +398,27 @@ export class AiService {
    * the capability string in a manifest is only a claim.
    */
   private async requireContentManagement(tenantId: string, siteId: string): Promise<void> {
-    const install = await getSystemDb().sitePlugin.findFirst({
-      where: {
-        tenantId,
-        siteId,
-        status: "ACTIVE",
-        plugin: { isCore: true, publisher: "Z-SOFT Co., Ltd" },
-      },
-      select: { settings: true },
-    });
+    const db = getSystemDb();
+    // The trusted core AI plugin ships site-scoped, but resolve both tiers so the
+    // check stays correct if it is ever activated org-wide.
+    const install =
+      (await db.sitePlugin.findFirst({
+        where: {
+          tenantId,
+          siteId,
+          status: "ACTIVE",
+          plugin: { isCore: true, publisher: "Z-SOFT Co., Ltd" },
+        },
+        select: { settings: true },
+      })) ??
+      (await db.orgPlugin.findFirst({
+        where: {
+          tenantId,
+          status: "ACTIVE",
+          plugin: { isCore: true, publisher: "Z-SOFT Co., Ltd" },
+        },
+        select: { settings: true },
+      }));
 
     const settings = (install?.settings ?? {}) as { contentManagementEnabled?: boolean };
     if (!install || settings.contentManagementEnabled !== true) {

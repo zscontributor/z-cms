@@ -1,0 +1,18 @@
+content-pack is a marketplace-distributed plugin, not a built-in that ships in
+the image. This marker makes the built-in tooling skip this directory:
+
+  - scripts/sign-builtins.mts        — will NOT first-party-sign it
+  - packages/database/prisma/seed-plugins.ts — will NOT register it as BUILTIN
+
+Distribution flow (the standard z-cms marketplace path, publisher key):
+
+  1. build:          pnpm --filter @zcmsorg/plugin-content-pack build
+  2. pack + sign:    node packages/cli/dist/main.js pack .packages/staging-plugins/content-pack \
+                       --kind plugin \
+                       --key  keys/lequy1010/publisher-private.pem \
+                       --pub  keys/lequy1010/publisher-public.pem \
+                       --out  plugins/content-pack/vn.zsoft.plugin.content-pack-0.1.0.zcms
+  3. verify:         node packages/cli/dist/main.js verify plugins/content-pack/vn.zsoft.plugin.content-pack-0.1.0.zcms
+  4. upload:         Marketplace admin console / POST /api/v1/packages (staff session)
+  5. review/approve: marketplace approves → marketplace counter-signs
+  6. install:        admin → Marketplace → Z-SOFT Content Pack → Install → Activate

@@ -539,6 +539,16 @@ const CatalogPluginSchema = z.object({
   description: z.string().nullable(),
   publisher: z.string(),
   isCore: z.boolean(),
+  scope: z.enum(["SITE", "ORG"]).describe("Activation reach: per-site or tenant-wide."),
+  tier: z
+    .enum(["PLATFORM", "ORG", "SITE"])
+    .describe("Derived admin-facing tier: PLATFORM (core), ORG (tenant-wide), or SITE."),
+  orgActive: z
+    .boolean()
+    .describe(
+      "True when this plugin is activated org-wide for the tenant, so it already runs " +
+        "on this site and cannot be managed from the per-site screen.",
+    ),
   latestVersion: z.string().nullable(),
   origin: z.string().nullable(),
   reviewStatus: z.string().nullable(),
@@ -659,6 +669,11 @@ const FailedJobSchema = z.object({
 const FailedJobPageSchema = z.object({
   items: z.array(FailedJobSchema),
   total: z.int().describe("Total failed jobs, not just the ones on this page."),
+});
+
+/** The result of emptying the dead-letter queue: how many jobs it removed. */
+const ClearedJobsSchema = z.object({
+  cleared: z.int().describe("How many failed jobs were removed."),
 });
 
 // ---------------------------------------------------------------------------
@@ -888,6 +903,7 @@ responses.add(CatalogThemeSchema, { id: "CatalogTheme" });
 responses.add(InstalledThemeSchema, { id: "InstalledTheme" });
 responses.add(FailedJobSchema, { id: "FailedJob" });
 responses.add(FailedJobPageSchema, { id: "FailedJobPage" });
+responses.add(ClearedJobsSchema, { id: "ClearedJobs" });
 responses.add(RegistryPackageSchema, { id: "RegistryPackage" });
 responses.add(BrowsePackageSchema, { id: "BrowsePackage" });
 responses.add(MarketplaceStatusSchema, { id: "MarketplaceStatus" });
@@ -967,6 +983,7 @@ export type ResponseSchemaId =
   | "PublisherKeyDto"
   | "FailedJob"
   | "FailedJobPage"
+  | "ClearedJobs"
   | "RegistryPackage"
   | "BrowsePackage"
   | "MarketplaceStatus"

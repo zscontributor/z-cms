@@ -231,6 +231,56 @@ export class PackagesService implements OnModuleInit {
     return { key: expected.key, version: expected.version, checksum: envelope.checksum };
   }
 
+  /**
+   * Advance a tenant's ACTIVE installs of a theme to a just-installed version.
+   *
+   * `installVerified` only writes the new version into the shared catalogue — by
+   * design, a running site keeps the version it pinned in `SiteTheme.versionId`
+   * ("activate it separately"). But when an admin UPDATES a theme that is already
+   * live, "update" is meant to mean "run the new one". This re-points every ACTIVE
+   * install of that theme (within the acting tenant) to the new version and drops
+   * those sites' render caches, so the new bundle is what the next request loads.
+   *
+   * Deliberately narrow: ACTIVE installs only — an INACTIVE install stays pinned
+   * until an explicit Activate (which already picks the latest version) — and
+   * scoped to the acting tenant, so a shared catalogue update never silently
+   * upgrades another tenant's running site from under them. A no-op when the theme
+   * is not live anywhere (e.g. a first-time install), so the two-step pull → activate
+   * flow is unchanged for that case.
+   */
+  async advanceActiveThemeInstalls(
+    tenantId: string,
+    key: string,
+    version: string,
+  ): Promise<number> {
+    const db = getSystemDb();
+    const row = await db.themeVersion.findFirst({
+      where: { version, theme: { key } },
+      select: { id: true },
+    });
+    if (!row) return 0;
+
+    const affected = await db.siteTheme.findMany({
+      where: { tenantId, status: "ACTIVE", theme: { key }, NOT: { versionId: row.id } },
+      select: { id: true, siteId: true },
+    });
+
+    for (const install of affected) {
+      await db.siteTheme.update({
+        where: { id: install.id },
+        data: { versionId: row.id },
+      });
+      await this.cache.invalidateSite(install.siteId);
+    }
+
+    if (affected.length > 0) {
+      this.logger.log(
+        `Applied theme ${key}@${version} to ${affected.length} active install(s) on tenant ${tenantId}.`,
+      );
+    }
+    return affected.length;
+  }
+
   marketplacePublicKey(): string {
     const key = (this.config.get<string>("MARKETPLACE_PUBLIC_KEY") ?? "").replace(/\\n/g, "\n");
     if (!key) {
@@ -341,11 +391,18 @@ export class PackagesService implements OnModuleInit {
     const version = String(manifest.version);
     const author = (manifest.author ?? {}) as { name?: string };
 
+    // Reach comes from the SIGNED manifest (verified before we get here), the same
+    // provenance as `permissions` and `network.hosts`. It is not an authority claim
+    // — `isCore` is, and stays false — so an ORG plugin still consents like any
+    // other; it just installs at the organization tier.
+    const scope = String(manifest.scope).toLowerCase() === "org" ? "ORG" : "SITE";
+
     const plugin = await db.plugin.upsert({
       where: { key },
       update: {
         name: String(manifest.name),
         description: (manifest.description as string) ?? null,
+        scope: scope as never,
         publisherId,
       },
       create: {
@@ -353,6 +410,7 @@ export class PackagesService implements OnModuleInit {
         name: String(manifest.name),
         description: (manifest.description as string) ?? null,
         publisher: author.name ?? "unknown",
+        scope: scope as never,
         publisherId,
       },
     });
@@ -510,7 +568,29 @@ export class PackagesService implements OnModuleInit {
         });
         await this.cache.invalidateSite(install.siteId);
       }
-      sitesAffected = affected.length;
+
+      // Org-wide installs of the same version, across every tenant that activated
+      // it. Same rule — QUARANTINED, not INACTIVE — but there is no siteId, so each
+      // affected tenant's sites all have to be rolled.
+      const affectedOrg = await db.orgPlugin.findMany({
+        where: { versionId: row.id, status: "ACTIVE" },
+        select: { id: true, tenantId: true },
+      });
+      for (const install of affectedOrg) {
+        await db.orgPlugin.update({
+          where: { id: install.id },
+          data: {
+            status: "QUARANTINED" as never,
+            lastError: `Revoked by the marketplace: ${reason}`,
+          },
+        });
+        const sites = await db.site.findMany({
+          where: { tenantId: install.tenantId },
+          select: { id: true },
+        });
+        await Promise.all(sites.map((s) => this.cache.invalidateSite(s.id)));
+      }
+      sitesAffected = affected.length + affectedOrg.length;
     }
 
     await this.purgeRuntimes(kind, key, version);

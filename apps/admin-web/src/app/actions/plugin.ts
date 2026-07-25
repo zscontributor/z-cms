@@ -8,6 +8,22 @@ import { isKnownPermission } from "@/lib/plugin-permissions";
 
 export type PluginActionResult = { ok: true; message: string } | { ok: false; error: string };
 
+/**
+ * Which activation tier a plugin action targets. The two tiers share one card and
+ * one set of actions; only the API base path and the page to revalidate differ.
+ * `"site"` hits `/plugins/*` and refreshes the site plugin screen; `"org"` hits
+ * `/org/plugins/*` and refreshes the organization screen.
+ */
+export type PluginTier = "site" | "org";
+
+function basePath(tier: PluginTier): string {
+  return tier === "org" ? "/org/plugins" : "/plugins";
+}
+
+function pageToRevalidate(tier: PluginTier): string {
+  return tier === "org" ? "/org-plugins" : "/plugins";
+}
+
 function toMessage(error: unknown, fallback: string): string {
   if (error instanceof ApiError) return error.message;
   return fallback;
@@ -24,6 +40,7 @@ function toMessage(error: unknown, fallback: string): string {
 export async function installPluginAction(
   key: string,
   granted: string[],
+  tier: PluginTier = "site",
 ): Promise<PluginActionResult> {
   const t = await getT();
 
@@ -37,10 +54,10 @@ export async function installPluginAction(
 
   try {
     await apiFetch<{ ok: true; granted: Permission[] }>(
-      `/plugins/${encodeURIComponent(key)}/install`,
+      `${basePath(tier)}/${encodeURIComponent(key)}/install`,
       { method: "POST", body: { grantedPermissions } },
     );
-    revalidatePath("/plugins");
+    revalidatePath(pageToRevalidate(tier));
     return {
       ok: true,
       message:
@@ -60,7 +77,10 @@ export async function installPluginAction(
  * `{ ok: false, error }` means setup() threw and the plugin is now FAILED —
  * that is a failure, and it is reported as one rather than swallowed.
  */
-export async function activatePluginAction(key: string): Promise<PluginActionResult> {
+export async function activatePluginAction(
+  key: string,
+  tier: PluginTier = "site",
+): Promise<PluginActionResult> {
   const t = await getT();
 
   const user = await getSession();
@@ -71,10 +91,10 @@ export async function activatePluginAction(key: string): Promise<PluginActionRes
 
   try {
     const result = await apiFetch<{ ok: boolean; error?: string }>(
-      `/plugins/${encodeURIComponent(key)}/activate`,
+      `${basePath(tier)}/${encodeURIComponent(key)}/activate`,
       { method: "POST" },
     );
-    revalidatePath("/plugins");
+    revalidatePath(pageToRevalidate(tier));
     if (!result.ok) {
       return {
         ok: false,
@@ -87,7 +107,10 @@ export async function activatePluginAction(key: string): Promise<PluginActionRes
   }
 }
 
-export async function deactivatePluginAction(key: string): Promise<PluginActionResult> {
+export async function deactivatePluginAction(
+  key: string,
+  tier: PluginTier = "site",
+): Promise<PluginActionResult> {
   const t = await getT();
 
   const user = await getSession();
@@ -97,10 +120,10 @@ export async function deactivatePluginAction(key: string): Promise<PluginActionR
   }
 
   try {
-    await apiFetch<{ ok: true }>(`/plugins/${encodeURIComponent(key)}/deactivate`, {
+    await apiFetch<{ ok: true }>(`${basePath(tier)}/${encodeURIComponent(key)}/deactivate`, {
       method: "POST",
     });
-    revalidatePath("/plugins");
+    revalidatePath(pageToRevalidate(tier));
     return { ok: true, message: t("plugins.actions.deactivated") };
   } catch (error) {
     return { ok: false, error: toMessage(error, t("plugins.actions.deactivateFailed")) };
@@ -111,6 +134,7 @@ export async function deactivatePluginAction(key: string): Promise<PluginActionR
 export async function savePluginSettingsAction(
   key: string,
   settings: Record<string, unknown>,
+  tier: PluginTier = "site",
 ): Promise<PluginActionResult> {
   const t = await getT();
 
@@ -121,11 +145,11 @@ export async function savePluginSettingsAction(
   }
 
   try {
-    await apiFetch<{ ok: true }>(`/plugins/${encodeURIComponent(key)}/settings`, {
+    await apiFetch<{ ok: true }>(`${basePath(tier)}/${encodeURIComponent(key)}/settings`, {
       method: "PATCH",
       body: settings,
     });
-    revalidatePath("/plugins");
+    revalidatePath(pageToRevalidate(tier));
     return { ok: true, message: t("plugins.actions.settingsSaved") };
   } catch (error) {
     return { ok: false, error: toMessage(error, t("plugins.actions.settingsSaveFailed")) };

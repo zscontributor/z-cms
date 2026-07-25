@@ -9,12 +9,16 @@
     "media": "Thư viện ảnh",
     "appearance": "Giao diện",
     "plugins": "Plugin",
+    "orgPlugins": "Plugin tổ chức",
     "operations": "Vận hành",
     "marketplace": "Marketplace",
     "jobs": "Tác vụ nền",
     "users": "Người dùng",
     "mail": "Email",
-    "sites": "Site"
+    "sites": "Site",
+    "shop": "Cửa hàng",
+    "orders": "Đơn hàng",
+    "commerce": "Cửa hàng"
   },
   "sidebar": {
     "currentSite": "Site hiện tại",
@@ -245,18 +249,27 @@
     "payload": "Dữ liệu",
     "retry": "Chạy lại",
     "discard": "Bỏ",
+    "clearAll": "Xóa tất cả",
     "discardDialog": {
       "title": "Bỏ {name}?",
       "body": "Bỏ là xoá hẳn tác vụ. Việc mà nó định làm sẽ không bao giờ được làm — không chạy lại, và không còn gì ngoài những gì bạn đang thấy ở đây. Nếu nó định gửi một email, email đó sẽ không bao giờ được gửi.",
       "retryFirst": "Nếu có khả năng lỗi chỉ là nhất thời, hãy chạy lại thay vì bỏ. Chạy lại mà vẫn hỏng thì tác vụ quay về danh sách này; còn đã bỏ thì không lấy lại được.",
       "confirm": "Bỏ vĩnh viễn"
     },
+    "clearDialog": {
+      "title": "Xóa toàn bộ hàng đợi thất bại?",
+      "body": "Thao tác này bỏ tất cả tác vụ lỗi — cả {total} tác vụ, không chỉ những gì đang hiện ở trang này. Việc chúng định làm sẽ không bao giờ được làm, và không có bản lưu nào phía sau.",
+      "retryFirst": "Hãy chạy lại những gì còn có thể thành công trước. Đã xóa hàng đợi thì không lấy lại được.",
+      "confirm": "Xóa tất cả vĩnh viễn"
+    },
     "actions": {
       "denied": "Bạn không có quyền quản lý tác vụ nền.",
       "retried": "Đã đưa {name} vào hàng đợi để chạy lại.",
       "retryFailed": "Không chạy lại được tác vụ.",
       "discarded": "Đã bỏ {name}.",
-      "discardFailed": "Không bỏ được tác vụ."
+      "discardFailed": "Không bỏ được tác vụ.",
+      "cleared": "Đã xóa {count} tác vụ lỗi.",
+      "clearFailed": "Không xóa được hàng đợi."
     },
     "truncated": "Đang hiện {shown} trong tổng số {total} job lỗi. Thử lại hết trang này vẫn chưa làm rỗng hàng đợi."
   },

@@ -60,7 +60,7 @@ export default async function JobsPage() {
               })}
             </p>
           ) : null}
-          <JobsTable jobs={page.items} locale={locale} />
+          <JobsTable jobs={page.items} total={page.total} locale={locale} />
         </>
       )}
     </>

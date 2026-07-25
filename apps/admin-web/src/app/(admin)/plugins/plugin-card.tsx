@@ -23,13 +23,20 @@ export function PluginCard({
   canInstall,
   canActivate,
   canConfigure,
+  tier = "site",
 }: {
   plugin: CatalogPluginDto;
   canInstall: boolean;
   canActivate: boolean;
   canConfigure: boolean;
+  /** Which lifecycle the card drives — the per-site screen or the organization screen. */
+  tier?: "site" | "org";
 }) {
   const t = useT();
+
+  // On the per-site screen, a plugin the tenant turned on org-wide runs here but is
+  // owned by the organization screen: show it, but let no site-level button touch it.
+  const managedElsewhere = tier === "site" && plugin.orgActive;
   const [consentOpen, setConsentOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [consentError, setConsentError] = useState<string | null>(null);
@@ -60,7 +67,7 @@ export function PluginCard({
   function confirmConsent(next: string[]) {
     setConsentError(null);
     startTransition(async () => {
-      const result = await installPluginAction(plugin.key, next);
+      const result = await installPluginAction(plugin.key, next, tier);
       if (!result.ok) {
         setConsentError(result.error);
         return;
@@ -73,7 +80,7 @@ export function PluginCard({
       // reached for. Granting is not the goal — running the plugin is — so finish
       // the job rather than making them press it twice.
       if (!isActive) {
-        const activated = await activatePluginAction(plugin.key);
+        const activated = await activatePluginAction(plugin.key, tier);
         if (!activated.ok) setRuntimeError(activated.error);
         else setNotice(activated.message);
       }
@@ -96,8 +103,8 @@ export function PluginCard({
 
     startTransition(async () => {
       const result = isActive
-        ? await deactivatePluginAction(plugin.key)
-        : await activatePluginAction(plugin.key);
+        ? await deactivatePluginAction(plugin.key, tier)
+        : await activatePluginAction(plugin.key, tier);
 
       // A failed setup() comes back as { ok: false, error } with HTTP 200. It is
       // still a failure: the plugin is now FAILED, and saying otherwise would be
@@ -131,7 +138,11 @@ export function PluginCard({
         <div className="min-w-0 pr-8">
           <h2 className="flex items-center gap-1.5 text-sm font-semibold">
             <span className="truncate">{plugin.name}</span>
-            {plugin.isCore ? <Badge tone="info">{t("plugins.card.core")}</Badge> : null}
+            {plugin.tier === "PLATFORM" ? (
+              <Badge tone="info">{t("plugins.card.tier.platform")}</Badge>
+            ) : plugin.tier === "ORG" ? (
+              <Badge tone="neutral">{t("plugins.card.tier.org")}</Badge>
+            ) : null}
           </h2>
           <p className="mt-0.5 text-[11px] z-muted">
             <code>{plugin.key}</code> · v{plugin.latestVersion ?? "—"} · {plugin.publisher}
@@ -234,6 +245,11 @@ export function PluginCard({
         </p>
       ) : null}
 
+      {managedElsewhere ? (
+        <p className="mt-4 rounded-md border border-brand-200 bg-brand-50 px-2.5 py-2 text-[11px] leading-4 text-brand-800 dark:border-brand-900 dark:bg-brand-950/40 dark:text-brand-200">
+          {t("plugins.card.managedOrgWide")}
+        </p>
+      ) : (
       <div className="mt-4 flex flex-wrap items-center gap-2 pt-1">
         {!plugin.installed ? (
           <Button
@@ -286,8 +302,9 @@ export function PluginCard({
           </>
         )}
       </div>
+      )}
 
-      {!canInstall && !plugin.installed ? (
+      {!managedElsewhere && !canInstall && !plugin.installed ? (
         <p className="mt-2 text-[11px] z-muted">{t("plugins.card.installDenied")}</p>
       ) : null}
 
@@ -304,7 +321,7 @@ export function PluginCard({
             schema={plugin.settingsSchema}
             settings={plugin.settings ?? {}}
             disabled={!canConfigure}
-            onSave={(values) => savePluginSettingsAction(plugin.key, values)}
+            onSave={(values) => savePluginSettingsAction(plugin.key, values, tier)}
             emptyText={t("plugins.settings.empty")}
             deniedText={t("plugins.settings.denied")}
           />

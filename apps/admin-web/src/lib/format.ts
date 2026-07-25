@@ -1,4 +1,4 @@
-import type { ContentStatus } from "@zcmsorg/schemas";
+import type { ContentStatus, OrderStatus, PaymentStatus } from "@zcmsorg/schemas";
 
 /**
  * Formatters are cached per locale: constructing an Intl.DateTimeFormat is the
@@ -49,4 +49,36 @@ export const STATUS_TONES: Record<ContentStatus, BadgeTone> = {
 /** The label itself lives in the catalogue: `content.status.<STATUS>`. */
 export function statusKey(status: ContentStatus): string {
   return `content.status.${status}`;
+}
+
+export const ORDER_STATUS_TONES: Record<OrderStatus, BadgeTone> = {
+  PENDING: "warning",
+  CONFIRMED: "info",
+  FULFILLED: "success",
+  CANCELLED: "danger",
+  REFUNDED: "neutral",
+};
+
+export const PAYMENT_STATUS_TONES: Record<PaymentStatus, BadgeTone> = {
+  UNPAID: "neutral",
+  PAID: "success",
+  REFUNDED: "warning",
+};
+
+/** Labels live in the catalogue: `commerce.orderStatus.<STATUS>`. */
+export function orderStatusKey(status: OrderStatus): string {
+  return `commerce.orderStatus.${status}`;
+}
+
+export function paymentStatusKey(status: PaymentStatus): string {
+  return `commerce.paymentStatus.${status}`;
+}
+
+/** A money amount from an order, in the order's own currency. */
+export function formatMoney(amount: number, currency: string, locale: string): string {
+  try {
+    return new Intl.NumberFormat(locale, { style: "currency", currency }).format(amount);
+  } catch {
+    return `${amount} ${currency}`;
+  }
 }

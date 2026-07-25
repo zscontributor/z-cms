@@ -1,11 +1,28 @@
 import type { ReactNode } from "react";
-import type { RenderIntegration } from "@zcmsorg/schemas";
+import type { CommercePublicConfig, RenderIntegration } from "@zcmsorg/schemas";
 import type { IntegrationSlot } from "@zcmsorg/theme-sdk";
 import { AiAssistant } from "@/components/ai-assistant";
+import { Storefront } from "@/components/storefront";
 
 interface AiAssistantData {
   name: string;
   welcomeMessage: string;
+}
+
+function commerceConfig(integration: RenderIntegration): CommercePublicConfig | null {
+  const data = integration.data as Partial<CommercePublicConfig> | null;
+  if (!data || typeof data.currency !== "string") {
+    console.warn("[integrations] Invalid public data for commerce.checkout; storefront skipped.");
+    return null;
+  }
+  return {
+    enabled: data.enabled !== false,
+    currency: data.currency,
+    codEnabled: data.codEnabled !== false,
+    shippingFlatFee: typeof data.shippingFlatFee === "number" ? data.shippingFlatFee : 0,
+    freeShippingThreshold:
+      typeof data.freeShippingThreshold === "number" ? data.freeShippingThreshold : null,
+  };
 }
 
 function aiAssistantData(integration: RenderIntegration): AiAssistantData | null {
@@ -24,13 +41,23 @@ function aiAssistantData(integration: RenderIntegration): AiAssistantData | null
 export function renderIntegrationSlot(
   slot: IntegrationSlot,
   integrations: Record<string, RenderIntegration>,
+  locale = "en",
 ): ReactNode {
-  if (slot !== "floating") return null;
+  if (slot === "floating") {
+    const assistant = integrations["ai.assistant"];
+    if (!assistant) return null;
+    const data = aiAssistantData(assistant);
+    if (!data) return null;
+    return <AiAssistant name={data.name} welcomeMessage={data.welcomeMessage} />;
+  }
 
-  const assistant = integrations["ai.assistant"];
-  if (!assistant) return null;
-  const data = aiAssistantData(assistant);
-  if (!data) return null;
+  if (slot === "commerce") {
+    const commerce = integrations["commerce.checkout"];
+    if (!commerce) return null;
+    const config = commerceConfig(commerce);
+    if (!config || !config.enabled) return null;
+    return <Storefront config={config} locale={locale} />;
+  }
 
-  return <AiAssistant name={data.name} welcomeMessage={data.welcomeMessage} />;
+  return null;
 }

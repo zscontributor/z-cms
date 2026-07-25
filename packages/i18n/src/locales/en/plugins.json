@@ -9,6 +9,11 @@
   "catalogHeading": "Catalogue",
   "card": {
     "core": "Core",
+    "tier": {
+      "platform": "Core",
+      "org": "Organization"
+    },
+    "managedOrgWide": "Activated organization-wide. It already runs on this site; manage it from Organization plugins.",
     "noDescription": "This plugin has no description.",
     "capabilities": "Offers to themes",
     "grantedHeading": "Granted permissions",
@@ -230,8 +235,27 @@
     "theme:publish": {
       "label": "Publish themes to the marketplace",
       "detail": "Put a theme on the public marketplace under this company's name. Once approved, it cannot be recalled."
+    },
+    "order:read": {
+      "label": "Read the shop’s orders",
+      "detail": "See customer names, contact details and delivery addresses on every order."
+    },
+    "order:manage": {
+      "label": "Manage orders",
+      "detail": "Confirm, fulfil, cancel or refund orders — a refund moves money."
+    },
+    "commerce:configure": {
+      "label": "Configure the storefront",
+      "detail": "Change currency, shipping and which payment methods the shop accepts."
     }
   },
   "sideloadHint": "Plugins you installed from a file. They run in the sandbox like any other, once approved.",
-  "sideloadApprovedHint": "Approved. Install it onto a site from the catalogue above to grant it permissions."
+  "sideloadApprovedHint": "Approved. Install it onto a site from the catalogue above to grant it permissions.",
+  "org": {
+    "metaTitle": "Organization plugins",
+    "title": "Organization plugins",
+    "description": "Plugins turned on once for the whole organization. Each runs on every site you own, in its own sandbox.",
+    "emptyTitle": "No organization plugins",
+    "emptyDescription": "No plugin in the catalogue is organization-wide, or the catalogue could not be reached."
+  }
 }

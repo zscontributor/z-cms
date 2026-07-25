@@ -9,12 +9,16 @@
     "media": "Media library",
     "appearance": "Appearance",
     "plugins": "Plugins",
+    "orgPlugins": "Org plugins",
     "operations": "Operations",
     "marketplace": "Marketplace",
     "jobs": "Background jobs",
     "users": "Users",
     "mail": "Mail",
-    "sites": "Sites"
+    "sites": "Sites",
+    "shop": "Shop",
+    "orders": "Orders",
+    "commerce": "Storefront"
   },
   "sidebar": {
     "currentSite": "Current site",
@@ -245,18 +249,27 @@
     "payload": "Payload",
     "retry": "Retry",
     "discard": "Discard",
+    "clearAll": "Clear all",
     "discardDialog": {
       "title": "Discard {name}?",
       "body": "Discarding deletes the job. The work it was going to do will never be done — it is not retried, and nothing is left behind except what you already see here. If it was going to send an email, the email is never sent.",
       "retryFirst": "If there is any chance the failure was transient, retry it instead. A retry that fails again lands back on this list; a discard does not come back.",
       "confirm": "Discard permanently"
     },
+    "clearDialog": {
+      "title": "Clear the dead-letter queue?",
+      "body": "This discards every failed job — all {total} of them, not just the ones on this page. The work they were going to do will never be done, and there is no archive behind it.",
+      "retryFirst": "Retry anything that might still succeed first. A cleared queue does not come back.",
+      "confirm": "Clear all permanently"
+    },
     "actions": {
       "denied": "You do not have permission to manage background jobs.",
       "retried": "{name} was queued for another attempt.",
       "retryFailed": "The job could not be retried.",
       "discarded": "{name} was discarded.",
-      "discardFailed": "The job could not be discarded."
+      "discardFailed": "The job could not be discarded.",
+      "cleared": "Cleared {count} failed jobs.",
+      "clearFailed": "The queue could not be cleared."
     },
     "truncated": "Showing {shown} of {total} failed jobs. Retrying everything on this page will not empty the queue."
   },

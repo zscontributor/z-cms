@@ -14,6 +14,7 @@ export const NAMESPACES = [
   "admin",
   "appearance",
   "auth",
+  "commerce",
   "common",
   "content",
   "errors",
@@ -47,7 +48,7 @@ export const STABLE_THRESHOLD = 0.95;
 export const LOCALES: LocaleInfo[] = [
   { code: "en", name: "English", nativeName: "English", dir: "ltr", status: "stable", coverage: 100, flag: "gb" },
   { code: "vi", name: "Vietnamese", nativeName: "Tiếng Việt", dir: "ltr", status: "stable", coverage: 100, flag: "vn" },
-  { code: "ja", name: "Japanese", nativeName: "日本語", dir: "ltr", status: "stable", coverage: 100, flag: "jp" },
+  { code: "ja", name: "Japanese", nativeName: "日本語", dir: "ltr", status: "stable", coverage: 99, flag: "jp" },
 ];
 
 /**

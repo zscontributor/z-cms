@@ -1,0 +1,87 @@
+{
+  "metaTitle": "Đơn hàng",
+  "list": {
+    "title": "Đơn hàng",
+    "description": "Mọi đơn hàng đặt qua cửa hàng.",
+    "denied": "Bạn không có quyền xem đơn hàng.",
+    "emptyTitle": "Chưa có đơn hàng",
+    "emptyDescription": "Đơn hàng đặt trên cửa hàng sẽ hiện ở đây.",
+    "noResultsTitle": "Không có đơn hàng phù hợp",
+    "noResultsDescription": "Thử tìm kiếm hoặc trạng thái khác.",
+    "searchPlaceholder": "Tìm mã đơn hoặc khách hàng",
+    "searchLabel": "Tìm đơn hàng",
+    "statusFilter": "Lọc theo trạng thái",
+    "allStatuses": "Tất cả trạng thái",
+    "view": "Xem"
+  },
+  "table": {
+    "order": "Đơn hàng",
+    "customer": "Khách hàng",
+    "items": "Sản phẩm",
+    "total": "Tổng cộng",
+    "status": "Trạng thái",
+    "placed": "Đặt lúc",
+    "actions": "Thao tác"
+  },
+  "detail": {
+    "metaTitle": "Đơn hàng",
+    "back": "Tất cả đơn hàng",
+    "notFound": "Đơn hàng này không tồn tại.",
+    "customer": "Khách hàng",
+    "contact": "Liên hệ",
+    "shipping": "Địa chỉ giao hàng",
+    "note": "Ghi chú đơn hàng",
+    "items": "Sản phẩm",
+    "summary": "Tổng kết",
+    "subtotal": "Tạm tính",
+    "shippingFee": "Phí vận chuyển",
+    "discount": "Giảm giá",
+    "total": "Tổng cộng",
+    "payment": "Thanh toán",
+    "placed": "Đặt lúc",
+    "paid": "Thanh toán lúc",
+    "updateStatus": "Cập nhật trạng thái",
+    "save": "Lưu trạng thái",
+    "saved": "Đã cập nhật trạng thái.",
+    "saveFailed": "Không thể cập nhật đơn hàng.",
+    "free": "Miễn phí"
+  },
+  "orderStatus": {
+    "PENDING": "Chờ xử lý",
+    "CONFIRMED": "Đã xác nhận",
+    "FULFILLED": "Đã giao",
+    "CANCELLED": "Đã hủy",
+    "REFUNDED": "Đã hoàn tiền"
+  },
+  "paymentStatus": {
+    "UNPAID": "Chưa thanh toán",
+    "PAID": "Đã thanh toán",
+    "REFUNDED": "Đã hoàn tiền"
+  },
+  "paymentMethod": {
+    "COD": "Thanh toán khi nhận hàng"
+  },
+  "settings": {
+    "metaTitle": "Cửa hàng",
+    "title": "Cửa hàng",
+    "description": "Tiền tệ, vận chuyển và thanh toán cho cửa hàng.",
+    "denied": "Bạn không có quyền cấu hình cửa hàng.",
+    "readOnly": "Bạn có thể xem nhưng không thể thay đổi các cài đặt này.",
+    "enabled": "Nhận đơn hàng",
+    "enabledHint": "Tắt để ngừng nhận đơn mà vẫn giữ nguyên cài đặt.",
+    "currency": "Tiền tệ",
+    "currencyHint": "Mã ISO, ví dụ USD, VND, JPY.",
+    "cod": "Thanh toán khi nhận hàng (COD)",
+    "codHint": "Cho phép khách trả tiền mặt khi đơn hàng đến.",
+    "shippingFee": "Phí vận chuyển",
+    "shippingFeeHint": "Phí cố định cộng vào mỗi đơn, theo tiền tệ ở trên.",
+    "freeShipping": "Miễn phí vận chuyển từ",
+    "freeShippingHint": "Để trống nếu luôn tính phí vận chuyển.",
+    "storeName": "Tên cửa hàng",
+    "storeEmail": "Email nhận thông báo đơn hàng",
+    "storeEmailHint": "Nơi nhận thông báo đơn hàng mới. Không bắt buộc.",
+    "save": "Lưu cài đặt",
+    "saved": "Đã lưu cài đặt cửa hàng.",
+    "saveFailed": "Không thể lưu cài đặt."
+  }
+}

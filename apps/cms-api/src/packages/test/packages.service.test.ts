@@ -256,3 +256,65 @@ describe("PackagesService.installVerified — channel transition", () => {
     expect(call.update.checksum).toBe("MARKETPLACE_REAL");
   });
 });
+
+describe("PackagesService.advanceActiveThemeInstalls — update applies to the live site", () => {
+  beforeEach(() => {
+    vi.spyOn(Logger.prototype, "log").mockImplementation(() => undefined);
+  });
+
+  function makeServiceWithCache(cache: { invalidateSite: any }) {
+    return new PackagesService(config as any, cache as any);
+  }
+
+  it("re-points ACTIVE installs (this tenant) to the new version and drops their caches", async () => {
+    const siteThemeUpdate = vi.fn().mockResolvedValue({});
+    const findMany = vi.fn().mockResolvedValue([
+      { id: "st1", siteId: "site-1" },
+      { id: "st2", siteId: "site-2" },
+    ]);
+    dbState.db = {
+      themeVersion: { findFirst: vi.fn().mockResolvedValue({ id: "tvNEW" }) },
+      siteTheme: { findMany, update: siteThemeUpdate },
+    };
+    const invalidateSite = vi.fn().mockResolvedValue(undefined);
+
+    const applied = await makeServiceWithCache({ invalidateSite }).advanceActiveThemeInstalls(
+      "tenant-1",
+      KEY,
+      "1.1.0",
+    );
+
+    expect(applied).toBe(2);
+    // Only ACTIVE installs of THIS theme, THIS tenant, not already on the new version.
+    expect(findMany.mock.calls[0][0].where).toMatchObject({
+      tenantId: "tenant-1",
+      status: "ACTIVE",
+      theme: { key: KEY },
+      NOT: { versionId: "tvNEW" },
+    });
+    // Each is moved onto the new version row and its render cache dropped.
+    expect(siteThemeUpdate).toHaveBeenCalledWith({ where: { id: "st1" }, data: { versionId: "tvNEW" } });
+    expect(siteThemeUpdate).toHaveBeenCalledWith({ where: { id: "st2" }, data: { versionId: "tvNEW" } });
+    expect(invalidateSite).toHaveBeenCalledWith("site-1");
+    expect(invalidateSite).toHaveBeenCalledWith("site-2");
+  });
+
+  it("is a no-op when the theme is not live anywhere (first-time install)", async () => {
+    const siteThemeUpdate = vi.fn();
+    dbState.db = {
+      themeVersion: { findFirst: vi.fn().mockResolvedValue({ id: "tvNEW" }) },
+      siteTheme: { findMany: vi.fn().mockResolvedValue([]), update: siteThemeUpdate },
+    };
+    const invalidateSite = vi.fn();
+
+    const applied = await makeServiceWithCache({ invalidateSite }).advanceActiveThemeInstalls(
+      "tenant-1",
+      KEY,
+      "1.1.0",
+    );
+
+    expect(applied).toBe(0);
+    expect(siteThemeUpdate).not.toHaveBeenCalled();
+    expect(invalidateSite).not.toHaveBeenCalled();
+  });
+});

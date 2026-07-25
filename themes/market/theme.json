@@ -3,7 +3,7 @@
   "name": "Z Market",
   "version": "1.2.1",
   "kind": "theme",
-  "description": "An elegant storefront theme for cosmetics, skincare and beauty brands: a full-bleed hero, shop-by-category tiles, a product grid, an ingredients accordion and a newsletter strip. English, Japanese and Vietnamese, with dark and light modes.",
+  "description": "An elegant storefront for cosmetics and beauty brands: hero, category tiles, product grid, ingredients accordion and newsletter — plus add-to-cart, a slide-in cart and cash-on-delivery checkout. English, Japanese and Vietnamese, dark and light modes.",
   "author": {
     "name": "Z-SOFT Co., Ltd.",
     "url": "https://z-soft.com.vn"
@@ -20,10 +20,12 @@
     "error"
   ],
   "optionalCapabilities": [
-    "ai.assistant"
+    "ai.assistant",
+    "commerce.checkout"
   ],
   "integrationSlots": [
-    "floating"
+    "floating",
+    "commerce"
   ],
   "menuLocations": [
     {

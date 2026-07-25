@@ -160,10 +160,20 @@ export class PluginsService {
 
   /** Capabilities contributed by the site's ACTIVE plugins — themes read these. */
   async capabilitiesFor(tenantId: string, siteId: string): Promise<string[]> {
-    const rows = await getSystemDb().sitePlugin.findMany({
-      where: { tenantId, siteId, status: "ACTIVE" },
-      include: { version: { select: { manifest: true } } },
-    });
+    const db = getSystemDb();
+    // Both tiers: the site's own ACTIVE installs plus any plugin the tenant has
+    // activated org-wide. An org plugin's capabilities are visible on every site.
+    const [siteRows, orgRows] = await Promise.all([
+      db.sitePlugin.findMany({
+        where: { tenantId, siteId, status: "ACTIVE" },
+        include: { version: { select: { manifest: true } } },
+      }),
+      db.orgPlugin.findMany({
+        where: { tenantId, status: "ACTIVE" },
+        include: { version: { select: { manifest: true } } },
+      }),
+    ]);
+    const rows = [...siteRows, ...orgRows];
 
     const caps = new Set<string>();
     for (const row of rows) {
@@ -178,13 +188,25 @@ export class PluginsService {
     tenantId: string,
     siteId: string,
   ): Promise<PluginRenderContributions> {
-    const rows = await getSystemDb().sitePlugin.findMany({
-      where: { tenantId, siteId, status: "ACTIVE" },
-      include: {
-        plugin: { select: { key: true } },
-        version: { select: { version: true, manifest: true } },
-      },
-    });
+    const db = getSystemDb();
+    const include = {
+      plugin: { select: { key: true } },
+      version: { select: { version: true, manifest: true } },
+    } as const;
+    // Site-tier installs plus org-wide ones. A public integration an org plugin
+    // exposes (e.g. an AI assistant activated for the whole tenant) shows up here
+    // for every site the tenant owns.
+    const [siteRows, orgRows] = await Promise.all([
+      db.sitePlugin.findMany({
+        where: { tenantId, siteId, status: "ACTIVE" },
+        include,
+      }),
+      db.orgPlugin.findMany({
+        where: { tenantId, status: "ACTIVE" },
+        include,
+      }),
+    ]);
+    const rows = [...siteRows, ...orgRows];
 
     const capabilities = new Set<string>();
     const integrations: Record<string, RenderIntegration> = {};
@@ -219,10 +241,18 @@ export class PluginsService {
     tenantId: string,
     siteId: string,
   ): Promise<{ name: string; welcomeMessage: string } | undefined> {
-    const row = await getSystemDb().sitePlugin.findFirst({
-      where: { tenantId, siteId, status: "ACTIVE", plugin: { key: "vn.zsoft.plugin.zai" } },
-      select: { settings: true },
-    });
+    const db = getSystemDb();
+    // zAI may be activated per-site or org-wide; check both tiers, preferring the
+    // site's own install if one exists.
+    const row =
+      (await db.sitePlugin.findFirst({
+        where: { tenantId, siteId, status: "ACTIVE", plugin: { key: "vn.zsoft.plugin.zai" } },
+        select: { settings: true },
+      })) ??
+      (await db.orgPlugin.findFirst({
+        where: { tenantId, status: "ACTIVE", plugin: { key: "vn.zsoft.plugin.zai" } },
+        select: { settings: true },
+      }));
     if (!row) return undefined;
     const settings = (row.settings ?? {}) as Record<string, unknown>;
     if (!PUBLIC_INTEGRATION_PROJECTORS["ai.assistant"].isAvailable?.(settings)) {
@@ -412,12 +442,26 @@ export class PluginsService {
     tenantId: string,
     siteId: string,
   ): Promise<DispatchTarget[]> {
-    const rows = await getSystemDb().sitePlugin.findMany({
-      where: { tenantId, siteId, status: "ACTIVE" },
-      include: { plugin: true, version: true },
-    });
+    const db = getSystemDb();
+    // The union of the two activation tiers. Site-scoped plugins are keyed by
+    // (site, plugin); org-scoped ones by (tenant, plugin) and reach every site the
+    // tenant owns. A given plugin lives in exactly one tier (its catalogue `scope`
+    // is fixed and the lifecycle endpoints refuse to install it at the other), so
+    // no row can appear in both lists — no de-duplication is needed. An org plugin
+    // still executes against the current siteId, so its scoped token and any data
+    // it writes are bound to the site being rendered, exactly like a site plugin.
+    const [siteRows, orgRows] = await Promise.all([
+      db.sitePlugin.findMany({
+        where: { tenantId, siteId, status: "ACTIVE" },
+        include: { plugin: true, version: true },
+      }),
+      db.orgPlugin.findMany({
+        where: { tenantId, status: "ACTIVE" },
+        include: { plugin: true, version: true },
+      }),
+    ]);
 
-    return rows.map((row) => this.toTarget(row));
+    return [...siteRows, ...orgRows].map((row) => this.toTarget(row));
   }
 
   /**

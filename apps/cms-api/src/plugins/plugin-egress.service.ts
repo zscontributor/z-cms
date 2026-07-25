@@ -266,15 +266,30 @@ export class PluginEgressService implements OnModuleDestroy {
    * one did not, must take effect on the next call rather than on the next restart.
    */
   private async policyFor(claims: PluginTokenClaims): Promise<EgressPolicy> {
-    const install = await getSystemDb().sitePlugin.findFirst({
-      where: {
-        tenantId: claims.tid,
-        siteId: claims.sid,
-        pluginId: claims.pid,
-        status: "ACTIVE",
-      },
-      include: { version: { select: { manifest: true } } },
-    });
+    const db = getSystemDb();
+    // The plugin making this call may be installed at either tier. A site-scoped
+    // install is keyed by (site, plugin); an org-scoped one by (tenant, plugin) and
+    // carries no siteId even though it runs against a site. Look for the site tier
+    // first, then fall back to the org tier — so an org plugin's declared hosts and
+    // secrets are enforced just the same.
+    const install =
+      (await db.sitePlugin.findFirst({
+        where: {
+          tenantId: claims.tid,
+          siteId: claims.sid,
+          pluginId: claims.pid,
+          status: "ACTIVE",
+        },
+        include: { version: { select: { manifest: true } } },
+      })) ??
+      (await db.orgPlugin.findFirst({
+        where: {
+          tenantId: claims.tid,
+          pluginId: claims.pid,
+          status: "ACTIVE",
+        },
+        include: { version: { select: { manifest: true } } },
+      }));
 
     const manifest = install?.version.manifest as {
       network?: { hosts?: string[]; secrets?: Record<string, string> };

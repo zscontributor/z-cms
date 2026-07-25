@@ -53,3 +53,28 @@ export async function discardFailedJobAction(id: string, name: string): Promise<
     return { ok: false, error: toMessage(error, t("admin.jobs.actions.discardFailed")) };
   }
 }
+
+/**
+ * Empties the whole dead-letter queue at once. Like discard, this decides the
+ * work will never be done — for every failed job, not one — which is why the UI
+ * asks first and the message reports how many were thrown away.
+ */
+export async function clearFailedJobsAction(): Promise<JobActionResult> {
+  const t = await getT();
+
+  const user = await getSession();
+  if (!user) return { ok: false, error: t("auth.session.expired") };
+  if (!can(user, "settings:update")) {
+    return { ok: false, error: t("admin.jobs.actions.denied") };
+  }
+
+  try {
+    const { cleared } = await apiFetch<{ cleared: number }>("/jobs/failed", {
+      method: "DELETE",
+    });
+    revalidatePath("/jobs");
+    return { ok: true, message: t("admin.jobs.actions.cleared", { count: String(cleared) }) };
+  } catch (error) {
+    return { ok: false, error: toMessage(error, t("admin.jobs.actions.clearFailed")) };
+  }
+}

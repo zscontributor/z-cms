@@ -1,0 +1,87 @@
+{
+  "metaTitle": "注文",
+  "list": {
+    "title": "注文",
+    "description": "ストアフロントからのすべての注文。",
+    "denied": "注文を閲覧する権限がありません。",
+    "emptyTitle": "まだ注文はありません",
+    "emptyDescription": "ストアフロントで受けた注文がここに表示されます。",
+    "noResultsTitle": "該当する注文はありません",
+    "noResultsDescription": "検索条件やステータスを変えてお試しください。",
+    "searchPlaceholder": "注文番号・顧客で検索",
+    "searchLabel": "注文を検索",
+    "statusFilter": "ステータスで絞り込み",
+    "allStatuses": "すべてのステータス",
+    "view": "表示"
+  },
+  "table": {
+    "order": "注文",
+    "customer": "顧客",
+    "items": "商品数",
+    "total": "合計",
+    "status": "ステータス",
+    "placed": "注文日時",
+    "actions": "操作"
+  },
+  "detail": {
+    "metaTitle": "注文",
+    "back": "すべての注文",
+    "notFound": "この注文は存在しません。",
+    "customer": "顧客",
+    "contact": "連絡先",
+    "shipping": "お届け先",
+    "note": "注文メモ",
+    "items": "商品",
+    "summary": "内訳",
+    "subtotal": "小計",
+    "shippingFee": "配送料",
+    "discount": "割引",
+    "total": "合計",
+    "payment": "お支払い",
+    "placed": "注文日時",
+    "paid": "支払日時",
+    "updateStatus": "ステータスを更新",
+    "save": "ステータスを保存",
+    "saved": "ステータスを更新しました。",
+    "saveFailed": "注文を更新できませんでした。",
+    "free": "無料"
+  },
+  "orderStatus": {
+    "PENDING": "保留中",
+    "CONFIRMED": "確認済み",
+    "FULFILLED": "発送済み",
+    "CANCELLED": "キャンセル",
+    "REFUNDED": "返金済み"
+  },
+  "paymentStatus": {
+    "UNPAID": "未払い",
+    "PAID": "支払い済み",
+    "REFUNDED": "返金済み"
+  },
+  "paymentMethod": {
+    "COD": "代金引換"
+  },
+  "settings": {
+    "metaTitle": "ストアフロント",
+    "title": "ストアフロント",
+    "description": "ショップの通貨・配送・支払い設定。",
+    "denied": "ストアフロントを設定する権限がありません。",
+    "readOnly": "この設定は閲覧のみで、変更はできません。",
+    "enabled": "注文を受け付ける",
+    "enabledHint": "オフにすると設定を保持したままチェックアウトを停止します。",
+    "currency": "通貨",
+    "currencyHint": "ISO コード（例：USD、VND、JPY）。",
+    "cod": "代金引換",
+    "codHint": "商品お届け時に現金でのお支払いを許可します。",
+    "shippingFee": "配送料",
+    "shippingFeeHint": "上記の通貨で、すべての注文に加算される定額の配送料。",
+    "freeShipping": "送料無料の下限",
+    "freeShippingHint": "常に配送料を課す場合は空欄のままにしてください。",
+    "storeName": "店名",
+    "storeEmail": "注文通知メール",
+    "storeEmailHint": "新規注文の通知先。任意。",
+    "save": "設定を保存",
+    "saved": "ストアフロントの設定を保存しました。",
+    "saveFailed": "設定を保存できませんでした。"
+  }
+}

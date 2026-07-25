@@ -44,6 +44,11 @@ export class QueueService implements OnModuleDestroy {
     return this.producer.discardJob(id);
   }
 
+  /** Empties the dead-letter queue, returning how many jobs were cleared. */
+  clearFailed(): Promise<number> {
+    return this.producer.clearFailed();
+  }
+
   async onModuleDestroy(): Promise<void> {
     await this.producer.close();
   }

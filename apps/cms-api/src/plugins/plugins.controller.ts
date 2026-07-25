@@ -28,6 +28,20 @@ import {
 import { CacheService } from "../redis/cache.service";
 import { PluginsService } from "./plugins.service";
 
+/** A plugin's activation reach, mirroring the Prisma `PluginScope` enum. */
+export type PluginScope = "SITE" | "ORG";
+
+/**
+ * The admin-facing tier, derived from the two catalogue columns rather than
+ * stored: authority (`isCore`) wins over reach (`scope`). One function so the
+ * site controller, the org controller and the API contract cannot drift.
+ */
+export type PluginTier = "PLATFORM" | "ORG" | "SITE";
+export function derivePluginTier(isCore: boolean, scope: PluginScope): PluginTier {
+  if (isCore) return "PLATFORM";
+  return scope === "ORG" ? "ORG" : "SITE";
+}
+
 // Exported so its OpenAPI schema can be type-checked against it. See openapi/registry.ts.
 export interface CatalogPlugin {
   key: string;
@@ -35,6 +49,10 @@ export interface CatalogPlugin {
   description: string | null;
   publisher: string;
   isCore: boolean;
+  scope: PluginScope;
+  tier: PluginTier;
+  /** True when active org-wide for the tenant — runs here, managed on the org screen. */
+  orgActive: boolean;
   latestVersion: string | null;
   /** Where the latest version came from — BUILTIN/MARKETPLACE = verified, SIDELOAD = not. */
   origin: string | null;
@@ -70,7 +88,7 @@ export interface CatalogPlugin {
   lastError: string | null;
 }
 
-interface SettingsSchema {
+export interface SettingsSchema {
   properties?: Record<
     string,
     { type?: "string" | "number" | "boolean"; enum?: string[] }
@@ -89,7 +107,7 @@ interface SettingsSchema {
  * new version must not make every existing site's saved settings un-saveable.
  * Wrong types are coerced where that is unambiguous, and skipped where it is not.
  */
-function coerceSettings(
+export function coerceSettings(
   schema: SettingsSchema | undefined,
   input: Record<string, unknown>,
 ): Record<string, unknown> {
@@ -164,6 +182,15 @@ export class PluginsController {
     const installed = await db().sitePlugin.findMany({ where: { siteId } });
     const byPluginId = new Map(installed.map((i) => [i.pluginId, i]));
 
+    // Which plugins the tenant has turned on org-wide — they run on this site but
+    // are managed from the organization screen, so the per-site card shows them
+    // read-only. RLS scopes this to the caller's tenant.
+    const orgActive = await db().orgPlugin.findMany({
+      where: { status: "ACTIVE" },
+      select: { pluginId: true },
+    });
+    const orgActiveIds = new Set(orgActive.map((o) => o.pluginId));
+
     return catalog.map((plugin) => {
       const latest = plugin.versions[0];
       const manifest = (latest?.manifest ?? {}) as {
@@ -179,6 +206,9 @@ export class PluginsController {
         description: plugin.description,
         publisher: plugin.publisher,
         isCore: plugin.isCore,
+        scope: plugin.scope,
+        tier: derivePluginTier(plugin.isCore, plugin.scope),
+        orgActive: orgActiveIds.has(plugin.id),
         latestVersion: latest?.version ?? null,
         origin: latest?.origin ?? null,
         reviewStatus: latest?.reviewStatus ?? null,
@@ -247,6 +277,14 @@ export class PluginsController {
 
     const latest = plugin.versions[0];
     if (!latest) throw new NotFoundException(t()("errors.plugins.noVersion", { key }));
+
+    // A plugin belongs to exactly one activation tier. An ORG-scoped plugin is
+    // installed once for the whole tenant on the organization screen; letting it
+    // also be installed per-site would give it two independent install rows and
+    // two consent states for the same plugin. Refuse it here.
+    if (plugin.scope === "ORG") {
+      throw new BadRequestException(t()("errors.plugins.wrongTierSite", { key }));
+    }
 
     const requested = (latest.permissions ?? []) as Permission[];
     const granted = (body.grantedPermissions ?? []) as Permission[];

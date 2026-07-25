@@ -9,6 +9,11 @@
   "catalogHeading": "Kho plugin",
   "card": {
     "core": "Lõi",
+    "tier": {
+      "platform": "Lõi",
+      "org": "Tổ chức"
+    },
+    "managedOrgWide": "Đã bật cho toàn tổ chức. Plugin đang chạy trên site này; quản lý ở mục Plugin của tổ chức.",
     "noDescription": "Plugin này chưa có mô tả.",
     "capabilities": "Cung cấp cho giao diện",
     "grantedHeading": "Quyền đã cấp",
@@ -230,8 +235,27 @@
     "theme:publish": {
       "label": "Phát hành theme lên marketplace",
       "detail": "Đưa theme lên marketplace công khai dưới tên công ty này. Đã được duyệt thì không thu hồi được."
+    },
+    "order:read": {
+      "label": "Đọc đơn hàng của cửa hàng",
+      "detail": "Xem tên khách, thông tin liên hệ và địa chỉ giao hàng trên mọi đơn."
+    },
+    "order:manage": {
+      "label": "Quản lý đơn hàng",
+      "detail": "Xác nhận, giao, hủy hoặc hoàn tiền đơn hàng — hoàn tiền là chuyển tiền."
+    },
+    "commerce:configure": {
+      "label": "Cấu hình cửa hàng",
+      "detail": "Đổi tiền tệ, vận chuyển và các phương thức thanh toán cửa hàng chấp nhận."
     }
   },
   "sideloadHint": "Các plugin bạn cài từ file. Sau khi duyệt, chúng chạy trong sandbox như mọi plugin khác.",
-  "sideloadApprovedHint": "Đã duyệt. Cài nó lên site từ danh mục ở trên để cấp quyền cho nó."
+  "sideloadApprovedHint": "Đã duyệt. Cài nó lên site từ danh mục ở trên để cấp quyền cho nó.",
+  "org": {
+    "metaTitle": "Plugin tổ chức",
+    "title": "Plugin tổ chức",
+    "description": "Các plugin được bật một lần cho toàn tổ chức. Mỗi plugin chạy trên mọi site bạn sở hữu, trong sandbox riêng.",
+    "emptyTitle": "Chưa có plugin tổ chức",
+    "emptyDescription": "Không có plugin nào trong danh mục ở phạm vi tổ chức, hoặc không truy cập được danh mục."
+  }
 }

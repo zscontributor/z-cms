@@ -132,7 +132,14 @@ export type IntegrationSlot =
   | "page-before"
   | "page-after"
   | "footer-before"
-  | "floating";
+  | "floating"
+  /**
+   * The storefront: a floating cart button, its drawer, and the checkout it opens.
+   * Mounted once (usually in the layout) by a theme that opts into commerce. Like
+   * every slot, the theme chooses only the position — the interactive UI is the
+   * runtime's, wired to the core `commerce.checkout` integration.
+   */
+  | "commerce";
 
 /**
  * `ctx.colorMode` — what the platform tells a theme about colour modes.

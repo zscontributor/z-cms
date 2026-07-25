@@ -1,0 +1,33 @@
+{
+  "id": "vn.zsoft.plugin.content-pack",
+  "name": "Z-SOFT Content Pack",
+  "version": "0.1.0",
+  "description": "Companion to the Z-SOFT theme: audits that every page and post exists in all configured languages and reports the coverage gaps to fill.",
+  "author": { "name": "Z-SOFT Co., Ltd", "url": "https://z-soft.com.vn" },
+  "engine": ">=0.1.0",
+  "entry": "dist/index.js",
+  "permissions": ["content:read"],
+  "capabilities": ["content.audit"],
+  "settingsSchema": {
+    "type": "object",
+    "properties": {
+      "requiredLocales": {
+        "type": "string",
+        "title": "Required languages",
+        "description": "Comma-separated locale codes every page/post should exist in, e.g. \"en,vi,ja\".",
+        "default": "en,vi,ja"
+      },
+      "contentTypes": {
+        "type": "string",
+        "title": "Content types to audit",
+        "description": "Comma-separated content-type keys to check. Leave empty to audit everything.",
+        "default": "page,post"
+      },
+      "warnOnGaps": {
+        "type": "boolean",
+        "title": "Warn in the log when a language is missing",
+        "default": true
+      }
+    }
+  }
+}

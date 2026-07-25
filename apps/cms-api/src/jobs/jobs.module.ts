@@ -109,6 +109,28 @@ class JobsController {
     // Discarding a job is deciding that work will never be done. Recorded.
     await this.audit.record(actor, "job.discarded", "job", id, {});
   }
+
+  @Delete("failed")
+  @HttpCode(200)
+  @ApiOperation({
+    summary: "Clear the dead-letter queue",
+    description:
+      "Discards every failed job at once — the bulk form of a per-job discard, " +
+      "for when the whole list is known-dead noise rather than work to recover. " +
+      "Irreversible, and audited with the count it removed. Retry anything worth " +
+      "keeping first; a cleared queue does not come back.",
+  })
+  @ApiAuthed("settings:update")
+  @ApiZodResponse("ClearedJobs", { description: "How many jobs were cleared." })
+  @RequirePermissions("settings:update")
+  async clear(@Actor() actor: RequestActor): Promise<{ cleared: number }> {
+    const cleared = await this.queue.clearFailed();
+
+    // Emptying the queue is deciding a whole set of work will never be done.
+    // Recorded with the count, since the rows themselves are now gone.
+    await this.audit.record(actor, "job.cleared", "job", null, { cleared });
+    return { cleared };
+  }
 }
 
 @Module({ controllers: [JobsController] })

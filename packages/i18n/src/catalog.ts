@@ -7,6 +7,7 @@ import type { Messages } from "./types";
 import enAdmin from "./locales/en/admin.json";
 import enAppearance from "./locales/en/appearance.json";
 import enAuth from "./locales/en/auth.json";
+import enCommerce from "./locales/en/commerce.json";
 import enCommon from "./locales/en/common.json";
 import enContent from "./locales/en/content.json";
 import enErrors from "./locales/en/errors.json";
@@ -18,6 +19,7 @@ import enThemeEditor from "./locales/en/themeEditor.json";
 import viAdmin from "./locales/vi/admin.json";
 import viAppearance from "./locales/vi/appearance.json";
 import viAuth from "./locales/vi/auth.json";
+import viCommerce from "./locales/vi/commerce.json";
 import viCommon from "./locales/vi/common.json";
 import viContent from "./locales/vi/content.json";
 import viErrors from "./locales/vi/errors.json";
@@ -29,6 +31,7 @@ import viThemeEditor from "./locales/vi/themeEditor.json";
 import jaAdmin from "./locales/ja/admin.json";
 import jaAppearance from "./locales/ja/appearance.json";
 import jaAuth from "./locales/ja/auth.json";
+import jaCommerce from "./locales/ja/commerce.json";
 import jaCommon from "./locales/ja/common.json";
 import jaContent from "./locales/ja/content.json";
 import jaErrors from "./locales/ja/errors.json";
@@ -51,6 +54,7 @@ export const catalog: Record<string, Messages> = {
     admin: enAdmin,
     appearance: enAppearance,
     auth: enAuth,
+    commerce: enCommerce,
     common: enCommon,
     content: enContent,
     errors: enErrors,
@@ -64,6 +68,7 @@ export const catalog: Record<string, Messages> = {
     admin: viAdmin,
     appearance: viAppearance,
     auth: viAuth,
+    commerce: viCommerce,
     common: viCommon,
     content: viContent,
     errors: viErrors,
@@ -77,6 +82,7 @@ export const catalog: Record<string, Messages> = {
     admin: jaAdmin,
     appearance: jaAppearance,
     auth: jaAuth,
+    commerce: jaCommerce,
     common: jaCommon,
     content: jaContent,
     errors: jaErrors,

@@ -108,6 +108,20 @@ export class QueueProducer {
     return true;
   }
 
+  /**
+   * Empties the dead-letter queue in one pass, returning how many jobs it threw
+   * away.
+   *
+   * This is `discardJob` applied to the whole failed set — the same irreversible
+   * "this work will never be done", just not one id at a time. `clean(grace,
+   * limit, "failed")` with grace 0 ignores age and limit 0 lifts the cap, so it
+   * removes every failed job, not only the page an operator can see.
+   */
+  async clearFailed(): Promise<number> {
+    const removed = await this.queue.clean(0, 0, "failed");
+    return removed.length;
+  }
+
   async close(): Promise<void> {
     await this.queue.close();
     await this.connection.quit();
