@@ -416,6 +416,8 @@ export interface InstalledThemeDto {
   demoAvailable: boolean;
   demoSeeded: boolean;
   screenshots: string[];
+  /** Release notes for the installed version, or null if the theme shipped none. */
+  changelog: string | null;
 }
 
 export interface ThemeCatalogEntry {
@@ -424,7 +426,12 @@ export interface ThemeCatalogEntry {
   description: string;
   author: string;
   screenshots: string[];
-  versions: { version: string; origin: PackageOrigin; reviewStatus: string }[];
+  versions: {
+    version: string;
+    origin: PackageOrigin;
+    reviewStatus: string;
+    changelog: string | null;
+  }[];
 }
 
 export const listInstalledThemes = cache(
@@ -519,6 +526,8 @@ export interface CatalogPluginDto {
   status: string | null;
   grantedPermissions?: Permission[] | null;
   settings?: Record<string, unknown> | null;
+  /** The latest version's release notes, or null if the plugin shipped none. */
+  changelog?: string | null;
 }
 
 export const listPlugins = cache(

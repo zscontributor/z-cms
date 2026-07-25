@@ -35,10 +35,24 @@ interface Run {
   code: number;
 }
 
-/** Runs `zcms <args>` and captures stdout, stderr and the exit code. */
-async function zcms(args: string[]): Promise<Run> {
+/**
+ * Runs `zcms <args>` and captures stdout, stderr and the exit code.
+ *
+ * The locale variables are stripped from the base environment so a machine whose
+ * shell is set to Japanese does not turn every English assertion below red. A test
+ * that cares about language sets ZCMS_LANG (or passes --lang) explicitly.
+ */
+async function zcms(args: string[], env?: Record<string, string>): Promise<Run> {
+  const base = { ...process.env };
+  delete base.LANG;
+  delete base.LC_ALL;
+  delete base.LC_MESSAGES;
+  delete base.ZCMS_LANG;
+
   try {
-    const { stdout, stderr } = await execFileAsync(TSX, [MAIN, ...args]);
+    const { stdout, stderr } = await execFileAsync(TSX, [MAIN, ...args], {
+      env: { ...base, ...env },
+    });
     return { stdout, stderr, code: 0 };
   } catch (err) {
     const e = err as { stdout?: string; stderr?: string; code?: number };
@@ -95,6 +109,43 @@ describe("command dispatch", () => {
     expect(stdout).toContain("zcms keygen");
     expect(code).toBe(1);
   });
+
+  it("treats -help (a single dash) as help, exiting 0", async () => {
+    // A common typo of --help. It should show usage and succeed, not fall through
+    // to the unknown-command path and exit 1.
+    const { stdout, code } = await zcms(["-help"]);
+
+    expect(stdout).toContain("the packaging tool for Z-CMS");
+    expect(code).toBe(0);
+  });
+});
+
+describe("localized help", () => {
+  it("shows Vietnamese help with --lang vi", async () => {
+    const { stdout, code } = await zcms(["help", "--lang", "vi"]);
+
+    expect(stdout).toContain("công cụ đóng gói");
+    expect(code).toBe(0);
+  });
+
+  it("accepts the country-style code (JP -> Japanese) on --help too", async () => {
+    const { stdout } = await zcms(["--help", "--lang", "JP"]);
+
+    expect(stdout).toContain("パッケージ化するツール");
+  });
+
+  it("reads the language from ZCMS_LANG when no flag is given", async () => {
+    const { stdout } = await zcms(["help"], { ZCMS_LANG: "vi" });
+
+    expect(stdout).toContain("công cụ đóng gói");
+  });
+
+  it("localizes the unknown-command error too", async () => {
+    const { stderr, code } = await zcms(["frobnicate", "--lang", "vi"]);
+
+    expect(stderr).toContain("Lệnh không hợp lệ");
+    expect(code).toBe(1);
+  });
 });
 
 describe("keygen", () => {
@@ -134,11 +185,35 @@ describe("keygen", () => {
     expect(stderr).toMatch(/already exists/);
     expect(code).toBe(1);
   });
+
+  it("refuses to overwrite an existing public key, keeping the pair matched", async () => {
+    // A public key left over from a previous pair must not be silently rewritten
+    // to match a fresh private key: that yields two halves that never belonged
+    // together, and every signature made with them then fails to verify.
+    const out = path.join(tmp, "keys");
+    fs.mkdirSync(out, { recursive: true });
+    fs.writeFileSync(path.join(out, "publisher-public.pem"), "stale public key");
+
+    const { stderr, code } = await zcms(["keygen", "--out", out]);
+
+    expect(stderr).toMatch(/already exists/);
+    expect(code).toBe(1);
+  });
 });
 
 describe("pack", () => {
   it("refuses to pack with no source directory", async () => {
     const { stderr, code } = await zcms(["pack"]);
+
+    expect(stderr).toMatch(/Missing source directory/);
+    expect(code).toBe(1);
+  });
+
+  it("reports the missing directory when only flags are given, not an opaque ENOENT", async () => {
+    // `zcms pack --kind theme ...` with the dir omitted must name what is missing,
+    // rather than treat the flag "--kind" as a directory and fail deep in the
+    // packer with an error that points nowhere useful.
+    const { stderr, code } = await zcms(["pack", "--kind", "theme"]);
 
     expect(stderr).toMatch(/Missing source directory/);
     expect(code).toBe(1);

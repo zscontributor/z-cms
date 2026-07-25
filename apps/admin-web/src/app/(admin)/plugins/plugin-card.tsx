@@ -10,6 +10,7 @@ import {
 } from "@/app/actions/plugin";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ChangelogNote } from "@/components/changelog-note";
 import { Dialog } from "@/components/ui/dialog";
 import { SchemaSettingsForm } from "@/components/settings/schema-settings-form";
 import { Icon } from "@/components/shell/icon";
@@ -156,6 +157,11 @@ export function PluginCard({
       <p className="mt-2 line-clamp-3 min-h-8 text-xs z-muted">
         {plugin.description ?? t("plugins.card.noDescription")}
       </p>
+
+      <ChangelogNote
+        label={t("plugins.card.changelog", { version: plugin.latestVersion ?? "—" })}
+        changelog={plugin.changelog}
+      />
 
       {plugin.capabilities.length > 0 ? (
         <div className="mt-3">

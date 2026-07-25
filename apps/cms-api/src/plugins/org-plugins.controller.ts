@@ -80,6 +80,7 @@ export class OrgPluginsController {
         capabilities?: string[];
         settingsSchema?: unknown;
         network?: { hosts?: string[] };
+        changelog?: unknown;
       };
       const install = byPluginId.get(plugin.id);
 
@@ -108,6 +109,10 @@ export class OrgPluginsController {
           ? ((install.settings ?? {}) as Record<string, unknown>)
           : null,
         lastError: install?.lastError ?? null,
+        changelog:
+          typeof manifest.changelog === "string" && manifest.changelog.trim()
+            ? manifest.changelog
+            : null,
       };
     });
   }

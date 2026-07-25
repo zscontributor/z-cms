@@ -73,6 +73,13 @@ export const MAX_AUTHOR_LENGTH = 80;
 export const MAX_DESCRIPTION_LENGTH = 280;
 
 /**
+ * Release notes for a single version — a short list of what changed, not a manual.
+ * Generous enough for a real changelog entry, bounded so it stays a summary an admin
+ * reads in the update dialog rather than a document.
+ */
+export const MAX_CHANGELOG_LENGTH = 2000;
+
+/**
  * Characters that are not text, whatever they claim to be.
  *
  * Three groups, and none of them can appear in a name a human meant to type:
@@ -129,6 +136,7 @@ export function validateText(
   value: unknown,
   max: number,
   required: boolean,
+  multiline = false,
 ): string | null {
   if (value === undefined || value === null || value === "") {
     return required ? `${field} is required.` : null;
@@ -141,9 +149,14 @@ export function validateText(
   const trimmed = value.trim();
   if (required && !trimmed) return `${field} is required.`;
 
-  if (UNSAFE_TEXT.test(trimmed)) {
+  // A multi-line field (a changelog) is meant to have line breaks and tabs, so the
+  // whitespace controls a human types on purpose are removed before the scan; every
+  // other control, bidi override and zero-width trick is still refused, exactly as
+  // for a single-line field.
+  const scanned = multiline ? trimmed.replace(/[\t\n\r]/g, "") : trimmed;
+  if (UNSAFE_TEXT.test(scanned)) {
     return (
-      `${field} contains ${describeUnsafe(trimmed)}. It is rendered in the admin and in the ` +
+      `${field} contains ${describeUnsafe(scanned)}. It is rendered in the admin and in the ` +
       `catalogue, and a character that cannot be seen is a character that is there to be abused.`
     );
   }
@@ -198,6 +211,8 @@ export function validateManifestIdentity(raw: Record<string, unknown>): string[]
   push(validateId(raw.id));
   push(validateText("name", raw.name, MAX_NAME_LENGTH, true));
   push(validateText("description", raw.description, MAX_DESCRIPTION_LENGTH, false));
+  // Optional, and multi-line: the changelog is a list of changes for this version.
+  push(validateText("changelog", raw.changelog, MAX_CHANGELOG_LENGTH, false, true));
 
   // Format only. Whether a version is ALLOWED to follow the ones already published
   // — that it is greater than the current highest — is a question about the state

@@ -29,7 +29,8 @@
     "configure": "設定する",
     "changePermissions": "権限の変更",
     "installDenied": "プラグインをインストールする権限がありません。",
-    "settingsGenerated": "このフォームはプラグインの settingsSchema から生成されます。"
+    "settingsGenerated": "このフォームはプラグインの settingsSchema から生成されます。",
+    "changelog": "v{version} の変更点"
   },
   "settings": {
     "empty": "このプラグインには設定がありません。",

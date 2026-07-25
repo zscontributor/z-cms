@@ -566,6 +566,10 @@ const CatalogPluginSchema = z.object({
   grantedPermissions: z.array(PermissionSchema).nullable().describe("Non-null only when installed."),
   settings: z.record(z.string(), z.unknown()).nullable(),
   lastError: z.string().nullable(),
+  changelog: z
+    .string()
+    .nullable()
+    .describe("The latest version's release notes, or null if the author shipped none."),
 });
 
 const CatalogThemeSchema = z.object({
@@ -576,7 +580,12 @@ const CatalogThemeSchema = z.object({
   isCore: z.boolean(),
   screenshots: z.array(z.url()).max(MAX_SCREENSHOTS),
   versions: z.array(
-    z.object({ version: z.string(), origin: z.string(), reviewStatus: z.string() }),
+    z.object({
+      version: z.string(),
+      origin: z.string(),
+      reviewStatus: z.string(),
+      changelog: z.string().nullable(),
+    }),
   ),
 });
 
@@ -592,6 +601,7 @@ const InstalledThemeSchema = z.object({
   demoAvailable: z.boolean(),
   demoSeeded: z.boolean(),
   screenshots: z.array(z.url()).max(MAX_SCREENSHOTS),
+  changelog: z.string().nullable(),
 });
 
 /**

@@ -64,5 +64,6 @@
     "approved": "Approved {name}.",
     "removed": "Removed {name}.",
     "actionFailed": "That action could not be completed."
-  }
+  },
+  "changelog": "What's new in v{version}"
 }

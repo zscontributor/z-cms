@@ -67,7 +67,13 @@ export interface CatalogTheme {
   author: string;
   isCore: boolean;
   screenshots: string[];
-  versions: { version: string; origin: string; reviewStatus: string }[];
+  versions: {
+    version: string;
+    origin: string;
+    reviewStatus: string;
+    /** This version's release notes, or null if the author shipped none. */
+    changelog: string | null;
+  }[];
 }
 
 export interface InstalledTheme {
@@ -84,6 +90,15 @@ export interface InstalledTheme {
   demoAvailable: boolean;
   demoSeeded: boolean;
   screenshots: string[];
+  /** Release notes for the installed version, so the admin sees what it introduced. */
+  changelog: string | null;
+}
+
+/** A version's release notes, read from its stored manifest. Non-strings (a theme
+ *  that shipped none, or a malformed value) become null so the DTO stays clean. */
+function changelogOf(manifest: unknown): string | null {
+  const value = (manifest as { changelog?: unknown } | null)?.changelog;
+  return typeof value === "string" && value.trim() ? value : null;
 }
 
 function screenshotUrls(
@@ -243,10 +258,11 @@ export class ThemesController {
               latest.manifest as Record<string, unknown>,
             )
           : [],
-        versions: theme.versions.map(({ version, origin, reviewStatus }) => ({
-          version,
-          origin,
-          reviewStatus,
+        versions: theme.versions.map((v) => ({
+          version: v.version,
+          origin: v.origin,
+          reviewStatus: v.reviewStatus,
+          changelog: changelogOf(v.manifest),
         })),
       };
     });
@@ -308,6 +324,7 @@ export class ThemesController {
           row.version.checksum,
           manifest,
         ),
+        changelog: changelogOf(manifest),
       };
     });
   }

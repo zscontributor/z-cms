@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  MAX_CHANGELOG_LENGTH,
   MAX_DESCRIPTION_LENGTH,
   MAX_ID_LENGTH,
   MAX_NAME_LENGTH,
@@ -148,6 +149,39 @@ describe("description — optional, but bounded", () => {
   it("refuses a novel", () => {
     const error = validateText("description", "a".repeat(281), MAX_DESCRIPTION_LENGTH, false);
     expect(error).toMatch(/limit is 280/);
+  });
+});
+
+describe("changelog — optional, multi-line, still safe", () => {
+  it("allows it to be absent", () => {
+    expect(validateText("changelog", undefined, MAX_CHANGELOG_LENGTH, false, true)).toBeNull();
+  });
+
+  it("allows line breaks and tabs — a changelog is a list", () => {
+    const notes = "- Fixed the hero button\n- Removed a duplicate breadcrumb\n\t- Minor polish";
+    expect(validateText("changelog", notes, MAX_CHANGELOG_LENGTH, false, true)).toBeNull();
+  });
+
+  it("still refuses a bidi override hidden among the newlines", () => {
+    const error = validateText(
+      "changelog",
+      "- normal line\n- ‮evil line",
+      MAX_CHANGELOG_LENGTH,
+      false,
+      true,
+    );
+    expect(error).toMatch(/U\+202E/);
+  });
+
+  it("refuses one longer than the limit", () => {
+    const error = validateText("changelog", "a".repeat(2001), MAX_CHANGELOG_LENGTH, false, true);
+    expect(error).toMatch(/limit is 2000/);
+  });
+
+  it("is validated as part of the manifest", () => {
+    expect(validateManifestIdentity({ ...ok, changelog: "- One change\n- Another" })).toEqual([]);
+    const errors = validateManifestIdentity({ ...ok, changelog: "a".repeat(2001) });
+    expect(errors.join(" ")).toMatch(/changelog is 2001 characters/);
   });
 });
 

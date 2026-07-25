@@ -349,6 +349,13 @@ export interface ThemeManifest {
   name: string;
   version: string;
   description?: string;
+  /**
+   * Release notes for THIS version — what changed since the previous one, so an
+   * admin looking at an update knows what they are getting. Plain text; one change
+   * per line reads best. The platform keeps every version's notes, so the full
+   * history is the changelogs of all published versions, newest first.
+   */
+  changelog?: string;
   author: ThemeAuthor;
   /** Semver range of the Z-CMS engine this theme supports. */
   engine: string;

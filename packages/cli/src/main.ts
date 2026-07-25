@@ -18,6 +18,7 @@ import {
   writeScaffold,
   type InitOptions,
 } from "./init";
+import { resolveLang, unknownCommand, usage } from "./help";
 import { createPrompter, interactive } from "./prompt";
 
 /**
@@ -39,49 +40,10 @@ import { createPrompter, interactive } from "./prompt";
  * `publish` is deliberately NOT here yet: uploading is `POST /packages` with an
  * admin session, and pretending the CLI can do it before there is a publisher
  * account system would be a lie in tab-completion form.
+ *
+ * The help text itself lives in ./help, in English, Japanese and Vietnamese; the
+ * language is chosen by --lang, ZCMS_LANG, or the shell locale.
  */
-
-const USAGE = `
-zcms — the packaging tool for Z-CMS themes and plugins
-
-  zcms init [<dir>] [--kind theme|plugin] [--id <reverse.dns.id>] [--name <name>]
-            [--description <text>] [--author <name>] [--author-url <url>]
-            [--version <semver>] [--yes]
-      Scaffolds a new theme or plugin: manifest, source, build, test, README.
-      Asks for anything it was not given. --yes never asks, and then --kind and
-      --id are required.
-
-  zcms keygen [--out <dir>]
-      Generates the publisher's Ed25519 key pair.
-      The private key must NEVER be committed or sent to anyone.
-
-  zcms pack <dir> --kind theme|plugin --key <private.pem> --pub <public.pem> [--out <file>]
-      Packs a built directory into one signed .zcms file.
-      Add --operator-key <private.pem> to also stamp an operator signature for the
-      sideload route (a self-hosted instance that pins the matching public key).
-
-  zcms verify <file.zcms> [--marketplace-key <public.pem>]
-      Checks a package. Without --marketplace-key only the publisher signature is
-      checked (enough to check your own work before submitting, NOT enough to install).
-
-  zcms help
-      Shows this text. Also: zcms (no command), zcms -h, zcms --help.
-
-Typical workflows
-  Build a distributable .zcms (the file you upload or submit):
-      zcms init ./my-theme --kind theme --id com.acme.theme.blog
-      cd my-theme && npm install && npm run build   # produces dist/
-      zcms keygen                                    # once — keep the private key safe
-      zcms pack ./my-theme --kind theme --key keys/private.pem --pub keys/public.pem
-      # -> com.acme.theme.blog-1.0.0.zcms
-
-  Sideload it into your OWN self-hosted instance (no marketplace):
-      zcms pack ./my-theme --kind theme --key op-private.pem --pub op-public.pem \\
-        --operator-key op-private.pem
-      # Upload the .zcms in Admin -> Appearance -> Install from file, then Approve.
-      # The instance must pin OPERATOR_PUBLIC_KEY (= op-public.pem); for themes it
-      # also needs ALLOW_THEME_SIDELOAD=true. See docs/distribution.md.
-`;
 
 function arg(name: string, argv: string[]): string | undefined {
   const i = argv.indexOf(`--${name}`);
@@ -249,6 +211,12 @@ function keygen(argv: string[]) {
   if (fs.existsSync(priv)) {
     die(`${priv} already exists. Overwriting a private key orphans every package it has ever signed.`);
   }
+  // The public half is guarded too: silently rewriting it while leaving an
+  // unrelated private key in place would hand out a key pair whose halves no
+  // longer match, and every signature made with it would then fail to verify.
+  if (fs.existsSync(pub)) {
+    die(`${pub} already exists. Point --out at an empty directory so the pair stays matched.`);
+  }
 
   // 0600: a private key readable by other users on the box is not a private key.
   fs.writeFileSync(priv, privateKey, { mode: 0o600 });
@@ -263,7 +231,10 @@ function keygen(argv: string[]) {
 }
 
 async function packCmd(argv: string[]) {
-  const dir = argv[1];
+  // Via `positional`, not `argv[1]`, so `zcms pack --kind theme ...` (dir omitted)
+  // reports the missing directory instead of trying to pack a directory named
+  // "--kind" and failing later with an opaque ENOENT.
+  const dir = positional(argv);
   if (!dir) die("Missing source directory. Example: zcms pack ./themes/corporate --kind theme ...");
 
   const kind = arg("kind", argv) as PackageKind | undefined;
@@ -372,6 +343,11 @@ async function main() {
   const argv = process.argv.slice(2);
   const command = argv[0];
 
+  // Help is the only localized output: --lang, then ZCMS_LANG, then the shell
+  // locale, then English. Resolved up front so every help path below speaks it,
+  // including the one an unknown command falls into.
+  const lang = resolveLang(argv, process.env);
+
   switch (command) {
     case "init":
       return initCmd(argv);
@@ -383,15 +359,16 @@ async function main() {
       return verifyCmd(argv);
     case "help":
     case "-h":
+    case "-help":
     case "--help":
-      console.log(USAGE);
+      console.log(usage(lang));
       return;
     default:
       // An unknown command is a mistake worth naming, so the hint points at it
       // rather than burying it under the whole usage text; no command at all just
       // prints help and exits 0.
-      if (command) console.error(`Unknown command "${command}". Try: zcms help\n`);
-      console.log(USAGE);
+      if (command) console.error(unknownCommand(command, lang));
+      console.log(usage(lang));
       process.exit(command ? 1 : 0);
   }
 }

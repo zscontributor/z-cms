@@ -71,6 +71,20 @@ package installable. Pass `--marketplace-key` to check that too.
 | `zcms keygen [--out dir]` | Generates your publisher key pair. |
 | `zcms pack <dir> --kind theme\|plugin --key <pem> --pub <pem>` | Packs a built directory into one signed `.zcms`. |
 | `zcms verify <file.zcms> [--marketplace-key <pem>]` | Checks a package's signatures. |
+| `zcms help [--lang en\|ja\|vi]` | Shows usage. Also `zcms`, `zcms -h`, `zcms -help`, `zcms --help`. |
+
+### Help in your language
+
+`zcms help` (and `--help`) prints in English, Japanese or Vietnamese:
+
+```sh
+zcms help --lang vi      # Tiếng Việt
+zcms help --lang ja      # 日本語  (--lang JP and --lang VN are accepted too)
+```
+
+Without `--lang` it reads `ZCMS_LANG`, then your shell locale (`LANG`), then falls
+back to English. Only the help text is translated — build output, checksums and
+error details are the same in every language.
 
 There is no `publish`. Submitting a package is an authenticated upload to the
 marketplace, and a `zcms publish` that could not actually do it would be a lie in

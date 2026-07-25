@@ -64,5 +64,6 @@
     "approved": "{name} を承認しました。",
     "removed": "{name} を削除しました。",
     "actionFailed": "この操作を完了できませんでした。"
-  }
+  },
+  "changelog": "v{version} の変更点"
 }

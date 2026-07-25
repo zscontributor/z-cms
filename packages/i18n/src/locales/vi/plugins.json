@@ -29,7 +29,8 @@
     "configure": "Cấu hình",
     "changePermissions": "Thay đổi quyền",
     "installDenied": "Bạn không có quyền cài đặt plugin.",
-    "settingsGenerated": "Biểu mẫu này được sinh tự động từ settingsSchema của plugin."
+    "settingsGenerated": "Biểu mẫu này được sinh tự động từ settingsSchema của plugin.",
+    "changelog": "Có gì mới ở v{version}"
   },
   "settings": {
     "empty": "Plugin này không có tuỳ chọn cấu hình.",

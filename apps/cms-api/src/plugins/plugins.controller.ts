@@ -86,6 +86,8 @@ export interface CatalogPlugin {
   grantedPermissions: Permission[] | null;
   settings: Record<string, unknown> | null;
   lastError: string | null;
+  /** The latest version's release notes, so an admin sees what an update introduces. */
+  changelog: string | null;
 }
 
 export interface SettingsSchema {
@@ -197,6 +199,7 @@ export class PluginsController {
         capabilities?: string[];
         settingsSchema?: unknown;
         network?: { hosts?: string[] };
+        changelog?: unknown;
       };
       const install = byPluginId.get(plugin.id);
 
@@ -225,6 +228,10 @@ export class PluginsController {
           ? ((install.settings ?? {}) as Record<string, unknown>)
           : null,
         lastError: install?.lastError ?? null,
+        changelog:
+          typeof manifest.changelog === "string" && manifest.changelog.trim()
+            ? manifest.changelog
+            : null,
       };
     });
   }

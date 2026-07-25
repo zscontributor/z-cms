@@ -64,5 +64,6 @@
     "approved": "Đã duyệt {name}.",
     "removed": "Đã gỡ {name}.",
     "actionFailed": "Không thực hiện được thao tác này."
-  }
+  },
+  "changelog": "Có gì mới ở v{version}"
 }

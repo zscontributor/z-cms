@@ -29,7 +29,8 @@
     "configure": "Configure",
     "changePermissions": "Change permissions",
     "installDenied": "You do not have permission to install plugins.",
-    "settingsGenerated": "This form is generated from the plugin's settingsSchema."
+    "settingsGenerated": "This form is generated from the plugin's settingsSchema.",
+    "changelog": "What's new in v{version}"
   },
   "settings": {
     "empty": "This plugin has no settings.",

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button, LinkButton } from "@/components/ui/button";
+import { ChangelogNote } from "@/components/changelog-note";
 import { Dialog } from "@/components/ui/dialog";
 import { Icon } from "@/components/shell/icon";
 import { MediaGallery } from "@/components/ui/media-gallery";
@@ -124,6 +125,11 @@ function ThemeCard({
           </Badge>
         )}
       </div>
+
+      <ChangelogNote
+        label={t("appearance.changelog", { version: theme.version })}
+        changelog={theme.changelog}
+      />
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {isActive ? (
