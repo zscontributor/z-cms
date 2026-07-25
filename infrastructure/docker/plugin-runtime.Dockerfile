@@ -51,6 +51,15 @@ RUN pnpm install --frozen-lockfile=false \
 # from this directory, and an unsigned second copy of the same code inside the one
 # container that runs untrusted plugins is an attack surface nothing reads.
 #
+# A `.not-builtin` marker means the directory is a PRIVATE, marketplace-distributed
+# package that merely lives beside the built-ins in the repo — signed with the
+# publisher key, not the pinned first-party key. It must NOT be staged into the
+# built-in `/plugins`: the runtime first-party-verifies every `.zcms` it discovers
+# there before matching a manifest id, so one publisher-signed package would fail
+# that check and block loading of every genuine built-in. `sign-builtins.mts` and
+# the `seed-plugins.ts`/`seed-themes.ts` steps already skip these directories; this
+# stage is the same marker's consumer at image-build time.
+#
 # A compose deployment bind-mounts `plugins/` off the host; an orchestrator has no
 # host checkout to mount, so without this the directory is empty and every built-in
 # plugin is "not installed".
@@ -63,6 +72,7 @@ RUN set -eu; \
     found=0; \
     for dir in /stage/plugins/*/; do \
       name=$(basename "$dir"); \
+      [ -f "$dir/.not-builtin" ] && continue; \
       [ -f "$dir/plugin.json" ] || continue; \
       ls "$dir"*.zcms >/dev/null 2>&1 || continue; \
       mkdir -p "/builtin/plugins/$name"; \

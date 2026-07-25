@@ -78,6 +78,12 @@ RUN pnpm prune --prod
 # step was skipped it fails the BUILD rather than shipping an image whose every site
 # serves the fallback. A directory with no `.zcms` is skipped rather than half-copied:
 # `theme.json` alone would advertise a built-in key whose package does not exist.
+#
+# A `.not-builtin` marker means the directory is a PRIVATE, marketplace-distributed
+# theme (publisher-signed, not first-party-signed) that only lives beside the built-ins
+# in the repo. It must not be staged into the built-in `/themes`: site-runtime verifies
+# these against FIRST_PARTY_PUBLIC_KEY, so a publisher-signed theme staged here fails
+# that check. `sign-builtins.mts` and the seed steps already skip these directories.
 # ---------------------------------------------------------------------------
 FROM build AS builtin-themes
 RUN set -eu; \
@@ -85,6 +91,7 @@ RUN set -eu; \
     found=0; \
     for dir in /repo/themes/*/; do \
       name=$(basename "$dir"); \
+      [ -f "$dir/.not-builtin" ] && continue; \
       [ -f "$dir/theme.json" ] || continue; \
       ls "$dir"*.zcms >/dev/null 2>&1 || continue; \
       mkdir -p "/builtin/themes/$name"; \
