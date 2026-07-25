@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   MAX_CHANGELOG_LENGTH,
+  MAX_CHANGELOG_LOCALES,
   MAX_DESCRIPTION_LENGTH,
   MAX_ID_LENGTH,
   MAX_NAME_LENGTH,
   assertManifestIdentity,
+  normalizeChangelog,
+  resolveChangelog,
+  validateChangelog,
   validateId,
   validateManifestIdentity,
   validateText,
@@ -182,6 +186,117 @@ describe("changelog — optional, multi-line, still safe", () => {
     expect(validateManifestIdentity({ ...ok, changelog: "- One change\n- Another" })).toEqual([]);
     const errors = validateManifestIdentity({ ...ok, changelog: "a".repeat(2001) });
     expect(errors.join(" ")).toMatch(/changelog is 2001 characters/);
+  });
+});
+
+describe("changelog — localized (an object keyed by locale)", () => {
+  it("accepts a plain string as the English notes", () => {
+    expect(validateChangelog("- Fixed the header")).toEqual([]);
+  });
+
+  it("accepts absence", () => {
+    expect(validateChangelog(undefined)).toEqual([]);
+    expect(validateChangelog(null)).toEqual([]);
+  });
+
+  it("accepts a locale map with English present", () => {
+    expect(
+      validateChangelog({ en: "- Fixed the header", vi: "- Sửa phần đầu trang" }),
+    ).toEqual([]);
+  });
+
+  it("requires English when localized", () => {
+    const errors = validateChangelog({ vi: "- Sửa phần đầu trang" });
+    expect(errors.join(" ")).toMatch(/must include "en"/);
+  });
+
+  it("holds every locale to the same text rules — length", () => {
+    const errors = validateChangelog({ en: "ok", vi: "a".repeat(2001) });
+    expect(errors.join(" ")).toMatch(/changelog\.vi is 2001 characters/);
+  });
+
+  it("holds every locale to the same text rules — a bidi override in a translation", () => {
+    const errors = validateChangelog({ en: "ok", ja: "- ‮evil line" });
+    expect(errors.join(" ")).toMatch(/changelog\.ja contains .*U\+202E/);
+  });
+
+  it("refuses a key that is not a locale code", () => {
+    const errors = validateChangelog({ en: "ok", "not a locale": "x" });
+    expect(errors.join(" ")).toMatch(/not a valid locale code/);
+  });
+
+  it("accepts regional locales like pt-BR and zh-Hans", () => {
+    expect(
+      validateChangelog({ en: "ok", "pt-BR": "corrigido", "zh-Hans": "已修复" }),
+    ).toEqual([]);
+  });
+
+  it("refuses a locale whose notes are empty", () => {
+    const errors = validateChangelog({ en: "ok", vi: "   " });
+    expect(errors.join(" ")).toMatch(/changelog\.vi is required/);
+  });
+
+  it("caps the number of locales", () => {
+    const many: Record<string, string> = { en: "ok" };
+    for (let i = 0; i < MAX_CHANGELOG_LOCALES; i += 1) many[`x${i}`] = "note";
+    const errors = validateChangelog(many);
+    expect(errors.join(" ")).toMatch(new RegExp(`limit is ${MAX_CHANGELOG_LOCALES}`));
+  });
+
+  it("refuses an array or other non-object", () => {
+    expect(validateChangelog(["nope"]).join(" ")).toMatch(/must be either/);
+    expect(validateChangelog(42).join(" ")).toMatch(/must be either/);
+  });
+
+  it("flows through the full manifest validation", () => {
+    expect(
+      validateManifestIdentity({ ...ok, changelog: { en: "- One change", vi: "- Một thay đổi" } }),
+    ).toEqual([]);
+    const errors = validateManifestIdentity({ ...ok, changelog: { vi: "- Một thay đổi" } });
+    expect(errors.join(" ")).toMatch(/must include "en"/);
+  });
+});
+
+describe("normalizeChangelog — one shape for every consumer", () => {
+  it("reads a plain string as English", () => {
+    expect(normalizeChangelog("- Fixed it")).toEqual({ en: "- Fixed it" });
+  });
+
+  it("trims and drops blank entries, and empties become null", () => {
+    expect(normalizeChangelog({ en: " keep ", vi: "   " })).toEqual({ en: "keep" });
+    expect(normalizeChangelog("   ")).toBeNull();
+    expect(normalizeChangelog({ vi: "  " })).toBeNull();
+  });
+
+  it("returns null for absent or malformed values", () => {
+    expect(normalizeChangelog(undefined)).toBeNull();
+    expect(normalizeChangelog(null)).toBeNull();
+    expect(normalizeChangelog(["nope"])).toBeNull();
+  });
+});
+
+describe("resolveChangelog — locale → base → English → anything", () => {
+  const notes = { en: "English", vi: "Tiếng Việt" };
+
+  it("returns the reader's exact locale", () => {
+    expect(resolveChangelog(notes, "vi")).toBe("Tiếng Việt");
+  });
+
+  it("falls back from a regional locale to its base", () => {
+    expect(resolveChangelog(notes, "vi-VN")).toBe("Tiếng Việt");
+  });
+
+  it("falls back to English when the locale is missing", () => {
+    expect(resolveChangelog(notes, "ja")).toBe("English");
+  });
+
+  it("falls back to any available notes when even English is missing", () => {
+    expect(resolveChangelog({ vi: "Tiếng Việt" }, "ja")).toBe("Tiếng Việt");
+  });
+
+  it("returns null for an empty or absent changelog", () => {
+    expect(resolveChangelog(null, "en")).toBeNull();
+    expect(resolveChangelog(undefined, "en")).toBeNull();
   });
 });
 

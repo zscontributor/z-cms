@@ -416,8 +416,12 @@ export interface InstalledThemeDto {
   demoAvailable: boolean;
   demoSeeded: boolean;
   screenshots: string[];
-  /** Release notes for the installed version, or null if the theme shipped none. */
-  changelog: string | null;
+  /**
+   * Release notes for the installed version as a locale → notes map (English always
+   * present), or null if the theme shipped none. Resolved to the reader's language
+   * by `ChangelogNote`.
+   */
+  changelog: Record<string, string> | null;
 }
 
 export interface ThemeCatalogEntry {
@@ -430,7 +434,8 @@ export interface ThemeCatalogEntry {
     version: string;
     origin: PackageOrigin;
     reviewStatus: string;
-    changelog: string | null;
+    /** Locale → notes map (English always present), or null if none shipped. */
+    changelog: Record<string, string> | null;
   }[];
 }
 
@@ -526,8 +531,12 @@ export interface CatalogPluginDto {
   status: string | null;
   grantedPermissions?: Permission[] | null;
   settings?: Record<string, unknown> | null;
-  /** The latest version's release notes, or null if the plugin shipped none. */
-  changelog?: string | null;
+  /**
+   * The latest version's release notes as a locale → notes map (English always
+   * present), or null if the plugin shipped none. Resolved to the reader's language
+   * by `ChangelogNote`.
+   */
+  changelog?: Record<string, string> | null;
 }
 
 export const listPlugins = cache(

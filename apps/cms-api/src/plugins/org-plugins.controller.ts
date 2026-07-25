@@ -11,6 +11,7 @@ import {
 } from "@nestjs/common";
 import { ApiOperation, ApiParam, ApiTags } from "@nestjs/swagger";
 import { db, getSystemDb } from "@zcmsorg/database";
+import { normalizeChangelog } from "@zcmsorg/package";
 import { pluginTablePrefix, validatePluginTables } from "@zcmsorg/plugin-sdk";
 import { PERMISSIONS, type Permission } from "@zcmsorg/schemas";
 import { invalidHostDeclarations } from "./plugin-egress";
@@ -109,10 +110,7 @@ export class OrgPluginsController {
           ? ((install.settings ?? {}) as Record<string, unknown>)
           : null,
         lastError: install?.lastError ?? null,
-        changelog:
-          typeof manifest.changelog === "string" && manifest.changelog.trim()
-            ? manifest.changelog
-            : null,
+        changelog: normalizeChangelog(manifest.changelog),
       };
     });
   }

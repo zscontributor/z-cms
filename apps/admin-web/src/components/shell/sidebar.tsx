@@ -54,9 +54,9 @@ export function Sidebar({
                       href={item.href}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] transition-colors",
+                        "relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition-colors",
                         active
-                          ? "bg-brand-50 font-medium text-brand-700 dark:bg-brand-500/10 dark:text-brand-300"
+                          ? "bg-brand-50 font-medium text-brand-700 before:absolute before:left-0 before:top-1/2 before:h-5 before:w-[3px] before:-translate-y-1/2 before:rounded-r-full before:bg-brand-500 dark:bg-brand-500/10 dark:text-brand-300 dark:before:bg-brand-400"
                           : "z-muted hover:bg-[var(--surface-sunken)] hover:text-[var(--text)]",
                       )}
                     >

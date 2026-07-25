@@ -354,8 +354,13 @@ export interface ThemeManifest {
    * admin looking at an update knows what they are getting. Plain text; one change
    * per line reads best. The platform keeps every version's notes, so the full
    * history is the changelogs of all published versions, newest first.
+   *
+   * Either a plain string (the English notes) or an object keyed by locale for a
+   * translated changelog, `{ en, vi, ja }`. When localized, English (`en`) is
+   * required — it is the default a reader sees when their locale is not translated.
+   * The admin shows each reader the notes in their own language, English otherwise.
    */
-  changelog?: string;
+  changelog?: string | Record<string, string>;
   author: ThemeAuthor;
   /** Semver range of the Z-CMS engine this theme supports. */
   engine: string;

@@ -61,7 +61,7 @@ async function chromePayload(): Promise<RenderPayload> {
 
 export default async function NotFound() {
   const payload = await chromePayload();
-  const { theme, assetBase } = await resolveTheme(
+  const { theme, stylesheet, assetBase } = await resolveTheme(
     payload.theme.key,
     payload.theme.version,
     payload.theme.origin,
@@ -69,6 +69,13 @@ export default async function NotFound() {
   const ctx = buildThemeContext(theme, payload, assetBase);
   const translate = t(payload.site.locale);
   const { Layout, templates } = theme;
+
+  // A dynamically installed theme ships its own compiled CSS: site-runtime's
+  // Tailwind build never saw its classes, so without this <link> the 404 renders
+  // as unstyled markup — the same stylesheet the normal render path injects.
+  const themeStyles = stylesheet ? (
+    <link rel="stylesheet" href={stylesheet} precedence="high" />
+  ) : null;
   const legacyFloatingIntegration = theme.manifest.integrationSlots?.includes("floating")
     ? null
     : ctx.renderSlot("floating");
@@ -78,6 +85,7 @@ export default async function NotFound() {
 
   return (
     <Layout ctx={ctx}>
+      {themeStyles}
       {NotFoundTemplate ? (
         <NotFoundTemplate ctx={ctx} />
       ) : ErrorTemplate ? (

@@ -11,6 +11,7 @@ import {
 } from "@nestjs/common";
 import { ApiOperation, ApiParam, ApiTags } from "@nestjs/swagger";
 import { db, getSystemDb } from "@zcmsorg/database";
+import { normalizeChangelog } from "@zcmsorg/package";
 import { pluginTablePrefix, validatePluginTables } from "@zcmsorg/plugin-sdk";
 import { invalidHostDeclarations } from "./plugin-egress";
 import { PERMISSIONS, type Permission } from "@zcmsorg/schemas";
@@ -86,8 +87,12 @@ export interface CatalogPlugin {
   grantedPermissions: Permission[] | null;
   settings: Record<string, unknown> | null;
   lastError: string | null;
-  /** The latest version's release notes, so an admin sees what an update introduces. */
-  changelog: string | null;
+  /**
+   * The latest version's release notes as a locale → notes map (English always
+   * present), so an admin sees what an update introduces — resolved to the reader's
+   * language in the admin. Null if the plugin shipped none.
+   */
+  changelog: Record<string, string> | null;
 }
 
 export interface SettingsSchema {
@@ -228,10 +233,7 @@ export class PluginsController {
           ? ((install.settings ?? {}) as Record<string, unknown>)
           : null,
         lastError: install?.lastError ?? null,
-        changelog:
-          typeof manifest.changelog === "string" && manifest.changelog.trim()
-            ? manifest.changelog
-            : null,
+        changelog: normalizeChangelog(manifest.changelog),
       };
     });
   }

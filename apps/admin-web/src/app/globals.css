@@ -20,23 +20,29 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --color-brand-50: #fff3ec;
-  --color-brand-100: #ffe1cf;
-  --color-brand-200: #ffbf9f;
-  --color-brand-300: #ff9a6b;
-  --color-brand-400: #fd7838;
-  --color-brand-500: #fa5600;
-  --color-brand-600: #e04c00;
-  --color-brand-700: #b83e00;
-  --color-brand-800: #8f3100;
-  --color-brand-900: #6b2500;
+  /*
+   * The warm golden ramp shared with the marketplace console. It centres on
+   * #b47b2b (500) — the same primary the marketplace draws — so the two products
+   * read as one family. 300 is the lighter tone the dark shell leans on, where a
+   * 500 golden would go muddy against near-black.
+   */
+  --color-brand-50: #fbf3e2;
+  --color-brand-100: #f7e6c4;
+  --color-brand-200: #ecca86;
+  --color-brand-300: #ddab52;
+  --color-brand-400: #c9902f;
+  --color-brand-500: #b47b2b;
+  --color-brand-600: #986620;
+  --color-brand-700: #7c5219;
+  --color-brand-800: #5f3f14;
+  --color-brand-900: #422c0f;
 
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
     "Noto Sans", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 
-  --radius-card: 0.625rem;
+  --radius-card: 0.875rem;
 }
 
 /*
@@ -45,25 +51,33 @@
  */
 @layer base {
   :root {
-    --surface: #f7f7f8;
+    /* Warm neutrals from the marketplace console: a beige page, white cards, warm
+       borders and ink. Kept as semantic tokens so light and dark cannot drift. */
+    --surface: #faf9f7;
     --surface-raised: #ffffff;
-    --surface-sunken: #f0f0f2;
-    --border: #e3e3e7;
-    --border-strong: #cfcfd6;
-    --text: #17171a;
-    --text-muted: #6b6b76;
-    --ring: #fa5600;
+    --surface-sunken: #f4f2ef;
+    --border: #e7e3dd;
+    --border-strong: #d6d0c8;
+    --text: #1c1917;
+    --text-muted: #6b6560;
+    --ring: #b47b2b;
+
+    --shadow-card: 0 1px 2px rgba(28, 25, 23, 0.05), 0 1px 3px rgba(28, 25, 23, 0.07);
+    --shadow-pop: 0 4px 6px -1px rgba(28, 25, 23, 0.08), 0 12px 28px -6px rgba(28, 25, 23, 0.16);
   }
 
   .dark {
-    --surface: #0e0e11;
-    --surface-raised: #17171b;
-    --surface-sunken: #101014;
-    --border: #26262c;
-    --border-strong: #35353d;
-    --text: #ececf1;
-    --text-muted: #9a9aa6;
-    --ring: #fa5600;
+    --surface: #131211;
+    --surface-raised: #1c1a18;
+    --surface-sunken: #24211e;
+    --border: #2f2b27;
+    --border-strong: #423d38;
+    --text: #f5f3f0;
+    --text-muted: #a8a099;
+    --ring: #e0a94f;
+
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.28);
+    --shadow-pop: 0 8px 20px rgba(0, 0, 0, 0.4), 0 18px 42px rgba(0, 0, 0, 0.34);
   }
 
   * {
@@ -96,6 +110,7 @@
     background-color: var(--surface-raised);
     border: 1px solid var(--border);
     border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
   }
 
   .z-input {

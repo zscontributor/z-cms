@@ -567,9 +567,12 @@ const CatalogPluginSchema = z.object({
   settings: z.record(z.string(), z.unknown()).nullable(),
   lastError: z.string().nullable(),
   changelog: z
-    .string()
+    .record(z.string(), z.string())
     .nullable()
-    .describe("The latest version's release notes, or null if the author shipped none."),
+    .describe(
+      "The latest version's release notes as a locale → notes map (English always " +
+        "present), or null if the author shipped none. The admin resolves it to the reader's language.",
+    ),
 });
 
 const CatalogThemeSchema = z.object({
@@ -584,7 +587,7 @@ const CatalogThemeSchema = z.object({
       version: z.string(),
       origin: z.string(),
       reviewStatus: z.string(),
-      changelog: z.string().nullable(),
+      changelog: z.record(z.string(), z.string()).nullable(),
     }),
   ),
 });
@@ -601,7 +604,7 @@ const InstalledThemeSchema = z.object({
   demoAvailable: z.boolean(),
   demoSeeded: z.boolean(),
   screenshots: z.array(z.url()).max(MAX_SCREENSHOTS),
-  changelog: z.string().nullable(),
+  changelog: z.record(z.string(), z.string()).nullable(),
 });
 
 /**

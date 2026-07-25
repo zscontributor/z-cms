@@ -75,9 +75,31 @@ export const MAX_DESCRIPTION_LENGTH = 280;
 /**
  * Release notes for a single version — a short list of what changed, not a manual.
  * Generous enough for a real changelog entry, bounded so it stays a summary an admin
- * reads in the update dialog rather than a document.
+ * reads in the update dialog rather than a document. Applies per locale.
  */
 export const MAX_CHANGELOG_LENGTH = 2000;
+
+/**
+ * The base locale a localized changelog must always carry, and the one every other
+ * locale falls back to when it is missing. The same base the theme message
+ * catalogue uses, so an author never has to think about two different defaults.
+ */
+export const CHANGELOG_BASE_LOCALE = "en";
+
+/**
+ * A ceiling on how many locales one version's changelog may carry. The whole
+ * manifest rides in a JSONB column; a bound keeps a single field from growing
+ * without limit, and no real release is translated into twenty languages by hand.
+ */
+export const MAX_CHANGELOG_LOCALES = 20;
+
+/**
+ * Locale codes as an author writes them: `en`, `vi`, `ja`, and regional forms
+ * like `pt-BR` or `zh-Hans`. Deliberately loose on the subtags — the point is to
+ * reject a key that is plainly not a locale (a sentence, a version number), not
+ * to police the BCP-47 registry.
+ */
+export const LOCALE_KEY_PATTERN = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/;
 
 /**
  * Characters that are not text, whatever they claim to be.
@@ -169,6 +191,123 @@ export function validateText(
   return null;
 }
 
+/**
+ * Checks a version's changelog, in either of the two forms an author may write it.
+ *
+ * A changelog is OPTIONAL — a package may ship none. But an author who writes one
+ * writes it one of two ways, and both are accepted:
+ *
+ *   - a plain string, which is the English notes ("Fixed the header on mobile.");
+ *   - an object keyed by locale, `{ "en": "…", "vi": "…" }`, when the notes are
+ *     translated.
+ *
+ * The object form has one hard rule: it must carry non-empty `en`. English is the
+ * base every other locale falls back to (`resolveChangelog`), so a localized
+ * changelog that omits it has nothing to show a reader whose language it does not
+ * include — which is most readers. Every locale's notes are held to the same text
+ * rules as a plain-string changelog: bounded length, line breaks allowed, bidi and
+ * zero-width tricks refused.
+ *
+ * Returns every problem at once, like `validateManifestIdentity`.
+ */
+export function validateChangelog(value: unknown): string[] {
+  // Absent entirely is fine — not every release needs release notes.
+  if (value === undefined || value === null) return [];
+
+  // The simplest and legacy form: a plain string is the English notes.
+  if (typeof value === "string") {
+    const error = validateText("changelog", value, MAX_CHANGELOG_LENGTH, false, true);
+    return error ? [error] : [];
+  }
+
+  if (typeof value !== "object" || Array.isArray(value)) {
+    return [
+      "changelog must be either release notes as a string, or an object keyed by " +
+        'locale, e.g. { "en": "…", "vi": "…" }.',
+    ];
+  }
+
+  const errors: string[] = [];
+  const entries = Object.entries(value as Record<string, unknown>);
+
+  if (entries.length > MAX_CHANGELOG_LOCALES) {
+    errors.push(
+      `changelog has ${entries.length} locales — the limit is ${MAX_CHANGELOG_LOCALES}.`,
+    );
+  }
+
+  // English is required whenever a localized changelog is given: it is the default
+  // every reader sees when their own locale is not among the translations.
+  if (!(CHANGELOG_BASE_LOCALE in (value as Record<string, unknown>))) {
+    errors.push(
+      `changelog must include "${CHANGELOG_BASE_LOCALE}" notes — English is the ` +
+        "default every other locale falls back to.",
+    );
+  }
+
+  for (const [locale, notes] of entries) {
+    if (!LOCALE_KEY_PATTERN.test(locale)) {
+      errors.push(
+        `changelog has "${locale}" as a locale, which is not a valid locale code ` +
+          '(expected e.g. "en", "vi", "pt-BR").',
+      );
+      continue;
+    }
+    // required = true: a locale the author bothered to list must have real notes.
+    const error = validateText(`changelog.${locale}`, notes, MAX_CHANGELOG_LENGTH, true, true);
+    if (error) errors.push(error);
+  }
+
+  return errors;
+}
+
+/**
+ * The changelog as the rest of the platform consumes it: a locale → notes map, or
+ * null when there are none. A plain-string changelog (the legacy and simplest
+ * form) is read as the English notes. Blank entries are dropped and a map that
+ * ends up empty becomes null, so every caller has one shape and one "no notes"
+ * case to handle.
+ */
+export function normalizeChangelog(raw: unknown): Record<string, string> | null {
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    return trimmed ? { [CHANGELOG_BASE_LOCALE]: trimmed } : null;
+  }
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+
+  const map: Record<string, string> = {};
+  for (const [locale, notes] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof notes === "string" && notes.trim()) map[locale] = notes.trim();
+  }
+  return Object.keys(map).length ? map : null;
+}
+
+/** "vi-VN" -> "vi": a changelog with region-less notes still serves a regional reader. */
+function baseLocale(locale: string): string {
+  return locale.split("-")[0] ?? locale;
+}
+
+/**
+ * The notes to show a reader in `locale`: their exact locale, then its region-less
+ * base ("vi-VN" → "vi"), then English, then whatever the changelog does carry.
+ * Returns null only when there is nothing to show. The mirror of the theme
+ * translator's locale → base → fallback order, so the changelog resolves the same
+ * way the rest of a theme's strings do.
+ */
+export function resolveChangelog(
+  changelog: Record<string, string> | null | undefined,
+  locale: string,
+): string | null {
+  if (!changelog) return null;
+  return (
+    changelog[locale] ??
+    changelog[baseLocale(locale)] ??
+    changelog[CHANGELOG_BASE_LOCALE] ??
+    Object.values(changelog)[0] ??
+    null
+  );
+}
+
 /** Returns an error message, or null if the id is usable. */
 export function validateId(id: unknown): string | null {
   if (typeof id !== "string" || !id) return "id is required.";
@@ -211,8 +350,9 @@ export function validateManifestIdentity(raw: Record<string, unknown>): string[]
   push(validateId(raw.id));
   push(validateText("name", raw.name, MAX_NAME_LENGTH, true));
   push(validateText("description", raw.description, MAX_DESCRIPTION_LENGTH, false));
-  // Optional, and multi-line: the changelog is a list of changes for this version.
-  push(validateText("changelog", raw.changelog, MAX_CHANGELOG_LENGTH, false, true));
+  // Optional, multi-line, and localizable: a plain string (English) or an object
+  // keyed by locale. When localized, English is required as the fallback.
+  for (const error of validateChangelog(raw.changelog)) push(error);
 
   // Format only. Whether a version is ALLOWED to follow the ones already published
   // — that it is greater than the current highest — is a question about the state

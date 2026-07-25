@@ -116,6 +116,16 @@ function pluginFiles(vars: TemplateVars): Files {
     name: vars.name,
     version: vars.version,
     description: vars.description,
+
+    // Release notes for this version, shown to an admin approving an update.
+    // Either a plain string (English) or, to translate them, an object keyed by
+    // locale — English (`en`) is required, other locales are optional and each
+    // falls back to English. Add `vi`, `ja`, … as you translate.
+    changelog: {
+      en: "Initial release.",
+      // vi: "Phát hành đầu tiên.",
+    },
+
     author: author(vars),
     engine: ENGINE_RANGE,
     entry: "dist/index.js",
@@ -348,6 +358,16 @@ function themeFiles(vars: TemplateVars): Files {
     version: vars.version,
     kind: "theme",
     description: vars.description,
+
+    // Release notes for this version, shown to an admin looking at an update.
+    // Either a plain string (English) or, to translate them, an object keyed by
+    // locale — English (`en`) is required, other locales are optional and each
+    // falls back to English. Add `vi`, `ja`, … as you translate.
+    changelog: {
+      en: "Initial release.",
+      // vi: "Phát hành đầu tiên.",
+    },
+
     author: author(vars),
     engine: ENGINE_RANGE,
 

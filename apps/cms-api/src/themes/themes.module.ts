@@ -13,6 +13,7 @@ import {
 import { randomBytes, randomUUID } from "node:crypto";
 import { ApiOperation, ApiParam, ApiTags } from "@nestjs/swagger";
 import { db, getSystemDb } from "@zcmsorg/database";
+import { normalizeChangelog } from "@zcmsorg/package";
 import { BlockDocumentSchema } from "@zcmsorg/schemas";
 import { Actor, RequirePermissions, SiteId, SiteScoped } from "../auth/decorators";
 import { t } from "../common/i18n";
@@ -71,8 +72,12 @@ export interface CatalogTheme {
     version: string;
     origin: string;
     reviewStatus: string;
-    /** This version's release notes, or null if the author shipped none. */
-    changelog: string | null;
+    /**
+     * This version's release notes as a locale → notes map (English always
+     * present), or null if the author shipped none. The admin resolves it to the
+     * reader's language.
+     */
+    changelog: Record<string, string> | null;
   }[];
 }
 
@@ -90,15 +95,19 @@ export interface InstalledTheme {
   demoAvailable: boolean;
   demoSeeded: boolean;
   screenshots: string[];
-  /** Release notes for the installed version, so the admin sees what it introduced. */
-  changelog: string | null;
+  /**
+   * Release notes for the installed version as a locale → notes map (English
+   * always present), or null if the theme shipped none. The admin resolves it to
+   * the reader's language.
+   */
+  changelog: Record<string, string> | null;
 }
 
-/** A version's release notes, read from its stored manifest. Non-strings (a theme
- *  that shipped none, or a malformed value) become null so the DTO stays clean. */
-function changelogOf(manifest: unknown): string | null {
-  const value = (manifest as { changelog?: unknown } | null)?.changelog;
-  return typeof value === "string" && value.trim() ? value : null;
+/** A version's release notes, read from its stored manifest and normalized to a
+ *  locale → notes map. A plain-string changelog is read as English; a theme that
+ *  shipped none, or a malformed value, becomes null so the DTO stays clean. */
+function changelogOf(manifest: unknown): Record<string, string> | null {
+  return normalizeChangelog((manifest as { changelog?: unknown } | null)?.changelog);
 }
 
 function screenshotUrls(
