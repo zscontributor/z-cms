@@ -23,6 +23,7 @@ describe("NAMESPACES", () => {
       "admin",
       "appearance",
       "auth",
+      "commerce",
       "common",
       "content",
       "errors",
