@@ -398,24 +398,43 @@ function ColumnView(props: NodeViewProps) {
           ref={setNodeRef}
           className={cn(
             "min-h-[3rem] rounded p-2 transition-colors",
-            isOver ? "bg-brand-50 outline outline-2 outline-brand-400 dark:bg-brand-950" : "",
-            (node.children?.length ?? 0) === 0 && "border border-dashed border-neutral-300 dark:border-neutral-700",
+            // The drop target, loud on purpose: a filled tint plus a solid ring, so
+            // the column a release would land in is unmistakable among its siblings.
+            isOver
+              ? "bg-brand-100/70 outline outline-2 outline-brand-500 dark:bg-brand-900/40"
+              : "",
+            (node.children?.length ?? 0) === 0 &&
+              !isOver &&
+              "border border-dashed border-neutral-300 dark:border-neutral-700",
           )}
         >
           {(node.children ?? []).length === 0 ? (
-            <p className="py-2 text-center text-[11px] text-neutral-400">
+            <p
+              className={cn(
+                "py-2 text-center text-[11px]",
+                isOver ? "font-medium text-brand-600 dark:text-brand-300" : "text-neutral-400",
+              )}
+            >
               {t("themeEditor.canvas.dropHere")}
             </p>
           ) : (
-            (node.children ?? []).map((child, i) => (
-              <NodeView
-                {...props}
-                key={child.id}
-                node={child}
-                index={i}
-                siblings={node.children?.length ?? 0}
-              />
-            ))
+            <>
+              {(node.children ?? []).map((child, i) => (
+                <NodeView
+                  {...props}
+                  key={child.id}
+                  node={child}
+                  index={i}
+                  siblings={node.children?.length ?? 0}
+                />
+              ))}
+              {/* The insertion line: a widget dropped here appends to the column, so
+                  the marker sits after the last child — showing WHERE, not just
+                  which column. */}
+              {isOver ? (
+                <div className="mt-1.5 h-1 rounded-full bg-brand-500" aria-hidden />
+              ) : null}
+            </>
           )}
         </div>
       </Chrome>

@@ -163,6 +163,31 @@ describe("ensureBundle", () => {
     expect(bundle.checksum).toBe(checksum);
   });
 
+  it("downloads once and unpacks intact under concurrent cold loads of the same bundle", async () => {
+    // THE FLICKER BUG. site-runtime resolves a theme in generateMetadata, in the
+    // page component, AND out of the theme-assets route for its CSS/icons — all at
+    // once, all landing here on a cold cache. Without single-flight, each starts
+    // its own download-verify-unpack, and one caller's install tears down the
+    // directory another is mid-import of: the page degrades to the default theme
+    // on some reloads and not others. Every concurrent caller must get a valid,
+    // fully-populated bundle, and the network must be hit exactly once.
+    const { file, checksum } = await releasedFile();
+    const fetchMock = stubDownload(file);
+
+    const results = await Promise.all(
+      Array.from({ length: 12 }, () =>
+        ensureBundle(cfg, "marketplace", "theme", KEY, VERSION, checksum),
+      ),
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    for (const bundle of results) {
+      expect(bundle.checksum).toBe(checksum);
+      expect(fs.existsSync(bundle.entryPath)).toBe(true);
+      expect(fs.readFileSync(bundle.entryPath, "utf8")).toContain("corporate");
+    }
+  });
+
   it("re-fetches when cached code is modified after signature verification", async () => {
     const { file, checksum } = await releasedFile();
     const fetchMock = stubDownload(file);

@@ -3,15 +3,18 @@
 import { useCallback, useEffect, useMemo, useReducer, useState, useTransition } from "react";
 import {
   DndContext,
+  DragOverlay,
   KeyboardSensor,
   PointerSensor,
   closestCenter,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragStartEvent,
 } from "@dnd-kit/core";
 import {
   LAYOUT_TEMPLATES,
+  WIDGET_CATALOG,
   bindingToCollectionQuery,
   collectDocumentCollections,
   collectionNameFor,
@@ -137,6 +140,10 @@ export function ThemeEditor({
   const [dirty, setDirty] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [saving, startSave] = useTransition();
+  // The label of whatever is mid-drag, drawn in a DragOverlay so a floating chip
+  // tracks the cursor. Without it dnd-kit only fades the item in place, and a drag
+  // with no thing following the pointer reads as broken.
+  const [dragLabel, setDragLabel] = useState<string | null>(null);
 
   const tree = templateTree(doc, template);
   const selected = selectedId ? (locate(tree, selectedId)?.node ?? null) : null;
@@ -204,7 +211,30 @@ export function ThemeEditor({
     setSelectedId(node.id);
   }
 
+  /** A human name for what is being dragged, for the floating overlay. */
+  const labelForDrag = useCallback(
+    (active: { id: string | number; data: { current?: { kind?: string; widgetType?: string } } }) => {
+      const data = active.data.current;
+      const widgetLabel = (type: string) => {
+        const spec = WIDGET_CATALOG.find((s) => s.type === type);
+        return spec ? t(spec.labelKey) : type;
+      };
+      if (data?.kind === "new" && data.widgetType) return widgetLabel(data.widgetType);
+      const found = locate(tree, String(active.id));
+      if (!found) return null;
+      const node = found.node;
+      if (node.kind === "widget") return node.widgetType ? widgetLabel(node.widgetType) : "widget";
+      return t(`themeEditor.containers.${node.kind}`);
+    },
+    [t, tree],
+  );
+
+  function onDragStart(event: DragStartEvent) {
+    setDragLabel(labelForDrag(event.active));
+  }
+
   function onDragEnd(event: DragEndEvent) {
+    setDragLabel(null);
     const { active, over } = event;
     if (!over) return;
 
@@ -324,7 +354,13 @@ export function ThemeEditor({
   }
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      onDragCancel={() => setDragLabel(null)}
+    >
       <div className="flex h-[calc(100vh-4rem)] flex-col">
         <header className="flex items-center justify-between gap-3 border-b border-neutral-200 px-4 py-2 dark:border-neutral-800">
           <div className="flex items-center gap-3">
@@ -422,36 +458,58 @@ export function ThemeEditor({
             />
           </main>
 
-          <aside className="w-80 shrink-0 border-l border-neutral-200 dark:border-neutral-800">
-            <Inspector
-              doc={doc}
-              node={selected}
-              contentTypes={contentTypes}
-              disabled={disabled}
-              onProps={(props) => selectedId && mutate(setProps(tree, selectedId, props))}
-              onBinding={(binding) => selectedId && mutate(setBinding(tree, selectedId, binding))}
-              onTokens={(tokens: LayoutTokens) => {
-                // A token change is an edit like any other, so it joins the undo
-                // stack rather than mutating the document behind Undo's back.
-                dispatch({ type: "commit", doc: { ...doc, tokens } });
-                setDirty(true);
-                setMessage(null);
-              }}
-              onDelete={() => selectedId && deleteNode(selectedId)}
-              onDuplicate={() => selectedId && mutate(duplicateNode(tree, selectedId))}
-            />
+          {/* A flex column, not a plain block: the Inspector is `h-full` and would
+              otherwise eat the whole aside and shove Publish off the bottom edge.
+              Here the Inspector takes the space that is left and scrolls inside it,
+              and Publish keeps its own bounded, always-reachable region below. */}
+          <aside className="flex w-80 shrink-0 flex-col border-l border-neutral-200 dark:border-neutral-800">
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <Inspector
+                doc={doc}
+                node={selected}
+                contentTypes={contentTypes}
+                disabled={disabled}
+                onProps={(props) => selectedId && mutate(setProps(tree, selectedId, props))}
+                onBinding={(binding) => selectedId && mutate(setBinding(tree, selectedId, binding))}
+                onTokens={(tokens: LayoutTokens) => {
+                  // A token change is an edit like any other, so it joins the undo
+                  // stack rather than mutating the document behind Undo's back.
+                  dispatch({ type: "commit", doc: { ...doc, tokens } });
+                  setDirty(true);
+                  setMessage(null);
+                }}
+                onDelete={() => selectedId && deleteNode(selectedId)}
+                onDuplicate={() => selectedId && mutate(duplicateNode(tree, selectedId))}
+              />
+            </div>
             {/* Signing lives beside the design, not on a settings page: it is the
                 last step of the same job, and the checksum it signs belongs to the
-                build of THIS draft. */}
-            <PublishPanel
-              draftId={draft.id}
-              draftKey={draft.key}
-              payloadChecksum={dirty ? null : draft.payloadChecksum}
-              canPublish={canPublish}
-            />
+                build of THIS draft. Capped so a tall key-management form scrolls
+                itself instead of crowding out the Inspector. */}
+            <div className="max-h-[45%] shrink-0 overflow-y-auto">
+              <PublishPanel
+                draftId={draft.id}
+                draftKey={draft.key}
+                payloadChecksum={dirty ? null : draft.payloadChecksum}
+                canPublish={canPublish}
+              />
+            </div>
           </aside>
         </div>
       </div>
+
+      {/* The thing you are dragging, following the cursor. A plain labelled chip
+          rather than a clone of the widget: the drop TARGET is what needs to read
+          clearly (the canvas highlights it), and a full-size ghost would only get
+          in the way of seeing it. */}
+      <DragOverlay dropAnimation={null}>
+        {dragLabel ? (
+          <div className="pointer-events-none flex items-center gap-1 rounded border border-brand-500 bg-white px-2.5 py-1.5 text-xs font-medium text-brand-700 shadow-lg dark:bg-neutral-900 dark:text-brand-300">
+            <span aria-hidden>⠿</span>
+            {dragLabel}
+          </div>
+        ) : null}
+      </DragOverlay>
     </DndContext>
   );
 }

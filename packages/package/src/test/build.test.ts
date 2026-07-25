@@ -224,19 +224,29 @@ describe("wrap / openPackage", () => {
   it("leaves no staging directory behind after opening a package", async () => {
     // openPackage runs on every download. A leaked temp dir per call turns a busy
     // runtime into a disk-full incident.
-    // Other suites open packages concurrently, so we assert only that OUR call
-    // leaves nothing new behind — not an absolute count of the shared tmpdir.
-    const before = new Set(
-      fs.readdirSync(os.tmpdir()).filter((f) => f.startsWith("zcms-open-")),
-    );
+    //
+    // Other suites (running in parallel workers) open packages against the SAME
+    // tmpdir, so a plain before/after set-diff is racy: a stranger's staging dir
+    // created after our snapshot but not yet cleaned up reads as "new" and fails a
+    // test about OUR call. But openPackage removes its own dir BEFORE returning, so
+    // any dir new after our call is someone else's and will drain on its own; only
+    // a genuine leak from our call persists. Keep only suspects that survive every
+    // sample.
+    const openDirs = (): Set<string> =>
+      new Set(fs.readdirSync(os.tmpdir()).filter((f) => f.startsWith("zcms-open-")));
+
+    const before = openDirs();
     const payload = Buffer.from("payload");
 
     await openPackage(await wrap(envelopeFor(payload), payload));
 
-    const leaked = fs
-      .readdirSync(os.tmpdir())
-      .filter((f) => f.startsWith("zcms-open-") && !before.has(f));
-    expect(leaked).toEqual([]);
+    let suspects = [...openDirs()].filter((f) => !before.has(f));
+    for (let i = 0; i < 20 && suspects.length > 0; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      const now = openDirs();
+      suspects = suspects.filter((f) => now.has(f));
+    }
+    expect(suspects).toEqual([]);
   });
 });
 
@@ -299,5 +309,18 @@ describe("installPayload", () => {
     await installPayload(await payloadOf({ "dist/index.js": "v1" }), dest);
 
     expect(fs.readdirSync(path.join(tmp, "cache"))).toEqual(["theme"]);
+  });
+
+  it("leaves no move-aside backup behind when replacing an existing install", async () => {
+    // A replace moves the old copy aside instead of deleting it in place — never
+    // leaving `dest` missing while a reader might import from it — then removes the
+    // moved-aside copy once the new tree is live. Nothing but `theme` may remain.
+    const dest = path.join(tmp, "cache", "theme");
+    await installPayload(await payloadOf({ "dist/index.js": "v1" }), dest);
+
+    await installPayload(await payloadOf({ "dist/index.js": "v2" }), dest);
+
+    expect(fs.readdirSync(path.join(tmp, "cache"))).toEqual(["theme"]);
+    expect(fs.readFileSync(path.join(dest, "dist/index.js"), "utf8")).toBe("v2");
   });
 });

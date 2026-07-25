@@ -65,6 +65,73 @@ function bundleDir(cfg: LoaderConfig, kind: PackageKind, key: string, version: s
 
 const MARKER = ".zcms-verified";
 
+/**
+ * Installs in flight, keyed by the bundle's on-disk directory.
+ *
+ * A cold theme is resolved several ways at once — site-runtime imports it in
+ * `generateMetadata` and the page component, AND serves its CSS/icons out of the
+ * theme-assets route, which calls in here on its OWN path (not through
+ * site-runtime's per-request de-dup). Without this, each of those misses the warm
+ * marker and starts its own download-verify-unpack, all writing the same
+ * directory and tearing each other's copy down mid-import — the page flickers
+ * between the real theme and the compiled-in default on reload.
+ *
+ * Keyed by the absolute `dir` (cacheDir/kind/key/version), so every route that
+ * wants the same bundle version shares ONE install regardless of which entry
+ * point it came through. Keyed by directory rather than key@version because the
+ * directory is what actually gets written, and two loaders with different cache
+ * roots must not block each other.
+ */
+const inFlightInstalls = new Map<string, Promise<InstalledBundle>>();
+
+function singleFlightInstall(
+  dir: string,
+  run: () => Promise<InstalledBundle>,
+): Promise<InstalledBundle> {
+  const existing = inFlightInstalls.get(dir);
+  if (existing) return existing;
+  const pending = run().finally(() => inFlightInstalls.delete(dir));
+  inFlightInstalls.set(dir, pending);
+  return pending;
+}
+
+/**
+ * A warm cache hit for the marketplace/operator path, or null to fall through to a
+ * fetch. Re-hashes the tree so a file mutated after verification is not trusted;
+ * see `VerificationMarker.contentDigest` for what that is and is not worth.
+ */
+function warmHit(
+  dir: string,
+  markerPath: string,
+  key: string,
+  version: string,
+  expectedChecksum?: string,
+): InstalledBundle | null {
+  if (!fs.existsSync(markerPath)) return null;
+  const marker = readMarker(markerPath);
+
+  // A checksum the API disagrees with means the version was republished (which
+  // the API forbids) or the cache was tampered with. Either way: re-fetch.
+  if (
+    marker &&
+    (!expectedChecksum || marker.checksum === expectedChecksum) &&
+    marker.contentDigest === contentDigestOnDisk(dir)
+  ) {
+    const entryPath = path.join(dir, marker.manifest.entry);
+    if (fs.existsSync(entryPath)) {
+      return {
+        key,
+        version,
+        dir,
+        entryPath,
+        manifest: marker.manifest,
+        checksum: marker.checksum,
+      };
+    }
+  }
+  return null;
+}
+
 interface VerificationMarker {
   checksum: string;
   manifest: PackageManifest;
@@ -124,64 +191,52 @@ export async function ensureBundle(
   const dir = bundleDir(cfg, kind, key, version);
   const markerPath = path.join(dir, MARKER);
 
-  if (fs.existsSync(markerPath)) {
-    const marker = readMarker(markerPath);
+  const hit = warmHit(dir, markerPath, key, version, expectedChecksum);
+  if (hit) return hit;
 
-    // A checksum the API disagrees with means the version was republished (which
-    // the API forbids) or the cache was tampered with. Either way: re-fetch.
-    if (
-      marker &&
-      (!expectedChecksum || marker.checksum === expectedChecksum) &&
-      marker.contentDigest === contentDigestOnDisk(dir)
-    ) {
-      const entryPath = path.join(dir, marker.manifest.entry);
-      if (fs.existsSync(entryPath)) {
-        return {
-          key,
-          version,
-          dir,
-          entryPath,
-          manifest: marker.manifest,
-          checksum: marker.checksum,
-        };
-      }
+  // Only ONE download-verify-unpack per bundle dir runs at a time; concurrent
+  // callers await it rather than racing to write the same directory. See
+  // `inFlightInstalls`.
+  return singleFlightInstall(dir, async () => {
+    // A flight we queued behind may have populated the cache while we waited.
+    const raced = warmHit(dir, markerPath, key, version, expectedChecksum);
+    if (raced) return raced;
+
+    const file = await download(cfg, kind, key, version);
+    const pkg = await openPackage(file);
+
+    // Nothing has been written to the cache yet, and nothing will be until this
+    // passes. A package that fails verification never lands on disk at all.
+    //
+    // WHICH key checks it is decided by `trust` — a discrete argument the caller
+    // passed — never by inspecting the envelope. If routing keyed off "does this
+    // envelope have a marketplaceSignature?", an attacker could downgrade a package
+    // onto whichever route has the weaker key by stripping one field and adding
+    // another. There is no `else` and no retry: a package handed the wrong route
+    // fails here, which is the intended outcome, not a bug to paper over.
+    if (trust === "operator") {
+      verifyOperator(pkg.envelope, pkg.payload, cfg.operatorPublicKey ?? "");
+    } else {
+      verifyPackage(pkg.envelope, pkg.payload, cfg.marketplacePublicKey);
     }
-  }
 
-  const file = await download(cfg, kind, key, version);
-  const pkg = await openPackage(file);
+    if (expectedChecksum && pkg.envelope.checksum !== expectedChecksum) {
+      throw new PackageError(
+        `Checksum of ${key}@${version} differs from the registered one. ` +
+          `The package may have been altered after it was released.`,
+      );
+    }
 
-  // Nothing has been written to the cache yet, and nothing will be until this
-  // passes. A package that fails verification never lands on disk at all.
-  //
-  // WHICH key checks it is decided by `trust` — a discrete argument the caller
-  // passed — never by inspecting the envelope. If routing keyed off "does this
-  // envelope have a marketplaceSignature?", an attacker could downgrade a package
-  // onto whichever route has the weaker key by stripping one field and adding
-  // another. There is no `else` and no retry: a package handed the wrong route
-  // fails here, which is the intended outcome, not a bug to paper over.
-  if (trust === "operator") {
-    verifyOperator(pkg.envelope, pkg.payload, cfg.operatorPublicKey ?? "");
-  } else {
-    verifyPackage(pkg.envelope, pkg.payload, cfg.marketplacePublicKey);
-  }
+    const manifest = pkg.envelope.manifest;
+    if (manifest.id !== key) {
+      // The envelope says it is a different package than the one we asked for.
+      throw new PackageError(
+        `The package returned is "${manifest.id}" but "${key}" was requested.`,
+      );
+    }
 
-  if (expectedChecksum && pkg.envelope.checksum !== expectedChecksum) {
-    throw new PackageError(
-      `Checksum of ${key}@${version} differs from the registered one. ` +
-        `The package may have been altered after it was released.`,
-    );
-  }
-
-  const manifest = pkg.envelope.manifest;
-  if (manifest.id !== key) {
-    // The envelope says it is a different package than the one we asked for.
-    throw new PackageError(
-      `The package returned is "${manifest.id}" but "${key}" was requested.`,
-    );
-  }
-
-  return unpackVerified(dir, markerPath, key, version, pkg.envelope, pkg.payload);
+    return unpackVerified(dir, markerPath, key, version, pkg.envelope, pkg.payload);
+  });
 }
 
 /**
@@ -312,30 +367,36 @@ export async function ensureBuiltinBundle(
     );
     const markerPath = path.join(dir, MARKER);
 
-    // A warm cache is reused only if it holds THIS checksum. A built-in that was
-    // re-signed (a new build of the same version, in development) must not keep
-    // serving the previous bytes out of the cache.
-    if (fs.existsSync(markerPath)) {
-      const marker = readMarker(markerPath);
-      const entryPath = marker ? path.join(dir, marker.manifest.entry) : "";
-      if (
-        marker &&
-        marker.checksum === envelope.checksum &&
-        marker.contentDigest === contentDigestOnDisk(dir) &&
-        fs.existsSync(entryPath)
-      ) {
-        return {
-          key,
-          version,
-          dir,
-          entryPath,
-          manifest: marker.manifest,
-          checksum: marker.checksum,
-        };
+    // Only ONE install per bundle dir at a time, and the warm-cache check runs
+    // INSIDE it: a concurrent caller (a page render and this theme's CSS request,
+    // say) must not each decide "no marker yet" and both unpack over the same
+    // directory. See `inFlightInstalls`.
+    return singleFlightInstall(dir, async () => {
+      // A warm cache is reused only if it holds THIS checksum. A built-in that was
+      // re-signed (a new build of the same version, in development) must not keep
+      // serving the previous bytes out of the cache.
+      if (fs.existsSync(markerPath)) {
+        const marker = readMarker(markerPath);
+        const entryPath = marker ? path.join(dir, marker.manifest.entry) : "";
+        if (
+          marker &&
+          marker.checksum === envelope.checksum &&
+          marker.contentDigest === contentDigestOnDisk(dir) &&
+          fs.existsSync(entryPath)
+        ) {
+          return {
+            key,
+            version,
+            dir,
+            entryPath,
+            manifest: marker.manifest,
+            checksum: marker.checksum,
+          };
+        }
       }
-    }
 
-    return unpackVerified(dir, markerPath, key, version, envelope, payload);
+      return unpackVerified(dir, markerPath, key, version, envelope, payload);
+    });
   }
 
   throw new PackageError(

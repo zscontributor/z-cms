@@ -143,39 +143,76 @@ export async function openPackage(file: Buffer): Promise<SignedPackage> {
 
 /** Extracts a VERIFIED payload to disk. Verify first; this function does not. */
 /**
- * Unpacks a payload into `dest`, ATOMICALLY.
+ * Unpacks a payload into `dest`, ATOMICALLY — and without ever leaving `dest`
+ * missing while a reader might be importing from it.
  *
  * The obvious implementation — `rm -rf dest` then unpack into it — has a window
- * in which `dest` exists and is empty or half-written. Two concurrent loads of
- * the same theme hit it immediately: site-runtime resolves the theme in
- * `generateMetadata` and again in the page component, so the second call's
- * `rmSync` deletes the directory the first call has just finished populating and
- * is about to read. The symptom is an intermittent "entry is not in the package"
- * on a cold cache, and it is invisible once the cache is warm — which is exactly
- * the kind of bug that only ever appears in production.
+ * in which `dest` exists and is empty or half-written. Unpacking into a private
+ * staging directory and `rename`-ing it into place closes most of that: rename is
+ * atomic on POSIX, so a reader sees either the old directory or the complete new
+ * one, never a partial one.
  *
- * So: unpack into a private temporary directory and `rename` it into place.
- * Rename is atomic on POSIX, so a reader sees either the old directory or the
- * complete new one, never a partial one.
+ * But `rename` REFUSES a non-empty destination, so a naive "rm dest; rename"
+ * reopens the hole: the `rm` deletes the whole (slow, recursive) tree, and for the
+ * entire span of that delete `dest` does not exist. Two loads of the same theme
+ * hit this immediately — site-runtime resolves a theme in `generateMetadata`, in
+ * the page component, AND out of the theme-assets route for its CSS and icons, all
+ * at once — so one caller's `rm` deletes the directory another has just finished
+ * populating and is mid-`import()` of. The symptom is an intermittent "entry is
+ * not in the package" / ENOENT on a cold cache that degrades the page to the
+ * default theme, invisible once the cache is warm: the kind of bug that only ever
+ * appears in production. (The loader single-flights installs per bundle dir on top
+ * of this; keeping the swap itself hole-free is the second half of the fix.)
+ *
+ * So an existing copy is moved ASIDE (atomic) rather than deleted, the fresh tree
+ * is renamed in (atomic), and only then is the old copy removed — by which point
+ * `dest` is already live again. The only window in which `dest` is absent is the
+ * two adjacent `rename` syscalls, with no I/O between them, and a reader that has
+ * already opened a file keeps reading the moved-aside inode across it (POSIX keeps
+ * an open fd valid through rename/unlink).
  */
 export async function installPayload(
   payload: Buffer,
   dest: string,
 ): Promise<string[]> {
-  const staging = `${dest}.tmp-${randomUUID().slice(0, 8)}`;
+  const suffix = randomUUID().slice(0, 8);
+  const staging = `${dest}.tmp-${suffix}`;
+  const backup = `${dest}.old-${suffix}`;
 
+  let written: string[];
   try {
-    const written = await unpackTo(payload, staging);
-
-    // rename() refuses a non-empty destination, so the old copy goes first. The
-    // gap between the two is small and, unlike the naive version, does not span
-    // the whole (slow) unpack.
-    fs.rmSync(dest, { recursive: true, force: true });
-    fs.mkdirSync(path.dirname(dest), { recursive: true });
-    fs.renameSync(staging, dest);
-
-    return written;
-  } finally {
+    written = await unpackTo(payload, staging);
+  } catch (err) {
     fs.rmSync(staging, { recursive: true, force: true });
+    throw err;
   }
+
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+
+  let movedAside = false;
+  try {
+    if (fs.existsSync(dest)) {
+      fs.renameSync(dest, backup);
+      movedAside = true;
+    }
+    fs.renameSync(staging, dest);
+  } catch (err) {
+    // The swap-in failed. Put the old copy back so the site is never left with no
+    // bundle at all, and drop our now-redundant staging copy.
+    if (movedAside && !fs.existsSync(dest)) {
+      try {
+        fs.renameSync(backup, dest);
+        movedAside = false;
+      } catch {
+        // `dest` reappeared under us — another installer's copy is in place. Its
+        // copy wins; our backup is discarded in `finally`.
+      }
+    }
+    fs.rmSync(staging, { recursive: true, force: true });
+    throw err;
+  } finally {
+    if (movedAside) fs.rmSync(backup, { recursive: true, force: true });
+  }
+
+  return written;
 }
