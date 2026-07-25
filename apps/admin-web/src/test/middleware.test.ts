@@ -153,6 +153,18 @@ describe("middleware", () => {
     );
   });
 
+  it("allows the marketplace in img-src, so package thumbnails can be seen", async () => {
+    // The marketplace catalogue hands out absolute screenshot URLs on its own origin;
+    // without it here every thumbnail on the marketplace screen is blocked by our CSP.
+    vi.stubEnv("MARKETPLACE_URL", "https://marketplace.example.org");
+
+    const response = await middleware(request("/marketplace", { [ACCESS_TOKEN_COOKIE]: "at" }));
+
+    const csp = response.headers.get("content-security-policy") ?? "";
+    const imgSrc = csp.split(";").find((d) => d.trim().startsWith("img-src")) ?? "";
+    expect(imgSrc).toContain("https://marketplace.example.org");
+  });
+
   it("drops the internal API host from connect-src rather than emitting an invalid source", async () => {
     // "z-cms_cms-api" is a Swarm service name. The underscore is not legal in a CSP
     // host-source, so the browser rejects the token and logs an error; the host is
