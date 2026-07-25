@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ContentStatusSchema } from "@zcmsorg/schemas";
@@ -79,7 +80,7 @@ export function ListToolbar({
           {locales.map((value) => {
             const active = value === selectedLocale;
             return (
-              <a
+              <Link
                 key={value}
                 href={hrefForLocale(value)}
                 role="tab"
@@ -92,7 +93,7 @@ export function ListToolbar({
                 )}
               >
                 {languageNames.of(value) ?? value}
-              </a>
+              </Link>
             );
           })}
         </div>
