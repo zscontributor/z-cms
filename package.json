@@ -54,7 +54,8 @@
       "@hono/node-server": ">=2.0.10",
       "sharp": ">=0.35.0",
       "fast-uri": "^3.1.4",
-      "valibot": ">=1.4.2"
+      "valibot": ">=1.4.2",
+      "brace-expansion": ">=5.0.8"
     }
   },
   "devDependencies": {
