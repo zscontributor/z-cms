@@ -54,7 +54,24 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # Booting the docker-container builder pulls moby/buildkit from Docker Hub,
+      # which intermittently times out ("Get https://registry-1.docker.io/v2/:
+      # context deadline exceeded") and fails the whole matrix job. Pre-pull it with
+      # retries so a transient hiccup is retried instead of fatal; setup-buildx then
+      # boots from the local image (pinned to the same tag it would fetch).
+      - name: Pre-pull buildkit image (tolerate Docker Hub flakiness)
+        run: |
+          for i in 1 2 3 4 5; do
+            docker pull moby/buildkit:buildx-stable-1 && exit 0
+            echo "buildkit pull attempt $i failed; retrying in $((i * 10))s…"
+            sleep $((i * 10))
+          done
+          echo "buildkit image pull failed after 5 attempts" >&2
+          exit 1
+
       - uses: docker/setup-buildx-action@v4
+        with:
+          driver-opts: image=moby/buildkit:buildx-stable-1
 
       # No login (so no push) on pull requests — the build still runs as a check.
       - name: Log in to GHCR
