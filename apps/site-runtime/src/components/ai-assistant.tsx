@@ -13,7 +13,14 @@ export function AiAssistant({ name, welcomeMessage }: { name: string; welcomeMes
   ]);
   const end = useRef<HTMLDivElement>(null);
 
-  useEffect(() => end.current?.scrollIntoView({ behavior: "smooth" }), [messages, pending]);
+  // Block body on purpose: a concise arrow would return whatever
+  // `scrollIntoView` yields as the effect's cleanup. Some browsers implement
+  // `behavior: "smooth"` by returning a Promise, and React then calls that
+  // Promise as a destroy function on the next run — "destroy is not a function",
+  // which crashes the whole tree the moment a new message arrives.
+  useEffect(() => {
+    end.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, pending]);
 
   async function send() {
     const content = input.trim();
