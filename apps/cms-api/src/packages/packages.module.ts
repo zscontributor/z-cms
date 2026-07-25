@@ -270,27 +270,33 @@ export class PackagesService implements OnModuleInit {
       },
     });
 
-    // A published version is immutable. Re-uploading the same version with
-    // different bytes would silently change what every site already running it
-    // executes on its next cache miss — the definition of a supply-chain attack.
+    // A RELEASED version is immutable. Re-uploading the same version with different
+    // bytes would silently change what every site already running it executes on its
+    // next cache miss — the definition of a supply-chain attack. But "released" means
+    // a version this instance holds a BUNDLE for. A BUILTIN row has none: it either
+    // ships inside the image, or — the case this guard used to trip on — was seeded
+    // into the registry from a local (gitignored) directory that never reaches the
+    // deployed image, as a PRIVATE marketplace theme is. That stub was never released
+    // through the marketplace and nothing can actually run it, so installing the
+    // marketplace's authoritative bytes for the same version is a promotion, not a
+    // byte-swap of running code — allowed even when the local build's checksum
+    // differs. A bundle-backed row stays immutable.
     const existing = await db.themeVersion.findFirst({
       where: { themeId: theme.id, version },
     });
-    if (existing && existing.checksum !== envelope.checksum) {
+    if (existing?.bundleUrl && existing.checksum !== envelope.checksum) {
       throw new BadRequestException(
         t()("errors.packages.versionImmutable", { key, version }),
       );
     }
 
-    // Same version, same checksum (the guard above guarantees it), but possibly a
-    // different distribution channel: a theme that shipped BUILTIN in the image and
-    // is now installed from the marketplace is byte-identical content served a new
-    // way, not a supply-chain swap. Move the row onto the incoming channel so the
-    // runtime loads the marketplace bundle and verifies it against the marketplace
-    // key — an empty update would strand it on the built-in bundle the image no
-    // longer ships, and the site would silently fall back to the default theme.
-    // Identity and content (checksum, manifest, engine) are left exactly as they
-    // were, so nothing a running site executes changes.
+    // Promoting a bundle-less BUILTIN stub adopts the marketplace's authoritative
+    // content (checksum, manifest, engine) wholesale — the stub's bytes were never
+    // the real release. A same-checksum channel move (a genuine built-in now installed
+    // from the marketplace) leaves identity untouched; only the channel changes, so
+    // the runtime loads the marketplace bundle instead of a built-in the image may no
+    // longer ship, and the site stops falling back to the default theme.
+    const promoting = existing != null && !existing.bundleUrl;
     const versionChannel = {
       origin: origin as never,
       bundleUrl: storageKey,
@@ -301,7 +307,14 @@ export class PackagesService implements OnModuleInit {
     };
     await db.themeVersion.upsert({
       where: { themeId_version: { themeId: theme.id, version } },
-      update: versionChannel,
+      update: promoting
+        ? {
+            ...versionChannel,
+            checksum: envelope.checksum,
+            manifest: manifest as never,
+            engine: String(manifest.engine ?? ">=0.1.0"),
+          }
+        : versionChannel,
       create: {
         themeId: theme.id,
         version,
@@ -344,18 +357,22 @@ export class PackagesService implements OnModuleInit {
       },
     });
 
+    // See registerTheme: immutability protects a RELEASED (bundle-backed) version.
+    // A BUILTIN stub with no bundle was never released through the marketplace, so a
+    // genuine install of that version is a promotion, not a byte-swap of running code.
     const existing = await db.pluginVersion.findFirst({
       where: { pluginId: plugin.id, version },
     });
-    if (existing && existing.checksum !== envelope.checksum) {
+    if (existing?.bundleUrl && existing.checksum !== envelope.checksum) {
       throw new BadRequestException(
         t()("errors.packages.versionImmutable", { key, version }),
       );
     }
 
-    // See registerTheme: the same version installed from a different channel is
-    // moved onto that channel (BUILTIN -> MARKETPLACE) rather than left stranded on
-    // a bundle the image no longer ships. Content and permissions are unchanged.
+    // Promoting a bundle-less BUILTIN stub adopts the marketplace's authoritative
+    // content wholesale; a same-checksum channel move (BUILTIN -> MARKETPLACE) leaves
+    // identity and permissions untouched and only changes the channel.
+    const promoting = existing != null && !existing.bundleUrl;
     const versionChannel = {
       origin: origin as never,
       bundleUrl: storageKey,
@@ -366,7 +383,15 @@ export class PackagesService implements OnModuleInit {
     };
     await db.pluginVersion.upsert({
       where: { pluginId_version: { pluginId: plugin.id, version } },
-      update: versionChannel,
+      update: promoting
+        ? {
+            ...versionChannel,
+            checksum: envelope.checksum,
+            manifest: manifest as never,
+            engine: String(manifest.engine ?? ">=0.1.0"),
+            permissions: (manifest.permissions ?? []) as string[],
+          }
+        : versionChannel,
       create: {
         pluginId: plugin.id,
         version,

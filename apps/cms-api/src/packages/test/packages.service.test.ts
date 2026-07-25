@@ -155,7 +155,12 @@ describe("PackagesService.ensureBucket (onModuleInit)", () => {
 const KEY = "vn.zsoft.theme.zsoft";
 
 /** Wires up openPackage/verifyPackage/scanPackage and a themeVersion.upsert spy. */
-function stubInstall(opts: { existingChecksum: string | null; bundleChecksum: string }) {
+function stubInstall(opts: {
+  existingChecksum: string | null;
+  bundleChecksum: string;
+  /** Present => the existing row is a RELEASED (bundle-backed) version, not a BUILTIN stub. */
+  existingBundleUrl?: string | null;
+}) {
   const themeVersionUpsert = vi.fn().mockResolvedValue({});
   dbState.db = {
     theme: { upsert: vi.fn().mockResolvedValue({ id: "t1" }) },
@@ -163,7 +168,12 @@ function stubInstall(opts: { existingChecksum: string | null; bundleChecksum: st
       findFirst: vi.fn().mockResolvedValue(
         opts.existingChecksum === null
           ? null
-          : { id: "tv1", checksum: opts.existingChecksum, origin: "BUILTIN" },
+          : {
+              id: "tv1",
+              checksum: opts.existingChecksum,
+              origin: opts.existingBundleUrl ? "MARKETPLACE" : "BUILTIN",
+              bundleUrl: opts.existingBundleUrl ?? null,
+            },
       ),
       upsert: themeVersionUpsert,
     },
@@ -207,10 +217,14 @@ describe("PackagesService.installVerified — channel transition", () => {
     expect(call.update.marketplaceSignature).toBe("MS");
   });
 
-  it("refuses a same-version reinstall whose bytes differ (immutability)", async () => {
-    // Same version, different checksum = a supply-chain swap. It must be rejected,
-    // not quietly transitioned.
-    stubInstall({ existingChecksum: "OLD", bundleChecksum: "NEW" });
+  it("refuses a same-version reinstall whose bytes differ, for a RELEASED version (immutability)", async () => {
+    // A bundle-backed version is a real release. Swapping its bytes under the same
+    // version = a supply-chain swap. It must be rejected, not quietly transitioned.
+    stubInstall({
+      existingChecksum: "OLD",
+      bundleChecksum: "NEW",
+      existingBundleUrl: `packages/theme/${KEY}/1.0.0.zcms`,
+    });
 
     await expect(
       makeService().installVerified(Buffer.from("bundle"), {
@@ -219,5 +233,26 @@ describe("PackagesService.installVerified — channel transition", () => {
         version: "1.0.0",
       }),
     ).rejects.toThrow();
+  });
+
+  it("promotes a BUILTIN stub whose bytes differ (a private theme seeded, then installed for real)", async () => {
+    // The z-soft case: `seed-themes` registered a BUILTIN row from a local build, and
+    // the marketplace holds a DIFFERENT build of the same version. The stub was never
+    // released through the marketplace and nothing can run it (no bundle), so the
+    // install must promote it — adopting the marketplace's authoritative checksum —
+    // not reject it as if a released version were being swapped.
+    const upsert = stubInstall({ existingChecksum: "LOCAL_SEED", bundleChecksum: "MARKETPLACE_REAL" });
+
+    await makeService().installVerified(Buffer.from("bundle"), {
+      kind: "theme",
+      key: KEY,
+      version: "1.0.0",
+    });
+
+    const call = upsert.mock.calls[0][0];
+    expect(call.update.origin).toBe("MARKETPLACE");
+    expect(call.update.bundleUrl).toBe(`packages/theme/${KEY}/1.0.0.zcms`);
+    // Adopts the marketplace's content wholesale — the seed stub's bytes were never real.
+    expect(call.update.checksum).toBe("MARKETPLACE_REAL");
   });
 });
