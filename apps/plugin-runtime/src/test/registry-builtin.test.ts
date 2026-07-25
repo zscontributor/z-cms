@@ -158,6 +158,33 @@ describe("loadBuiltinPlugin", () => {
     expect((await loadBuiltinPlugin("vn.zsoft.plugin.b")).code).toBe("module.exports = 'B';");
   });
 
+  it("ignores a `.not-builtin` package and still loads the real built-ins beside it", async () => {
+    // The production regression: `content-pack` is a marketplace-distributed plugin
+    // (marked `.not-builtin`) whose `.zcms` is signed with the PUBLISHER key, not the
+    // pinned first-party key, yet its file sits under PLUGIN_DIR next to the genuine
+    // built-ins. Discovery verifies every file it returns BEFORE matching a manifest id,
+    // so without the marker being honoured the foreign package throws "Invalid
+    // first-party signature" and takes down loading of every real built-in with it.
+    await publishAs("genuine", "vn.zsoft.plugin.a", "module.exports = 'A';");
+    const foreign = await publishAs(
+      "content-pack",
+      "vn.zsoft.plugin.content-pack",
+      "module.exports = 'MKT';",
+      { key: OTHER.privateKey },
+    );
+    fs.writeFileSync(path.join(foreign, ".not-builtin"), "marketplace-distributed\n");
+
+    // The genuine plugin loads despite the foreign package sharing the directory.
+    expect((await loadBuiltinPlugin("vn.zsoft.plugin.a")).code).toBe("module.exports = 'A';");
+
+    // And the `.not-builtin` package is not loadable as a built-in at all — it is
+    // skipped by discovery, so it reads as "no signed package", never as a running
+    // plugin whose signature happened to check out.
+    await expect(loadBuiltinPlugin("vn.zsoft.plugin.content-pack")).rejects.toThrow(
+      /no signed package/,
+    );
+  });
+
   it("says so when a plugin has no signed package at all", async () => {
     fs.mkdirSync(path.join(dir, "unsigned", "dist"), { recursive: true });
     fs.writeFileSync(

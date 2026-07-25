@@ -412,6 +412,15 @@ function builtinPackageFiles(root: string): string[] {
   return fs
     .readdirSync(root, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
+    // A `.not-builtin` marker means this directory is a PRIVATE, marketplace-
+    // distributed package that merely lives alongside the built-ins on disk — it is
+    // signed with the publisher key, not the pinned first-party key. `verifyFirstParty`
+    // is called on EVERY file this scan returns before any manifest id is looked at,
+    // so a single foreign-signed package here would throw and block loading of every
+    // genuine built-in. The build/sign (`sign-builtins.mts`) and seed steps
+    // (`seed-plugins.ts`, `seed-themes.ts`) already skip these directories; the runtime
+    // loader is the fourth consumer of the same marker and must skip them too.
+    .filter((entry) => !fs.existsSync(path.join(root, entry.name, ".not-builtin")))
     .flatMap((entry) => {
       const dir = path.join(root, entry.name);
       return fs
