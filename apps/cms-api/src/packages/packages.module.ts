@@ -1,4 +1,10 @@
-import { PutObjectCommand, GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  PutObjectCommand,
+  GetObjectCommand,
+  HeadBucketCommand,
+  CreateBucketCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 import {
   BadRequestException,
   Controller,
@@ -7,6 +13,7 @@ import {
   Logger,
   Module,
   NotFoundException,
+  type OnModuleInit,
   Param,
   Res,
 } from "@nestjs/common";
@@ -33,7 +40,7 @@ const DEFAULT_THEME_KEY = "vn.zsoft.theme.default";
 const MAX_PACKAGE_LABEL = `${MAX_PACKAGE_BYTES / (1024 * 1024)}MB`;
 
 @Injectable()
-export class PackagesService {
+export class PackagesService implements OnModuleInit {
   private readonly logger = new Logger(PackagesService.name);
   private readonly s3: S3Client;
   private readonly bucket: string;
@@ -52,6 +59,57 @@ export class PackagesService {
       },
       forcePathStyle: true,
     });
+  }
+
+  async onModuleInit(): Promise<void> {
+    await this.ensureBucket();
+  }
+
+  /**
+   * Make sure the object store actually has the bucket we write to.
+   *
+   * RustFS ships empty and nothing in the deploy creates `S3_BUCKET`, so the
+   * first media upload or marketplace install used to fail with `NoSuchBucket`
+   * until an operator made the bucket by hand — a manual step that is easy to
+   * forget and gives a 500 with no hint of the cause. Creating it here, once, on
+   * startup removes it: a `HeadBucket` that reports the bucket missing is followed
+   * by a `CreateBucket`; a bucket that already exists is left untouched.
+   *
+   * Failure is logged, not thrown. If the object store is briefly unreachable
+   * while the API boots (Swarm has no ordering guarantee between the two), the
+   * API must still come up — the next write will surface a real, actionable
+   * error on its own rather than the whole service crash-looping at start.
+   */
+  private async ensureBucket(): Promise<void> {
+    try {
+      await this.s3.send(new HeadBucketCommand({ Bucket: this.bucket }));
+      return; // Already there — the common case on every boot after the first.
+    } catch (err) {
+      const status = (err as { $metadata?: { httpStatusCode?: number } }).$metadata
+        ?.httpStatusCode;
+      const name = (err as Error).name;
+      const missing = status === 404 || name === "NotFound" || name === "NoSuchBucket";
+      if (!missing) {
+        // 403, a network error, a misconfigured endpoint — creating won't help and
+        // could mask the real problem. Leave it for the first write to report.
+        this.logger.warn(
+          `Could not verify object-store bucket "${this.bucket}": ${(err as Error).message}`,
+        );
+        return;
+      }
+    }
+    try {
+      await this.s3.send(new CreateBucketCommand({ Bucket: this.bucket }));
+      this.logger.log(`Created object-store bucket "${this.bucket}"`);
+    } catch (err) {
+      const name = (err as Error).name;
+      // Another replica won the race, or the bucket appeared between our head and
+      // create. Both mean the bucket now exists, which is all we were after.
+      if (name === "BucketAlreadyOwnedByYou" || name === "BucketAlreadyExists") return;
+      this.logger.warn(
+        `Could not create object-store bucket "${this.bucket}": ${(err as Error).message}`,
+      );
+    }
   }
 
   /**
