@@ -117,18 +117,36 @@ export class MarketplaceService {
     const catalogue = await this.fetchRegistry(remote, kind, q);
 
     const db = getSystemDb();
+
+    // "Installed" here must mean this instance actually HOLDS a servable bundle —
+    // exactly what `fetchBundle` requires (`bundleUrl` set) and what the runtime
+    // downloads. A key can also carry a BUILTIN registry row whose `bundleUrl` is
+    // null: a theme that ships inside the image, OR — the case that made this a bug —
+    // a private marketplace theme that `seed-themes` registered as BUILTIN from a
+    // local (gitignored) directory that is NOT in the deployed image. Counting the
+    // mere existence of a row as "installed" hid the Install button for such a theme,
+    // so it could never be pulled from the marketplace and every site rendering it
+    // fell back to the default. Only a version with a bundle counts.
+    const heldVersions = {
+      where: { bundleUrl: { not: null } },
+      select: { version: true },
+      orderBy: { createdAt: "desc" as const },
+      take: 1,
+    };
     const [themes, plugins] = await Promise.all([
-      db.theme.findMany({
-        select: { key: true, versions: { select: { version: true }, orderBy: { createdAt: "desc" }, take: 1 } },
-      }),
-      db.plugin.findMany({
-        select: { key: true, versions: { select: { version: true }, orderBy: { createdAt: "desc" }, take: 1 } },
-      }),
+      db.theme.findMany({ select: { key: true, versions: heldVersions } }),
+      db.plugin.findMany({ select: { key: true, versions: heldVersions } }),
     ]);
 
-    const held = new Map<string, string | null>();
-    for (const row of themes) held.set(`theme:${row.key}`, row.versions[0]?.version ?? null);
-    for (const row of plugins) held.set(`plugin:${row.key}`, row.versions[0]?.version ?? null);
+    const held = new Map<string, string>();
+    for (const row of themes) {
+      const version = row.versions[0]?.version;
+      if (version) held.set(`theme:${row.key}`, version);
+    }
+    for (const row of plugins) {
+      const version = row.versions[0]?.version;
+      if (version) held.set(`plugin:${row.key}`, version);
+    }
 
     return catalogue.map((pkg) => {
       const id = `${pkg.kind}:${pkg.key}`;
