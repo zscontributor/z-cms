@@ -605,6 +605,28 @@ export class ThemesController {
       await this.createDemoMenuItems(actor.tenantId, row.id, menu.items ?? []);
     }
 
+    // Enable the locales the demo just published in. `ctx.alternates` — and so the
+    // theme's language switcher — only shows a locale that is in `Site.locales`, so a
+    // multilingual demo (e.g. en/vi/ja) that left this untouched would seed Japanese
+    // pages the switcher hides and no /ja URL can reach. Additive only: locales the
+    // site already serves are kept and their order preserved, new ones appended.
+    const demoLocales = [...new Set(contents.map((item) => item.locale).filter(Boolean))];
+    if (demoLocales.length > 0) {
+      const site = await db().site.findUnique({
+        where: { id: siteId },
+        select: { locales: true },
+      });
+      if (site) {
+        const merged = [...site.locales];
+        for (const locale of demoLocales) {
+          if (!merged.includes(locale)) merged.push(locale);
+        }
+        if (merged.length !== site.locales.length) {
+          await db().site.update({ where: { id: siteId }, data: { locales: merged } });
+        }
+      }
+    }
+
     if (demo.settings) {
       await db().siteTheme.update({
         where: { id: active.id },

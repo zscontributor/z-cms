@@ -281,6 +281,68 @@ export class PackagesService implements OnModuleInit {
     return affected.length;
   }
 
+  /**
+   * The plugin equivalent of `advanceActiveThemeInstalls`.
+   *
+   * Installing a new plugin version only writes it to the catalogue; a running site
+   * keeps the version pinned in `SitePlugin`/`OrgPlugin.versionId`. When an admin
+   * UPDATES a plugin that is already live, "update" should mean "run the new one":
+   * this re-points every ACTIVE install of that plugin (within the acting tenant —
+   * both per-site and org-wide) to the new version and drops the affected sites'
+   * render caches, so the next request loads the new build. The plugin-runtime
+   * fetches the new version's bundle by checksum on that next call, so no separate
+   * purge is needed (that is the revocation path's job).
+   *
+   * Tenant-scoped and ACTIVE-only: an inactive install stays pinned until an
+   * explicit Activate (which already selects the latest version), and another
+   * tenant is never upgraded from under it. A no-op when the plugin is not live.
+   */
+  async advanceActivePluginInstalls(
+    tenantId: string,
+    key: string,
+    version: string,
+  ): Promise<number> {
+    const db = getSystemDb();
+    const plugin = await db.plugin.findUnique({ where: { key }, select: { id: true } });
+    if (!plugin) return 0;
+    const row = await db.pluginVersion.findFirst({
+      where: { pluginId: plugin.id, version },
+      select: { id: true },
+    });
+    if (!row) return 0;
+
+    const sitePlugins = await db.sitePlugin.findMany({
+      where: { tenantId, status: "ACTIVE", pluginId: plugin.id, NOT: { versionId: row.id } },
+      select: { id: true, siteId: true },
+    });
+    const orgPlugins = await db.orgPlugin.findMany({
+      where: { tenantId, status: "ACTIVE", pluginId: plugin.id, NOT: { versionId: row.id } },
+      select: { id: true },
+    });
+    if (sitePlugins.length === 0 && orgPlugins.length === 0) return 0;
+
+    const siteIds = new Set<string>();
+    for (const sp of sitePlugins) {
+      await db.sitePlugin.update({ where: { id: sp.id }, data: { versionId: row.id } });
+      siteIds.add(sp.siteId);
+    }
+    for (const op of orgPlugins) {
+      await db.orgPlugin.update({ where: { id: op.id }, data: { versionId: row.id } });
+    }
+    // An org-wide plugin runs on every site of the tenant, so all of them are stale.
+    if (orgPlugins.length > 0) {
+      const sites = await db.site.findMany({ where: { tenantId }, select: { id: true } });
+      for (const s of sites) siteIds.add(s.id);
+    }
+    for (const id of siteIds) await this.cache.invalidateSite(id);
+
+    const count = sitePlugins.length + orgPlugins.length;
+    this.logger.log(
+      `Applied plugin ${key}@${version} to ${count} active install(s) on tenant ${tenantId}.`,
+    );
+    return count;
+  }
+
   marketplacePublicKey(): string {
     const key = (this.config.get<string>("MARKETPLACE_PUBLIC_KEY") ?? "").replace(/\\n/g, "\n");
     if (!key) {

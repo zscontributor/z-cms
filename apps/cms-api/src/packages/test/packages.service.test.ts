@@ -318,3 +318,69 @@ describe("PackagesService.advanceActiveThemeInstalls — update applies to the l
     expect(invalidateSite).not.toHaveBeenCalled();
   });
 });
+
+describe("PackagesService.advanceActivePluginInstalls — plugin update applies to live sites", () => {
+  beforeEach(() => {
+    vi.spyOn(Logger.prototype, "log").mockImplementation(() => undefined);
+  });
+
+  function makeServiceWithCache(cache: { invalidateSite: any }) {
+    return new PackagesService(config as any, cache as any);
+  }
+
+  const PKEY = "vn.zsoft.plugin.content-pack";
+
+  it("re-points active site + org installs to the new version and drops caches", async () => {
+    const sitePluginUpdate = vi.fn().mockResolvedValue({});
+    const orgPluginUpdate = vi.fn().mockResolvedValue({});
+    const invalidateSite = vi.fn().mockResolvedValue(undefined);
+    dbState.db = {
+      plugin: { findUnique: vi.fn().mockResolvedValue({ id: "p1" }) },
+      pluginVersion: { findFirst: vi.fn().mockResolvedValue({ id: "pvNEW" }) },
+      sitePlugin: {
+        findMany: vi.fn().mockResolvedValue([{ id: "sp1", siteId: "site-1" }]),
+        update: sitePluginUpdate,
+      },
+      orgPlugin: { findMany: vi.fn().mockResolvedValue([{ id: "op1" }]), update: orgPluginUpdate },
+      // Org-wide plugin => every tenant site is stale.
+      site: { findMany: vi.fn().mockResolvedValue([{ id: "site-1" }, { id: "site-2" }]) },
+    };
+
+    const applied = await makeServiceWithCache({ invalidateSite }).advanceActivePluginInstalls(
+      "tenant-1",
+      PKEY,
+      "0.2.0",
+    );
+
+    expect(applied).toBe(2); // 1 site install + 1 org install
+    expect(sitePluginUpdate).toHaveBeenCalledWith({ where: { id: "sp1" }, data: { versionId: "pvNEW" } });
+    expect(orgPluginUpdate).toHaveBeenCalledWith({ where: { id: "op1" }, data: { versionId: "pvNEW" } });
+    // site-1 (per-site) + site-1/site-2 (org-wide) => both sites, de-duplicated.
+    expect(invalidateSite).toHaveBeenCalledWith("site-1");
+    expect(invalidateSite).toHaveBeenCalledWith("site-2");
+  });
+
+  it("is a no-op when the plugin is not live anywhere", async () => {
+    const sitePluginUpdate = vi.fn();
+    const orgPluginUpdate = vi.fn();
+    const invalidateSite = vi.fn();
+    dbState.db = {
+      plugin: { findUnique: vi.fn().mockResolvedValue({ id: "p1" }) },
+      pluginVersion: { findFirst: vi.fn().mockResolvedValue({ id: "pvNEW" }) },
+      sitePlugin: { findMany: vi.fn().mockResolvedValue([]), update: sitePluginUpdate },
+      orgPlugin: { findMany: vi.fn().mockResolvedValue([]), update: orgPluginUpdate },
+      site: { findMany: vi.fn() },
+    };
+
+    const applied = await makeServiceWithCache({ invalidateSite }).advanceActivePluginInstalls(
+      "tenant-1",
+      PKEY,
+      "0.2.0",
+    );
+
+    expect(applied).toBe(0);
+    expect(sitePluginUpdate).not.toHaveBeenCalled();
+    expect(orgPluginUpdate).not.toHaveBeenCalled();
+    expect(invalidateSite).not.toHaveBeenCalled();
+  });
+});

@@ -33,8 +33,12 @@ function demoContent(over: Record<string, unknown> = {}) {
   };
 }
 
-function makeDb(demo: unknown) {
+function makeDb(demo: unknown, siteLocales: string[] = ["en"]) {
   return {
+    site: {
+      findUnique: vi.fn().mockResolvedValue({ locales: siteLocales }),
+      update: vi.fn().mockResolvedValue({}),
+    },
     siteTheme: {
       findFirst: vi.fn().mockResolvedValue({
         id: "st1",
@@ -359,6 +363,49 @@ describe("ThemesController.seedActiveDemo", () => {
       const res = await makeController().seedActiveDemo(actor, "s1");
       expect(res.orders).toBe(0);
       expect(holder.db.order.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("locale enabling", () => {
+    // The switcher (ctx.alternates) only surfaces a locale the site enables, so a
+    // multilingual demo has to enable the locales it just published in.
+    const trilingual = [
+      demoContent({ locale: "en", slug: "home", translationGroup: "home" }),
+      demoContent({ locale: "vi", slug: "trang-chu", translationGroup: "home" }),
+      demoContent({ locale: "ja", slug: "home-ja", translationGroup: "home" }),
+    ];
+
+    it("adds the demo's locales to a site that does not publish them yet", async () => {
+      holder.db = makeDb(
+        { contentTypes: CONTENT_TYPES, contents: trilingual, menus: [] },
+        ["en"],
+      );
+      await makeController().seedActiveDemo(actor, "s1");
+      expect(holder.db.site.update).toHaveBeenCalledWith({
+        where: { id: "s1" },
+        data: { locales: ["en", "vi", "ja"] },
+      });
+    });
+
+    it("keeps the site's existing locales and order, appending only new ones", async () => {
+      holder.db = makeDb(
+        { contentTypes: CONTENT_TYPES, contents: trilingual, menus: [] },
+        ["vi", "en"],
+      );
+      await makeController().seedActiveDemo(actor, "s1");
+      expect(holder.db.site.update).toHaveBeenCalledWith({
+        where: { id: "s1" },
+        data: { locales: ["vi", "en", "ja"] },
+      });
+    });
+
+    it("does not write Site.locales when the demo adds no new locale", async () => {
+      holder.db = makeDb(
+        { contentTypes: CONTENT_TYPES, contents: trilingual, menus: [] },
+        ["en", "vi", "ja"],
+      );
+      await makeController().seedActiveDemo(actor, "s1");
+      expect(holder.db.site.update).not.toHaveBeenCalled();
     });
   });
 });

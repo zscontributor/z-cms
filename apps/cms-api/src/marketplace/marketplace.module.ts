@@ -242,13 +242,15 @@ export class MarketplaceService {
 
     await this.packages.installVerified(bundle, { kind, key, version });
 
-    // Updating a theme that is already live means "run the new one": advance this
-    // tenant's ACTIVE installs of it to the version just pulled and drop their
+    // Updating a theme/plugin that is already live means "run the new one": advance
+    // this tenant's ACTIVE installs of it to the version just pulled and drop their
     // render caches. A first-time install (nothing active yet) is a no-op, so the
     // two-step pull → activate flow is unchanged there.
     let applied = 0;
     if (kind === "theme") {
       applied = await this.packages.advanceActiveThemeInstalls(actor.tenantId, key, version);
+    } else {
+      applied = await this.packages.advanceActivePluginInstalls(actor.tenantId, key, version);
     }
 
     await getSystemDb().auditLog.create({
