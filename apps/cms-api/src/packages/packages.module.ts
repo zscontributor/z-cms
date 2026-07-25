@@ -282,21 +282,33 @@ export class PackagesService implements OnModuleInit {
       );
     }
 
+    // Same version, same checksum (the guard above guarantees it), but possibly a
+    // different distribution channel: a theme that shipped BUILTIN in the image and
+    // is now installed from the marketplace is byte-identical content served a new
+    // way, not a supply-chain swap. Move the row onto the incoming channel so the
+    // runtime loads the marketplace bundle and verifies it against the marketplace
+    // key — an empty update would strand it on the built-in bundle the image no
+    // longer ships, and the site would silently fall back to the default theme.
+    // Identity and content (checksum, manifest, engine) are left exactly as they
+    // were, so nothing a running site executes changes.
+    const versionChannel = {
+      origin: origin as never,
+      bundleUrl: storageKey,
+      publisherSignature: envelope.publisherSignature,
+      marketplaceSignature,
+      reviewStatus: reviewStatus as never,
+      scanReport: scan as never,
+    };
     await db.themeVersion.upsert({
       where: { themeId_version: { themeId: theme.id, version } },
-      update: {},
+      update: versionChannel,
       create: {
         themeId: theme.id,
         version,
         engine: String(manifest.engine ?? ">=0.1.0"),
         manifest: manifest as never,
-        origin: origin as never,
-        bundleUrl: storageKey,
         checksum: envelope.checksum,
-        publisherSignature: envelope.publisherSignature,
-        marketplaceSignature,
-        reviewStatus: reviewStatus as never,
-        scanReport: scan as never,
+        ...versionChannel,
       },
     });
   }
@@ -341,22 +353,28 @@ export class PackagesService implements OnModuleInit {
       );
     }
 
+    // See registerTheme: the same version installed from a different channel is
+    // moved onto that channel (BUILTIN -> MARKETPLACE) rather than left stranded on
+    // a bundle the image no longer ships. Content and permissions are unchanged.
+    const versionChannel = {
+      origin: origin as never,
+      bundleUrl: storageKey,
+      publisherSignature: envelope.publisherSignature,
+      marketplaceSignature,
+      reviewStatus: reviewStatus as never,
+      scanReport: scan as never,
+    };
     await db.pluginVersion.upsert({
       where: { pluginId_version: { pluginId: plugin.id, version } },
-      update: {},
+      update: versionChannel,
       create: {
         pluginId: plugin.id,
         version,
         engine: String(manifest.engine ?? ">=0.1.0"),
         manifest: manifest as never,
-        origin: origin as never,
         permissions: (manifest.permissions ?? []) as string[],
-        bundleUrl: storageKey,
         checksum: envelope.checksum,
-        publisherSignature: envelope.publisherSignature,
-        marketplaceSignature,
-        reviewStatus: reviewStatus as never,
-        scanReport: scan as never,
+        ...versionChannel,
       },
     });
   }

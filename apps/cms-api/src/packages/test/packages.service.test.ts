@@ -1,11 +1,25 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Logger } from "@nestjs/common";
 
-// The database is imported by packages.module but never touched by onModuleInit;
-// stub it so importing the service does not reach for a real connection. The
-// scanner and package modules are pure function exports with no side effects, so
-// they are left real — mocking them only risks an incomplete import graph.
-vi.mock("@zcmsorg/database", () => ({ getSystemDb: () => ({}) }));
+// getSystemDb returns whatever `dbState.db` a test sets — the ensureBucket tests
+// never touch it, the install tests wire up theme/themeVersion fakes.
+const dbState = vi.hoisted(() => ({ db: {} as any }));
+vi.mock("@zcmsorg/database", () => ({ getSystemDb: () => dbState.db }));
+
+// The scanner and package modules are otherwise left real (openapi/registry imports
+// named exports from them, so a bare replacement breaks the import graph). Only the
+// two entry points install() drives are overridden, via importOriginal.
+const pkgState = vi.hoisted(() => ({ openPackage: null as any, verifyPackage: null as any }));
+vi.mock("@zcmsorg/package", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  openPackage: (...a: any[]) => pkgState.openPackage(...a),
+  verifyPackage: (...a: any[]) => pkgState.verifyPackage(...a),
+}));
+const scanState = vi.hoisted(() => ({ scanPackage: null as any }));
+vi.mock("@zcmsorg/scanner", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  scanPackage: (...a: any[]) => scanState.scanPackage(...a),
+}));
 
 // The S3 client is mocked: onModuleInit must decide whether to create the bucket
 // from the commands it sends, and we assert on exactly those. Each command carries
@@ -57,7 +71,8 @@ const config = {
       S3_ACCESS_KEY: "ak",
       S3_SECRET_KEY: "sk",
     })[k],
-  get: (k: string) => (k === "S3_REGION" ? "us-east-1" : undefined),
+  get: (k: string) =>
+    ({ S3_REGION: "us-east-1", MARKETPLACE_PUBLIC_KEY: "PINNED-KEY" })[k],
 };
 
 function makeService() {
@@ -134,5 +149,75 @@ describe("PackagesService.ensureBucket (onModuleInit)", () => {
     });
 
     await expect(makeService().onModuleInit()).resolves.toBeUndefined();
+  });
+});
+
+const KEY = "vn.zsoft.theme.zsoft";
+
+/** Wires up openPackage/verifyPackage/scanPackage and a themeVersion.upsert spy. */
+function stubInstall(opts: { existingChecksum: string | null; bundleChecksum: string }) {
+  const themeVersionUpsert = vi.fn().mockResolvedValue({});
+  dbState.db = {
+    theme: { upsert: vi.fn().mockResolvedValue({ id: "t1" }) },
+    themeVersion: {
+      findFirst: vi.fn().mockResolvedValue(
+        opts.existingChecksum === null
+          ? null
+          : { id: "tv1", checksum: opts.existingChecksum, origin: "BUILTIN" },
+      ),
+      upsert: themeVersionUpsert,
+    },
+  };
+  pkgState.openPackage = vi.fn().mockResolvedValue({
+    envelope: {
+      manifest: { kind: "theme", id: KEY, version: "1.0.0", name: "Z-Soft", engine: ">=0.1.0" },
+      checksum: opts.bundleChecksum,
+      publisherSignature: "PS",
+      marketplaceSignature: "MS",
+    },
+    payload: Buffer.from("payload"),
+  });
+  pkgState.verifyPackage = vi.fn(); // a no-op resolves = signature accepted
+  scanState.scanPackage = vi.fn().mockResolvedValue({ verdict: "pass", findings: [] });
+  s3State.send = vi.fn().mockResolvedValue({}); // Head + Put both succeed
+  return themeVersionUpsert;
+}
+
+describe("PackagesService.installVerified — channel transition", () => {
+  beforeEach(() => {
+    vi.spyOn(Logger.prototype, "log").mockImplementation(() => undefined);
+    vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+  });
+
+  it("moves a BUILTIN version onto the marketplace channel on install (same bytes)", async () => {
+    // The exact case that stranded z-soft: the row already exists as BUILTIN with a
+    // matching checksum. An empty update would leave it pointing at the built-in
+    // bundle the image no longer ships; it must flip to the marketplace channel.
+    const upsert = stubInstall({ existingChecksum: "CHK", bundleChecksum: "CHK" });
+
+    await makeService().installVerified(Buffer.from("bundle"), {
+      kind: "theme",
+      key: KEY,
+      version: "1.0.0",
+    });
+
+    const call = upsert.mock.calls[0][0];
+    expect(call.update.origin).toBe("MARKETPLACE");
+    expect(call.update.bundleUrl).toBe(`packages/theme/${KEY}/1.0.0.zcms`);
+    expect(call.update.marketplaceSignature).toBe("MS");
+  });
+
+  it("refuses a same-version reinstall whose bytes differ (immutability)", async () => {
+    // Same version, different checksum = a supply-chain swap. It must be rejected,
+    // not quietly transitioned.
+    stubInstall({ existingChecksum: "OLD", bundleChecksum: "NEW" });
+
+    await expect(
+      makeService().installVerified(Buffer.from("bundle"), {
+        kind: "theme",
+        key: KEY,
+        version: "1.0.0",
+      }),
+    ).rejects.toThrow();
   });
 });
