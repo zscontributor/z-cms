@@ -405,5 +405,23 @@ describe("PluginsService", () => {
         "plugin-runtime HTTP 404: No signed package found for plugin zsoft-seo.",
       );
     });
+
+    it("fails activation when the plugin's own setup() throws in the sandbox", async () => {
+      // The runtime answered 200 — the dispatch was fine — but the plugin's setup
+      // handler threw (its ctx.db seeding was refused, say). That is a failed
+      // activation, not a clean one: runSetup must raise it so the caller does not
+      // flip the plugin ACTIVE having never finished setting up.
+      holder.systemDb.sitePlugin.findFirst.mockResolvedValue(activeRow());
+      (fetch as any).mockResolvedValue({
+        ok: true,
+        status: 200,
+        headers: new Headers({ "content-type": "application/json" }),
+        json: async () => ({ ok: false, error: "seed refused: tableNotOwned" }),
+      });
+
+      await expect(makeService().runSetup("t1", "s1", "zsoft-seo")).rejects.toThrow(
+        /seed refused/,
+      );
+    });
   });
 });

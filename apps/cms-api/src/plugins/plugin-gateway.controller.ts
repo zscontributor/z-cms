@@ -425,6 +425,14 @@ export class PluginGatewayController {
     // The install for this (plugin, site) at either tier — a SitePlugin, or the
     // tenant's OrgPlugin. getSystemDb() reads the catalogue directly; the manifest
     // and the isCore flag are platform data, not tenant rows.
+    //
+    // Deliberately NOT filtered on status ACTIVE: a plugin's `setup()` runs during
+    // activation, while the install is still INACTIVE, and its whole job may be to
+    // seed the tables it just declared. The token is the gate that a plugin is
+    // legitimately executing at all — it is minted per-invocation only for a real
+    // dispatch (setup included) — so ownership here only needs the install to
+    // exist, be first-party, and declare the table. An inactive plugin never
+    // reaches this code without a token, and cannot mint one.
     const sys = getSystemDb();
     const include = {
       plugin: { select: { isCore: true } },
@@ -432,11 +440,11 @@ export class PluginGatewayController {
     } as const;
     const install =
       (await sys.sitePlugin.findFirst({
-        where: { siteId: claims.sid, pluginId: claims.pid, status: "ACTIVE" },
+        where: { siteId: claims.sid, pluginId: claims.pid },
         include,
       })) ??
       (await sys.orgPlugin.findFirst({
-        where: { tenantId: claims.tid, pluginId: claims.pid, status: "ACTIVE" },
+        where: { tenantId: claims.tid, pluginId: claims.pid },
         include,
       }));
 

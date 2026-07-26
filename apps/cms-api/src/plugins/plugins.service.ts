@@ -621,7 +621,14 @@ export class PluginsService {
     // change and the permission grant. Nothing to dispatch, so return clean.
     if (isCoreRuntimePlugin(row.version.manifest)) return;
 
-    await this.execute(tenantId, siteId, this.toTarget(row), { kind: "setup" });
+    const res = await this.execute(tenantId, siteId, this.toTarget(row), { kind: "setup" });
+    // A failed setup must fail activation — the caller flips to ACTIVE only on a
+    // clean return, and "clean" has to include the plugin's own code. Without this
+    // a setup that threw (or whose db seeding was refused) would be swallowed and
+    // the plugin would come up ACTIVE having never finished setting up.
+    if (!res.ok) {
+      throw new Error(res.error ?? "Plugin setup failed.");
+    }
   }
 
   /**

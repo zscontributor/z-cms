@@ -1,0 +1,154 @@
+{
+  "id": "vn.zsoft.plugin.shop",
+  "name": "Shop Manager",
+  "version": "0.1.0",
+  "description": "Open a shop on Z-CMS: manage inventory, shipping methods and payment options. Creates its own tables, seeds a cosmetics-shop demo, and adds the management screens — a complete example of what a first-party plugin can do.",
+  "author": {
+    "name": "Z-SOFT Co., Ltd",
+    "url": "https://z-soft.com.vn"
+  },
+  "engine": ">=0.1.0",
+  "entry": "dist/index.js",
+  "scope": "site",
+  "permissions": ["data:own"],
+  "capabilities": ["shop.management"],
+  "permissionsProvided": [
+    { "key": "inventory:read", "description": "See the shop's stock — SKUs, quantities and warehouse.", "defaultRoles": ["EDITOR", "ADMIN", "OWNER"] },
+    { "key": "inventory:manage", "description": "Add and adjust stock, reorder levels and warehouses.", "defaultRoles": ["ADMIN", "OWNER"] },
+    { "key": "shipping:read", "description": "See the shipping methods and their rates.", "defaultRoles": ["EDITOR", "ADMIN", "OWNER"] },
+    { "key": "shipping:manage", "description": "Add and change shipping methods, zones and rates.", "defaultRoles": ["ADMIN", "OWNER"] },
+    { "key": "payment:read", "description": "See the payment methods the shop accepts.", "defaultRoles": ["EDITOR", "ADMIN", "OWNER"] },
+    { "key": "payment:configure", "description": "Turn payment methods on or off and edit their details.", "defaultRoles": ["ADMIN", "OWNER"] }
+  ],
+  "database": {
+    "tables": [
+      {
+        "name": "p_vn_zsoft_plugin_shop__inventory",
+        "columns": [
+          { "name": "sku", "type": "text" },
+          { "name": "product", "type": "text" },
+          { "name": "stock", "type": "integer", "default": 0 },
+          { "name": "warehouse", "type": "text", "nullable": true },
+          { "name": "reorder_level", "type": "integer", "default": 0 }
+        ],
+        "indexes": [{ "columns": ["sku"], "unique": true }]
+      },
+      {
+        "name": "p_vn_zsoft_plugin_shop__shipping",
+        "columns": [
+          { "name": "method", "type": "text" },
+          { "name": "zone", "type": "text" },
+          { "name": "rate", "type": "numeric", "default": 0 },
+          { "name": "eta_days", "type": "integer", "default": 3 },
+          { "name": "enabled", "type": "boolean", "default": true }
+        ]
+      },
+      {
+        "name": "p_vn_zsoft_plugin_shop__payment",
+        "columns": [
+          { "name": "method", "type": "text" },
+          { "name": "kind", "type": "text" },
+          { "name": "instructions", "type": "text", "nullable": true },
+          { "name": "enabled", "type": "boolean", "default": true }
+        ]
+      }
+    ]
+  },
+  "admin": {
+    "nav": [
+      { "label": "Inventory", "icon": "stack", "resource": "inventory", "permission": "inventory:read" },
+      { "label": "Shipping", "icon": "globe", "resource": "shipping", "permission": "shipping:read" },
+      { "label": "Payment", "icon": "gear", "resource": "payment", "permission": "payment:read" }
+    ],
+    "resources": [
+      {
+        "key": "inventory",
+        "label": "Inventory",
+        "table": "p_vn_zsoft_plugin_shop__inventory",
+        "list": {
+          "columns": [
+            { "column": "sku", "label": "SKU" },
+            { "column": "product", "label": "Product" },
+            { "column": "stock", "label": "In stock" },
+            { "column": "warehouse", "label": "Warehouse" },
+            { "column": "reorder_level", "label": "Reorder at" }
+          ],
+          "orderBy": { "column": "product", "direction": "asc" }
+        },
+        "form": {
+          "fields": [
+            { "column": "sku", "label": "SKU" },
+            { "column": "product", "label": "Product" },
+            { "column": "stock", "label": "In stock", "input": "number" },
+            { "column": "warehouse", "label": "Warehouse" },
+            { "column": "reorder_level", "label": "Reorder at", "input": "number" }
+          ]
+        },
+        "permissions": { "read": "inventory:read", "write": "inventory:manage" }
+      },
+      {
+        "key": "shipping",
+        "label": "Shipping methods",
+        "table": "p_vn_zsoft_plugin_shop__shipping",
+        "list": {
+          "columns": [
+            { "column": "method", "label": "Method" },
+            { "column": "zone", "label": "Zone" },
+            { "column": "rate", "label": "Rate" },
+            { "column": "eta_days", "label": "ETA (days)" },
+            { "column": "enabled", "label": "On" }
+          ],
+          "orderBy": { "column": "rate", "direction": "asc" }
+        },
+        "form": {
+          "fields": [
+            { "column": "method", "label": "Method" },
+            { "column": "zone", "label": "Zone" },
+            { "column": "rate", "label": "Rate", "input": "number" },
+            { "column": "eta_days", "label": "ETA (days)", "input": "number" },
+            { "column": "enabled", "label": "Enabled", "input": "boolean" }
+          ]
+        },
+        "permissions": { "read": "shipping:read", "write": "shipping:manage" }
+      },
+      {
+        "key": "payment",
+        "label": "Payment methods",
+        "table": "p_vn_zsoft_plugin_shop__payment",
+        "list": {
+          "columns": [
+            { "column": "method", "label": "Method" },
+            { "column": "kind", "label": "Type" },
+            { "column": "enabled", "label": "On" }
+          ]
+        },
+        "form": {
+          "fields": [
+            { "column": "method", "label": "Method" },
+            { "column": "kind", "label": "Type", "input": "select", "options": ["Cash on delivery", "Bank transfer", "E-wallet"] },
+            { "column": "instructions", "label": "Instructions", "input": "textarea" },
+            { "column": "enabled", "label": "Enabled", "input": "boolean" }
+          ]
+        },
+        "permissions": { "read": "payment:read", "write": "payment:configure" }
+      }
+    ]
+  },
+  "settingsSchema": {
+    "type": "object",
+    "properties": {
+      "storeName": {
+        "type": "string",
+        "title": "Store name",
+        "description": "Shown on the demo data this plugin seeds.",
+        "default": "Lumière"
+      },
+      "lowStockThreshold": {
+        "type": "number",
+        "title": "Low-stock threshold",
+        "description": "Default reorder level for newly seeded inventory.",
+        "default": 20
+      }
+    }
+  }
+}
