@@ -253,7 +253,15 @@ export function generatePluginTableDdl(
   const tbl = ident(table.name);
 
   const columnLines = table.columns.map((column) => {
-    const parts = [ident(column.name), COLUMN_SQL_TYPE[column.type]];
+    // The type is never emitted raw — only its mapped SQL spelling, so a crafted
+    // type string cannot inject. But an unknown type would map to `undefined` and
+    // produce broken DDL; refuse it loudly instead, so a manifest that slipped past
+    // validation fails here rather than emitting a malformed statement.
+    const sqlType = COLUMN_SQL_TYPE[column.type];
+    if (!sqlType) {
+      throw new Error(`Refusing DDL for unknown column type: ${JSON.stringify(column.type)}`);
+    }
+    const parts = [ident(column.name), sqlType];
     if (column.nullable !== true) parts.push("NOT NULL");
     const def = defaultLiteral(column);
     if (def !== undefined) parts.push(`DEFAULT ${def}`);

@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { getSystemDb } from "@zcmsorg/database";
 import {
   generatePluginTableDdl,
+  validatePluginTableSchemas,
   type PluginAdminContribution,
   type PluginAdminResource,
   type PluginTableSchema,
@@ -647,6 +648,19 @@ export class PluginsService {
       database?: { tables?: PluginTableSchema[] };
     } | null;
     const tables = manifest?.database?.tables ?? [];
+
+    // Re-validate at the door, even though install already did. This is the moment
+    // arbitrary DDL is about to run against the real database, so it does not get to
+    // trust that some earlier gate held — a manifest that names a core table, an
+    // off-prefix table, a bad column or an unknown type is refused HERE, before a
+    // single statement is emitted. Activation fails cleanly; nothing partial runs.
+    const violations = validatePluginTableSchemas(plugin.key, tables);
+    if (violations.length) {
+      throw new Error(
+        `Refusing to create tables for ${plugin.key}: ` +
+          violations.map((v) => `${v.table} (${v.reason})`).join(", "),
+      );
+    }
 
     for (const table of tables) {
       for (const statement of generatePluginTableDdl(plugin.key, table)) {

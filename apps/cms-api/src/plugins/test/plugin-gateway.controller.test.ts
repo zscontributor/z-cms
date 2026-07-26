@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BadRequestException, ForbiddenException } from "@nestjs/common";
 
-const holder = vi.hoisted(() => ({ db: null as any }));
+const holder = vi.hoisted(() => ({ db: null as any, sys: null as any }));
 vi.mock("@zcmsorg/database", () => ({
   db: () => holder.db,
+  // resolvePluginTable reads the installed manifest through the system client.
+  getSystemDb: () => holder.sys,
   // withTenant binds the query to the token's tenant; we run the callback directly.
   withTenant: (_tid: string, fn: any) => fn({ db: holder.db }),
 }));
@@ -23,6 +25,35 @@ function makeDb() {
       findFirst: vi.fn().mockResolvedValue(null),
       findMany: vi.fn().mockResolvedValue([]),
     },
+    // The raw executors the db.* dispatch uses once a table has been resolved as
+    // the plugin's own. A spy so a test can prove they were NEVER reached when the
+    // table is refused.
+    $queryRawUnsafe: vi.fn().mockResolvedValue([{ id: "row-1" }]),
+    $executeRawUnsafe: vi.fn().mockResolvedValue(1),
+  };
+}
+
+/**
+ * The system client resolvePluginTable reads. By default it returns a first-party
+ * install whose manifest owns exactly one table, `p_zsoft_seo__leads`. A test that
+ * wants a community plugin or a different table set overrides it.
+ */
+function makeSys(over: { isCore?: boolean; tables?: unknown[] } = {}) {
+  const install = {
+    plugin: { isCore: over.isCore ?? true },
+    version: {
+      manifest: {
+        database: {
+          tables: over.tables ?? [
+            { name: "p_zsoft_seo__leads", columns: [{ name: "email", type: "text" }] },
+          ],
+        },
+      },
+    },
+  };
+  return {
+    sitePlugin: { findFirst: vi.fn().mockResolvedValue(install) },
+    orgPlugin: { findFirst: vi.fn().mockResolvedValue(null) },
   };
 }
 
@@ -57,6 +88,7 @@ function claims(over: Record<string, unknown> = {}) {
 describe("PluginGatewayController", () => {
   beforeEach(() => {
     holder.db = makeDb();
+    holder.sys = makeSys();
     tokens.verify.mockReset();
     queue.enqueue.mockClear();
     mail.enqueue.mockClear();
@@ -257,6 +289,78 @@ describe("PluginGatewayController", () => {
       });
 
       expect(plugins.runJob).toHaveBeenCalledWith("t1", "s1", "zsoft-seo", "reindex", { a: 1 });
+    });
+  });
+
+  // The two guarantees a plugin's own tables rest on, exercised from the attacker's
+  // side: it may reach ITS tables and no others, and it never sees a connection.
+  describe("db.* — the plugin's own tables only", () => {
+    const withDb = { scopes: ["data:own"] as string[] };
+
+    it("REFUSES a write to a core table it does not own, and never runs SQL", async () => {
+      // The land-grab: a plugin points db.insert at `content`. Its manifest does not
+      // declare `content`, so resolvePluginTable refuses it before any SQL is built.
+      tokens.verify.mockResolvedValue(claims(withDb));
+      await expect(
+        makeController().call("Bearer x", {
+          method: "db.insert",
+          params: { table: "content", row: { title: "hijacked" } },
+        }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(holder.db.$queryRawUnsafe).not.toHaveBeenCalled();
+      expect(holder.db.$executeRawUnsafe).not.toHaveBeenCalled();
+    });
+
+    it("REFUSES a write to another plugin's prefixed table", async () => {
+      tokens.verify.mockResolvedValue(claims(withDb));
+      await expect(
+        makeController().call("Bearer x", {
+          method: "db.update",
+          params: { table: "p_other_plugin__secrets", patch: { x: 1 }, where: {} },
+        }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(holder.db.$queryRawUnsafe).not.toHaveBeenCalled();
+    });
+
+    it("REFUSES db.* to a community (non-first-party) plugin, even for its own table", async () => {
+      // Owning tables is a first-party privilege. Even declaring the table and
+      // holding the scope, a non-isCore plugin is refused.
+      holder.sys = makeSys({ isCore: false });
+      tokens.verify.mockResolvedValue(claims(withDb));
+      await expect(
+        makeController().call("Bearer x", {
+          method: "db.select",
+          params: { table: "p_zsoft_seo__leads", options: {} },
+        }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(holder.db.$queryRawUnsafe).not.toHaveBeenCalled();
+    });
+
+    it("REFUSES db.* without the data:own scope the admin must grant", async () => {
+      // The scope gate in front of everything: no data:own, no tables at all.
+      tokens.verify.mockResolvedValue(claims({ scopes: [] }));
+      await expect(
+        makeController().call("Bearer x", {
+          method: "db.insert",
+          params: { table: "p_zsoft_seo__leads", row: { email: "a@x.com" } },
+        }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(holder.db.$queryRawUnsafe).not.toHaveBeenCalled();
+    });
+
+    it("allows a write to its OWN declared table, scoped to the token's tenant and site", async () => {
+      tokens.verify.mockResolvedValue(claims(withDb));
+      await makeController().call("Bearer x", {
+        method: "db.insert",
+        params: { table: "p_zsoft_seo__leads", row: { email: "a@x.com" } },
+      });
+
+      expect(holder.db.$queryRawUnsafe).toHaveBeenCalledTimes(1);
+      const [sql, ...values] = holder.db.$queryRawUnsafe.mock.calls[0];
+      expect(sql).toContain('INSERT INTO "p_zsoft_seo__leads"');
+      // tenant/site come from the token (t1/s1), never from the plugin's params.
+      expect(values.slice(0, 2)).toEqual(["t1", "s1"]);
+      expect(values).toContain("a@x.com");
     });
   });
 });

@@ -141,6 +141,18 @@ describe("generatePluginTableDdl", () => {
     // write a foreign table name into DDL.
     expect(() => generatePluginTableDdl(PLUGIN, { ...leads, name: "users" })).toThrow();
   });
+
+  it("throws on an unknown column type rather than emitting broken DDL", () => {
+    // The type is only ever looked up in a fixed map, so it cannot inject — but an
+    // unknown one must fail loud here, not slip out as `undefined` in a CREATE.
+    expect(() =>
+      generatePluginTableDdl(PLUGIN, {
+        name: `${PREFIX}x`,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        columns: [{ name: "c", type: "text); DROP TABLE users; --" as any }],
+      }),
+    ).toThrow(/unknown column type/);
+  });
 });
 
 describe("query builders", () => {
