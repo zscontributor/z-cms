@@ -67,13 +67,23 @@ html[${COLOR_MODE_ATTRIBUTE}="dark"] [${COLOR_MODE_ICON_ATTRIBUTE}="light"] { di
  *   - A DUAL-MODE theme starts from the visitor's stored choice, then the theme's
  *     declared default, then (for "system") the OS.
  *
+ * The choice is stored in BOTH a cookie and `localStorage`, and read from the cookie
+ * first. `localStorage` is per-ORIGIN, and a site here answers on several hosts:
+ * `www.example.com` is 308-redirected to `example.com` (see `canonicalHostFor`), and
+ * the preference set on one is invisible to the other. The cookie is scoped to the
+ * registrable domain (the leading `www.` stripped from the host), so it rides across
+ * that redirect and across subdomains — which is what makes dark mode survive a click
+ * on the menu. `localStorage` is kept as a same-origin mirror and read as a fallback,
+ * so a visitor who stored a choice before this cookie existed still keeps it.
+ *
  * Minified by hand rather than by a bundler, because it is a string in the HTML and
- * never reaches one. Every part of it is wrapped in try/catch: `localStorage` throws
- * outright in a Safari private window and inside a sandboxed iframe, and a site that
- * failed to render because it could not remember a colour preference would have its
- * priorities backwards. It degrades to "the theme's default, and the toggle does
- * nothing" — which is also what a visitor with JavaScript disabled gets, and for
- * them the theme's own `prefers-color-scheme` rule still honours the OS.
+ * never reaches one. Every part of it is wrapped in try/catch: `localStorage` and
+ * `document.cookie` both throw outright in a Safari private window and inside a
+ * sandboxed iframe, and a site that failed to render because it could not remember a
+ * colour preference would have its priorities backwards. It degrades to "the theme's
+ * default, and the toggle does nothing" — which is also what a visitor with
+ * JavaScript disabled gets, and for them the theme's own `prefers-color-scheme` rule
+ * still honours the OS.
  */
 export function colorModeScript(config: ColorModeContext): string {
   const forced = config.toggleable ? null : (config.modes[0] ?? "light");
@@ -83,7 +93,11 @@ var K=${JSON.stringify(COLOR_MODE_STORAGE_KEY)},A=${JSON.stringify(COLOR_MODE_AT
 var FORCED=${JSON.stringify(forced)},DEF=${JSON.stringify(config.default)};
 function apply(m){R.setAttribute(A,m);R.style.colorScheme=m;sync(m)}
 function sync(m){try{var b=document.querySelectorAll("["+${JSON.stringify(COLOR_MODE_TOGGLE_ATTRIBUTE)}+"]");for(var i=0;i<b.length;i++){b[i].setAttribute("aria-pressed",String(m==="dark"))}}catch(e){}}
-function read(){if(FORCED)return null;try{var v=localStorage.getItem(K);return v==="dark"||v==="light"?v:null}catch(e){return null}}
+function ck(){try{var a=document.cookie?document.cookie.split("; "):[];for(var i=0;i<a.length;i++){if(a[i].indexOf(K+"=")===0){var w=a[i].slice(K.length+1);return w==="dark"||w==="light"?w:null}}return null}catch(e){return null}}
+function ls(){try{var v=localStorage.getItem(K);return v==="dark"||v==="light"?v:null}catch(e){return null}}
+function read(){if(FORCED)return null;return ck()||ls()}
+function wc(m){try{var h=location.hostname,d="";if(h&&h.indexOf(".")>-1&&!/^[0-9.]+$/.test(h)){d="; domain="+h.replace(/^www\\./,"")}document.cookie=K+"="+m+"; path=/; max-age=31536000; SameSite=Lax"+(location.protocol==="https:"?"; Secure":"")+d}catch(e){}}
+function save(m){try{localStorage.setItem(K,m)}catch(e){}wc(m)}
 function os(){try{return window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}catch(e){return "light"}}
 function start(){if(FORCED)return FORCED;var s=read();if(s)return s;return DEF==="system"?os():DEF}
 apply(start());
@@ -98,7 +112,10 @@ if(e.zcmsColorModeHandled)return;e.zcmsColorModeHandled=true;
 e.preventDefault();
 var next=R.getAttribute(A)==="dark"?"light":"dark";
 apply(next);
-try{localStorage.setItem(K,next)}catch(_){}
+/* Persisted to BOTH a cookie and localStorage. The cookie is domain-scoped, so
+   the choice survives the www<->apex (and any registered-domain spelling) redirect
+   that localStorage, being per-origin, silently drops on the next navigation. */
+save(next);
 });
 /* Follow the OS, but only while the visitor has expressed no preference of their own. */
 try{window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change",function(ev){

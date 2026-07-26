@@ -53,6 +53,10 @@ describe("colorModeScript", () => {
     document.documentElement.style.colorScheme = "";
     document.body.innerHTML = "";
     localStorage.clear();
+    // The cookie outlives a test the way localStorage does not (jsdom shares one
+    // document across a file), so a choice one test persisted would leak into the
+    // next and start it in the wrong mode. Expire it.
+    document.cookie = `${COLOR_MODE_STORAGE_KEY}=; path=/; max-age=0`;
     setPrefersDark(false);
   });
 
@@ -106,6 +110,28 @@ describe("colorModeScript", () => {
       expect(mode()).toBe("light");
       expect(localStorage.getItem(COLOR_MODE_STORAGE_KEY)).toBe("light");
       expect(button.getAttribute("aria-pressed")).toBe("false");
+    });
+
+    it("also persists to a cookie, so the choice survives a cross-origin redirect", () => {
+      // localStorage is per-origin; the www<->apex redirect (canonicalHostFor) lands
+      // the visitor on a different origin, where only a cookie is still visible. This
+      // is the reason dark mode used to reset to light on the first menu click.
+      document.body.innerHTML = `<button ${COLOR_MODE_TOGGLE_ATTRIBUTE}>x</button>`;
+      run();
+
+      document.querySelector("button")!.click();
+
+      expect(mode()).toBe("dark");
+      expect(document.cookie).toContain(`${COLOR_MODE_STORAGE_KEY}=dark`);
+    });
+
+    it("starts from the cookie even when localStorage has nothing", () => {
+      // Exactly the post-redirect state: the cookie rode across, localStorage did not.
+      document.cookie = `${COLOR_MODE_STORAGE_KEY}=dark; path=/`;
+      setPrefersDark(false);
+      run();
+
+      expect(mode()).toBe("dark");
     });
 
     it("works when the click lands on an icon inside the button", () => {
