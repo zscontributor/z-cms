@@ -266,7 +266,12 @@ export default async function CatchAllPage(props: RouteProps) {
   if (!payload.content) notFound();
 
   const content = payload.content;
-  const isHome = path === "/";
+  // The homepage is the content with an empty slug — one per locale (the platform's
+  // "empty slug IS the homepage" contract). Matching on `path === "/"` only caught
+  // the default locale: a localized home keeps its locale prefix ("/ja", "/vi") on
+  // purpose (see resolveRoute), so those fell through to `templates.page`, which
+  // draws a page-head band above the theme's own hero — the hero "pushed down".
+  const isHome = content.slug === "";
   const isPost = content.contentType.key === "post";
 
   // `page` is the only required template — everything falls back to it, so a
