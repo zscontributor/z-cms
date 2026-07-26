@@ -585,6 +585,103 @@ export const listOrgPlugins = cache(
 );
 
 // ---------------------------------------------------------------------------
+// Plugin admin screens — the list/detail/form a plugin declares and core renders.
+// Types mirror the plugin-sdk shapes; admin-web reads them off the wire rather
+// than importing the SDK, which is a build-time dependency it does not need.
+// ---------------------------------------------------------------------------
+
+export interface PluginNavContribution {
+  pluginKey: string;
+  label: string;
+  icon?: string;
+  resource: string;
+  permission: string;
+}
+
+export interface PluginResourceColumn {
+  column: string;
+  label: string;
+}
+
+export interface PluginResourceField {
+  column: string;
+  label: string;
+  input?: "text" | "textarea" | "number" | "boolean" | "select" | "date";
+  options?: string[];
+  readonly?: boolean;
+}
+
+export interface PluginResourceDescriptor {
+  key: string;
+  label: string;
+  table: string;
+  list: {
+    columns: PluginResourceColumn[];
+    orderBy?: { column: string; direction?: "asc" | "desc" };
+  };
+  form?: { fields: PluginResourceField[] };
+  permissions: { read: string; write?: string };
+}
+
+export interface PluginAdminContributions {
+  nav: PluginNavContribution[];
+  resources: Array<{ pluginKey: string; resource: PluginResourceDescriptor }>;
+}
+
+/** The plugin admin screens the current user may see on the current site. */
+export const getPluginAdminContributions = cache(
+  async (): Promise<PluginAdminContributions> =>
+    apiFetch<PluginAdminContributions>("/plugin-admin/contributions"),
+);
+
+export type PluginRow = Record<string, unknown>;
+
+export async function listPluginResource(
+  pluginKey: string,
+  resourceKey: string,
+  query: { page?: number; perPage?: number } = {},
+): Promise<{ resource: PluginResourceDescriptor; rows: PluginRow[] }> {
+  return apiFetch(
+    `/plugin-admin/${encodeURIComponent(pluginKey)}/${encodeURIComponent(resourceKey)}`,
+    { query: { page: query.page, perPage: query.perPage } },
+  );
+}
+
+export async function createPluginRow(
+  pluginKey: string,
+  resourceKey: string,
+  row: PluginRow,
+): Promise<{ row: PluginRow | null }> {
+  return apiFetch(
+    `/plugin-admin/${encodeURIComponent(pluginKey)}/${encodeURIComponent(resourceKey)}`,
+    { method: "POST", body: row },
+  );
+}
+
+export async function updatePluginRow(
+  pluginKey: string,
+  resourceKey: string,
+  id: string,
+  patch: PluginRow,
+): Promise<{ rows: PluginRow[] }> {
+  return apiFetch(
+    `/plugin-admin/${encodeURIComponent(pluginKey)}/${encodeURIComponent(resourceKey)}/${encodeURIComponent(id)}`,
+    { method: "PATCH", body: patch },
+  );
+}
+
+export async function deletePluginRow(
+  pluginKey: string,
+  resourceKey: string,
+  id: string,
+): Promise<{ deleted: number }> {
+  return apiFetch(
+    `/plugin-admin/${encodeURIComponent(pluginKey)}/${encodeURIComponent(resourceKey)}/${encodeURIComponent(id)}`,
+    { method: "DELETE" },
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Marketplace package primitives
 // ---------------------------------------------------------------------------
 

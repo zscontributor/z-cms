@@ -1,6 +1,13 @@
 import { redirect } from "next/navigation";
 import type { ContentTypeDto } from "@zcmsorg/schemas";
-import { can, getCurrentSite, getSession, listContentTypes, listSites } from "@/lib/api";
+import {
+  can,
+  getCurrentSite,
+  getPluginAdminContributions,
+  getSession,
+  listContentTypes,
+  listSites,
+} from "@/lib/api";
 import { getT } from "@/lib/locale";
 import { Sidebar, type NavGroup } from "@/components/shell/sidebar";
 import { Topbar } from "@/components/shell/topbar";
@@ -15,6 +22,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // A site with no content types (or an API hiccup) must still render the shell,
   // otherwise the user is locked out of the very screens that would fix it.
   const contentTypes: ContentTypeDto[] = site ? await safe(listContentTypes, []) : [];
+
+  // Screens contributed by the site's active plugins. Already filtered server-side
+  // to what this user's permissions reach — which is the whole answer to "why is
+  // this menu here?": it is here because a plugin that adds it is active and this
+  // user may open it, and it is absent everywhere else.
+  const pluginNav = site
+    ? (await safe(getPluginAdminContributions, { nav: [], resources: [] })).nav
+    : [];
 
   const groups: NavGroup[] = [
     {
@@ -109,6 +124,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             { href: "/settings/commerce", label: t("admin.nav.commerce"), icon: "gear" as const },
           ]
         : [],
+    },
+    {
+      // Screens plugins add. One group holds them all — each entry is a resource a
+      // plugin declared, linking to the generic screen core renders for it.
+      label: t("admin.nav.extensions"),
+      items: pluginNav.map((item) => ({
+        href: `/x/${encodeURIComponent(item.pluginKey)}/${encodeURIComponent(item.resource)}`,
+        label: item.label,
+        icon: item.icon ?? "plug",
+      })),
     },
   ].filter((group) => group.items.length > 0);
 

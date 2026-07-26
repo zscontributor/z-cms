@@ -66,6 +66,11 @@ const SENSITIVE: Record<Permission, boolean> = {
   // and the sandbox still cannot open a socket — but who the data goes to is a
   // decision only the admin can make, and they cannot make it unprompted.
   "network:fetch": true,
+  // A plugin's own tables hold only what the plugin itself put there, isolated per
+  // tenant and reachable by nothing else — the relational equivalent of the
+  // key-value storage it gets unasked. Operating them is not a reach into anyone
+  // else's data, so the scope that permits it is not a sensitive grant.
+  "data:own": false,
   "audit:read": true,
   // Orders carry a customer's name, contact and delivery address — personal data
   // that leaves the tenant if a plugin can read it.

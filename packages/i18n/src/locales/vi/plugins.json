@@ -217,6 +217,10 @@
       "label": "Đọc nhật ký hoạt động",
       "detail": "Xem lịch sử thao tác của mọi thành viên trên site."
     },
+    "data:own": {
+      "label": "Lưu dữ liệu riêng trong bảng",
+      "detail": "Plugin giữ dữ liệu riêng trong các bảng chỉ nó truy cập được, cô lập theo site này. Nó không thể xem hay chạm vào nội dung, người dùng, hay dữ liệu của plugin khác."
+    },
     "package:review": {
       "label": "Duyệt package bị cách ly",
       "detail": "Chấp nhận hoặc từ chối theme/plugin bị trình quét mã độc gắn cờ — tức là quyết định cho code đáng ngờ được chạy."

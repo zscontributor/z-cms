@@ -19,7 +19,8 @@
     "shop": "ショップ",
     "orders": "注文",
     "commerce": "ストアフロント",
-    "menus": "メニュー"
+    "menus": "メニュー",
+    "extensions": "拡張機能"
   },
   "sidebar": {
     "currentSite": "現在のサイト",

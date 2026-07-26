@@ -19,7 +19,8 @@
     "shop": "Cửa hàng",
     "orders": "Đơn hàng",
     "commerce": "Cửa hàng",
-    "menus": "Menu"
+    "menus": "Menu",
+    "extensions": "Tiện ích mở rộng"
   },
   "sidebar": {
     "currentSite": "Site hiện tại",

@@ -217,6 +217,10 @@
       "label": "Read the activity log",
       "detail": "See the history of what every member has done on the site."
     },
+    "data:own": {
+      "label": "Store its own data in tables",
+      "detail": "The plugin keeps its own records in tables that only it can reach, isolated to this site. It cannot see or touch your content, your users, or any other plugin's data."
+    },
     "package:review": {
       "label": "Review quarantined packages",
       "detail": "Approve or reject a theme or plugin the malware scanner flagged — deciding that distrusted code may run."

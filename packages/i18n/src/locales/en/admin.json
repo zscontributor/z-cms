@@ -19,7 +19,8 @@
     "shop": "Shop",
     "orders": "Orders",
     "commerce": "Storefront",
-    "menus": "Menus"
+    "menus": "Menus",
+    "extensions": "Extensions"
   },
   "sidebar": {
     "currentSite": "Current site",
