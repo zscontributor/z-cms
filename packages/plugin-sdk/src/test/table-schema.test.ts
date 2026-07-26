@@ -5,6 +5,7 @@ import {
   buildPluginSelect,
   buildPluginUpdate,
   generatePluginTableDdl,
+  generatePluginTableDropDdl,
   validatePluginTableSchemas,
   type PluginTableSchema,
 } from "../table-schema";
@@ -152,6 +153,27 @@ describe("generatePluginTableDdl", () => {
         columns: [{ name: "c", type: "text); DROP TABLE users; --" as any }],
       }),
     ).toThrow(/unknown column type/);
+  });
+});
+
+describe("generatePluginTableDropDdl", () => {
+  it("drops the plugin's own table with IF EXISTS and no CASCADE", () => {
+    expect(generatePluginTableDropDdl(PLUGIN, leads)).toEqual([
+      `DROP TABLE IF EXISTS "${PREFIX}leads"`,
+    ]);
+  });
+
+  it("REFUSES to emit a DROP for a core table", () => {
+    // The guarantee the whole uninstall path rests on: it can never be turned into
+    // `DROP TABLE users`, whatever it is handed.
+    expect(() => generatePluginTableDropDdl(PLUGIN, { ...leads, name: "users" })).toThrow();
+    expect(() => generatePluginTableDropDdl(PLUGIN, { ...leads, name: "content" })).toThrow();
+  });
+
+  it("REFUSES a table under another plugin's prefix", () => {
+    expect(() =>
+      generatePluginTableDropDdl(PLUGIN, { ...leads, name: "p_other__secrets" }),
+    ).toThrow();
   });
 });
 

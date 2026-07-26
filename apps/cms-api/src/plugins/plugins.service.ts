@@ -1,8 +1,10 @@
 import { BadGatewayException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { getSystemDb } from "@zcmsorg/database";
+import { db, getSystemDb, withTenant } from "@zcmsorg/database";
 import {
+  buildPluginDelete,
   generatePluginTableDdl,
+  generatePluginTableDropDdl,
   validatePluginTableSchemas,
   type PluginAdminContribution,
   type PluginAdminResource,
@@ -665,6 +667,91 @@ export class PluginsService {
     for (const table of tables) {
       for (const statement of generatePluginTableDdl(plugin.key, table)) {
         await getSystemDb().$executeRawUnsafe(statement);
+      }
+    }
+  }
+
+  /**
+   * Deletes ONE site's rows from a plugin's tables — the data half of uninstalling
+   * the plugin from that site.
+   *
+   * A DELETE, never a DROP: the table is a global object shared by every site the
+   * plugin is installed on, so dropping it here would destroy other sites' — and
+   * other tenants' — data. Each delete is scoped to `(tenant_id, site_id)` from the
+   * uninstalling actor and runs under that tenant's RLS, so it can only ever remove
+   * the caller's own rows, and only from a table the plugin owns (the builder emits
+   * the validated table name and nothing else).
+   *
+   * A no-op for a community plugin, which has no tables.
+   */
+  async purgePluginSiteData(
+    tenantId: string,
+    siteId: string,
+    pluginKey: string,
+  ): Promise<void> {
+    const plugin = await getSystemDb().plugin.findUnique({
+      where: { key: pluginKey },
+      include: { versions: { orderBy: { createdAt: "desc" }, take: 1 } },
+    });
+    if (!plugin?.isCore) return;
+
+    const manifest = plugin.versions[0]?.manifest as {
+      database?: { tables?: PluginTableSchema[] };
+    } | null;
+    const tables = manifest?.database?.tables ?? [];
+    const violations = validatePluginTableSchemas(plugin.key, tables);
+    if (violations.length) return; // A malformed manifest owns no rows worth touching.
+
+    await withTenant(tenantId, async () => {
+      for (const table of tables) {
+        // Empty `where` — the builder still pins tenant_id/site_id, so this removes
+        // exactly this site's rows from this table and nothing else.
+        const q = buildPluginDelete(table, { tenantId, siteId }, {});
+        await db().$executeRawUnsafe(q.text, ...q.values);
+      }
+    });
+  }
+
+  /**
+   * Drops a plugin's tables — but ONLY when no site anywhere still has the plugin
+   * installed, so the global table is genuinely unused.
+   *
+   * This is the safe form of "drop on uninstall": a shared table is dropped when
+   * the LAST install goes, not the first. The count runs on the system client, so
+   * it sees installs across every tenant — dropping while another tenant still
+   * holds the plugin would nuke their data, and this exists to make that
+   * impossible. Guarded like the create path: first-party only, own prefix only,
+   * re-validated before a single DROP is emitted.
+   */
+  async dropPluginTablesIfUnused(pluginKey: string): Promise<void> {
+    const sys = getSystemDb();
+    const plugin = await sys.plugin.findUnique({
+      where: { key: pluginKey },
+      include: { versions: { orderBy: { createdAt: "desc" }, take: 1 } },
+    });
+    if (!plugin?.isCore) return;
+
+    const [siteInstalls, orgInstalls] = await Promise.all([
+      sys.sitePlugin.count({ where: { pluginId: plugin.id } }),
+      sys.orgPlugin.count({ where: { pluginId: plugin.id } }),
+    ]);
+    if (siteInstalls + orgInstalls > 0) return; // Still in use somewhere — never drop.
+
+    const manifest = plugin.versions[0]?.manifest as {
+      database?: { tables?: PluginTableSchema[] };
+    } | null;
+    const tables = manifest?.database?.tables ?? [];
+    const violations = validatePluginTableSchemas(plugin.key, tables);
+    if (violations.length) {
+      throw new Error(
+        `Refusing to drop tables for ${plugin.key}: ` +
+          violations.map((v) => `${v.table} (${v.reason})`).join(", "),
+      );
+    }
+
+    for (const table of tables) {
+      for (const statement of generatePluginTableDropDdl(plugin.key, table)) {
+        await sys.$executeRawUnsafe(statement);
       }
     }
   }

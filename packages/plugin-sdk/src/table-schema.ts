@@ -314,6 +314,32 @@ export function generatePluginTableDdl(
   return statements;
 }
 
+/**
+ * The statements that drop one plugin table — the mirror of
+ * {@link generatePluginTableDdl}, guarded exactly the same way.
+ *
+ * `isPluginTable` + `ident` are the two locks: this can only ever emit a DROP for
+ * a table named with the plugin's own prefix, so a bug or a bad caller cannot turn
+ * it into `DROP TABLE users`. No `CASCADE`: a plugin table is a standalone island
+ * (nothing else has a foreign key into it), and Postgres drops the table's own
+ * indexes and RLS policy with it automatically — so a plain `DROP TABLE IF EXISTS`
+ * removes everything the create made and nothing it did not.
+ *
+ * Dropping is safe ONLY when no site still holds the plugin: the table is a global
+ * object shared across every tenant, its rows separated by `tenant_id`/`site_id`.
+ * The caller is responsible for that check; this function only refuses to name a
+ * table that is not the plugin's.
+ */
+export function generatePluginTableDropDdl(
+  pluginId: string,
+  table: PluginTableSchema,
+): string[] {
+  if (!isPluginTable(pluginId, table.name)) {
+    throw new Error(`Refusing to drop a table outside ${pluginTablePrefix(pluginId)}`);
+  }
+  return [`DROP TABLE IF EXISTS ${ident(table.name)}`];
+}
+
 // ---------------------------------------------------------------------------
 // Query building
 // ---------------------------------------------------------------------------

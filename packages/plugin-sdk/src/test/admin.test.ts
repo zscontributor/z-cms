@@ -63,7 +63,7 @@ describe("validateAdminContribution", () => {
     // The whole safety story: a resource can only read a table the plugin owns.
     const bad = {
       ...valid,
-      resources: [{ ...valid.resources![0], table: "orders" }],
+      resources: [{ ...valid.resources![0]!, table: "orders" }],
     };
     const v = validateAdminContribution(bad, [leads]);
     expect(v).toContainEqual({ where: "resource:leads", reason: "unknown-table", detail: "orders" });
@@ -74,7 +74,7 @@ describe("validateAdminContribution", () => {
       ...valid,
       resources: [
         {
-          ...valid.resources![0],
+          ...valid.resources![0]!,
           list: { columns: [{ column: "salary", label: "Salary" }] },
         },
       ],
@@ -92,7 +92,7 @@ describe("validateAdminContribution", () => {
     const bad = {
       resources: [
         {
-          ...valid.resources![0],
+          ...valid.resources![0]!,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           permissions: {} as any,
         },
@@ -103,13 +103,13 @@ describe("validateAdminContribution", () => {
   });
 
   it("REFUSES a duplicate resource key", () => {
-    const bad = { resources: [valid.resources![0], valid.resources![0]] };
+    const bad = { resources: [valid.resources![0]!, valid.resources![0]!] };
     const v = validateAdminContribution(bad, [leads]);
     expect(v).toContainEqual({ where: "resource:leads", reason: "duplicate-resource-key", detail: "leads" });
   });
 
   it("REFUSES a resource key that is not a slug", () => {
-    const bad = { resources: [{ ...valid.resources![0], key: "Leads!" }] };
+    const bad = { resources: [{ ...valid.resources![0]!, key: "Leads!" }] };
     const v = validateAdminContribution(bad, [leads]);
     expect(v).toContainEqual({ where: "resource:Leads!", reason: "invalid-resource-key", detail: "Leads!" });
   });

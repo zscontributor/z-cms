@@ -538,6 +538,57 @@ export class PluginsController {
     return { ok: true };
   }
 
+  @Post(":key/uninstall")
+  @SiteScoped()
+  @HttpCode(200)
+  @ApiOperation({
+    summary: "Uninstall a plugin from this site",
+    description:
+      "Removes the install and THIS SITE'S data: the plugin's key-value storage " +
+      "for the site, and this site's rows in any tables the plugin owns. The tables " +
+      "themselves are a global object shared with every other site that has the " +
+      "plugin, so they are dropped only when the LAST site anywhere uninstalls — " +
+      "never while another site (or tenant) still holds the plugin. teardown() runs " +
+      "first if the plugin was active. Unlike deactivate, this is not reversible.",
+  })
+  @ApiParam({ name: "key", description: 'Plugin key, e.g. "zsoft-seo".' })
+  @ApiSiteScoped()
+  @ApiAuthed("plugin:install")
+  @ApiZodResponse("Ok", { description: "Uninstalled." })
+  @ApiNotFound("The plugin is not installed on this site.")
+  @RequirePermissions("plugin:install")
+  async uninstall(
+    @Actor() actor: RequestActor,
+    @SiteId() siteId: string,
+    @Param("key") key: string,
+  ): Promise<{ ok: true }> {
+    const row = await this.installRow(siteId, key);
+
+    // If it was still active, wind it down first — it is going away for good.
+    if (row.status === "ACTIVE") {
+      await this.plugins.runTeardown(actor.tenantId, siteId, key);
+    }
+
+    // This site's data goes with the install: its key-value store, then its rows in
+    // any tables the plugin owns. Both are scoped to this site — nothing another
+    // site holds is touched.
+    await db().pluginData.deleteMany({ where: { siteId, pluginId: row.pluginId } });
+    await this.plugins.purgePluginSiteData(actor.tenantId, siteId, key);
+
+    // Remove the install itself.
+    await db().sitePlugin.delete({ where: { id: row.id } });
+
+    // Only now, with this install gone, ask whether the plugin's tables are unused
+    // everywhere — and drop them only if they are.
+    await this.plugins.dropPluginTablesIfUnused(key);
+
+    await this.cache.invalidateSite(siteId);
+    this.plugins.bustProvidedPermissions(actor.tenantId);
+    await this.audit.record(actor, "plugin.uninstalled", "plugin", key, {});
+
+    return { ok: true };
+  }
+
   @Patch(":key/settings")
   @SiteScoped()
   @ApiOperation({
