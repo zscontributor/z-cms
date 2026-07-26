@@ -30,10 +30,16 @@ const MAX_ENTRIES = 2000;
  *
  * The third is dev-only tooling and source that a *distributable* has no use for:
  * the runtime loads `dist/`, not `src/`, and it never runs a build. Excluding it
- * is not just tidiness either — a theme's `build.mjs` legitimately imports `fs`,
- * and shipping it would put an `fs` import inside the package, which the scanner
- * rightly rejects. The build script is not part of what runs; it should not be
- * part of what is scanned or signed.
+ * is not just tidiness either — a theme's build/generator script legitimately
+ * imports `fs`, and shipping it would put an `fs` import inside the package, which
+ * the scanner rightly rejects. The script is not part of what runs; it should not
+ * be part of what is scanned or signed. This rule is name-broad on purpose: an
+ * earlier `build.mjs`-only version shipped a theme's `gen-theme.mjs` and got the
+ * package rejected at review — a script is a script whatever it is called.
+ *
+ * The fourth is a built package that ended up inside a package — a stale `.zcms`
+ * an author left in the tree. It is never content; it only bloats the download and
+ * gives the scanner a package-in-a-package to puzzle over.
  */
 const DENIED = [
   // Key material. Anywhere in the tree, under any name this can be recognised by.
@@ -48,13 +54,22 @@ const DENIED = [
   /(^|\/)\.DS_Store$/,
   /(^|\/)\.turbo(\/|$)/,
 
-  // Dev-only: TypeScript source, tests, build scripts, tool configs.
+  // Dev-only: TypeScript source, tests, build/generator scripts, tool configs.
+  // The script pattern covers `build.mjs`, `gen-theme.mjs`, `generate.cjs`, etc.,
+  // at any depth — but not a data file like `generated-data.mjs` (no build/gen/
+  // generate *name*). Note there is deliberately no blanket `scripts/` rule: a
+  // non-JS file there (a `scripts/setup.py`) must reach the loud executable refusal
+  // in payload-rules, not be silently dropped here.
   /(^|\/)src(\/|$)/,
   /^tests?\//,
-  /(^|\/)build\.(?:m|c)?js$/,
+  /(^|\/)(?:build|gen|generate)(?:[-.][^/]*)?\.(?:m|c)?js$/,
   /(^|\/)tsconfig(?:\.\w+)?\.json$/,
+  /(^|\/)turbo\.json$/,
   /(^|\/)[^/]+\.config\.(?:m|c)?[jt]s$/,
   /\.map$/,
+
+  // A built package that slipped into the source tree — never part of the payload.
+  /\.zcms$/i,
 ];
 
 function collect(dir: string, root = dir): string[] {

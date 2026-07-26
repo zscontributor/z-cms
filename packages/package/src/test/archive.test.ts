@@ -131,6 +131,37 @@ describe("packDirectory", () => {
     expect(unpacked.sort()).toEqual(["assets/logo.svg", "dist/index.js", "theme.json"]);
   });
 
+  it("leaves generator scripts (at any depth), turbo config and stray packages out", async () => {
+    // The build.mjs-only rule shipped a theme's `gen-theme.mjs` (it imports `fs`)
+    // and the marketplace scanner rejected the package. A script is a script
+    // whatever it is named or wherever it sits, and a stray built `.zcms` is a
+    // package inside a package.
+    const dir = themeDir();
+    write(dir, "gen-theme.mjs", "import fs from 'node:fs'");
+    write(dir, "generate.cjs", "require('fs')");
+    write(dir, "tools/build-css.mjs", "import fs from 'node:fs'");
+    write(dir, "turbo.json", "{}");
+    write(dir, "vn.zsoft.theme.x-1.3.0.zcms", "stale build output");
+
+    const unpacked = await unpackTo(await packDirectory(dir), path.join(tmp, "out"));
+
+    expect(unpacked.sort()).toEqual(["assets/logo.svg", "dist/index.js", "theme.json"]);
+  });
+
+  it("does not mistake a shipped asset for a build script", async () => {
+    // The exclusions must not be so eager they eat a theme's own files: a data file
+    // that merely starts with "generated", and an `assets/scripts/` of client code,
+    // are content — the generator rule matches only build/gen/generate names.
+    const dir = themeDir();
+    write(dir, "generated-data.mjs", "export default []");
+    write(dir, "assets/scripts/widget.js", "console.log(1)");
+
+    const unpacked = await unpackTo(await packDirectory(dir), path.join(tmp, "out"));
+
+    expect(unpacked).toContain("generated-data.mjs");
+    expect(unpacked).toContain("assets/scripts/widget.js");
+  });
+
   it("never packs the publisher's private key", async () => {
     // The workflow every publisher is told to follow is `zcms keygen` (which
     // writes the key into the project directory) followed by `zcms pack .`. So
