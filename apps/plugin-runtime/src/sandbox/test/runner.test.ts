@@ -327,6 +327,7 @@ describe("runPlugin", () => {
         filters: { probe: (value, context, ctx) => ({
           ctx: Object.keys(ctx).sort(),
           storage: Object.keys(ctx.storage).sort(),
+          db: Object.keys(ctx.db).sort(),
           content: Object.keys(ctx.content).sort(),
           jobs: Object.keys(ctx.jobs).sort(),
           log: Object.keys(ctx.log).sort(),
@@ -342,8 +343,12 @@ describe("runPlugin", () => {
     expect(res.result).toEqual({
       // `secrets` is booleans, never values: "is the OpenAI key configured?" is
       // answerable in here, "what is it?" is not. See the settings test below.
-      ctx: ["content", "http", "jobs", "log", "mail", "secrets", "settings", "site", "storage"],
+      ctx: ["content", "db", "http", "jobs", "log", "mail", "secrets", "settings", "site", "storage"],
       storage: ["delete", "get", "list", "set"],
+      // ctx.db is table-scoped RPC, not a connection: the plugin names a table it
+      // owns in its manifest and a plain filter, and cms-api builds the parameterized
+      // query, checks the table, and stamps tenant/site. Gated by the data:own scope.
+      db: ["delete", "insert", "select", "update"],
       content: ["get", "list"],
       jobs: ["enqueue"],
       log: ["error", "info", "warn"],
