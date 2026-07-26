@@ -625,6 +625,9 @@
   margin-top: 46px;
 }
 .zdefault__market-card {
+  display: block;
+  color: inherit;
+  text-decoration: none;
   background: var(--z-card);
   border: 1px solid var(--z-line);
   border-radius: 22px;

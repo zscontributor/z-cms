@@ -554,7 +554,13 @@ function HomeTemplate({ ctx, content }: PageTemplateProps<DefaultThemeSettings>)
 
           <div className="zdefault__market-grid">
             {MARKET_CARDS.map((card) => (
-              <article className="zdefault__market-card" key={card.name}>
+              <a
+                className="zdefault__market-card"
+                key={card.name}
+                href={card.demo}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 <div className="zdefault__market-preview">
                   <img
                     src={ctx.asset(card.preview)}
@@ -572,7 +578,7 @@ function HomeTemplate({ ctx, content }: PageTemplateProps<DefaultThemeSettings>)
                     <span aria-hidden="true">★★★★★</span>
                   </div>
                 </div>
-              </article>
+              </a>
             ))}
           </div>
         </div>
@@ -844,16 +850,19 @@ const MARKET_CARDS = [
     name: "Z Default",
     tagKey: "market.business",
     preview: "assets/theme-previews/default.png",
+    demo: "https://z-cms.org",
   },
   {
     name: "Z Market",
     tagKey: "market.commerce",
     preview: "assets/theme-previews/market.png",
+    demo: "https://shop.z-cms.org",
   },
   {
     name: "Z Magazine",
     tagKey: "market.publishing",
     preview: "assets/theme-previews/magazine.png",
+    demo: "https://news.z-cms.org",
   },
 ] as const;
 
