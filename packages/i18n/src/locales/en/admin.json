@@ -491,6 +491,14 @@
     "logoHelp": "Shown by the theme wherever it draws your logo. A transparent PNG or SVG reads best.",
     "noLogo": "No logo set",
     "draftNotice": "This site is a draft: it answers no requests until you publish it.",
+    "seo": "SEO",
+    "sitemap": {
+      "generate": "Generate sitemap.xml",
+      "generating": "Generating…",
+      "help": "Rebuild sitemap.xml from the site's published content. Runs in the background — /sitemap.xml updates within seconds.",
+      "queued": "Sitemap generation queued. /sitemap.xml will update within seconds.",
+      "failed": "Could not generate the sitemap."
+    },
     "errors": {
       "createDenied": "You do not have permission to create a site.",
       "createFailed": "Could not create the site.",

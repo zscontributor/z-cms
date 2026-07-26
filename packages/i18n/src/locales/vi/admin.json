@@ -491,6 +491,14 @@
     "logoHelp": "Theme sẽ hiển thị ở nơi nó vẽ logo. Nên dùng PNG nền trong suốt hoặc SVG.",
     "noLogo": "Chưa đặt logo",
     "draftNotice": "Site đang là bản nháp: chưa phản hồi truy cập nào cho tới khi bạn xuất bản.",
+    "seo": "SEO",
+    "sitemap": {
+      "generate": "Tạo sitemap.xml",
+      "generating": "Đang tạo…",
+      "help": "Tạo lại sitemap.xml từ nội dung đã xuất bản của site. Chạy nền — /sitemap.xml sẽ cập nhật sau ít giây.",
+      "queued": "Đã lên lịch tạo sitemap. /sitemap.xml sẽ cập nhật sau ít giây.",
+      "failed": "Không tạo được sitemap."
+    },
     "errors": {
       "createDenied": "Bạn không có quyền tạo site.",
       "createFailed": "Không tạo được site.",

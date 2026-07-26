@@ -45,7 +45,7 @@ vi.mock("@/lib/api", () => {
   };
 });
 
-import { createSiteAction } from "../site";
+import { createSiteAction, rebuildSitemapAction } from "../site";
 
 const USER = { id: "u1", permissions: ["site:create"] } as unknown as SessionUser;
 
@@ -102,5 +102,37 @@ describe("createSiteAction", () => {
     expect(cookieJar.get(SITE_COOKIE)).toBe("new-site");
     expect(revalidateMock).toHaveBeenCalledWith("/sites");
     expect(revalidateMock).toHaveBeenCalledWith("/", "layout");
+  });
+});
+
+describe("rebuildSitemapAction", () => {
+  it("posts to the site's sitemap rebuild route, unscoped, and reports queued", async () => {
+    apiFetchMock.mockResolvedValueOnce({ status: "queued" });
+
+    const result = await rebuildSitemapAction("site-1");
+
+    expect(result).toEqual({ ok: true, message: "admin.sites.sitemap.queued" });
+    expect(apiFetchMock).toHaveBeenCalledWith("/sites/site-1/sitemap/rebuild", {
+      method: "POST",
+      siteScoped: false,
+    });
+  });
+
+  it("refuses without site:update and never touches the API", async () => {
+    canMock.mockReturnValue(false);
+
+    const result = await rebuildSitemapAction("site-1");
+
+    expect(result).toEqual({ ok: false, error: "admin.sites.errors.updateDenied" });
+    expect(apiFetchMock).not.toHaveBeenCalled();
+  });
+
+  it("surfaces the API's error message verbatim", async () => {
+    const { ApiError } = await import("@/lib/api");
+    apiFetchMock.mockRejectedValueOnce(new ApiError(500, "storage is down"));
+
+    const result = await rebuildSitemapAction("site-1");
+
+    expect(result).toEqual({ ok: false, error: "storage is down" });
   });
 });

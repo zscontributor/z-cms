@@ -482,6 +482,14 @@
     "logoHelp": "テーマがロゴを描画する場所に表示されます。透過PNGかSVGが最適です。",
     "noLogo": "ロゴ未設定",
     "draftNotice": "このサイトは下書きです。公開するまでリクエストに応答しません。",
+    "seo": "SEO",
+    "sitemap": {
+      "generate": "sitemap.xml を生成",
+      "generating": "生成中…",
+      "help": "公開済みコンテンツから sitemap.xml を再生成します。バックグラウンドで実行され、数秒で /sitemap.xml に反映されます。",
+      "queued": "サイトマップの生成をキューに登録しました。数秒で /sitemap.xml に反映されます。",
+      "failed": "サイトマップを生成できませんでした。"
+    },
     "errors": {
       "createDenied": "サイトを作成する権限がありません。",
       "createFailed": "サイトを作成できませんでした。",

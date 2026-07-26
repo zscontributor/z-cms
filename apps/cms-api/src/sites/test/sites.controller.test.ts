@@ -27,8 +27,11 @@ const cache = {
   invalidateSite: vi.fn().mockResolvedValue(undefined),
 };
 
+const queue = { enqueue: vi.fn().mockResolvedValue(undefined) };
+const audit = { record: vi.fn().mockResolvedValue(undefined) };
+
 function controller() {
-  return new SitesController(cache as never);
+  return new SitesController(cache as never, queue as never, audit as never);
 }
 
 const actor: RequestActor = {
@@ -414,5 +417,50 @@ describe("CreateSiteSchema hostname", () => {
     expect(
       CreateSiteSchema.safeParse({ name: "a", slug: "a", hostname: "not a host" }).success,
     ).toBe(false);
+  });
+});
+
+describe("rebuildSitemap", () => {
+  it("enqueues a site.sitemap job for the caller's tenant and the site in the URL", async () => {
+    site.findUnique.mockResolvedValue({ id: "s1" });
+
+    const result = await controller().rebuildSitemap(actor, "s1");
+
+    expect(result).toEqual({ status: "queued" });
+    expect(queue.enqueue).toHaveBeenCalledWith("site.sitemap", {
+      tenantId: "t1",
+      siteId: "s1",
+    });
+  });
+
+  it("enqueues WITHOUT a jobId, so a manual rebuild always runs and never dedupes away", async () => {
+    // A stable jobId collapses into the hour-retained completed job — a second click
+    // would silently do nothing. The manual trigger must pass no options at all.
+    site.findUnique.mockResolvedValue({ id: "s1" });
+
+    await controller().rebuildSitemap(actor, "s1");
+
+    const [, , options] = queue.enqueue.mock.calls[0]!;
+    expect(options).toBeUndefined();
+  });
+
+  it("records an audit entry naming the site", async () => {
+    site.findUnique.mockResolvedValue({ id: "s1" });
+
+    await controller().rebuildSitemap(actor, "s1");
+
+    expect(audit.record).toHaveBeenCalledWith(actor, "site.sitemap.rebuilt", "site", "s1");
+  });
+
+  it("404s an unknown site and enqueues nothing", async () => {
+    // RLS makes a foreign site indistinguishable from a missing one — both are 404,
+    // and neither may cause a rebuild to be queued.
+    site.findUnique.mockResolvedValue(null);
+
+    await expect(controller().rebuildSitemap(actor, "nope")).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(queue.enqueue).not.toHaveBeenCalled();
+    expect(audit.record).not.toHaveBeenCalled();
   });
 });

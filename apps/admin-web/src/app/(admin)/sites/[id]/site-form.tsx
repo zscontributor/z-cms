@@ -9,6 +9,7 @@ import { MediaPickerField } from "@/components/editor/media-picker";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { useT } from "@/lib/i18n-provider";
+import { RebuildSitemapButton } from "./rebuild-sitemap-button";
 
 function slugify(value: string): string {
   return value
@@ -229,6 +230,17 @@ export function SiteForm({
             ) : (
               <p className="text-xs z-muted">{t("admin.sites.noLogo")}</p>
             )}
+          </div>
+        </div>
+
+        <div className="border-t border-[var(--border)] pt-5">
+          <h2 className="text-sm font-semibold">{t("admin.sites.seo")}</h2>
+          <p className="mt-0.5 text-[11px] leading-4 z-muted">
+            {t("admin.sites.sitemap.help")}
+          </p>
+
+          <div className="mt-4">
+            <RebuildSitemapButton siteId={site.id} canUpdate={canUpdate} />
           </div>
         </div>
 

@@ -128,3 +128,38 @@ export async function updateSiteAction(
     return { ok: false, error: toMessage(error, t("admin.sites.errors.updateFailed")) };
   }
 }
+
+export type SitemapActionResult =
+  | { ok: true; message: string }
+  | { ok: false; error: string };
+
+/**
+ * Queues a rebuild of this site's sitemap.xml.
+ *
+ * Publishing already rebuilds it; this button is for the gaps that leaves — content
+ * older than the sitemap feature, a rebuild event that was lost, or simply wanting a
+ * fresh one before submitting the URL to a search console. The API enqueues a
+ * background job and answers 202, so success here means "queued", not "written": the
+ * worker builds it moments later and /sitemap.xml reflects it on its next fetch.
+ *
+ * Gated on `site:update`, the same permission the API enforces — checked here too so
+ * an editor sees a clean message instead of a 403 from the fetch.
+ */
+export async function rebuildSitemapAction(id: string): Promise<SitemapActionResult> {
+  const t = await getT();
+
+  const user = await getSession();
+  if (!user) return { ok: false, error: t("auth.session.expired") };
+  if (!can(user, "site:update")) return { ok: false, error: t("admin.sites.errors.updateDenied") };
+
+  try {
+    await apiFetch<{ status: string }>(`/sites/${encodeURIComponent(id)}/sitemap/rebuild`, {
+      method: "POST",
+      siteScoped: false,
+    });
+
+    return { ok: true, message: t("admin.sites.sitemap.queued") };
+  } catch (error) {
+    return { ok: false, error: toMessage(error, t("admin.sites.sitemap.failed")) };
+  }
+}

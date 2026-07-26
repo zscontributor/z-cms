@@ -3,6 +3,7 @@ import {
   ConflictException,
   Controller,
   Get,
+  HttpCode,
   Module,
   NotFoundException,
   Param,
@@ -14,6 +15,7 @@ import { db, installCorePlugins, type Prisma } from "@zcmsorg/database";
 import { parseSiteBrand, type SiteBrand, type SiteDto } from "@zcmsorg/schemas";
 import type { z } from "zod";
 import { Actor, RequirePermissions } from "../auth/decorators";
+import { AuditService } from "../audit/audit.module";
 import { t } from "../common/i18n";
 import { toSiteDto } from "../common/mappers";
 import type { RequestActor } from "../common/request-context";
@@ -25,6 +27,7 @@ import {
   ApiZodResponse,
 } from "../openapi/decorators";
 import { CreateSiteSchema, UpdateSiteSchema } from "../openapi/registry";
+import { QueueService } from "../queue/queue.module";
 import { CacheService } from "../redis/cache.service";
 
 const SITE_INCLUDE = {
@@ -131,7 +134,11 @@ async function seedStarterContent(
 @ApiTags("Sites")
 @Controller("sites")
 export class SitesController {
-  constructor(private readonly cache: CacheService) {}
+  constructor(
+    private readonly cache: CacheService,
+    private readonly queue: QueueService,
+    private readonly audit: AuditService,
+  ) {}
 
   /**
    * No tenant filter in the where clause, and none is needed: this query runs
@@ -373,6 +380,54 @@ export class SitesController {
     await this.cache.invalidateSite(id);
 
     return toSiteDto(site);
+  }
+
+  /**
+   * Rebuilds this site's sitemap.xml, on demand.
+   *
+   * A publish already rebuilds it — see ContentsService.rebuildSitemap — so this
+   * exists for the cases that path never covers: content that predates the sitemap
+   * feature, a rebuild event that was lost, or an owner who simply wants to be sure
+   * before submitting the URL to a search console. It is the same job, enqueued the
+   * same way; the worker writes `sites/{id}/sitemap.xml` and site-runtime serves it.
+   *
+   * No `jobId` on purpose. The publish path dedupes on `sitemap-{id}` to collapse a
+   * burst of edits into one rebuild, but completed jobs are RETAINED for an hour
+   * (removeOnComplete age), so reusing that id here would make a second click within
+   * the hour a silent no-op — the opposite of what a manual "rebuild now" button is
+   * for. A unique id per click guarantees the job actually runs; the button is
+   * disabled while pending, so a human cannot queue a meaningful pile of them.
+   *
+   * 202, not 200: the sitemap is not written by the time this returns. The worker
+   * builds it moments later, and `/sitemap.xml` reflects it on its next fetch.
+   */
+  @Post(":id/sitemap/rebuild")
+  @HttpCode(202)
+  @ApiOperation({
+    summary: "Rebuild a site's sitemap.xml",
+    description:
+      "Queues a background rebuild of this site's sitemap from its published, " +
+      "routable content. Runs asynchronously; the public /sitemap.xml updates once " +
+      "the worker finishes.",
+  })
+  @ApiAuthed("site:update")
+  @ApiNotFound("No such site — or not one of yours.")
+  @RequirePermissions("site:update")
+  async rebuildSitemap(
+    @Actor() actor: RequestActor,
+    @Param("id") id: string,
+  ): Promise<{ status: "queued" }> {
+    // RLS scopes this to the caller's tenant, so a missing row means "not yours"
+    // just as much as "does not exist" — the same answer, on purpose.
+    const site = await db().site.findUnique({ where: { id }, select: { id: true } });
+    if (!site) throw new NotFoundException(t()("errors.sites.notFound"));
+
+    // Awaited, unlike the fire-and-forget publish path: a manual action should tell
+    // the caller if the queue is unreachable, not swallow it.
+    await this.queue.enqueue("site.sitemap", { tenantId: actor.tenantId, siteId: id });
+    await this.audit.record(actor, "site.sitemap.rebuilt", "site", id);
+
+    return { status: "queued" };
   }
 }
 
