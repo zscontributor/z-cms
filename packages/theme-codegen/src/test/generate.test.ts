@@ -3,8 +3,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { createRequire } from "node:module";
 import { LayoutDocumentSchema, type LayoutDocument } from "@zcmsorg/schemas";
-import { CodegenError, buildThemeDir, generateThemeDir } from "../generate";
+import { CodegenError, RESOLVE_PATHS, buildThemeDir, generateThemeDir } from "../generate";
 import { emitIndexTsx, emitLayoutJson } from "../emit";
 import { buildManifest, collectMenuLocations } from "../manifest";
 
@@ -286,4 +287,38 @@ describe("buildThemeDir — the artifact is real", () => {
       post_6_newest: { contentType: "post", limit: 6, sort: "newest" },
     });
   }, 60_000);
+});
+
+/**
+ * The build resolves the theme's imports from RESOLVE_PATHS, because the theme is
+ * built in a temp dir with no node_modules of its own. The tests above prove that
+ * works — but only in a dev checkout, where THIS package's own node_modules still
+ * holds the `@zcmsorg/*` symlinks. `pnpm prune --prod` (the Docker `prod-deps` stage)
+ * empties a workspace library's own node_modules while leaving the hoisted links at
+ * the repo root, so a RESOLVE_PATHS that named only the per-package dir resolved in
+ * every test and failed in production alone — the outage that motivated this guard.
+ *
+ * So the invariant is not "the SDK resolves" (it always does in dev) but "the SDK
+ * resolves from a path OTHER than this package's own node_modules" — a path that
+ * survives the prune.
+ */
+describe("resolution survives `pnpm prune --prod`", () => {
+  const require = createRequire(__filename);
+  const perPackage = RESOLVE_PATHS[0];
+  const survivors = RESOLVE_PATHS.filter((p) => p !== perPackage);
+
+  it("offers a resolve path beyond this package's own node_modules", () => {
+    // The per-package dir is empty in the worker image; without a second candidate
+    // every drawn-theme build fails to resolve @zcmsorg/theme-sdk in prod only.
+    expect(survivors.length).toBeGreaterThan(0);
+  });
+
+  it("resolves the SDK and the widget CSS from a pruned-safe path", () => {
+    // The workspace-root node_modules keeps @zcmsorg/* as symlinks after the prune;
+    // both the bundle's imports and the theme.css copy resolve against it.
+    expect(require.resolve("@zcmsorg/theme-sdk", { paths: survivors })).toContain("theme-sdk");
+    expect(require.resolve("@zcmsorg/theme-widgets/widgets.css", { paths: survivors })).toContain(
+      "widgets.css",
+    );
+  });
 });

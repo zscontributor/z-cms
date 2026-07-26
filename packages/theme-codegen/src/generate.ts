@@ -30,9 +30,23 @@ import { buildManifest, type ThemeIdentity } from "./manifest";
  * half of the SDK's dual build is precisely the failure it was split to avoid —
  * handed the CJS build, esbuild emits a `__require` shim for react/jsx-runtime that
  * throws the moment the theme is loaded.
+ *
+ * TWO node_modules are offered, tried in order, because one of them is empty in prod.
+ * `pnpm prune --prod` (the Docker `prod-deps` stage) empties a workspace library's
+ * OWN node_modules while leaving the hoisted links at the repo root intact — so
+ * `theme-codegen/node_modules/@zcmsorg/theme-sdk` exists in a dev checkout and is
+ * gone from the worker image, and a single-path RESOLVE_PATHS resolves in tests and
+ * fails only in production (the one place with no test watching). The workspace-root
+ * node_modules is where the `@zcmsorg/*` symlinks survive the prune, so it is the
+ * fallback. Both are genuine node_modules dirs, so `exports` and the `import`
+ * condition below still select the ESM half from either — the reason `alias` is
+ * still wrong and `nodePaths` still right.
  */
 const PACKAGE_ROOT = path.resolve(__dirname, "..");
-const RESOLVE_PATHS = [path.join(PACKAGE_ROOT, "node_modules")];
+export const RESOLVE_PATHS = [
+  path.join(PACKAGE_ROOT, "node_modules"),
+  path.resolve(PACKAGE_ROOT, "..", "..", "node_modules"),
+];
 
 export interface GenerateInput {
   identity: ThemeIdentity;
