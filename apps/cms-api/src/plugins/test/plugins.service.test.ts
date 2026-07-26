@@ -215,6 +215,31 @@ describe("PluginsService", () => {
       expect(result.capabilities).toEqual(["ai.assistant"]);
       expect(result.integrations).toEqual({});
     });
+
+    it("runs a registered CORE projector without any plugin active, gated by the theme", async () => {
+      holder.systemDb.sitePlugin.findMany.mockResolvedValue([]);
+      const service = makeService();
+      service.registerCapabilityProjector("commerce.checkout", {
+        provider: { kind: "core", version: "1.0.0" },
+        resolve: ({ themeCapabilities }) =>
+          themeCapabilities.includes("commerce.checkout") ? { currency: "USD" } : null,
+      });
+
+      // Theme cannot render a storefront -> nothing is contributed.
+      await expect(service.renderContributionsFor("t1", "s1", [])).resolves.toEqual({
+        capabilities: [],
+        integrations: {},
+      });
+
+      // Theme opts in -> the core capability is live and stamped "core".
+      const opted = await service.renderContributionsFor("t1", "s1", ["commerce.checkout"]);
+      expect(opted.capabilities).toEqual(["commerce.checkout"]);
+      expect(opted.integrations["commerce.checkout"]).toEqual({
+        capability: "commerce.checkout",
+        provider: { pluginKey: "core", version: "1.0.0" },
+        data: { currency: "USD" },
+      });
+    });
   });
 
   describe("dispatchAction", () => {

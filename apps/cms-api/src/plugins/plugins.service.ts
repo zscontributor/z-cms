@@ -111,10 +111,33 @@ export interface PluginRenderContributions {
   integrations: Record<string, RenderIntegration>;
 }
 
-interface PublicIntegrationProjector {
-  pluginKey: string;
-  isAvailable?: (settings: Record<string, unknown>) => boolean;
-  project: (settings: Record<string, unknown>) => unknown;
+/** What a projector may read to build the browser-safe data for its capability. */
+export interface CapabilityProjectorContext {
+  tenantId: string;
+  siteId: string;
+  /** The providing plugin's settings; `{}` for a core-provided capability. */
+  settings: Record<string, unknown>;
+  /** Capabilities the active theme declared it can render (`optionalCapabilities`). */
+  themeCapabilities: readonly string[];
+}
+
+/**
+ * Turns a capability into the browser-safe data a runtime-owned widget renders
+ * against — the AI assistant's name, the storefront's currency. This is THE
+ * public projection boundary: a sandboxed plugin never nominates what reaches a
+ * page, core does, here, so credentials and internal state stay server-side.
+ *
+ * A projector's `provider` says where the capability comes from, and it is the
+ * single line Phase 4 changes to move commerce out of core: a `"core"` capability
+ * is eligible on every site (gated only by its own `resolve` returning non-null),
+ * while a `"plugin"` one is eligible only where an ACTIVE plugin of `pluginKey`
+ * provides it. The runtime side neither knows nor cares which it was — it mounts
+ * the component for the capability and reads the data — so nothing downstream has
+ * to change when a capability's provider does.
+ */
+export interface CapabilityProjector {
+  provider: { kind: "core"; version: string } | { kind: "plugin"; pluginKey: string };
+  resolve(ctx: CapabilityProjectorContext): Promise<unknown | null> | unknown | null;
 }
 
 function isZaiProviderConfigured(settings: Record<string, unknown>): boolean {
@@ -124,23 +147,6 @@ function isZaiProviderConfigured(settings: Record<string, unknown>): boolean {
     (settings.geminiEnabled === true && Boolean(settings.geminiApiKey))
   );
 }
-
-/**
- * The public projection boundary. A plugin cannot nominate arbitrary settings
- * for the browser: core owns this allow-list, so credentials remain server-side.
- */
-const PUBLIC_INTEGRATION_PROJECTORS: Record<string, PublicIntegrationProjector> = {
-  "ai.assistant": {
-    pluginKey: "vn.zsoft.plugin.zai",
-    isAvailable: isZaiProviderConfigured,
-    project: (settings) => ({
-      name: typeof settings.assistantName === "string" && settings.assistantName
-        ? settings.assistantName : "zAI Assistant",
-      welcomeMessage: typeof settings.welcomeMessage === "string" && settings.welcomeMessage
-        ? settings.welcomeMessage : "Xin chào! Tôi có thể giúp gì cho bạn?",
-    }),
-  },
-};
 
 /**
  * Talks to plugin-runtime. Nothing in cms-api ever loads or executes plugin code.
@@ -168,10 +174,43 @@ export class PluginsService {
     { at: number; perms: ProvidedPermission[] }
   >();
 
+  /** capability -> how to project its browser-safe data. See CapabilityProjector. */
+  private readonly projectors = new Map<string, CapabilityProjector>();
+
   constructor(
     private readonly config: ConfigService,
     private readonly tokens: PluginTokenService,
-  ) {}
+  ) {
+    // The one built-in projector. Others (commerce today, whatever tomorrow)
+    // register themselves from their own module, so this service does not have to
+    // know what capabilities exist — only how to run whatever is registered.
+    this.registerCapabilityProjector("ai.assistant", {
+      provider: { kind: "plugin", pluginKey: "vn.zsoft.plugin.zai" },
+      resolve: ({ settings }) => {
+        if (!isZaiProviderConfigured(settings)) return null;
+        return {
+          name:
+            typeof settings.assistantName === "string" && settings.assistantName
+              ? settings.assistantName
+              : "zAI Assistant",
+          welcomeMessage:
+            typeof settings.welcomeMessage === "string" && settings.welcomeMessage
+              ? settings.welcomeMessage
+              : "Xin chào! Tôi có thể giúp gì cho bạn?",
+        };
+      },
+    });
+  }
+
+  /**
+   * Registers how a capability's browser-safe data is built. Called once per
+   * capability, at startup, from the module that owns it — the extension point
+   * that lets a first-party feature (or, in time, a first-party plugin) contribute
+   * runtime UI without this service knowing anything about it.
+   */
+  registerCapabilityProjector(capability: string, projector: CapabilityProjector): void {
+    this.projectors.set(capability, projector);
+  }
 
   /**
    * The provided-permissions a site's ACTIVE plugins introduce — the keys a
@@ -357,10 +396,22 @@ export class PluginsService {
     return [...caps];
   }
 
-  /** Capabilities plus their safe public data, resolved in one catalogue query. */
+  /**
+   * Capabilities the site can feature-detect, plus the browser-safe data for the
+   * ones a projector turns into a runtime integration.
+   *
+   * Two sources, one shape out. Active plugins contribute their declared
+   * capabilities (for `hasCapability`) and the settings a projector reads;
+   * registered projectors — plugin-backed like the AI assistant, or core-backed
+   * like commerce — turn an eligible capability into an integration. `themeCaps`
+   * is the theme's `optionalCapabilities`, passed to each projector so one can
+   * decline to compute a config a template has nowhere to render (commerce on a
+   * blog theme), without this method knowing which projector cares.
+   */
   async renderContributionsFor(
     tenantId: string,
     siteId: string,
+    themeCaps: readonly string[] = [],
   ): Promise<PluginRenderContributions> {
     const db = getSystemDb();
     const include = {
@@ -371,40 +422,60 @@ export class PluginsService {
     // exposes (e.g. an AI assistant activated for the whole tenant) shows up here
     // for every site the tenant owns.
     const [siteRows, orgRows] = await Promise.all([
-      db.sitePlugin.findMany({
-        where: { tenantId, siteId, status: "ACTIVE" },
-        include,
-      }),
-      db.orgPlugin.findMany({
-        where: { tenantId, status: "ACTIVE" },
-        include,
-      }),
+      db.sitePlugin.findMany({ where: { tenantId, siteId, status: "ACTIVE" }, include }),
+      db.orgPlugin.findMany({ where: { tenantId, status: "ACTIVE" }, include }),
     ]);
-    const rows = [...siteRows, ...orgRows];
 
+    // Every active capability, for feature detection — and, for each, the first
+    // active provider's key/version/settings, which a plugin-backed projector needs.
     const capabilities = new Set<string>();
-    const integrations: Record<string, RenderIntegration> = {};
-
-    for (const row of rows) {
+    const active = new Map<
+      string,
+      { pluginKey: string; version: string; settings: Record<string, unknown> }
+    >();
+    for (const row of [...siteRows, ...orgRows]) {
       const manifest = row.version.manifest as { capabilities?: string[] } | null;
-      for (const capability of manifest?.capabilities ?? []) {
-        capabilities.add(capability);
-
-        const projector = PUBLIC_INTEGRATION_PROJECTORS[capability];
-        if (!projector || projector.pluginKey !== row.plugin.key || integrations[capability]) {
-          continue;
+      for (const cap of manifest?.capabilities ?? []) {
+        capabilities.add(cap);
+        if (!active.has(cap)) {
+          active.set(cap, {
+            pluginKey: row.plugin.key,
+            version: row.version.version,
+            settings: (row.settings ?? {}) as Record<string, unknown>,
+          });
         }
-        const settings = (row.settings ?? {}) as Record<string, unknown>;
-        if (projector.isAvailable && !projector.isAvailable(settings)) {
-          continue;
-        }
-
-        integrations[capability] = {
-          capability,
-          provider: { pluginKey: row.plugin.key, version: row.version.version },
-          data: projector.project(settings),
-        };
       }
+    }
+
+    const integrations: Record<string, RenderIntegration> = {};
+    for (const [capability, projector] of this.projectors) {
+      let provider: { pluginKey: string; version: string };
+      let settings: Record<string, unknown>;
+
+      if (projector.provider.kind === "plugin") {
+        // Only the plugin the projector names may supply it — a rogue plugin that
+        // declares `ai.assistant` cannot borrow zAI's projection.
+        const supplier = active.get(capability);
+        if (!supplier || supplier.pluginKey !== projector.provider.pluginKey) continue;
+        provider = { pluginKey: supplier.pluginKey, version: supplier.version };
+        settings = supplier.settings;
+      } else {
+        provider = { pluginKey: "core", version: projector.provider.version };
+        settings = {};
+      }
+
+      const data = await projector.resolve({
+        tenantId,
+        siteId,
+        settings,
+        themeCapabilities: themeCaps,
+      });
+      if (data == null) continue;
+
+      integrations[capability] = { capability, provider, data };
+      // A core capability that resolved is live on this site, so themes may
+      // feature-detect it too.
+      capabilities.add(capability);
     }
 
     return { capabilities: [...capabilities], integrations };
@@ -429,12 +500,17 @@ export class PluginsService {
       }));
     if (!row) return undefined;
     const settings = (row.settings ?? {}) as Record<string, unknown>;
-    if (!PUBLIC_INTEGRATION_PROJECTORS["ai.assistant"].isAvailable?.(settings)) {
-      return undefined;
-    }
-    return PUBLIC_INTEGRATION_PROJECTORS["ai.assistant"].project(
+
+    // The same projector `renderContributionsFor` runs, so "what the browser gets"
+    // has one definition. It returns null when no provider is configured.
+    const projector = this.projectors.get("ai.assistant");
+    const data = await projector?.resolve({
+      tenantId,
+      siteId,
       settings,
-    ) as { name: string; welcomeMessage: string };
+      themeCapabilities: [],
+    });
+    return (data as { name: string; welcomeMessage: string } | null) ?? undefined;
   }
 
   /**

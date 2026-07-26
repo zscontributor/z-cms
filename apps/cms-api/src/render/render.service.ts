@@ -261,29 +261,29 @@ export class RenderService {
 
     await this.localiseMenus(site, menus, locale, activeThemeKey);
 
+    // Themes feature-detect on `optionalCapabilities`; it also tells each render
+    // projector what this theme can actually render, so commerce config is not
+    // computed for a blog theme that has nowhere to put a cart.
+    const themeOptional = (
+      themeRow.version as { manifest?: { optionalCapabilities?: unknown } } | null
+    )?.manifest?.optionalCapabilities;
+    const themeCaps = Array.isArray(themeOptional) ? (themeOptional as string[]) : [];
+
+    // One path for every runtime integration — the AI assistant, the storefront,
+    // whatever registers a projector next. Commerce is no longer special-cased
+    // here; it registers a `commerce.checkout` projector like anything else, and
+    // when it becomes a plugin only its registration changes, not this call.
     const pluginContributions = await this.plugins.renderContributionsFor(
       site.tenantId,
       site.id,
+      themeCaps,
     );
     const legacyAiAssistant = pluginContributions.integrations["ai.assistant"]?.data as
       | { name: string; welcomeMessage: string }
       | undefined;
 
-    // Commerce is a first-party capability, not a plugin — so its contribution is
-    // added here, next to the plugin ones, rather than through a plugin projector.
-    // It is offered only to a theme that ASKED for it in its manifest: a site on a
-    // non-commerce theme is unaffected, and no storefront config reaches a page that
-    // could not render a cart anyway.
-    const commerce = await this.commerceContribution(
-      (themeRow.version as { manifest?: unknown } | null)?.manifest,
-      site.id,
-    );
-    const capabilities = commerce
-      ? [...pluginContributions.capabilities, commerce.capability]
-      : pluginContributions.capabilities;
-    const integrations = commerce
-      ? { ...pluginContributions.integrations, [commerce.capability]: commerce.integration }
-      : pluginContributions.integrations;
+    const capabilities = pluginContributions.capabilities;
+    const integrations = pluginContributions.integrations;
 
     const base = {
       site: {
@@ -548,47 +548,6 @@ export class RenderService {
    * A manifest is a stranger's JSON: it may declare nothing, may declare junk, and
    * may declare five hundred lists. All three answer here rather than at the database.
    */
-  /**
-   * The storefront contribution: the `commerce.checkout` capability and the
-   * browser-safe config the theme's commerce slot renders against. Core-owned,
-   * because commerce is not a plugin. Null when the shop is switched off, so a
-   * theme's `hasCapability("commerce.checkout")` tracks whether checkout is live.
-   */
-  private async commerceContribution(
-    manifest: unknown,
-    siteId: string,
-  ): Promise<{ capability: string; integration: RenderIntegration<CommercePublicConfig> } | null> {
-    // Only for a theme that opted in. `optionalCapabilities` is the theme saying it
-    // can render a storefront; without it, contributing commerce would be shouting
-    // a capability into a template that has nowhere to put it.
-    const optional = (manifest as { optionalCapabilities?: unknown } | null | undefined)
-      ?.optionalCapabilities;
-    if (!Array.isArray(optional) || !optional.includes("commerce.checkout")) return null;
-
-    const row = await db().commerceSettings.findFirst({ where: { siteId } });
-    // No row means never configured, which defaults to on — a shop with a
-    // commerce theme works the day it is installed. An explicit `enabled: false`
-    // is the operator taking checkout down, and it wins.
-    if (row && !row.enabled) return null;
-
-    const config: CommercePublicConfig = {
-      enabled: true,
-      currency: row?.currency ?? "USD",
-      codEnabled: row?.codEnabled ?? true,
-      shippingFlatFee: row ? Number(row.shippingFlatFee) : 0,
-      freeShippingThreshold:
-        row?.freeShippingThreshold != null ? Number(row.freeShippingThreshold) : null,
-    };
-
-    return {
-      capability: "commerce.checkout",
-      integration: {
-        capability: "commerce.checkout",
-        provider: { pluginKey: "core", version: "1.0.0" },
-        data: config,
-      },
-    };
-  }
 
   private declaredCollections(
     manifest: unknown,

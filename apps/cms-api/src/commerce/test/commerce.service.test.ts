@@ -90,7 +90,7 @@ describe("CommerceService.quote", () => {
 
   it("prices a cart from the product's own data, ignoring anything the client could send", async () => {
     holder.db = makeDb([product("a", 48), product("b", 32)]);
-    const service = new CommerceService();
+    const service = new CommerceService({ registerCapabilityProjector() {} } as never);
 
     const quote = await service.quote(HOST, {
       items: [
@@ -107,7 +107,7 @@ describe("CommerceService.quote", () => {
 
   it("marks a missing or unpublished product unavailable and leaves it out of the total", async () => {
     holder.db = makeDb([product("a", 48)]);
-    const service = new CommerceService();
+    const service = new CommerceService({ registerCapabilityProjector() {} } as never);
 
     const quote = await service.quote(HOST, {
       items: [
@@ -129,7 +129,7 @@ describe("CommerceService.quote", () => {
       shippingFlatFee: 5,
       freeShippingThreshold: 100,
     });
-    const service = new CommerceService();
+    const service = new CommerceService({ registerCapabilityProjector() {} } as never);
 
     const small = await service.quote(HOST, { items: [{ productId: "a", quantity: 1 }] });
     expect(small.shippingFee).toBe(5);
@@ -149,7 +149,7 @@ describe("CommerceService.createOrder", () => {
 
   it("creates an order from server-computed totals and a snapshot of each line", async () => {
     holder.db = makeDb([product("a", 48)]);
-    const service = new CommerceService();
+    const service = new CommerceService({ registerCapabilityProjector() {} } as never);
 
     const result = await service.createOrder(HOST, {
       items: [{ productId: "a", quantity: 2 }],
@@ -169,7 +169,7 @@ describe("CommerceService.createOrder", () => {
 
   it("refuses to place an order whose only items are unavailable", async () => {
     holder.db = makeDb([]);
-    const service = new CommerceService();
+    const service = new CommerceService({ registerCapabilityProjector() {} } as never);
 
     await expect(
       service.createOrder(HOST, {
@@ -188,7 +188,7 @@ describe("CommerceService.createOrder", () => {
       shippingFlatFee: 0,
       freeShippingThreshold: null,
     });
-    const service = new CommerceService();
+    const service = new CommerceService({ registerCapabilityProjector() {} } as never);
 
     await expect(
       service.createOrder(HOST, {
@@ -202,7 +202,7 @@ describe("CommerceService.createOrder", () => {
   it("rejects a request for a site that is not published", async () => {
     holder.systemDb = { domain: { findUnique: vi.fn().mockResolvedValue(null) } };
     holder.db = makeDb([product("a", 48)]);
-    const service = new CommerceService();
+    const service = new CommerceService({ registerCapabilityProjector() {} } as never);
 
     await expect(
       service.quote(HOST, { items: [{ productId: "a", quantity: 1 }] }),
@@ -217,7 +217,7 @@ describe("CommerceService.updateStatus", () => {
 
   it("settles the COD payment and stamps paidAt when an order is fulfilled", async () => {
     holder.db = makeDb([product("a", 48)]);
-    const service = new CommerceService();
+    const service = new CommerceService({ registerCapabilityProjector() {} } as never);
 
     const placed = await service.createOrder(HOST, {
       items: [{ productId: "a", quantity: 1 }],

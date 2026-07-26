@@ -3,11 +3,13 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  type OnModuleInit,
 } from "@nestjs/common";
 import { randomBytes } from "node:crypto";
 import { db, getSystemDb, withTenant } from "@zcmsorg/database";
 import type {
   CheckoutRequest,
+  CommercePublicConfig,
   CommerceSettings,
   CommerceSettingsDto,
   CreateOrderResultDto,
@@ -19,6 +21,7 @@ import type {
   QuoteRequest,
   QuoteResultDto,
 } from "@zcmsorg/schemas";
+import { PluginsService } from "../plugins/plugins.service";
 
 /**
  * The storefront's server half.
@@ -70,7 +73,54 @@ function readImage(data: unknown): string | null {
 }
 
 @Injectable()
-export class CommerceService {
+export class CommerceService implements OnModuleInit {
+  constructor(private readonly plugins: PluginsService) {}
+
+  /**
+   * Registers commerce as a render projector — the same extension point the AI
+   * assistant uses. Core-provided today (commerce lives in this module); the day
+   * commerce becomes a first-party plugin, this single `provider` line changes to
+   * `{ kind: "plugin", pluginKey: ... }` and nothing else about the render path
+   * does. Until then, `"core"` means "eligible on every site", gated by the theme
+   * opting in and the shop being switched on — both decided in `publicConfig`.
+   */
+  onModuleInit(): void {
+    this.plugins.registerCapabilityProjector("commerce.checkout", {
+      provider: { kind: "core", version: "1.0.0" },
+      resolve: ({ siteId, themeCapabilities }) =>
+        this.publicConfig(siteId, themeCapabilities),
+    });
+  }
+
+  /**
+   * The browser-safe storefront config, or null when the shop is not live here —
+   * the theme did not opt in, or the operator switched checkout off. Uses the
+   * system client with an explicit site id, because the render path that calls it
+   * carries no tenant context.
+   */
+  async publicConfig(
+    siteId: string,
+    themeCapabilities: readonly string[],
+  ): Promise<CommercePublicConfig | null> {
+    // A theme that cannot render a storefront should not be handed one.
+    if (!themeCapabilities.includes("commerce.checkout")) return null;
+
+    const row = await getSystemDb().commerceSettings.findFirst({ where: { siteId } });
+    // No row means never configured, which defaults to on — a shop with a commerce
+    // theme works the day it is installed. An explicit `enabled: false` is the
+    // operator taking checkout down, and it wins.
+    if (row && !row.enabled) return null;
+
+    return {
+      enabled: true,
+      currency: row?.currency ?? "USD",
+      codEnabled: row?.codEnabled ?? true,
+      shippingFlatFee: row ? Number(row.shippingFlatFee) : 0,
+      freeShippingThreshold:
+        row?.freeShippingThreshold != null ? Number(row.freeShippingThreshold) : null,
+    };
+  }
+
   // ------------------------------------------------------------- public flow
 
   /**
