@@ -111,7 +111,8 @@
     "commerce": "Commerce",
     "publishing": "Publishing",
     "free": "Free",
-    "byZSoft": "By Z-SOFT"
+    "byZSoft": "By Z-SOFT",
+    "previewAlt": "{name} theme"
   },
   "developers": {
     "eyebrow": "Made for developers",
@@ -123,8 +124,11 @@
     "eyebrow": "Built in the open",
     "title": "Software gets better when we build it together.",
     "copy": "Z-CMS is an open-source project for the developers, designers, content creators and businesses who want to own their platform.",
+    "githubTitle": "GitHub",
     "github": "Read the source and the roadmap",
+    "docsTitle": "Docs",
     "docs": "Start building with Z-CMS",
+    "forumTitle": "Forum",
     "forum": "Ask, answer and discuss",
     "contributeTitle": "Contribute",
     "contribute": "Send code, docs and ideas"

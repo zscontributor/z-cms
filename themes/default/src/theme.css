@@ -67,8 +67,11 @@
 }
 
 .zdefault a {
-  color: inherit;
   text-decoration: none;
+}
+/* Buttons keep their own colours; only non-button links inherit text colour. */
+.zdefault a:not(.zdefault__btn) {
+  color: inherit;
 }
 .zdefault img {
   max-width: 100%;
@@ -914,7 +917,7 @@
 .zdefault__prose li {
   color: var(--z-muted);
 }
-.zdefault__prose a {
+.zdefault__prose a:not(.zdefault__btn) {
   color: var(--z-orange);
   text-decoration: underline;
   text-underline-offset: 3px;

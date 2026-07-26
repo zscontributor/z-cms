@@ -111,7 +111,8 @@
     "commerce": "Thương mại",
     "publishing": "Xuất bản",
     "free": "Miễn phí",
-    "byZSoft": "Bởi Z-SOFT"
+    "byZSoft": "Bởi Z-SOFT",
+    "previewAlt": "Giao diện {name}"
   },
   "developers": {
     "eyebrow": "Dành cho developer",
@@ -123,8 +124,11 @@
     "eyebrow": "Phát triển công khai",
     "title": "Phần mềm tốt hơn khi cùng nhau xây dựng.",
     "copy": "Z-CMS là dự án mã nguồn mở dành cho developer, designer, người làm nội dung và các doanh nghiệp muốn làm chủ nền tảng của mình.",
+    "githubTitle": "GitHub",
     "github": "Xem source code và roadmap",
+    "docsTitle": "Tài liệu",
     "docs": "Bắt đầu phát triển với Z-CMS",
+    "forumTitle": "Diễn đàn",
     "forum": "Hỏi đáp và thảo luận",
     "contributeTitle": "Đóng góp",
     "contribute": "Gửi code, tài liệu và ý tưởng"

@@ -556,7 +556,10 @@ function HomeTemplate({ ctx, content }: PageTemplateProps<DefaultThemeSettings>)
             {MARKET_CARDS.map((card) => (
               <article className="zdefault__market-card" key={card.name}>
                 <div className="zdefault__market-preview">
-                  <img src={ctx.asset(card.preview)} alt={`${card.name} theme`} />
+                  <img
+                    src={ctx.asset(card.preview)}
+                    alt={ctx.t("market.previewAlt", { name: card.name })}
+                  />
                 </div>
                 <div className="zdefault__market-body">
                   <div className="zdefault__market-meta">
@@ -602,11 +605,11 @@ function HomeTemplate({ ctx, content }: PageTemplateProps<DefaultThemeSettings>)
 
           <div className="zdefault__community-grid">
             <a href={settings.githubUrl} target="_blank" rel="noopener noreferrer">
-              <strong>GitHub</strong>
+              <strong>{ctx.t("community.githubTitle")}</strong>
               <span>{ctx.t("community.github")}</span>
             </a>
             <a href={settings.docsUrl} target="_blank" rel="noopener noreferrer">
-              <strong>Docs</strong>
+              <strong>{ctx.t("community.docsTitle")}</strong>
               <span>{ctx.t("community.docs")}</span>
             </a>
             <a
@@ -614,7 +617,7 @@ function HomeTemplate({ ctx, content }: PageTemplateProps<DefaultThemeSettings>)
               target="_blank"
               rel="noopener noreferrer"
             >
-              <strong>Forum</strong>
+              <strong>{ctx.t("community.forumTitle")}</strong>
               <span>{ctx.t("community.forum")}</span>
             </a>
             <a

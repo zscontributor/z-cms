@@ -111,7 +111,8 @@
     "commerce": "コマース",
     "publishing": "パブリッシング",
     "free": "無料",
-    "byZSoft": "Z-SOFT 提供"
+    "byZSoft": "Z-SOFT 提供",
+    "previewAlt": "{name} テーマ"
   },
   "developers": {
     "eyebrow": "開発者のために",
@@ -123,8 +124,11 @@
     "eyebrow": "オープンに開発",
     "title": "ともに作るほど、ソフトウェアは良くなる。",
     "copy": "Z-CMS は、自分たちの基盤を自分たちで持ちたい開発者・デザイナー・制作者・企業のためのオープンソースプロジェクトです。",
+    "githubTitle": "GitHub",
     "github": "ソースコードとロードマップを見る",
+    "docsTitle": "ドキュメント",
     "docs": "Z-CMS で開発を始める",
+    "forumTitle": "フォーラム",
     "forum": "質問し、答え、議論する",
     "contributeTitle": "コントリビュート",
     "contribute": "コード・ドキュメント・アイデアを送る"
