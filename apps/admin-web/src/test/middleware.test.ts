@@ -14,6 +14,15 @@ function request(path: string, cookies: Record<string, string> = {}): NextReques
   });
 }
 
+/** A JWT whose payload carries the given `exp` (seconds). The signature is a
+ *  placeholder — middleware decodes the payload and never verifies it. */
+function jwt(expSeconds: number): string {
+  const seg = (o: object) => Buffer.from(JSON.stringify(o)).toString("base64url");
+  return `${seg({ alg: "HS256", typ: "JWT" })}.${seg({ sub: "u", exp: expSeconds })}.sig`;
+}
+
+const now = () => Math.floor(Date.now() / 1000);
+
 let fetchMock: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
@@ -112,6 +121,47 @@ describe("middleware", () => {
     expect(response.headers.get("location")).toBeNull();
     expect(response.cookies.get(ACCESS_TOKEN_COOKIE)?.value).toBe("new-at");
     expect(response.cookies.get(REFRESH_TOKEN_COOKIE)?.value).toBe("new-rt");
+  });
+
+  it("proactively rotates an EXPIRED access JWT so the new pair is written on the navigation, not in the RSC render", async () => {
+    // The bug this guards: a present-but-dead access cookie used to slip through,
+    // forcing the RSC render to refresh — where cookies cannot be written — so the
+    // rotated refresh token was lost and replayed, tripping the API's token-reuse
+    // revocation. Middleware must exchange it here and persist the fresh pair.
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ accessToken: "new-at", refreshToken: "new-rt", user: {} }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+
+    const response = await middleware(
+      request("/content", { [ACCESS_TOKEN_COOKIE]: jwt(now() - 60), [REFRESH_TOKEN_COOKIE]: "rt" }),
+    );
+
+    expect(response.headers.get("location")).toBeNull();
+    expect(response.cookies.get(ACCESS_TOKEN_COOKIE)?.value).toBe("new-at");
+    expect(response.cookies.get(REFRESH_TOKEN_COOKIE)?.value).toBe("new-rt");
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it("lets a live (unexpired) access JWT straight through without spending a refresh", async () => {
+    const response = await middleware(
+      request("/content", { [ACCESS_TOKEN_COOKIE]: jwt(now() + 600) }),
+    );
+
+    expect(response.headers.get("location")).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("redirects an expired access JWT with no refresh token to /login instead of 401-ing in the render", async () => {
+    const response = await middleware(
+      request("/settings", { [ACCESS_TOKEN_COOKIE]: jwt(now() - 60) }),
+    );
+
+    const redirectUrl = new URL(response.headers.get("location") as string);
+    expect(redirectUrl.pathname).toBe("/login");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("redirects to /login when the refresh attempt fails", async () => {

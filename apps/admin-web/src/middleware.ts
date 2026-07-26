@@ -53,7 +53,15 @@ export async function middleware(request: NextRequest) {
     return secure(NextResponse.next(forward), nonce);
   }
 
-  if (accessToken) return secure(NextResponse.next(forward), nonce);
+  // Presence is not freshness. The access cookie lives an hour but the JWT inside
+  // expires in 15 minutes, so for 45 minutes a *present* cookie carries a *dead*
+  // token. Letting that through means the RSC render below refreshes instead —
+  // and an RSC render cannot write cookies, so the rotated refresh token is never
+  // persisted, the browser replays the old one on the next navigation, and the API
+  // flags it as token reuse and revokes the whole session family. Refreshing HERE,
+  // where a cookie pair can actually be written, is the only place that closes the
+  // gap. An opaque or exp-less token we cannot read is left for the API to judge.
+  if (accessToken && !isExpired(accessToken)) return secure(NextResponse.next(forward), nonce);
 
   if (refreshToken) {
     const refreshed = await refresh(refreshToken);
@@ -184,6 +192,29 @@ function rewriteCookie(cookie: string, refreshed: AuthResult): string {
   parts.push(`${ACCESS_TOKEN_COOKIE}=${refreshed.accessToken}`);
   parts.push(`${REFRESH_TOKEN_COOKIE}=${refreshed.refreshToken}`);
   return parts.join("; ");
+}
+
+/**
+ * Reads a JWT's `exp` WITHOUT verifying the signature — the API is still the sole
+ * authority on validity; this only decides whether middleware should refresh
+ * proactively. Anything it cannot read (not a JWT, no `exp`, malformed payload) is
+ * reported as not-expired and left for the API to reject, matching the middleware's
+ * rule that it never inspects token contents beyond what it must.
+ */
+function isExpired(jwt: string): boolean {
+  const payload = jwt.split(".")[1];
+  if (!payload) return false;
+  try {
+    const { exp } = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as {
+      exp?: unknown;
+    };
+    if (typeof exp !== "number") return false;
+    // 30s of skew so a token seconds from death is rotated on THIS navigation
+    // rather than mid-render on the next one.
+    return Date.now() >= (exp - 30) * 1000;
+  } catch {
+    return false;
+  }
 }
 
 async function refresh(refreshToken: string): Promise<AuthResult | null> {
