@@ -136,6 +136,26 @@ export interface ThemeDraftSummaryDto {
  */
 const KEY_RE = /^[a-z0-9]+(\.[a-z0-9-]+){2,}$/;
 
+/**
+ * How long a draft may sit in BUILDING before a fresh Build press is allowed to
+ * reclaim it.
+ *
+ * BUILDING is set by cms-api and cleared by the worker (to BUILT, or to FAILED via
+ * the job's catch). If the worker is hard-killed mid-build — a redeploy, an OOM, a
+ * SIGKILL — that catch never runs, so the row keeps saying BUILDING while BullMQ
+ * eventually drops the job (its `removeOnFail` TTL expires). Nothing is left to move
+ * the draft off BUILDING, and both Save and Build refuse to touch it while it says
+ * so: the draft is wedged forever, curable only by a hand-edit of the database.
+ *
+ * The window is the guard against that. It is deliberately far longer than any real
+ * theme build (codegen + esbuild + sign is seconds, tens at worst), so a BUILDING
+ * older than this cannot be a build still in flight — it is a corpse. Short enough
+ * that an author is not stranded for the rest of the day. Within the window a second
+ * Build press is still refused, which is what stops a double-click from racing two
+ * builds at the same S3 key.
+ */
+const BUILD_STALE_AFTER_MS = 15 * 60 * 1000;
+
 type DraftRow = Awaited<ReturnType<typeof loadDraft>>;
 
 function loadDraft(id: string, siteId: string) {
@@ -515,7 +535,16 @@ class ThemeDraftsController {
     const existing = await loadDraft(id, siteId);
     if (!existing) throw new NotFoundException("Draft not found.");
     if (existing.status === "BUILDING") {
-      throw new ConflictException("This design is already being built.");
+      // A BUILDING that is younger than a real build could outlast is a build genuinely
+      // in flight (or a double-click on Build) — refuse, as before. Only an orphaned
+      // BUILDING, one the worker abandoned without ever writing BUILT or FAILED, is
+      // stale enough to reclaim; see BUILD_STALE_AFTER_MS.
+      const buildingForMs = Date.now() - existing.updatedAt.getTime();
+      if (buildingForMs < BUILD_STALE_AFTER_MS) {
+        throw new ConflictException("This design is already being built.");
+      }
+      // Fall through: the build below reclaims the wedged draft. The enqueue path
+      // discards the dead job first, so a fresh one actually runs.
     }
 
     // Validated before the job is queued, so an author gets the reason NOW rather
@@ -532,11 +561,22 @@ class ThemeDraftsController {
 
     // `jobId` keyed on the draft: BullMQ refuses a duplicate while one is queued,
     // so a double-click cannot start two builds racing to write the same S3 key.
+    //
+    // But that same stable id has a sharp edge: `add` with a jobId that ALREADY
+    // exists is a silent no-op, whatever state the old record is in. A failed build
+    // lingers in the dead-letter set for a day (removeOnFail), and a worker killed
+    // mid-build can leave a stalled record behind — either would make this enqueue
+    // return the corpse instead of running fresh work, and the draft would sit in
+    // BUILDING forever again. So discard any prior job for this draft first. It is a
+    // no-op when none exists, and the double-click it used to guard is now caught by
+    // the age check above (that press is still inside the stale window → 409).
+    const jobId = `theme-build-${existing.id}`;
     try {
+      await this.queue.discardJob(jobId).catch(() => undefined);
       await this.queue.enqueue(
         "theme.build",
         { tenantId: actor.tenantId, siteId, draftId: existing.id, actorId: actor.userId },
-        { jobId: `theme-build-${existing.id}` },
+        { jobId },
       );
     } catch (error) {
       // BUILDING was already committed above, but the job never reached the queue —
