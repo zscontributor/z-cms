@@ -26,14 +26,38 @@ function makeSystemDb() {
     sitePlugin: {
       findMany: vi.fn().mockResolvedValue([]),
       findFirst: vi.fn().mockResolvedValue(null),
+      count: vi.fn().mockResolvedValue(0),
     },
     // The org tier is unioned into every active-plugin read; default to empty so a
     // test that only cares about site plugins is unaffected.
     orgPlugin: {
       findMany: vi.fn().mockResolvedValue([]),
       findFirst: vi.fn().mockResolvedValue(null),
+      count: vi.fn().mockResolvedValue(0),
     },
+    plugin: { findUnique: vi.fn().mockResolvedValue(null) },
     site: { findFirst: vi.fn().mockResolvedValue({ id: "s1", name: "Main", defaultLocale: "en" }) },
+    $executeRawUnsafe: vi.fn().mockResolvedValue(0),
+  };
+}
+
+/** A first-party plugin owning one table, as plugin.findUnique returns it. */
+function tableOwningPlugin() {
+  return {
+    id: "plugin-1",
+    key: "vn.zsoft.testdb",
+    isCore: true,
+    versions: [
+      {
+        manifest: {
+          database: {
+            tables: [
+              { name: "p_vn_zsoft_testdb__notes", columns: [{ name: "body", type: "text" }] },
+            ],
+          },
+        },
+      },
+    ],
   };
 }
 
@@ -239,6 +263,47 @@ describe("PluginsService", () => {
         provider: { pluginKey: "core", version: "1.0.0" },
         data: { currency: "USD" },
       });
+    });
+  });
+
+  describe("dropPluginTablesIfUnused", () => {
+    it("DROPS the table only when no site or org still holds the plugin", async () => {
+      holder.systemDb.plugin.findUnique.mockResolvedValue(tableOwningPlugin());
+      holder.systemDb.sitePlugin.count.mockResolvedValue(0);
+      holder.systemDb.orgPlugin.count.mockResolvedValue(0);
+
+      await makeService().dropPluginTablesIfUnused("vn.zsoft.testdb");
+
+      const calls = holder.systemDb.$executeRawUnsafe.mock.calls.map((c: unknown[]) => c[0]);
+      expect(calls.some((s: string) => s.includes('DROP TABLE IF EXISTS "p_vn_zsoft_testdb__notes"'))).toBe(true);
+    });
+
+    it("does NOT drop while another SITE still holds the plugin — no data nuked", async () => {
+      // The guarantee: a shared table survives until the LAST install goes.
+      holder.systemDb.plugin.findUnique.mockResolvedValue(tableOwningPlugin());
+      holder.systemDb.sitePlugin.count.mockResolvedValue(1);
+      holder.systemDb.orgPlugin.count.mockResolvedValue(0);
+
+      await makeService().dropPluginTablesIfUnused("vn.zsoft.testdb");
+      expect(holder.systemDb.$executeRawUnsafe).not.toHaveBeenCalled();
+    });
+
+    it("does NOT drop while an ORG install remains", async () => {
+      holder.systemDb.plugin.findUnique.mockResolvedValue(tableOwningPlugin());
+      holder.systemDb.sitePlugin.count.mockResolvedValue(0);
+      holder.systemDb.orgPlugin.count.mockResolvedValue(1);
+
+      await makeService().dropPluginTablesIfUnused("vn.zsoft.testdb");
+      expect(holder.systemDb.$executeRawUnsafe).not.toHaveBeenCalled();
+    });
+
+    it("never drops for a community plugin (it owns no tables)", async () => {
+      holder.systemDb.plugin.findUnique.mockResolvedValue({
+        ...tableOwningPlugin(),
+        isCore: false,
+      });
+      await makeService().dropPluginTablesIfUnused("vn.zsoft.testdb");
+      expect(holder.systemDb.$executeRawUnsafe).not.toHaveBeenCalled();
     });
   });
 

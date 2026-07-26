@@ -117,7 +117,7 @@
 }
 
 .aurora__title {
-  font-size: clamp(30px, 5vw, 46px);
+  font-size: clamp(34px, 4.2vw, 50px);
   line-height: 1.12;
   letter-spacing: -0.03em;
   font-weight: 700;
@@ -285,6 +285,9 @@
 }
 
 @media (max-width: 640px) {
+  .aurora__title {
+    font-size: clamp(32px, 9vw, 36px);
+  }
   .aurora__bar {
     flex-direction: column;
     align-items: flex-start;

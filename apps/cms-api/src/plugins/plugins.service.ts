@@ -1,6 +1,6 @@
 import { BadGatewayException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { db, getSystemDb, withTenant } from "@zcmsorg/database";
+import { getSystemDb } from "@zcmsorg/database";
 import {
   buildPluginDelete,
   generatePluginTableDdl,
@@ -702,14 +702,16 @@ export class PluginsService {
     const violations = validatePluginTableSchemas(plugin.key, tables);
     if (violations.length) return; // A malformed manifest owns no rows worth touching.
 
-    await withTenant(tenantId, async () => {
-      for (const table of tables) {
-        // Empty `where` — the builder still pins tenant_id/site_id, so this removes
-        // exactly this site's rows from this table and nothing else.
-        const q = buildPluginDelete(table, { tenantId, siteId }, {});
-        await db().$executeRawUnsafe(q.text, ...q.values);
-      }
-    });
+    // On getSystemDb, not the request's tenant transaction — so the delete is
+    // committed immediately and a `dropPluginTablesIfUnused` that follows sees the
+    // true row count (and does not deadlock trying to DROP a table this same
+    // request still holds a lock on). Safety does not rest on RLS here: the builder
+    // pins `tenant_id`/`site_id` into the WHERE from the authenticated actor, so it
+    // removes exactly this site's rows and only from a table the plugin owns.
+    for (const table of tables) {
+      const q = buildPluginDelete(table, { tenantId, siteId }, {});
+      await getSystemDb().$executeRawUnsafe(q.text, ...q.values);
+    }
   }
 
   /**

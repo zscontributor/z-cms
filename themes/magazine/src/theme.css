@@ -649,7 +649,7 @@
 }
 .zmag__lead-headline {
   font-family: var(--z-serif);
-  font-size: clamp(38px, 5.2vw, 66px);
+  font-size: clamp(36px, 4.2vw, 50px);
   line-height: 1.03;
   letter-spacing: -0.02em;
   font-weight: 700;
@@ -970,7 +970,7 @@
 }
 .zmag__article-headline {
   font-family: var(--z-serif);
-  font-size: clamp(34px, 4.6vw, 58px);
+  font-size: clamp(36px, 4.2vw, 50px);
   line-height: 1.06;
   letter-spacing: -0.02em;
   font-weight: 700;
@@ -1045,7 +1045,7 @@
 }
 .zmag__page-title {
   font-family: var(--z-serif);
-  font-size: clamp(34px, 4.4vw, 54px);
+  font-size: clamp(36px, 4.2vw, 50px);
   line-height: 1.08;
   letter-spacing: -0.02em;
   font-weight: 700;
@@ -1059,8 +1059,8 @@
 }
 .zmag__section-front-title {
   font-family: var(--z-serif);
-  font-size: clamp(38px, 5.6vw, 72px);
-  line-height: 1;
+  font-size: clamp(36px, 4.2vw, 50px);
+  line-height: 1.06;
   letter-spacing: -0.025em;
   font-weight: 700;
   margin: 0 0 18px;
@@ -1260,7 +1260,7 @@
 }
 .zmag__block-hero h2 {
   font-family: var(--z-serif);
-  font-size: clamp(30px, 4vw, 46px);
+  font-size: clamp(28px, 3.2vw, 40px);
   line-height: 1.08;
   font-weight: 700;
   margin: 0 0 12px;
@@ -1689,6 +1689,12 @@ html[data-theme="dark"] .zmag__lang-menu {
 }
 
 @media (max-width: 640px) {
+  .zmag__lead-headline,
+  .zmag__article-headline,
+  .zmag__page-title,
+  .zmag__section-front-title {
+    font-size: clamp(32px, 9vw, 36px);
+  }
   .zmag__container {
     width: min(100% - 28px, 1240px);
   }

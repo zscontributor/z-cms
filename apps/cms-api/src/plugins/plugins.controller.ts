@@ -571,12 +571,14 @@ export class PluginsController {
 
     // This site's data goes with the install: its key-value store, then its rows in
     // any tables the plugin owns. Both are scoped to this site — nothing another
-    // site holds is touched.
-    await db().pluginData.deleteMany({ where: { siteId, pluginId: row.pluginId } });
+    // site holds is touched. All on the system client (committed immediately, not
+    // in the request's tenant transaction) so the drop check below sees the true
+    // state and does not deadlock on a table this request would still be holding.
+    await getSystemDb().pluginData.deleteMany({ where: { siteId, pluginId: row.pluginId } });
     await this.plugins.purgePluginSiteData(actor.tenantId, siteId, key);
 
     // Remove the install itself.
-    await db().sitePlugin.delete({ where: { id: row.id } });
+    await getSystemDb().sitePlugin.delete({ where: { id: row.id } });
 
     // Only now, with this install gone, ask whether the plugin's tables are unused
     // everywhere — and drop them only if they are.
