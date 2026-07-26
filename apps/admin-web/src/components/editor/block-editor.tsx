@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import type { Block, BlockDocument, CoreBlockType } from "@zcmsorg/schemas";
-import type { ContentTypeOption } from "@/lib/block-registry";
-import { BLOCK_SPECS, createBlock, getBlockSpec, newBlockId } from "@/lib/block-registry";
+import type { Block, BlockDocument } from "@zcmsorg/schemas";
+import type { BlockRegistry, ContentTypeOption } from "@/lib/block-registry";
+import { createBlockFromSpec, inferBlockSpec, newBlockId } from "@/lib/block-registry";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/shell/icon";
 import { cn } from "@/lib/cn";
@@ -20,12 +20,15 @@ export function BlockEditor({
   onChange,
   disabled,
   contentTypes,
+  registry,
 }: {
   blocks: BlockDocument;
   onChange: (blocks: BlockDocument) => void;
   disabled?: boolean;
   /** The site's content types — a `core/content-list` block lists one of them. */
   contentTypes: ContentTypeOption[];
+  /** Core blocks + the active theme's blocks, resolved into the reader's language. */
+  registry: BlockRegistry;
 }) {
   const t = useT();
   const [openId, setOpenId] = useState<string | null>(blocks[0]?.id ?? null);
@@ -50,8 +53,10 @@ export function BlockEditor({
     onChange(blocks.filter((_, i) => i !== index));
   }
 
-  function add(type: CoreBlockType) {
-    const block = createBlock(type, t);
+  function add(type: string) {
+    const spec = registry.get(type);
+    if (!spec) return;
+    const block = createBlockFromSpec(spec);
     onChange([...blocks, block]);
     setOpenId(block.id);
     setAdding(false);
@@ -76,7 +81,7 @@ export function BlockEditor({
       ) : null}
 
       {blocks.map((block, index) => {
-        const spec = getBlockSpec(block.type);
+        const spec = registry.get(block.type);
         const open = openId === block.id;
 
         return (
@@ -98,12 +103,10 @@ export function BlockEditor({
                 </span>
                 <span className="min-w-0">
                   <span className="block text-[13px] font-medium">
-                    {spec ? t(spec.labelKey) : block.type}
+                    {spec ? spec.label : block.type}
                   </span>
                   <span className="block truncate text-[11px] z-muted">
-                    {summarize(block) ||
-                      (spec ? t(spec.descriptionKey) : "") ||
-                      block.type}
+                    {summarize(block) || (spec ? spec.description : "") || block.type}
                   </span>
                 </span>
               </button>
@@ -154,17 +157,21 @@ export function BlockEditor({
 
             {open ? (
               <div className="p-3">
-                {spec ? (
-                  <BlockPropsForm
-                    spec={spec}
-                    props={block.props}
-                    disabled={disabled}
-                    contentTypes={contentTypes}
-                    onChange={(props) => update(index, { ...block, props })}
-                  />
-                ) : (
-                  <UnknownBlock block={block} />
+                {/* A block with no spec (a plugin block, or a theme block the theme
+                    forgot to declare) still gets an editable form — one inferred
+                    from the props it carries — instead of a read-only JSON dump. */}
+                {spec ? null : (
+                  <p className="mb-2 text-[11px] z-muted">
+                    {t("content.blocks.generic.hint", { type: block.type })}
+                  </p>
                 )}
+                <BlockPropsForm
+                  spec={spec ?? inferBlockSpec(block)}
+                  props={block.props}
+                  disabled={disabled}
+                  contentTypes={contentTypes}
+                  onChange={(props) => update(index, { ...block, props })}
+                />
               </div>
             ) : null}
           </div>
@@ -184,8 +191,8 @@ export function BlockEditor({
         </Button>
 
         {adding ? (
-          <div className="z-card absolute inset-x-0 bottom-full z-20 mb-1 p-1 shadow-lg">
-            {BLOCK_SPECS.map((spec) => (
+          <div className="z-card absolute inset-x-0 bottom-full z-20 mb-1 max-h-80 overflow-auto p-1 shadow-lg">
+            {registry.insertable.map((spec) => (
               <button
                 key={spec.type}
                 type="button"
@@ -196,33 +203,14 @@ export function BlockEditor({
                   {spec.icon}
                 </span>
                 <span className="min-w-0">
-                  <span className="block text-[13px] font-medium">{t(spec.labelKey)}</span>
-                  <span className="block text-[11px] z-muted">{t(spec.descriptionKey)}</span>
+                  <span className="block text-[13px] font-medium">{spec.label}</span>
+                  <span className="block text-[11px] z-muted">{spec.description}</span>
                 </span>
               </button>
             ))}
           </div>
         ) : null}
       </div>
-    </div>
-  );
-}
-
-/**
- * A block whose type this admin build does not know (a theme or plugin block)
- * must survive a round trip through the editor untouched — silently dropping a
- * theme's block on save would be data loss.
- */
-function UnknownBlock({ block }: { block: Block }) {
-  const t = useT();
-  return (
-    <div className="rounded-md bg-[var(--surface-sunken)] p-3">
-      <p className="text-[11px] z-muted">
-        {t("content.blocks.unknownTitle", { type: block.type })}
-      </p>
-      <pre className="mt-2 max-h-40 overflow-auto font-mono text-[11px] z-muted">
-        {JSON.stringify(block.props, null, 2)}
-      </pre>
     </div>
   );
 }

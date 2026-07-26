@@ -9,10 +9,14 @@ import { describe, expect, it } from "vitest";
 import {
   BLOCK_SPECS,
   blockLabel,
+  buildBlockRegistry,
   createBlock,
+  createBlockFromSpec,
   getBlockSpec,
+  inferBlockSpec,
   isCoreBlockType,
   newBlockId,
+  type ThemeBlockSchema,
 } from "../block-registry";
 
 const t = translator("en");
@@ -166,5 +170,111 @@ describe("core/content-list", () => {
     expect(block.props).not.toHaveProperty("items");
     // The starting limit survives the server's own clamp unchanged.
     expect(clampCollectionLimit(block.props.limit)).toBe(block.props.limit);
+  });
+});
+
+describe("buildBlockRegistry", () => {
+  const heroSchema: ThemeBlockSchema = {
+    label: { en: "Hero", vi: "Ảnh bìa" },
+    description: "A theme hero.",
+    icon: "H",
+    props: [
+      { key: "heading", label: { en: "Heading", vi: "Tiêu đề" }, kind: "text", default: "Hi" },
+      {
+        key: "tone",
+        label: "Tone",
+        kind: "select",
+        options: [
+          { value: "light", label: { en: "Light", vi: "Sáng" } },
+          { value: "dark", label: "Dark" },
+        ],
+      },
+      { key: "paragraphs", label: "Paragraphs", kind: "stringList", multiline: true },
+    ],
+  };
+
+  it("includes every core block, resolved to plain strings", () => {
+    const registry = buildBlockRegistry(t, "en", {});
+    const hero = registry.get("core/hero");
+    expect(hero?.isCore).toBe(true);
+    // No i18n keys survive into the resolved shape — the form only ever sees text.
+    expect(hero?.label).toBe(t("content.blocks.specs.hero.label"));
+    expect(hero?.props.every((prop) => !prop.label.includes("content.blocks"))).toBe(true);
+  });
+
+  it("adds the active theme's blocks and marks them non-core", () => {
+    const registry = buildBlockRegistry(t, "en", { "zsoft/hero": heroSchema });
+    const spec = registry.get("zsoft/hero");
+    expect(spec?.isCore).toBe(false);
+    expect(spec?.label).toBe("Hero");
+    // Theme blocks are insertable alongside core ones.
+    expect(registry.insertable.some((entry) => entry.type === "zsoft/hero")).toBe(true);
+    expect(registry.insertable.some((entry) => entry.type === "core/richtext")).toBe(true);
+  });
+
+  it("resolves localized text against the reader's locale, falling back to en", () => {
+    const vi = buildBlockRegistry(t, "vi", { "zsoft/hero": heroSchema });
+    expect(vi.get("zsoft/hero")?.label).toBe("Ảnh bìa");
+    // "Dark" has no vi translation — the plain-string label is used verbatim.
+    const tone = vi.get("zsoft/hero")?.props.find((prop) => prop.key === "tone");
+    expect(tone?.options?.map((option) => option.label)).toEqual(["Sáng", "Dark"]);
+  });
+
+  it("seeds a new theme block from its declared defaults, per kind", () => {
+    const registry = buildBlockRegistry(t, "en", { "zsoft/hero": heroSchema });
+    const block = createBlockFromSpec(registry.get("zsoft/hero")!);
+    expect(block.type).toBe("zsoft/hero");
+    expect(block.props.heading).toBe("Hi"); // declared default
+    expect(block.props.tone).toBe(""); // select with no default → empty string
+    expect(block.props.paragraphs).toEqual([]); // stringList → empty array, not a record
+  });
+
+  it("lets a theme override a core block's spec without duplicating the menu entry", () => {
+    const registry = buildBlockRegistry(t, "en", {
+      "core/hero": { label: "Custom Hero", props: [] },
+    });
+    expect(registry.get("core/hero")?.label).toBe("Custom Hero");
+    expect(registry.insertable.filter((entry) => entry.type === "core/hero")).toHaveLength(1);
+  });
+});
+
+describe("inferBlockSpec", () => {
+  it("infers an editable control per prop from the values a block carries", () => {
+    const spec = inferBlockSpec({
+      id: "b1",
+      type: "acme/card",
+      props: {
+        title: "Short",
+        body: "x".repeat(120),
+        enabled: true,
+        count: 3,
+        imageUrl: "/media/x.jpg",
+        tags: ["a", "b"],
+        rows: [{ label: "L", value: "V" }],
+      },
+    });
+    const kind = (key: string) => spec.props.find((prop) => prop.key === key)?.kind;
+    expect(kind("title")).toBe("text");
+    expect(kind("body")).toBe("textarea"); // long string
+    expect(kind("enabled")).toBe("boolean");
+    expect(kind("count")).toBe("number");
+    expect(kind("imageUrl")).toBe("url"); // url-ish key
+    expect(kind("tags")).toBe("stringList"); // array of strings, never records
+    expect(kind("rows")).toBe("items"); // array of flat records
+  });
+
+  it("humanizes prop keys into labels", () => {
+    const spec = inferBlockSpec({ id: "b", type: "acme/x", props: { titleTop: "" } });
+    expect(spec.props[0]?.label).toBe("Title Top");
+  });
+
+  it("falls back to a JSON control for a nested object it cannot shape", () => {
+    const spec = inferBlockSpec({ id: "b", type: "acme/x", props: { meta: { a: { b: 1 } } } });
+    expect(spec.props[0]?.kind).toBe("json");
+  });
+
+  it("round-trips the block's props as its defaults", () => {
+    const props = { a: "1", b: [1, 2] };
+    expect(inferBlockSpec({ id: "b", type: "acme/x", props }).defaultProps).toEqual(props);
   });
 });

@@ -92,6 +92,13 @@ export interface InstalledTheme {
   reviewStatus: string;
   settings: Record<string, unknown>;
   settingsSchema: unknown;
+  /**
+   * The theme's block-editing schemas, keyed by block type. The admin renders a
+   * proper form for the theme's own blocks straight from this — the same "ship the
+   * schema, not a code change to admin-web" contract as `settingsSchema`. `{}` when
+   * the theme declares none (its blocks fall back to a generic editor).
+   */
+  editorBlocks: Record<string, unknown>;
   demoAvailable: boolean;
   demoSeeded: boolean;
   screenshots: string[];
@@ -324,6 +331,10 @@ export class ThemesController {
         // The admin renders the settings form straight from this schema, so a
         // theme can add an option without any change to admin-web.
         settingsSchema: manifest?.settingsSchema ?? null,
+        // Straight from the manifest, like settingsSchema: the admin builds the
+        // block-editing forms from this, so a theme adds or revises a block's form
+        // without any change to admin-web.
+        editorBlocks: (manifest?.editorBlocks as Record<string, unknown>) ?? {},
         demoAvailable: Boolean(manifest?.demo),
         demoSeeded: seededKeys.has(row.theme.key),
         screenshots: screenshotUrls(

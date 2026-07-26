@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   can,
+  getActiveThemeEditorBlocks,
   getContent,
   getContentTypeByKey,
   getCurrentSite,
@@ -42,11 +43,12 @@ export default async function NewContentPage({ params, searchParams }: PageProps
   // `listContentTypes` is the same cached call `getContentTypeByKey` resolves the
   // URL key through, so asking for the whole set costs no second request. A
   // `core/content-list` block needs it to offer the site's types as a choice.
-  const [user, type, site, contentTypes] = await Promise.all([
+  const [user, type, site, contentTypes, themeBlocks] = await Promise.all([
     getSession(),
     getContentTypeByKey(typeKey),
     getCurrentSite(),
     listContentTypes(),
+    getActiveThemeEditorBlocks(),
   ]);
 
   if (!type) notFound();
@@ -168,6 +170,7 @@ export default async function NewContentPage({ params, searchParams }: PageProps
         type={type}
         initial={initial}
         contentTypes={contentTypes.map(({ key, name }) => ({ key, name }))}
+        themeBlocks={themeBlocks}
         permissions={{
           canSave: true,
           canPublish: can(user, "content:publish"),

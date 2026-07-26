@@ -609,6 +609,7 @@ const InstalledThemeSchema = z.object({
   reviewStatus: z.string(),
   settings: z.record(z.string(), z.unknown()),
   settingsSchema: z.unknown(),
+  editorBlocks: z.record(z.string(), z.unknown()),
   demoAvailable: z.boolean(),
   demoSeeded: z.boolean(),
   screenshots: z.array(z.url()).max(MAX_SCREENSHOTS),

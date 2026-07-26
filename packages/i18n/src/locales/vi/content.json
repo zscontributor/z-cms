@@ -137,7 +137,10 @@
     "empty": "Chưa có khối nào. Thêm khối đầu tiên bên dưới.",
     "add": "Thêm khối",
     "delete": "Xoá khối",
-    "unknownTitle": "Khối {type} không được admin nhận diện (do theme hoặc plugin cung cấp). Nội dung được giữ nguyên khi lưu.",
+    "generic": {
+      "hint": "Khối {type} chưa có biểu mẫu chỉnh sửa từ theme đang dùng — chỉnh sửa các trường thô của nó.",
+      "invalidJson": "JSON không hợp lệ — hãy sửa lại trước khi có thể lưu trường này."
+    },
     "htmlPlaceholder": "<p>Nội dung…</p>",
     "item": "Mục",
     "addItem": "Thêm {item}",

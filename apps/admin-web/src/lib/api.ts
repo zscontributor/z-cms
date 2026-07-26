@@ -28,6 +28,7 @@ import {
   refreshCookieOptions,
 } from "./cookies";
 import { getLocale, getT } from "./locale";
+import type { ThemeBlockSchema } from "./block-registry";
 import type { ThemeSettingsSchema } from "./theme-schema";
 
 export const API_URL = process.env.CMS_API_URL ?? "http://localhost:4100";
@@ -413,6 +414,13 @@ export interface InstalledThemeDto {
   reviewStatus: string;
   settings: Record<string, unknown>;
   settingsSchema: ThemeSettingsSchema | null;
+  /**
+   * The theme's block-editing schemas, keyed by block type ("zsoft/hero"). The
+   * content editor builds a form for the theme's own blocks from this; `{}` when
+   * the theme ships none, in which case those blocks get the generic fallback
+   * editor. Mirrors `settingsSchema`: shipped by the theme, not coded into admin.
+   */
+  editorBlocks: Record<string, ThemeBlockSchema>;
   demoAvailable: boolean;
   demoSeeded: boolean;
   screenshots: string[];
@@ -441,6 +449,28 @@ export interface ThemeCatalogEntry {
 
 export const listInstalledThemes = cache(
   async (): Promise<InstalledThemeDto[]> => apiFetch<InstalledThemeDto[]>("/themes/installed"),
+);
+
+/**
+ * The active theme's block-editing schemas, so the content editor can offer a form
+ * for the theme's own blocks (`zsoft/hero`, …) instead of a read-only JSON dump.
+ * `{}` when no theme is active or it declares none. Shares the cached
+ * `listInstalledThemes` request the theme screens already make.
+ */
+export const getActiveThemeEditorBlocks = cache(
+  async (): Promise<Record<string, ThemeBlockSchema>> => {
+    // Block schemas only make the editor nicer; they are not required to edit. A
+    // content editor may lack `theme:read` (so `/themes/installed` 403s), or a site
+    // may have no active theme — either way the editor must still open, with core
+    // blocks and the generic fallback. So this never throws: it degrades to `{}`.
+    try {
+      const themes = await listInstalledThemes();
+      const active = themes.find((theme) => theme.status === "ACTIVE");
+      return active?.editorBlocks ?? {};
+    } catch {
+      return {};
+    }
+  },
 );
 
 export const listThemeCatalog = cache(

@@ -425,6 +425,99 @@ export interface ThemeManifest {
   optionalCapabilities?: string[];
   /** Runtime integration positions this theme deliberately exposes. */
   integrationSlots?: IntegrationSlot[];
+  /**
+   * Editing schemas for the theme's own block types, so the admin can offer a
+   * proper form — labelled fields, a rich-text box, a repeatable list — for a
+   * `zsoft/hero` exactly as it does for a `core/hero`, instead of dumping the
+   * block's props as read-only JSON.
+   *
+   * Keyed by block type ("zsoft/hero"). Static data, read from theme.json without
+   * executing the theme — the same contract as `settingsSchema`: a theme adds or
+   * revises a block's editing form without any change to admin-web. A block type
+   * that has no entry here still round-trips; the admin falls back to a generic
+   * value-inferred editor rather than losing it.
+   *
+   * Declares only how to EDIT the block. How to render it is the component in
+   * `defineTheme({ blocks })`; the two are kept in sync by the theme author.
+   */
+  editorBlocks?: Record<string, ThemeBlockSchema>;
+}
+
+/**
+ * A string an admin reads, in whatever language the admin is running in. Either a
+ * single string (the same text in every locale) or a locale → text map, e.g.
+ * `{ en: "Hero", vi: "Ảnh bìa" }`. When a map, English (`en`) is the fallback a
+ * reader sees when their locale is not translated — the same rule as `changelog`.
+ */
+export type LocalizedText = string | Record<string, string>;
+
+/**
+ * How the admin draws the control for one block prop. Mirrors the core registry.
+ *
+ * `stringList` edits a prop that is a bare array of strings (`["a", "b"]`) — the
+ * shape a theme reads with a "list of paragraphs" helper. It is NOT `items`: an
+ * `items` prop is an array of *records*, and saving a string array through it
+ * would rewrite `"a"` to `{ value: "a" }` and break the theme.
+ */
+export type ThemeBlockPropKind =
+  | "text"
+  | "textarea"
+  | "html"
+  | "url"
+  | "boolean"
+  | "select"
+  | "number"
+  | "items"
+  | "stringList";
+
+/** One choice of a `select` prop (or `select` item field). */
+export interface ThemeBlockPropOption {
+  value: string;
+  label: LocalizedText;
+}
+
+/** One field of an `items` prop's repeated record. */
+export interface ThemeBlockItemField {
+  key: string;
+  label: LocalizedText;
+  kind: "text" | "textarea" | "url" | "boolean" | "select";
+  /** For a `select` item field: the allowed values. */
+  options?: ThemeBlockPropOption[];
+}
+
+/** The editing schema for a single block prop. */
+export interface ThemeBlockProp {
+  /** The prop key on the block, e.g. "heading". Must match what the component reads. */
+  key: string;
+  label: LocalizedText;
+  kind: ThemeBlockPropKind;
+  placeholder?: LocalizedText;
+  hint?: LocalizedText;
+  /** For `select`: the allowed values. */
+  options?: ThemeBlockPropOption[];
+  /** For `number`: the inclusive bounds the control clamps to. */
+  min?: number;
+  max?: number;
+  /** For `items`: the fields of each repeated entry. */
+  itemFields?: ThemeBlockItemField[];
+  /** For `items` and `stringList`: the singular noun for one entry ("Card"). */
+  itemLabel?: LocalizedText;
+  /** For `stringList`: draw each entry as a multi-line textarea rather than an input. */
+  multiline?: boolean;
+  /**
+   * The value a freshly-inserted block gets for this prop. Omitted means an empty
+   * value appropriate to the kind ("" for text, false for boolean, [] for items).
+   */
+  default?: unknown;
+}
+
+/** The editing schema for one theme block type. */
+export interface ThemeBlockSchema {
+  label: LocalizedText;
+  description?: LocalizedText;
+  /** A one-character glyph shown in the block list and picker (e.g. "H"). */
+  icon?: string;
+  props: ThemeBlockProp[];
 }
 
 /**

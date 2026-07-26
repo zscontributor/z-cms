@@ -24,6 +24,15 @@ import { COLLECTION_MAX_LIMIT, COLLECTION_SORTS, CORE_BLOCK_TYPES } from "@zcmso
  * nothing anywhere tells the editor why. So the renderer resolves it against the
  * site's actual content types and offers them as a select.
  */
+/**
+ * `stringList` and `json` are not offered to core blocks; they exist for the two
+ * ways a block reaches the editor without a hand-written spec:
+ *   - `stringList` edits a bare array of strings (`["a","b"]`) — a theme's "list of
+ *     paragraphs" prop. It stores strings, not `{ value }` records, so it never
+ *     rewrites the shape the theme reads.
+ *   - `json` is the last resort for a value the editor cannot otherwise shape (a
+ *     nested object): an editable JSON box, still better than read-only text.
+ */
 export type PropKind =
   | "text"
   | "textarea"
@@ -33,7 +42,9 @@ export type PropKind =
   | "select"
   | "number"
   | "contentType"
-  | "items";
+  | "items"
+  | "stringList"
+  | "json";
 
 export interface PropSpec {
   key: string;
@@ -301,5 +312,339 @@ export function createBlock(type: CoreBlockType, t: Translate): Block {
     id: newBlockId(),
     type,
     props: spec ? spec.defaults(t) : {},
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Theme-provided block schemas
+//
+// A theme ships an editing schema for its own block types in its manifest (the
+// `editorBlocks` map). The admin renders a form from it exactly as it does for a
+// core block — so a `zsoft/hero` is edited with labelled fields, not a JSON dump —
+// without any code change here. This mirrors the `settingsSchema` contract.
+//
+// The catch: a core BlockSpec carries i18n *keys* (shipped once, drawn in the
+// admin's language), but a theme's schema carries *text* the theme author wrote,
+// optionally per-locale. So a theme schema and a core spec are resolved through
+// different paths into ONE shape — `ResolvedBlockSpec`, all strings, already in the
+// reader's language — which is the only shape the form ever sees.
+// ---------------------------------------------------------------------------
+
+/** Text an admin reads: one string, or a locale → string map (`en` is the fallback). */
+export type LocalizedText = string | Record<string, string>;
+
+export interface ThemeBlockPropOption {
+  value: string;
+  label: LocalizedText;
+}
+
+export interface ThemeBlockItemField {
+  key: string;
+  label: LocalizedText;
+  kind: "text" | "textarea" | "url" | "boolean" | "select";
+  options?: ThemeBlockPropOption[];
+}
+
+export interface ThemeBlockProp {
+  key: string;
+  label: LocalizedText;
+  kind: PropKind;
+  placeholder?: LocalizedText;
+  hint?: LocalizedText;
+  options?: ThemeBlockPropOption[];
+  min?: number;
+  max?: number;
+  itemFields?: ThemeBlockItemField[];
+  itemLabel?: LocalizedText;
+  /** For `stringList`: draw each entry as a textarea rather than an input. */
+  multiline?: boolean;
+  default?: unknown;
+}
+
+export interface ThemeBlockSchema {
+  label: LocalizedText;
+  description?: LocalizedText;
+  icon?: string;
+  props: ThemeBlockProp[];
+}
+
+// ---------------------------------------------------------------------------
+// Resolved specs — the single shape the form consumes
+// ---------------------------------------------------------------------------
+
+export interface ResolvedPropOption {
+  value: string;
+  label: string;
+}
+
+export interface ResolvedItemField {
+  key: string;
+  label: string;
+  kind: "text" | "textarea" | "url" | "boolean" | "select";
+  options?: ResolvedPropOption[];
+}
+
+export interface ResolvedPropSpec {
+  key: string;
+  label: string;
+  kind: PropKind;
+  placeholder?: string;
+  hint?: string;
+  options?: ResolvedPropOption[];
+  min?: number;
+  max?: number;
+  itemFields?: ResolvedItemField[];
+  itemLabel?: string;
+  multiline?: boolean;
+}
+
+export interface ResolvedBlockSpec {
+  type: string;
+  label: string;
+  description: string;
+  icon: string;
+  /** A core block (`core/*`) vs a theme block — used only for menu grouping. */
+  isCore: boolean;
+  props: ResolvedPropSpec[];
+  /** The props a freshly-inserted block of this type starts with. */
+  defaultProps: Record<string, unknown>;
+}
+
+/**
+ * The editor's whole vocabulary of blocks for one screen: the core blocks plus the
+ * active theme's blocks, each resolved into the reader's language. `insertable` is
+ * what the "Add block" menu offers; `get` is how a stored block finds its form.
+ */
+export interface BlockRegistry {
+  insertable: ResolvedBlockSpec[];
+  get(type: string): ResolvedBlockSpec | undefined;
+}
+
+/** Resolve `LocalizedText` (or a plain string) against the admin's locale. */
+function pickLocalized(text: LocalizedText | undefined, locale: string): string | undefined {
+  if (text === undefined || text === null) return undefined;
+  if (typeof text === "string") return text;
+  return text[locale] ?? text.en ?? Object.values(text)[0];
+}
+
+/** A core `BlockSpec` (i18n keys, defaults factory) → the resolved shape. */
+function resolveCoreSpec(spec: BlockSpec, t: Translate): ResolvedBlockSpec {
+  return {
+    type: spec.type,
+    label: t(spec.labelKey),
+    description: t(spec.descriptionKey),
+    icon: spec.icon,
+    isCore: true,
+    defaultProps: spec.defaults(t),
+    props: spec.props.map((prop) => ({
+      key: prop.key,
+      label: t(prop.labelKey),
+      kind: prop.kind,
+      placeholder: prop.placeholderKey ? t(prop.placeholderKey) : undefined,
+      hint: prop.hintKey
+        ? t(prop.hintKey, { min: prop.min ?? 0, max: prop.max ?? 0 })
+        : undefined,
+      min: prop.min,
+      max: prop.max,
+      options: prop.options?.map((option) => ({
+        value: option.value,
+        label: t(option.labelKey),
+      })),
+      itemFields: prop.itemFields?.map((field) => ({
+        key: field.key,
+        label: t(field.labelKey),
+        kind: field.kind,
+      })),
+      itemLabel: prop.itemLabelKey ? t(prop.itemLabelKey) : undefined,
+    })),
+  };
+}
+
+/** A default value for a prop the theme did not give one, appropriate to its kind. */
+function emptyValueForKind(kind: PropKind): unknown {
+  switch (kind) {
+    case "boolean":
+      return false;
+    case "items":
+    case "stringList":
+      return [];
+    case "number":
+      return undefined;
+    case "json":
+      return {};
+    default:
+      return "";
+  }
+}
+
+/** A theme's `ThemeBlockSchema` (author text, per-locale) → the resolved shape. */
+function resolveThemeSpec(
+  type: string,
+  schema: ThemeBlockSchema,
+  locale: string,
+): ResolvedBlockSpec {
+  const props: ResolvedPropSpec[] = (schema.props ?? []).map((prop) => ({
+    key: prop.key,
+    label: pickLocalized(prop.label, locale) ?? prop.key,
+    kind: prop.kind,
+    placeholder: pickLocalized(prop.placeholder, locale),
+    hint: pickLocalized(prop.hint, locale),
+    min: prop.min,
+    max: prop.max,
+    multiline: prop.multiline,
+    options: prop.options?.map((option) => ({
+      value: option.value,
+      label: pickLocalized(option.label, locale) ?? option.value,
+    })),
+    itemFields: prop.itemFields?.map((field) => ({
+      key: field.key,
+      label: pickLocalized(field.label, locale) ?? field.key,
+      kind: field.kind,
+      options: field.options?.map((option) => ({
+        value: option.value,
+        label: pickLocalized(option.label, locale) ?? option.value,
+      })),
+    })),
+    itemLabel: pickLocalized(prop.itemLabel, locale),
+  }));
+
+  const defaultProps: Record<string, unknown> = {};
+  for (const prop of schema.props ?? []) {
+    defaultProps[prop.key] =
+      prop.default !== undefined ? prop.default : emptyValueForKind(prop.kind);
+  }
+
+  return {
+    type,
+    label: pickLocalized(schema.label, locale) ?? type,
+    description: pickLocalized(schema.description, locale) ?? "",
+    icon: schema.icon ?? type.split("/")[1]?.[0]?.toUpperCase() ?? "?",
+    isCore: false,
+    props,
+    defaultProps,
+  };
+}
+
+/**
+ * Build the registry for a content-editing screen: the core blocks first, then the
+ * active theme's blocks. A theme entry for a `core/*` type overrides the core spec
+ * (a theme may relabel a core block), and is de-duplicated so the menu shows it once.
+ */
+export function buildBlockRegistry(
+  t: Translate,
+  locale: string,
+  themeBlocks: Record<string, ThemeBlockSchema> | undefined,
+): BlockRegistry {
+  const byType = new Map<string, ResolvedBlockSpec>();
+  for (const spec of BLOCK_SPECS) byType.set(spec.type, resolveCoreSpec(spec, t));
+  for (const [type, schema] of Object.entries(themeBlocks ?? {})) {
+    byType.set(type, resolveThemeSpec(type, schema, locale));
+  }
+  return {
+    insertable: [...byType.values()],
+    get: (type) => byType.get(type),
+  };
+}
+
+/** A new block of a resolved type, its props seeded from the spec's defaults. */
+export function createBlockFromSpec(spec: ResolvedBlockSpec): Block {
+  return {
+    id: newBlockId(),
+    type: spec.type,
+    props: structuredClone(spec.defaultProps),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Generic fallback — an editable form inferred from a block's own values
+//
+// When no spec exists for a stored block (a plugin block, or a theme block the
+// theme forgot to declare), the editor still must not strand the author with a
+// read-only JSON dump. It infers a control per prop from the value that is there:
+// a string becomes text, a boolean a checkbox, an array of records a list, and so
+// on. The labels are the prop keys, humanised. It is coarser than a real schema,
+// but it edits, and it round-trips anything it cannot shape as raw JSON.
+// ---------------------------------------------------------------------------
+
+/** "titleTop" / "cta_href" → "Title top" / "Cta href". */
+function humanizeKey(key: string): string {
+  const spaced = key
+    .replace(/[_-]+/g, " ")
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .trim();
+  if (!spaced) return key;
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+/** Keys whose value is a link or an asset, so a media/URL control fits better. */
+const URLISH_KEY = /(image|src|url|href|photo|cover|background|banner|logo)/i;
+
+function inferPropSpec(key: string, value: unknown): ResolvedPropSpec {
+  const label = humanizeKey(key);
+
+  if (typeof value === "boolean") return { key, label, kind: "boolean" };
+  if (typeof value === "number") return { key, label, kind: "number" };
+
+  if (Array.isArray(value)) {
+    if (value.length > 0 && value.every((entry) => typeof entry === "string")) {
+      return { key, label, kind: "stringList", multiline: true };
+    }
+    if (
+      value.length > 0 &&
+      value.every((entry) => entry !== null && typeof entry === "object" && !Array.isArray(entry))
+    ) {
+      const fieldKeys = [
+        ...new Set(value.flatMap((entry) => Object.keys(entry as Record<string, unknown>))),
+      ];
+      // A record field that is itself an object or array cannot be a flat item
+      // field; when any entry has one, the whole list is safer edited as JSON.
+      const flat = fieldKeys.every((fieldKey) =>
+        value.every((entry) => {
+          const cell = (entry as Record<string, unknown>)[fieldKey];
+          return cell === undefined || cell === null || typeof cell !== "object";
+        }),
+      );
+      if (flat) {
+        return {
+          key,
+          label,
+          kind: "items",
+          itemFields: fieldKeys.map((fieldKey) => ({
+            key: fieldKey,
+            label: humanizeKey(fieldKey),
+            kind: "text",
+          })),
+        };
+      }
+      return { key, label, kind: "json" };
+    }
+    // Empty or mixed array: a string list is the least-surprising editable default.
+    return { key, label, kind: value.length === 0 ? "stringList" : "json" };
+  }
+
+  if (value !== null && typeof value === "object") return { key, label, kind: "json" };
+
+  // string, or a missing value we treat as text
+  if (key === "html") return { key, label, kind: "html" };
+  if (URLISH_KEY.test(key)) return { key, label, kind: "url" };
+  const text = typeof value === "string" ? value : "";
+  if (text.includes("\n") || text.length > 80) return { key, label, kind: "textarea" };
+  return { key, label, kind: "text" };
+}
+
+/**
+ * A synthetic spec for a block the registry does not know, inferred from the props
+ * it currently carries. Rendered by the same form as a real spec.
+ */
+export function inferBlockSpec(block: Block): ResolvedBlockSpec {
+  const props = block.props ?? {};
+  return {
+    type: block.type,
+    label: block.type,
+    description: "",
+    icon: block.type.split("/")[1]?.[0]?.toUpperCase() ?? "?",
+    isCore: false,
+    props: Object.entries(props).map(([key, value]) => inferPropSpec(key, value)),
+    defaultProps: { ...props },
   };
 }

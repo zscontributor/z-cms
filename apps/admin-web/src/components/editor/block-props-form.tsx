@@ -1,6 +1,12 @@
 "use client";
 
-import type { BlockSpec, ContentTypeOption, PropSpec } from "@/lib/block-registry";
+import { useState } from "react";
+import type {
+  ContentTypeOption,
+  ResolvedBlockSpec,
+  ResolvedItemField,
+  ResolvedPropSpec,
+} from "@/lib/block-registry";
 import { Button } from "@/components/ui/button";
 import { Checkbox, Field, Input, Select, Textarea } from "@/components/ui/field";
 import { Icon } from "@/components/shell/icon";
@@ -17,7 +23,7 @@ export function BlockPropsForm({
   disabled,
   contentTypes,
 }: {
-  spec: BlockSpec;
+  spec: ResolvedBlockSpec;
   props: Props;
   onChange: (props: Props) => void;
   disabled?: boolean;
@@ -44,6 +50,15 @@ export function BlockPropsForm({
   );
 }
 
+/** Kinds that want the full row rather than half of the two-column grid. */
+const WIDE_KINDS = new Set<ResolvedPropSpec["kind"]>([
+  "textarea",
+  "html",
+  "items",
+  "stringList",
+  "json",
+]);
+
 function PropControl({
   prop,
   value,
@@ -51,33 +66,27 @@ function PropControl({
   disabled,
   contentTypes,
 }: {
-  prop: PropSpec;
+  prop: ResolvedPropSpec;
   value: unknown;
   onChange: (value: unknown) => void;
   disabled?: boolean;
   contentTypes: ContentTypeOption[];
 }) {
-  const t = useT();
-  const wide = prop.kind === "textarea" || prop.kind === "html" || prop.kind === "items";
   const id = `prop-${prop.key}`;
-  const placeholder = prop.placeholderKey ? t(prop.placeholderKey) : undefined;
-  const hint = prop.hintKey
-    ? t(prop.hintKey, { min: prop.min ?? 0, max: prop.max ?? 0 })
-    : undefined;
 
   return (
     <Field
-      label={t(prop.labelKey)}
+      label={prop.label}
       htmlFor={id}
-      hint={hint}
-      className={wide ? "sm:col-span-2" : undefined}
+      hint={prop.hint}
+      className={WIDE_KINDS.has(prop.kind) ? "sm:col-span-2" : undefined}
     >
       {prop.kind === "text" ? (
         <Input
           id={id}
           disabled={disabled}
           value={str(value)}
-          placeholder={placeholder}
+          placeholder={prop.placeholder}
           onChange={(event) => onChange(event.target.value)}
         />
       ) : null}
@@ -88,7 +97,7 @@ function PropControl({
           rows={3}
           disabled={disabled}
           value={str(value)}
-          placeholder={placeholder}
+          placeholder={prop.placeholder}
           onChange={(event) => onChange(event.target.value)}
         />
       ) : null}
@@ -107,21 +116,13 @@ function PropControl({
           id={id}
           mode="url"
           value={str(value)}
-          placeholder={placeholder}
+          placeholder={prop.placeholder}
           onChange={(next) => onChange(next)}
         />
       ) : null}
 
       {prop.kind === "boolean" ? (
-        <label className="flex h-9 items-center gap-2 text-sm">
-          <Checkbox
-            id={id}
-            disabled={disabled}
-            checked={value === true}
-            onChange={(event) => onChange(event.target.checked)}
-          />
-          <span className="z-muted">{value === true ? t("common.on") : t("common.off")}</span>
-        </label>
+        <BooleanControl id={id} value={value} onChange={onChange} disabled={disabled} />
       ) : null}
 
       {prop.kind === "select" ? (
@@ -133,7 +134,7 @@ function PropControl({
         >
           {(prop.options ?? []).map((option) => (
             <option key={option.value} value={option.value}>
-              {t(option.labelKey)}
+              {option.label}
             </option>
           ))}
         </Select>
@@ -149,7 +150,7 @@ function PropControl({
           max={prop.max}
           disabled={disabled}
           value={str(value)}
-          placeholder={placeholder}
+          placeholder={prop.placeholder}
           // Clamped on blur, not on every keystroke: rewriting "1" to the minimum
           // while someone is still typing "12" makes the field impossible to use.
           // A `type="number"` input hands back "" for text, so "abc" never lands in
@@ -172,7 +173,40 @@ function PropControl({
       {prop.kind === "items" ? (
         <ItemsControl prop={prop} value={value} onChange={onChange} disabled={disabled} />
       ) : null}
+
+      {prop.kind === "stringList" ? (
+        <StringListControl prop={prop} value={value} onChange={onChange} disabled={disabled} />
+      ) : null}
+
+      {prop.kind === "json" ? (
+        <JsonControl id={id} value={value} onChange={onChange} disabled={disabled} />
+      ) : null}
     </Field>
+  );
+}
+
+function BooleanControl({
+  id,
+  value,
+  onChange,
+  disabled,
+}: {
+  id: string;
+  value: unknown;
+  onChange: (value: unknown) => void;
+  disabled?: boolean;
+}) {
+  const t = useT();
+  return (
+    <label className="flex h-9 items-center gap-2 text-sm">
+      <Checkbox
+        id={id}
+        disabled={disabled}
+        checked={value === true}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+      <span className="z-muted">{value === true ? t("common.on") : t("common.off")}</span>
+    </label>
   );
 }
 
@@ -239,7 +273,7 @@ function readNumber(raw: string): number | undefined {
   return Number.isFinite(value) ? value : undefined;
 }
 
-function clamp(value: number | undefined, prop: PropSpec): number | undefined {
+function clamp(value: number | undefined, prop: ResolvedPropSpec): number | undefined {
   if (value === undefined) return undefined;
   const min = prop.min ?? Number.NEGATIVE_INFINITY;
   const max = prop.max ?? Number.POSITIVE_INFINITY;
@@ -253,7 +287,7 @@ function ItemsControl({
   onChange,
   disabled,
 }: {
-  prop: PropSpec;
+  prop: ResolvedPropSpec;
   value: unknown;
   onChange: (value: unknown) => void;
   disabled?: boolean;
@@ -261,7 +295,7 @@ function ItemsControl({
   const t = useT();
   const fields = prop.itemFields ?? [];
   const items: Props[] = Array.isArray(value) ? (value as Props[]) : [];
-  const itemLabel = prop.itemLabelKey ? t(prop.itemLabelKey) : t("content.blocks.item");
+  const itemLabel = prop.itemLabel ?? t("content.blocks.item");
 
   function update(index: number, key: string, next: unknown) {
     const copy = items.map((item, i) => (i === index ? { ...item, [key]: next } : item));
@@ -324,26 +358,13 @@ function ItemsControl({
 
           <div className="grid gap-2 sm:grid-cols-2">
             {fields.map((field) => (
-              <Field
+              <ItemFieldControl
                 key={field.key}
-                label={t(field.labelKey)}
-                className={field.kind === "textarea" ? "sm:col-span-2" : undefined}
-              >
-                {field.kind === "textarea" ? (
-                  <Textarea
-                    rows={2}
-                    disabled={disabled}
-                    value={str(item[field.key])}
-                    onChange={(event) => update(index, field.key, event.target.value)}
-                  />
-                ) : (
-                  <Input
-                    disabled={disabled}
-                    value={str(item[field.key])}
-                    onChange={(event) => update(index, field.key, event.target.value)}
-                  />
-                )}
-              </Field>
+                field={field}
+                value={item[field.key]}
+                disabled={disabled}
+                onChange={(next) => update(index, field.key, next)}
+              />
             ))}
           </div>
         </div>
@@ -354,7 +375,7 @@ function ItemsControl({
         disabled={disabled}
         onClick={() => {
           const blank: Props = {};
-          for (const field of fields) blank[field.key] = "";
+          for (const field of fields) blank[field.key] = field.kind === "boolean" ? false : "";
           onChange([...items, blank]);
         }}
         className="self-start border-dashed"
@@ -364,6 +385,212 @@ function ItemsControl({
       </Button>
     </div>
   );
+}
+
+/** One field of an item record — text/textarea/url/boolean/select. */
+function ItemFieldControl({
+  field,
+  value,
+  onChange,
+  disabled,
+}: {
+  field: ResolvedItemField;
+  value: unknown;
+  onChange: (value: unknown) => void;
+  disabled?: boolean;
+}) {
+  const wide = field.kind === "textarea";
+  return (
+    <Field label={field.label} className={wide ? "sm:col-span-2" : undefined}>
+      {field.kind === "textarea" ? (
+        <Textarea
+          rows={2}
+          disabled={disabled}
+          value={str(value)}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      ) : field.kind === "boolean" ? (
+        <BooleanControl id={field.key} value={value} onChange={onChange} disabled={disabled} />
+      ) : field.kind === "select" ? (
+        <Select
+          disabled={disabled}
+          value={str(value)}
+          onChange={(event) => onChange(event.target.value)}
+        >
+          {(field.options ?? []).map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </Select>
+      ) : field.kind === "url" ? (
+        <MediaPickerField mode="url" value={str(value)} onChange={(next) => onChange(next)} />
+      ) : (
+        <Input
+          disabled={disabled}
+          value={str(value)}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      )}
+    </Field>
+  );
+}
+
+/** A repeatable list of plain strings — stored as `string[]`, never as records. */
+function StringListControl({
+  prop,
+  value,
+  onChange,
+  disabled,
+}: {
+  prop: ResolvedPropSpec;
+  value: unknown;
+  onChange: (value: unknown) => void;
+  disabled?: boolean;
+}) {
+  const t = useT();
+  const items: string[] = Array.isArray(value) ? value.map((entry) => str(entry)) : [];
+  const itemLabel = prop.itemLabel ?? t("content.blocks.item");
+
+  function update(index: number, next: string) {
+    onChange(items.map((item, i) => (i === index ? next : item)));
+  }
+
+  function move(index: number, delta: number) {
+    const target = index + delta;
+    if (target < 0 || target >= items.length) return;
+    const copy = [...items];
+    const [item] = copy.splice(index, 1);
+    if (item !== undefined) copy.splice(target, 0, item);
+    onChange(copy);
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {items.map((item, index) => (
+        <div key={index} className="flex items-start gap-1.5">
+          {prop.multiline ? (
+            <Textarea
+              rows={2}
+              disabled={disabled}
+              value={item}
+              onChange={(event) => update(index, event.target.value)}
+              className="flex-1"
+            />
+          ) : (
+            <Input
+              disabled={disabled}
+              value={item}
+              onChange={(event) => update(index, event.target.value)}
+              className="flex-1"
+            />
+          )}
+          <span className="flex shrink-0 gap-0.5">
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={disabled || index === 0}
+              onClick={() => move(index, -1)}
+              aria-label={t("common.moveUp")}
+              className="size-8 px-0"
+            >
+              <Icon name="up" size={18} />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={disabled || index === items.length - 1}
+              onClick={() => move(index, 1)}
+              aria-label={t("common.moveDown")}
+              className="size-8 px-0"
+            >
+              <Icon name="down" size={18} />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={disabled}
+              onClick={() => onChange(items.filter((_, i) => i !== index))}
+              aria-label={t("common.delete")}
+              className="size-8 px-0 hover:text-red-600 dark:hover:text-red-400"
+            >
+              <Icon name="trash" size={18} />
+            </Button>
+          </span>
+        </div>
+      ))}
+
+      <Button
+        size="sm"
+        disabled={disabled}
+        onClick={() => onChange([...items, ""])}
+        className="self-start border-dashed"
+      >
+        <Icon name="plus" size={18} />
+        {t("content.blocks.addItem", { item: itemLabel.toLowerCase() })}
+      </Button>
+    </div>
+  );
+}
+
+/**
+ * The last-resort control for a value the editor cannot otherwise shape — a nested
+ * object. An editable JSON box: the parsed value is written up only while the text
+ * parses, so a half-typed edit can never persist malformed props. Still strictly
+ * better than a read-only dump.
+ */
+function JsonControl({
+  id,
+  value,
+  onChange,
+  disabled,
+}: {
+  id: string;
+  value: unknown;
+  onChange: (value: unknown) => void;
+  disabled?: boolean;
+}) {
+  const t = useT();
+  const [raw, setRaw] = useState(() => stringifyJson(value));
+  const [error, setError] = useState(false);
+
+  function onEdit(text: string) {
+    setRaw(text);
+    try {
+      const parsed = JSON.parse(text);
+      setError(false);
+      onChange(parsed);
+    } catch {
+      setError(true);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <Textarea
+        id={id}
+        rows={6}
+        disabled={disabled}
+        value={raw}
+        onChange={(event) => onEdit(event.target.value)}
+        className="font-mono text-[11px]"
+        spellCheck={false}
+      />
+      {error ? (
+        <p className="text-[11px] text-red-600 dark:text-red-400">
+          {t("content.blocks.generic.invalidJson")}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function stringifyJson(value: unknown): string {
+  try {
+    return JSON.stringify(value ?? {}, null, 2);
+  } catch {
+    return "{}";
+  }
 }
 
 function str(value: unknown): string {

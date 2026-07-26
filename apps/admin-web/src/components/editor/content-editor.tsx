@@ -15,7 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Checkbox, Field, Input, Select, Textarea } from "@/components/ui/field";
 import { Icon } from "@/components/shell/icon";
-import type { ContentTypeOption } from "@/lib/block-registry";
+import type { ContentTypeOption, ThemeBlockSchema } from "@/lib/block-registry";
+import { buildBlockRegistry } from "@/lib/block-registry";
 import { STATUS_TONES, formatDateTime, statusKey } from "@/lib/format";
 import { useLocale, useT } from "@/lib/i18n-provider";
 import { isValidSlug, slugify } from "@/lib/slugify";
@@ -68,6 +69,7 @@ export function ContentEditor({
   initial,
   permissions,
   contentTypes,
+  themeBlocks,
 }: {
   type: ContentTypeDto;
   initial: EditorInitial;
@@ -80,9 +82,19 @@ export function ContentEditor({
    * the URL key goes through the same cached `listContentTypes()` call.
    */
   contentTypes: ContentTypeOption[];
+  /**
+   * The active theme's block-editing schemas. Merged with the core blocks so the
+   * block editor can offer a real form for the theme's own blocks (`zsoft/hero`, …)
+   * — the reason a page authored by a theme is edited, not shown as JSON.
+   */
+  themeBlocks?: Record<string, ThemeBlockSchema>;
 }) {
   const t = useT();
   const uiLocale = useLocale();
+  const registry = useMemo(
+    () => buildBlockRegistry(t, uiLocale, themeBlocks),
+    [t, uiLocale, themeBlocks],
+  );
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -313,6 +325,7 @@ export function ContentEditor({
               onChange={setBlocks}
               disabled={readOnly}
               contentTypes={contentTypes}
+              registry={registry}
             />
           </section>
         ) : null}

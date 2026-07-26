@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import {
   ApiError,
   can,
+  getActiveThemeEditorBlocks,
   getContent,
   getContentTranslations,
   getContentTypeByKey,
@@ -40,10 +41,11 @@ export default async function EditContentPage({ params }: PageProps) {
   // `listContentTypes` is the same cached call `getContentTypeByKey` resolves the
   // URL key through, so asking for the whole set costs no second request. A
   // `core/content-list` block needs it to offer the site's types as a choice.
-  const [user, type, contentTypes] = await Promise.all([
+  const [user, type, contentTypes, themeBlocks] = await Promise.all([
     getSession(),
     getContentTypeByKey(typeKey),
     listContentTypes(),
+    getActiveThemeEditorBlocks(),
   ]);
   if (!type) notFound();
 
@@ -103,6 +105,7 @@ export default async function EditContentPage({ params }: PageProps) {
         type={type}
         initial={initial}
         contentTypes={contentTypes.map(({ key, name }) => ({ key, name }))}
+        themeBlocks={themeBlocks}
         permissions={{
           canSave: can(user, "content:update"),
           canPublish: can(user, "content:publish"),

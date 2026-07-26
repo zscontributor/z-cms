@@ -137,7 +137,10 @@
     "empty": "No blocks yet. Add the first one below.",
     "add": "Add block",
     "delete": "Delete block",
-    "unknownTitle": "The block {type} is not recognised by the admin (it comes from a theme or a plugin). Its content is preserved on save.",
+    "generic": {
+      "hint": "The block {type} has no editing form from the active theme — editing its raw fields.",
+      "invalidJson": "Invalid JSON — fix it before this field can be saved."
+    },
     "htmlPlaceholder": "<p>Content…</p>",
     "item": "Item",
     "addItem": "Add {item}",
