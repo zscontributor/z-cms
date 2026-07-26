@@ -105,4 +105,18 @@ describe("middleware", () => {
 
     expect(csp(run())).toContain("connect-src 'self' https://api.example.org");
   });
+
+  it("narrows Vary to Accept-Encoding on /sitemap.xml and /robots.txt so a CDN can cache them", () => {
+    // The App Router's `Vary: RSC…` header is meaningless on a crawler-only path and
+    // is what makes Cloudflare refuse to cache it. These are the two resources SEO
+    // tools fetch, so they are the two that must be cacheable.
+    expect(run("http://site.test/sitemap.xml").headers.get("vary")).toBe("Accept-Encoding");
+    expect(run("http://site.test/robots.txt").headers.get("vary")).toBe("Accept-Encoding");
+  });
+
+  it("leaves Vary alone on a normal page, which still needs RSC negotiation", () => {
+    // Scoped on purpose: overriding Vary everywhere would break the client router's
+    // prefetch cache, which keys on exactly that header.
+    expect(run("http://site.test/blog").headers.get("vary")).not.toBe("Accept-Encoding");
+  });
 });

@@ -43,6 +43,9 @@ export async function GET(): Promise<Response> {
     headers: {
       "content-type": "text/plain; charset=utf-8",
       "cache-control": "public, max-age=300, s-maxage=300",
+      // Explicit length so the response is not streamed chunked — see the sitemap
+      // route. `middleware.ts` fixes the Vary header on this path so a CDN caches it.
+      "content-length": String(Buffer.byteLength(body)),
     },
   });
 }

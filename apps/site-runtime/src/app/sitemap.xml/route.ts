@@ -25,13 +25,27 @@ import { RENDER_REVALIDATE_SECONDS } from "@/lib/env";
 /** The Host header decides which site this is, so this can never be static. */
 export const dynamic = "force-dynamic";
 
-const XML_HEADERS = {
-  "content-type": "application/xml; charset=utf-8",
-  // A crawler may re-fetch often; let it and any CDN hold the doc briefly. The
-  // worker rebuilds on publish, and the fetch below revalidates, so a few minutes
-  // of staleness is the ceiling.
-  "cache-control": "public, max-age=300, s-maxage=300",
-} as const;
+/**
+ * The sitemap as an XML response.
+ *
+ * `Content-Length` is set explicitly: without it Next streams the body chunked,
+ * and a few stricter SEO crawlers wait for a declared length before they consider
+ * the document complete. `middleware.ts` overrides the App Router's `Vary: RSC…`
+ * header to `Accept-Encoding` on this path, which is what lets a CDN cache the
+ * result at all — most refuse to cache a response whose Vary is anything else.
+ */
+function xmlResponse(body: string): NextResponse {
+  return new NextResponse(body, {
+    headers: {
+      "content-type": "application/xml; charset=utf-8",
+      // A crawler may re-fetch often; let it and any CDN hold the doc briefly. The
+      // worker rebuilds on publish, and the fetch below revalidates, so a few
+      // minutes of staleness is the ceiling.
+      "cache-control": "public, max-age=300, s-maxage=300",
+      "content-length": String(Buffer.byteLength(body)),
+    },
+  });
+}
 
 /**
  * A valid, empty sitemap. Returned when the object does not exist yet — a site
@@ -91,7 +105,7 @@ export async function GET(): Promise<Response> {
   // Not built yet (or swept) — a valid empty sitemap, briefly cached so it fills
   // in once the worker writes the object.
   if (upstream.status === 403 || upstream.status === 404) {
-    return new NextResponse(EMPTY_SITEMAP, { headers: XML_HEADERS });
+    return xmlResponse(EMPTY_SITEMAP);
   }
 
   if (!upstream.ok) {
@@ -99,5 +113,5 @@ export async function GET(): Promise<Response> {
   }
 
   const xml = await upstream.text();
-  return new NextResponse(xml, { headers: XML_HEADERS });
+  return xmlResponse(xml);
 }

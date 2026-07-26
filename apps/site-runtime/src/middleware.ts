@@ -77,6 +77,21 @@ export function middleware(request: NextRequest) {
     );
   }
 
+  // `/sitemap.xml` and `/robots.txt` are fetched directly by crawlers and SEO
+  // tools, never navigated to by Next's client router — so the `Vary: RSC,
+  // Next-Router-…` header that NextResponse.next() stamps on for RSC negotiation
+  // is meaningless on them, and it is exactly what keeps a CDN from caching the
+  // response: Cloudflare (and most caches) refuse to cache anything whose Vary is
+  // not a bare `Accept-Encoding`, which is why these come back `cf-cache-status:
+  // DYNAMIC` and chunked. Narrowing Vary here lets the sitemap be edge-cached and
+  // served with a Content-Length — friendlier to the stricter SEO crawlers, and a
+  // load the origin then does not carry. Scoped to these two paths on purpose: a
+  // real page still needs the RSC Vary for the client router's prefetch cache.
+  const path = request.nextUrl.pathname;
+  if (path === "/sitemap.xml" || path === "/robots.txt") {
+    response.headers.set("vary", "Accept-Encoding");
+  }
+
   return response;
 }
 
