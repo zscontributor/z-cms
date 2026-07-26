@@ -6,7 +6,7 @@ import {
   SeoSchema,
   isBrowserSafeUrl,
 } from "./content";
-import { RoleSchema, PermissionSchema, type Role } from "./permissions";
+import { RoleSchema, type Role } from "./permissions";
 
 /**
  * The wire contract between cms-api and its two front ends.
@@ -33,7 +33,16 @@ export const SessionUserSchema = z.object({
   tenantId: z.uuid(),
   tenantSlug: z.string(),
   role: RoleSchema,
-  permissions: z.array(PermissionSchema),
+  /**
+   * Every permission the user holds: the role's core grants, plus any
+   * provided-permission an active plugin grants that role (a shop plugin's
+   * `order:read`). A bare string array, not the core `PermissionSchema` enum,
+   * because a plugin key is a legitimate member and the server is the one that
+   * produced this list — the strictness `PermissionSchema` buys on *inbound*
+   * requests (a plugin cannot ask for a word core never coined) is not the job
+   * here, where the value flows server -> admin UI.
+   */
+  permissions: z.array(z.string()),
   /** Whether this account is protected by a second factor. Drives the profile screen. */
   twoFactorEnabled: z.boolean(),
 });

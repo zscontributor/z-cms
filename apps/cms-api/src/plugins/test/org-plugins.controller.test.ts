@@ -31,9 +31,10 @@ function makeSystemDb() {
 
 const cache = { invalidateSite: vi.fn().mockResolvedValue(undefined) };
 const audit = { record: vi.fn().mockResolvedValue(undefined) };
+const plugins = { bustProvidedPermissions: vi.fn() };
 
 function makeController() {
-  return new OrgPluginsController(cache as any, audit as any);
+  return new OrgPluginsController(cache as any, audit as any, plugins as any);
 }
 
 const actor: RequestActor = {

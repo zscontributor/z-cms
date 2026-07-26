@@ -124,6 +124,18 @@ export const PERMISSIONS = [
    * an admin grants it to one at install.
    */
   "network:fetch",
+  /**
+   * Operate the plugin's OWN relational tables — the ones it declared in
+   * `manifest.database` and core created for it, reached through `ctx.db`.
+   *
+   * Like `network:fetch`, this scope is meaningless on its own and belongs to no
+   * role: no human action needs it, it exists for plugins, and an admin grants it
+   * to one at install. And like a plugin's tables themselves, it is a first-party
+   * privilege — the gateway refuses `db.*` to a plugin that is not first-party
+   * even when the scope was granted, because a community plugin has no tables for
+   * it to name. A plugin that only uses `ctx.storage` never asks for it.
+   */
+  "data:own",
   "audit:read",
   /**
    * Read the shop's orders — the customer names, contact details and delivery
@@ -280,4 +292,168 @@ export function highestRole(roles: readonly Role[], fallback: Role = "VIEWER"): 
     (best, role) => (ROLE_RANK[role] > ROLE_RANK[best] ? role : best),
     fallback,
   );
+}
+
+// ---------------------------------------------------------------------------
+// Plugin-provided permissions
+// ---------------------------------------------------------------------------
+
+/**
+ * A permission key as it flows through a session and a `can()` check — a plain
+ * string, because at that point it may be one of two things:
+ *
+ *   - a {@link Permission}, from the fixed core vocabulary above, or
+ *   - a permission a plugin *introduced* (see {@link ProvidedPermission}).
+ *
+ * The two are deliberately different acts and must not be confused. The core
+ * enum is what a plugin *requests to spend* against the host — a plugin asks for
+ * `content:read` and the gateway lets it read content. A provided permission is
+ * what a plugin *introduces to gate its own surface* — the Orders page a commerce
+ * plugin ships is not core's to guard, so the plugin brings the key that guards
+ * it. A plugin can never request a provided permission (there is no core API
+ * behind it), and it can never provide a core one (core already owns that word).
+ *
+ * `can(user, key)` is a membership test over the user's effective permission
+ * list, so it does not care which kind a key is. Everything upstream of that
+ * check — what a plugin may request, what it may provide, what a role grants —
+ * does care, and keeps them apart.
+ */
+export type PermissionKey = string;
+
+/**
+ * A permission a plugin introduces at install time to gate its own admin pages,
+ * endpoints and actions — WordPress's `add_cap` ("manage_woocommerce"), made
+ * legible and namespaced.
+ *
+ * The plugin declares these in its manifest. The admin sees them on the consent
+ * screen next to the core scopes, and `defaultRoles` says which existing roles
+ * should hold the new permission the moment the plugin is active — so a shop
+ * plugin can say "EDITOR sees orders" without the operator hand-editing roles.
+ */
+export interface ProvidedPermission {
+  /**
+   * The permission key. Namespaced (see {@link pluginPermissionPrefix}) so a
+   * community plugin can never mint a key that collides with a core permission
+   * or another plugin's. First-party (core) plugins are the sole exception and
+   * may register bare `resource:action` keys — on this instance they ARE the
+   * platform, and a commerce plugin extracted from core keeps `order:read`.
+   */
+  key: PermissionKey;
+  /** One line the admin reads on the consent screen. What holding this allows. */
+  description: string;
+  /**
+   * Roles that should hold this permission by default once the plugin is active.
+   * Resolved per session by {@link pluginPermissionGrants}; omit for a permission
+   * no role gets automatically (one an operator assigns deliberately, later).
+   */
+  defaultRoles?: Role[];
+}
+
+/**
+ * The prefix every provided permission of a community plugin must start with.
+ *
+ *   "vn.zsoft.plugin.crm"  ->  "x:vn_zsoft_plugin_crm:"
+ *
+ * Same reasoning as the table prefix: derived from the plugin id (which the
+ * marketplace guarantees unique), never chosen by the plugin — a plugin that got
+ * to pick its own namespace would pick `order` and we would be back to trusting
+ * it. The leading `x:` marks the whole key as plugin-introduced at a glance, so a
+ * `can()` on a permission core has never heard of is obviously not a core bug.
+ */
+export function pluginPermissionPrefix(pluginId: string): string {
+  const slug = pluginId
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
+  return `x:${slug}:`;
+}
+
+/** Postgres/consent identifiers stay legible; a longer key is a bug, not a name. */
+const MAX_PERMISSION_KEY_LENGTH = 96;
+
+export interface ProvidedPermissionViolation {
+  key: string;
+  reason: "missing-prefix" | "reserved-core" | "malformed" | "too-long";
+}
+
+/**
+ * Checks a plugin's declared provided-permissions before any of its code runs —
+ * the install-time gate, the only cheap moment to refuse them.
+ *
+ * `isCore` relaxes the namespacing rule for first-party plugins (see
+ * {@link ProvidedPermission.key}); everything else is held to the prefix. A key
+ * that duplicates a core permission is refused from a community plugin
+ * ("reserved-core") because core already answers for that word — an admin who
+ * granted a role `order:read` meant the platform's, not a stranger's.
+ */
+export function validateProvidedPermissions(
+  pluginId: string,
+  isCore: boolean,
+  provided: readonly ProvidedPermission[] | undefined,
+): ProvidedPermissionViolation[] {
+  if (!provided?.length) return [];
+
+  const corePermissions = new Set<string>(PERMISSIONS);
+  const prefix = pluginPermissionPrefix(pluginId);
+  const violations: ProvidedPermissionViolation[] = [];
+
+  for (const { key } of provided) {
+    if (key.length > MAX_PERMISSION_KEY_LENGTH) {
+      violations.push({ key, reason: "too-long" });
+      continue;
+    }
+
+    if (isCore) {
+      // A first-party key is a bare, well-formed core-shaped word (`order:read`)
+      // or a namespaced one — both are theirs to mint. Only shape is enforced.
+      if (!/^(x:[a-z0-9_]+:)?[a-z-]+:[a-z-]+$/.test(key)) {
+        violations.push({ key, reason: "malformed" });
+      }
+      continue;
+    }
+
+    if (corePermissions.has(key)) {
+      violations.push({ key, reason: "reserved-core" });
+      continue;
+    }
+
+    if (!key.startsWith(prefix)) {
+      violations.push({ key, reason: "missing-prefix" });
+      continue;
+    }
+
+    // After the prefix, one or two lowercase `resource:action` segments.
+    const tail = key.slice(prefix.length);
+    if (!/^[a-z][a-z0-9-]*(:[a-z][a-z0-9-]*)?$/.test(tail)) {
+      violations.push({ key, reason: "malformed" });
+    }
+  }
+
+  return violations;
+}
+
+/**
+ * The provided-permission keys a user with these roles holds by default, given
+ * the permissions currently active on their site.
+ *
+ * Pure and additive: it never removes a core grant, it only unions in the plugin
+ * keys whose `defaultRoles` intersect the user's roles. The caller (session
+ * assembly) concatenates the result onto {@link permissionsForRole}, so a `can()`
+ * check downstream sees one flat list and cannot tell a core grant from a plugin
+ * one — which is exactly right, because at the point of the check they are the
+ * same kind of thing: a permission the user holds.
+ */
+export function pluginPermissionGrants(
+  roles: readonly Role[],
+  active: readonly ProvidedPermission[],
+): PermissionKey[] {
+  const held = new Set<Role>(roles);
+  const keys = new Set<PermissionKey>();
+
+  for (const perm of active) {
+    if (perm.defaultRoles?.some((r) => held.has(r))) keys.add(perm.key);
+  }
+
+  return [...keys];
 }

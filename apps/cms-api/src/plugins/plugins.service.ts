@@ -1,7 +1,8 @@
 import { BadGatewayException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { getSystemDb } from "@zcmsorg/database";
-import type { Permission, RenderIntegration } from "@zcmsorg/schemas";
+import { generatePluginTableDdl, type PluginTableSchema } from "@zcmsorg/plugin-sdk";
+import type { ProvidedPermission, Permission, RenderIntegration } from "@zcmsorg/schemas";
 import { t } from "../common/i18n";
 import { PluginTokenService } from "./plugin-token.service";
 
@@ -67,6 +68,9 @@ async function runtimeHttpError(res: Response): Promise<Error> {
  * vocabulary — the routing decision travels as this explicit value, never inferred
  * on the far side from whether a bundle happens to exist.
  */
+/** How long a site's active provided-permissions stay cached on the auth path. */
+const PROVIDED_PERMISSIONS_TTL_MS = 30_000;
+
 export type PluginTrust = "builtin" | "marketplace" | "operator";
 
 /** Maps a version's stored origin to the runtime's load route. */
@@ -153,10 +157,79 @@ const PUBLIC_INTEGRATION_PROJECTORS: Record<string, PublicIntegrationProjector> 
 export class PluginsService {
   private readonly logger = new Logger(PluginsService.name);
 
+  /** (tenantId:siteId) -> the provided-permissions active there, cached briefly. */
+  private readonly providedCache = new Map<
+    string,
+    { at: number; perms: ProvidedPermission[] }
+  >();
+
   constructor(
     private readonly config: ConfigService,
     private readonly tokens: PluginTokenService,
   ) {}
+
+  /**
+   * The provided-permissions a site's ACTIVE plugins introduce — the keys a
+   * commerce plugin brings to guard its own Orders screen (see
+   * `manifest.permissionsProvided`). Read on the auth hot path to union plugin
+   * grants onto a user's role, so it is cached: activation is rare, requests are
+   * not, and a permission appearing 30s after a plugin is switched on is fine.
+   *
+   * `siteId` omitted resolves only the tenant-wide (org) tier — the baseline the
+   * session builds before a site is chosen. With a site, both tiers apply.
+   */
+  async activeProvidedPermissions(
+    tenantId: string,
+    siteId: string | undefined,
+  ): Promise<ProvidedPermission[]> {
+    const cacheKey = `${tenantId}:${siteId ?? "-"}`;
+    const hit = this.providedCache.get(cacheKey);
+    const now = Date.now();
+    if (hit && now - hit.at < PROVIDED_PERMISSIONS_TTL_MS) return hit.perms;
+
+    const db = getSystemDb();
+    const [siteRows, orgRows] = await Promise.all([
+      siteId
+        ? db.sitePlugin.findMany({
+            where: { tenantId, siteId, status: "ACTIVE" },
+            include: { version: { select: { manifest: true } } },
+          })
+        : Promise.resolve([]),
+      db.orgPlugin.findMany({
+        where: { tenantId, status: "ACTIVE" },
+        include: { version: { select: { manifest: true } } },
+      }),
+    ]);
+
+    // Keyed by permission key so a plugin active at both tiers is counted once.
+    // Collision across plugins cannot happen: `validateProvidedPermissions`
+    // namespaces every community key and reserves the core ones at install.
+    const byKey = new Map<string, ProvidedPermission>();
+    for (const row of [...siteRows, ...orgRows]) {
+      const manifest = row.version.manifest as {
+        permissionsProvided?: ProvidedPermission[];
+      } | null;
+      for (const perm of manifest?.permissionsProvided ?? []) {
+        if (!byKey.has(perm.key)) byKey.set(perm.key, perm);
+      }
+    }
+
+    const perms = [...byKey.values()];
+    this.providedCache.set(cacheKey, { at: now, perms });
+    return perms;
+  }
+
+  /**
+   * Drop cached provided-permissions for a tenant. Called whenever a plugin's
+   * active state changes (activate/deactivate/uninstall): the cache is a latency
+   * optimisation, not a source of truth, so the safe move on any change is to
+   * clear every one of the tenant's site keys and let them refill on demand.
+   */
+  bustProvidedPermissions(tenantId: string): void {
+    for (const key of this.providedCache.keys()) {
+      if (key.startsWith(`${tenantId}:`)) this.providedCache.delete(key);
+    }
+  }
 
   /** Capabilities contributed by the site's ACTIVE plugins — themes read these. */
   async capabilitiesFor(tenantId: string, siteId: string): Promise<string[]> {
@@ -357,6 +430,67 @@ export class PluginsService {
   }
 
   /**
+   * Creates (or reconciles) a first-party plugin's declared tables — the DDL half
+   * of activation, run before `setup()` so the plugin's own setup can already
+   * write to its tables.
+   *
+   * Runs on `getSystemDb()`, deliberately outside any tenant transaction: the
+   * table and its RLS policy are global objects created once, and the per-tenant
+   * isolation is the policy itself, not the connection that installed it. The DDL
+   * is idempotent (every statement is `IF NOT EXISTS` or drop-then-create), so
+   * this is safe to run on every activation, the way WordPress re-runs `dbDelta`.
+   *
+   * A no-op for a community plugin: owning tables is a first-party privilege, and
+   * install already refused a `database` block from anyone else, so there is
+   * nothing here to create. The `isCore` re-check is defence in depth.
+   */
+  async ensurePluginTables(pluginKey: string): Promise<void> {
+    const plugin = await getSystemDb().plugin.findUnique({
+      where: { key: pluginKey },
+      include: { versions: { orderBy: { createdAt: "desc" }, take: 1 } },
+    });
+    if (!plugin?.isCore) return;
+
+    const manifest = plugin.versions[0]?.manifest as {
+      database?: { tables?: PluginTableSchema[] };
+    } | null;
+    const tables = manifest?.database?.tables ?? [];
+
+    for (const table of tables) {
+      for (const statement of generatePluginTableDdl(plugin.key, table)) {
+        await getSystemDb().$executeRawUnsafe(statement);
+      }
+    }
+  }
+
+  /**
+   * Runs a plugin's `teardown()` on deactivation — the mirror of `runSetup`, and
+   * like it a dispatch on a plugin that is on its way out of ACTIVE, so it takes a
+   * key and resolves the row directly rather than through `activePlugins`.
+   *
+   * Best-effort by contract: the caller runs this, then flips the install to
+   * INACTIVE regardless of the outcome. A plugin is deactivated because the admin
+   * said so, not because its teardown agreed — so a throw here is returned, not
+   * raised, for the caller to log.
+   */
+  async runTeardown(
+    tenantId: string,
+    siteId: string,
+    pluginKey: string,
+  ): Promise<{ ok: boolean; error?: string }> {
+    const row = await getSystemDb().sitePlugin.findFirst({
+      where: { tenantId, siteId, plugin: { key: pluginKey } },
+      include: { plugin: true, version: true },
+    });
+    if (!row) return { ok: true };
+
+    const res = await this.execute(tenantId, siteId, this.toTarget(row), {
+      kind: "teardown",
+    });
+    return { ok: res.ok, error: res.error };
+  }
+
+  /**
    * Runs one deferred job for one plugin, in the sandbox.
    *
    * Reached from the worker via the internal run-job endpoint. It resolves the
@@ -525,7 +659,7 @@ export class PluginsService {
    */
   private networkBudgetMs(kind: string): number {
     if (kind === "job" || kind === "call") return 35_000;
-    if (kind === "setup") return 15_000;
+    if (kind === "setup" || kind === "teardown") return 15_000;
     if (kind === "filter") return 3_000;
     return 12_000; // action
   }

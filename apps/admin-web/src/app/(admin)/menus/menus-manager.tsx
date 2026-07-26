@@ -111,7 +111,7 @@ export function MenusManager({
       {canManage ? (
         <div className="rounded-lg border border-dashed border-[var(--border-strong)] bg-[var(--surface-raised)] p-4">
           <p className="mb-2 text-sm font-medium">{t("admin.menus.create")}</p>
-          <div className="flex flex-wrap items-end gap-3">
+          <div className="flex flex-wrap items-start gap-3">
             <Field label={t("admin.menus.newLocation")} hint={t("admin.menus.newLocationHint")}>
               <Input
                 value={newKey}
@@ -128,9 +128,14 @@ export function MenusManager({
                 className="w-56"
               />
             </Field>
-            <Button variant="secondary" onClick={addMenu} disabled={!newKey.trim()}>
-              {t("admin.menus.create")}
-            </Button>
+            <div className="flex flex-col">
+              <span aria-hidden className="mb-1.5 block text-xs">
+                &nbsp;
+              </span>
+              <Button variant="secondary" onClick={addMenu} disabled={!newKey.trim()}>
+                {t("admin.menus.create")}
+              </Button>
+            </div>
           </div>
         </div>
       ) : null}

@@ -124,6 +124,52 @@ export interface PluginHttpApi {
   fetch(request: PluginHttpRequest): Promise<PluginHttpResponse>;
 }
 
+/**
+ * Read/write access to the plugin's OWN relational tables — the ones it declared
+ * in `manifest.database` and core created. Requires the `data:own` scope, and is
+ * available only to first-party plugins (a community plugin uses `ctx.storage`).
+ *
+ * This is not a database handle. There is no connection, no transaction, no SQL
+ * string under any of these methods — the plugin names a table it owns and a
+ * plain filter, the gateway builds the parameterized query on the far side of
+ * the boundary, and the plugin gets rows back. Everything that follows is the
+ * point, and it mirrors `storage`:
+ *
+ *   - **The table must be the plugin's own.** Every method is checked against the
+ *     installed manifest's declared tables, read from the database at call time.
+ *     A plugin cannot name `content`, `users`, or another plugin's table — it has
+ *     no way to reach one, the same way `storage` has no way to reach another
+ *     plugin's keys.
+ *   - **Every row is scoped to this site.** `tenant_id` and `site_id` are stamped
+ *     from the token on every insert and pinned on every read/update/delete. A
+ *     plugin cannot phrase a query that reaches another site's rows, and Postgres
+ *     RLS enforces the tenant half a second time, in the database.
+ *   - **Only a filter, never an expression.** `where` is equality on the table's
+ *     own columns. There are no operators, no `OR`, no raw fragments — nothing a
+ *     plugin says becomes SQL except as a bound parameter.
+ */
+export interface PluginDatabaseApi {
+  insert<T = Record<string, unknown>>(
+    table: string,
+    row: Record<string, unknown>,
+  ): Promise<T>;
+  select<T = Record<string, unknown>>(
+    table: string,
+    options?: {
+      where?: Record<string, unknown>;
+      orderBy?: { column: string; direction?: "asc" | "desc" };
+      limit?: number;
+      offset?: number;
+    },
+  ): Promise<T[]>;
+  update<T = Record<string, unknown>>(
+    table: string,
+    patch: Record<string, unknown>,
+    where: Record<string, unknown>,
+  ): Promise<T[]>;
+  delete(table: string, where: Record<string, unknown>): Promise<{ deleted: number }>;
+}
+
 export interface PluginContext<S = Record<string, unknown>> {
   /** The plugin's own settings for THIS site, merged with schema defaults. */
   settings: S;
@@ -143,6 +189,13 @@ export interface PluginContext<S = Record<string, unknown>> {
   site: { id: string; name: string; locale: string };
   log: PluginLogger;
   storage: PluginStorage;
+  /**
+   * The plugin's own relational tables. Present on every context, but every call
+   * is refused unless the plugin holds `data:own` and declared the table — a
+   * community plugin that touches it gets the same "scope not granted" a missing
+   * permission earns anywhere else.
+   */
+  db: PluginDatabaseApi;
   content: PluginContentApi;
   jobs: PluginJobsApi;
   mail: PluginMailApi;

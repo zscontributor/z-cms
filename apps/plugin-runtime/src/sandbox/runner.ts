@@ -4,7 +4,7 @@ import { Worker } from "node:worker_threads";
 import { callGateway } from "../gateway-client";
 
 export interface Invocation {
-  kind: "action" | "job" | "call" | "filter" | "setup";
+  kind: "action" | "job" | "call" | "filter" | "setup" | "teardown";
   name?: string;
   payload?: unknown;
   value?: unknown;
@@ -62,6 +62,7 @@ const TIMEOUT_MS = {
   call: 30_000,
   filter: 800,
   setup: 10_000,
+  teardown: 10_000,
 } as const;
 /** The worker is killed at this point whether or not it agrees to stop. */
 const KILL_GRACE_MS = 500;

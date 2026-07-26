@@ -183,7 +183,10 @@ function makeService() {
 
   // The real signer. A JWT test against a mocked signer tests nothing.
   const jwt = new JwtService();
-  const service = new AuthService(jwt, config, revocations, events, mfa);
+  // No permission-introducing plugin is active in these fixtures; the session's
+  // provided-permission lookup resolves to nothing, leaving the role's own grants.
+  const plugins = { activeProvidedPermissions: vi.fn(async () => []) } as any;
+  const service = new AuthService(jwt, config, revocations, events, mfa, plugins);
 
   /**
    * Login, asserting it produced a session rather than an MFA challenge.

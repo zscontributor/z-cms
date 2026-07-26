@@ -29,7 +29,12 @@ function makeSystemDb() {
   };
 }
 
-const plugins = { runSetup: vi.fn().mockResolvedValue(undefined) };
+const plugins = {
+  runSetup: vi.fn().mockResolvedValue(undefined),
+  ensurePluginTables: vi.fn().mockResolvedValue(undefined),
+  runTeardown: vi.fn().mockResolvedValue({ ok: true }),
+  bustProvidedPermissions: vi.fn(),
+};
 const cache = { invalidateSite: vi.fn().mockResolvedValue(undefined) };
 const audit = { record: vi.fn().mockResolvedValue(undefined) };
 

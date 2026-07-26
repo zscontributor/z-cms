@@ -1,4 +1,9 @@
-import type { PackageMediaDeclaration, Permission } from "@zcmsorg/schemas";
+import type {
+  PackageMediaDeclaration,
+  Permission,
+  ProvidedPermission,
+} from "@zcmsorg/schemas";
+import type { PluginTableSchema } from "./table-schema";
 
 /**
  * A plugin declares, up front and in machine-readable form, everything it wants
@@ -119,6 +124,26 @@ export interface PluginManifest {
   capabilities?: string[];
 
   /**
+   * Permissions this plugin *introduces* to gate its own admin pages, endpoints
+   * and actions — the shop plugin that ships an Orders screen brings the
+   * `order:read` that guards it, because that screen is not core's to guard.
+   *
+   * The complement of `permissions` above, and not to be confused with it:
+   * `permissions` are core scopes the plugin *requests to spend* against the host
+   * (it asks for `content:read`, the gateway lets it read content);
+   * `permissionsProvided` are new keys the plugin *brings into existence* for a
+   * role to hold. A plugin can never request one of these (there is no core API
+   * behind it) and a community plugin can never provide a core one — every key
+   * here is namespaced (`x:<slug>:...`) and validated at install by
+   * `validateProvidedPermissions`. First-party plugins may mint bare keys.
+   *
+   * Each key's `defaultRoles` says which roles hold it the moment the plugin is
+   * active, so a plugin can wire "EDITOR sees orders" without the operator
+   * hand-editing any role.
+   */
+  permissionsProvided?: ProvidedPermission[];
+
+  /**
    * What the catalogue shows: up to three screenshots and, optionally, a video.
    *
    * A plugin is harder to photograph than a theme — much of what it does has no
@@ -151,10 +176,17 @@ export interface PluginManifest {
    *   - every table it names starts with `pluginTablePrefix(id)`.
    *
    * A plugin that declares a table outside its prefix is refused installation.
-   * Declaring the tables here, rather than letting a plugin issue DDL, is what
-   * makes that check possible before any of its code has run.
+   * Declaring the tables here — as a schema core turns into DDL, never as SQL the
+   * plugin writes — is what makes that check possible before any of its code has
+   * run, and what keeps a plugin-chosen string from ever reaching a `CREATE TABLE`
+   * as anything but an already-validated identifier.
+   *
+   * Owning tables is a first-party privilege: a community plugin is refused a
+   * `database` block at install and gets `ctx.storage` instead. The rows a plugin
+   * does own are reached through `ctx.db`, which scopes every query to the site
+   * and tenant from the plugin's token.
    */
   database?: {
-    tables: string[];
+    tables: PluginTableSchema[];
   };
 }

@@ -9,8 +9,12 @@ import {
   canGrantRole,
   highestRole,
   permissionsForRole,
+  pluginPermissionGrants,
+  pluginPermissionPrefix,
   roleHasPermission,
+  validateProvidedPermissions,
   type Permission,
+  type ProvidedPermission,
   type Role,
 } from "../permissions";
 
@@ -265,5 +269,137 @@ describe("PERMISSIONS and ROLES vocabularies", () => {
     for (const p of PERMISSIONS as readonly Permission[]) {
       expect(p).toMatch(/^[a-z-]+:[a-z-]+$/);
     }
+  });
+});
+
+describe("pluginPermissionPrefix", () => {
+  it("derives a namespaced prefix from the plugin id", () => {
+    expect(pluginPermissionPrefix("vn.zsoft.plugin.crm")).toBe(
+      "x:vn_zsoft_plugin_crm:",
+    );
+  });
+
+  it("gives two plugins named 'crm' distinct namespaces via their full id", () => {
+    // The whole reason the prefix is the full reverse-DNS id, not its last segment:
+    // two publishers may both ship a "crm" and must not fight over a permission key.
+    expect(pluginPermissionPrefix("com.acme.crm")).not.toBe(
+      pluginPermissionPrefix("io.globex.crm"),
+    );
+  });
+});
+
+describe("validateProvidedPermissions", () => {
+  const provide = (...keys: string[]): ProvidedPermission[] =>
+    keys.map((key) => ({ key, description: key }));
+
+  it("accepts a community plugin's correctly namespaced keys", () => {
+    const v = validateProvidedPermissions(
+      "vn.zsoft.plugin.crm",
+      false,
+      provide("x:vn_zsoft_plugin_crm:lead:read", "x:vn_zsoft_plugin_crm:lead:manage"),
+    );
+    expect(v).toEqual([]);
+  });
+
+  it("REFUSES a community plugin a bare, non-core key", () => {
+    // THE LAND-GRAB. A community plugin declaring `lead:read` would, if waved
+    // through, mint an un-namespaced key indistinguishable from a platform one. It
+    // must be forced into its own namespace instead.
+    const v = validateProvidedPermissions("vn.zsoft.plugin.crm", false, provide("lead:read"));
+    expect(v).toEqual([{ key: "lead:read", reason: "missing-prefix" }]);
+  });
+
+  it("REFUSES a community plugin a key that shadows a core permission verbatim", () => {
+    // A key equal to a core permission is reserved outright — core already answers
+    // for that word, and an admin who granted a role `order:read` meant the
+    // platform's, not a stranger's. Caught before the prefix rule even applies.
+    const v = validateProvidedPermissions(
+      "vn.zsoft.plugin.crm",
+      false,
+      provide("order:read"),
+    );
+    expect(v).toEqual([{ key: "order:read", reason: "reserved-core" }]);
+  });
+
+  it("REFUSES a community key under the RIGHT prefix but the WRONG plugin's", () => {
+    // A plugin cannot borrow another's namespace to look official.
+    const v = validateProvidedPermissions(
+      "vn.zsoft.plugin.crm",
+      false,
+      provide("x:vn_zsoft_plugin_shop:order:read"),
+    );
+    expect(v).toEqual([
+      { key: "x:vn_zsoft_plugin_shop:order:read", reason: "missing-prefix" },
+    ]);
+  });
+
+  it("lets a first-party (core) plugin mint a bare core-shaped key", () => {
+    // A commerce plugin extracted from core keeps `order:read`. Only first-party
+    // packages, flagged isCore from a signed manifest, get this.
+    const v = validateProvidedPermissions(
+      "vn.zsoft.commerce",
+      true,
+      provide("order:read", "order:manage", "commerce:configure"),
+    );
+    expect(v).toEqual([]);
+  });
+
+  it("still rejects a malformed key even from a first-party plugin", () => {
+    const v = validateProvidedPermissions("vn.zsoft.commerce", true, provide("order:*"));
+    expect(v).toEqual([{ key: "order:*", reason: "malformed" }]);
+  });
+
+  it("rejects a namespaced key whose tail is not resource:action shaped", () => {
+    const v = validateProvidedPermissions(
+      "vn.zsoft.plugin.crm",
+      false,
+      provide("x:vn_zsoft_plugin_crm:LEAD"),
+    );
+    expect(v).toEqual([{ key: "x:vn_zsoft_plugin_crm:LEAD", reason: "malformed" }]);
+  });
+
+  it("treats an absent declaration as no violations", () => {
+    expect(validateProvidedPermissions("vn.zsoft.plugin.crm", false, undefined)).toEqual([]);
+    expect(validateProvidedPermissions("vn.zsoft.plugin.crm", false, [])).toEqual([]);
+  });
+});
+
+describe("pluginPermissionGrants", () => {
+  const orderRead: ProvidedPermission = {
+    key: "order:read",
+    description: "Read orders",
+    defaultRoles: ["EDITOR"],
+  };
+  const orderManage: ProvidedPermission = {
+    key: "order:manage",
+    description: "Move an order along",
+    defaultRoles: ["ADMIN"],
+  };
+  const active = [orderRead, orderManage];
+
+  it("grants a permission to a role listed in its defaultRoles", () => {
+    expect(pluginPermissionGrants(["EDITOR"], active)).toEqual(["order:read"]);
+  });
+
+  it("does NOT grant an EDITOR a permission reserved for ADMIN", () => {
+    // The escalation test, at the plugin layer: an EDITOR must not pick up
+    // order:manage just because the shop plugin is active.
+    expect(pluginPermissionGrants(["EDITOR"], active)).not.toContain("order:manage");
+  });
+
+  it("unions grants across all of a user's roles without duplicating", () => {
+    const grants = pluginPermissionGrants(["EDITOR", "ADMIN"], active);
+    expect(new Set(grants)).toEqual(new Set(["order:read", "order:manage"]));
+    expect(grants.length).toBe(2);
+  });
+
+  it("grants nothing for a permission with no defaultRoles", () => {
+    // A permission an operator must assign deliberately is held by no one on install.
+    const manual: ProvidedPermission = { key: "order:refund", description: "Refund" };
+    expect(pluginPermissionGrants(["ADMIN", "EDITOR"], [manual])).toEqual([]);
+  });
+
+  it("grants nothing when no plugin permissions are active", () => {
+    expect(pluginPermissionGrants(["OWNER"], [])).toEqual([]);
   });
 });

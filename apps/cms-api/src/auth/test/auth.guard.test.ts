@@ -96,9 +96,12 @@ function makeGuard(metadata: Record<string, unknown> = {}) {
   const revocations = { isRevoked: vi.fn(async () => false), revoke: vi.fn() } as any;
   const events = { record: vi.fn() } as any;
   const jwt = new JwtService();
+  // No permission-introducing plugin is active in these fixtures, so the guard's
+  // provided-permission lookup resolves to nothing and the grant set is the role's.
+  const plugins = { activeProvidedPermissions: vi.fn(async () => []) } as any;
 
-  const guard = new AuthGuard(reflector, jwt, config, revocations, events);
-  return { guard, jwt, revocations, events, db: state.db };
+  const guard = new AuthGuard(reflector, jwt, config, revocations, events, plugins);
+  return { guard, jwt, revocations, events, plugins, db: state.db };
 }
 
 /** A fake ExecutionContext exposing just the request the guard reads. */

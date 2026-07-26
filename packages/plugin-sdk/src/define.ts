@@ -75,6 +75,22 @@ export interface Plugin<S = Record<string, unknown>> {
 
   /** Runs once when the plugin is activated on a site (migrations, defaults). */
   setup?: (ctx: PluginContext<S>) => Promise<void> | void;
+
+  /**
+   * Runs once when the plugin is DEACTIVATED on a site — the mirror of `setup`.
+   *
+   * The place to release what activation acquired: cancel a scheduled job, write a
+   * final flush to `ctx.storage`, tell a third party this site has gone quiet.
+   * Unlike `setup`, a throw here does NOT stop the transition — WordPress
+   * deactivates a plugin whether or not its hook was clean, and so does this: the
+   * error is logged and deactivation proceeds. A plugin that must not lose data on
+   * the way out should not rely on a best-effort callback to save it.
+   *
+   * This is NOT uninstall. The install, its granted permissions and its data all
+   * survive a deactivation; dropping a plugin's own tables belongs to a separate
+   * uninstall path, not here.
+   */
+  teardown?: (ctx: PluginContext<S>) => Promise<void> | void;
 }
 
 export function definePlugin<S = Record<string, unknown>>(plugin: Plugin<S>): Plugin<S> {

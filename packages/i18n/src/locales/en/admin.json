@@ -176,6 +176,17 @@
       "updateBadge": "Update to {version}",
       "installFailed": "The package could not be installed.",
       "installDenied": "You do not have permission to install this.",
+      "sections": {
+        "installed": "Installed on this site",
+        "installedDescription": "Themes and plugins currently installed on this site.",
+        "available": "Marketplace",
+        "availableDescription": "Community themes and plugins you can install into this site."
+      },
+      "installedEmpty": "Nothing is installed on this site yet.",
+      "manage": "Manage",
+      "activeBadge": "Active",
+      "inactiveBadge": "Inactive",
+      "updateAvailableBadge": "Update available",
       "tabsLabel": "Marketplace package type",
       "categoriesLabel": "Marketplace categories",
       "tabs": {

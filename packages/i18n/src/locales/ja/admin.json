@@ -176,6 +176,17 @@
       "updateBadge": "{version}にアップデート",
       "installFailed": "パッケージをインストールできませんでした。",
       "installDenied": "これをインストールする権限がありません。",
+      "sections": {
+        "installed": "このサイトにインストール済み",
+        "installedDescription": "現在このサイトにインストールされているテーマとプラグイン。",
+        "available": "マーケットプレイス",
+        "availableDescription": "このサイトにインストールできるコミュニティのテーマとプラグイン。"
+      },
+      "installedEmpty": "このサイトにはまだ何もインストールされていません。",
+      "manage": "管理",
+      "activeBadge": "有効",
+      "inactiveBadge": "無効",
+      "updateAvailableBadge": "アップデートあり",
       "tabsLabel": "マーケットプレイスのパッケージ種別",
       "categoriesLabel": "マーケットプレイスのカテゴリ",
       "tabs": {

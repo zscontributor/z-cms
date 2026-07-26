@@ -11,12 +11,15 @@ import { Reflector } from "@nestjs/core";
 import { getSystemDb } from "@zcmsorg/database";
 import {
   permissionsForRole,
+  pluginPermissionGrants,
   type AccessTokenClaims,
   type Permission,
+  type PermissionKey,
   type Role,
 } from "@zcmsorg/schemas";
 import { timingSafeEqual } from "node:crypto";
 import { t } from "../common/i18n";
+import { PluginsService } from "../plugins/plugins.service";
 import { RevocationService } from "./revocation.service";
 import { SecurityEventService } from "../audit/security-event.service";
 import type { AuthedRequest } from "../common/request-context";
@@ -54,6 +57,7 @@ export class AuthGuard implements CanActivate {
     private readonly config: ConfigService,
     private readonly revocations: RevocationService,
     private readonly events: SecurityEventService,
+    private readonly plugins: PluginsService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -167,7 +171,18 @@ export class AuthGuard implements CanActivate {
     }
     if (!role) throw new ForbiddenException(t()("errors.auth.noRole"));
 
-    const permissions = [...permissionsForRole(role)];
+    // The role's core grants, plus any provided-permission the site's active
+    // plugins hand this role (the Orders screen a commerce plugin guards with its
+    // own `order:read`). The plugin lookup is cached, so the common path — no
+    // permission-introducing plugin active — costs one map hit and nothing more.
+    const provided = await this.plugins.activeProvidedPermissions(
+      user.tenantId,
+      siteId,
+    );
+    const permissions: PermissionKey[] = [
+      ...permissionsForRole(role),
+      ...pluginPermissionGrants([role], provided),
+    ];
 
     req.actor = {
       userId: user.id,

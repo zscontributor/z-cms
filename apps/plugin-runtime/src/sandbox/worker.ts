@@ -36,7 +36,8 @@ interface WorkerInput {
     | { kind: "job"; name: string; payload: unknown }
     | { kind: "call"; name: string; payload: unknown }
     | { kind: "filter"; name: string; value: unknown; context: unknown }
-    | { kind: "setup" };
+    | { kind: "setup" }
+    | { kind: "teardown" };
   settings: Record<string, unknown>;
   /** Declared secret name -> is it configured. Booleans only; never a value. */
   secrets: Record<string, boolean>;
@@ -119,6 +120,17 @@ const BOOTSTRAP = `
       delete: (key)        => rpc("storage.delete", { key }),
       list:   (prefix)     => rpc("storage.list",   { prefix }),
     },
+    db: {
+      // Same RPC shape as storage: no connection, no SQL, no socket. The plugin
+      // names a table it owns and a plain filter; cms-api builds the parameterized
+      // query on the far side, checks the table against the installed manifest, and
+      // stamps tenant/site from the token. A community plugin's call is refused for
+      // want of the \`data:own\` scope, exactly like any other ungranted method.
+      insert: (table, row)          => rpc("db.insert", { table, row }),
+      select: (table, options)      => rpc("db.select", { table, options: options || {} }),
+      update: (table, patch, where) => rpc("db.update", { table, patch, where }),
+      delete: (table, where)        => rpc("db.delete", { table, where }),
+    },
     content: {
       get:  (contentId) => rpc("content.get",  { contentId }),
       list: (query)     => rpc("content.list", { query: query || {} }),
@@ -178,6 +190,12 @@ const BOOTSTRAP = `
   if (invocation.kind === "setup") {
     if (!plugin.setup) return JSON.stringify(null);
     await plugin.setup(ctx);
+    return JSON.stringify(null);
+  }
+
+  if (invocation.kind === "teardown") {
+    if (!plugin.teardown) return JSON.stringify(null);
+    await plugin.teardown(ctx);
     return JSON.stringify(null);
   }
 

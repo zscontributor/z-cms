@@ -12,8 +12,17 @@ import {
 import { ApiOperation, ApiParam, ApiTags } from "@nestjs/swagger";
 import { db, getSystemDb } from "@zcmsorg/database";
 import { normalizeChangelog } from "@zcmsorg/package";
-import { pluginTablePrefix, validatePluginTables } from "@zcmsorg/plugin-sdk";
-import { PERMISSIONS, type Permission } from "@zcmsorg/schemas";
+import {
+  pluginTablePrefix,
+  validatePluginTableSchemas,
+  type PluginTableSchema,
+} from "@zcmsorg/plugin-sdk";
+import {
+  PERMISSIONS,
+  validateProvidedPermissions,
+  type Permission,
+  type ProvidedPermission,
+} from "@zcmsorg/schemas";
 import { invalidHostDeclarations } from "./plugin-egress";
 import { Actor, RequirePermissions } from "../auth/decorators";
 import { t } from "../common/i18n";
@@ -21,6 +30,7 @@ import type { RequestActor } from "../common/request-context";
 import { AuditService } from "../audit/audit.module";
 import { ApiAuthed, ApiNotFound, ApiZodBody, ApiZodResponse } from "../openapi/decorators";
 import { CacheService } from "../redis/cache.service";
+import { PluginsService } from "./plugins.service";
 import {
   type CatalogPlugin,
   type SettingsSchema,
@@ -52,6 +62,7 @@ export class OrgPluginsController {
   constructor(
     private readonly cache: CacheService,
     private readonly audit: AuditService,
+    private readonly plugins: PluginsService,
   ) {}
 
   @Get()
@@ -172,15 +183,32 @@ export class OrgPluginsController {
     }
 
     const manifest = (latest.manifest ?? {}) as {
-      database?: { tables?: string[] };
+      database?: { tables?: PluginTableSchema[] };
       network?: { hosts?: string[] };
+      permissionsProvided?: ProvidedPermission[];
     };
-    const violations = validatePluginTables(plugin.key, manifest.database?.tables);
+    if (manifest.database?.tables?.length && !plugin.isCore) {
+      throw new BadRequestException(t()("errors.plugins.tablesFirstPartyOnly"));
+    }
+    const violations = validatePluginTableSchemas(plugin.key, manifest.database?.tables);
     if (violations.length) {
       throw new BadRequestException(
         t()("errors.plugins.invalidTables", {
           tables: violations.map((v) => v.table).join(", "),
           prefix: pluginTablePrefix(plugin.key),
+        }),
+      );
+    }
+
+    const badPermissions = validateProvidedPermissions(
+      plugin.key,
+      plugin.isCore,
+      manifest.permissionsProvided,
+    );
+    if (badPermissions.length) {
+      throw new BadRequestException(
+        t()("errors.plugins.invalidProvidedPermissions", {
+          permissions: badPermissions.map((v) => v.key).join(", "),
         }),
       );
     }
@@ -249,6 +277,7 @@ export class OrgPluginsController {
     // Capabilities changed for every site the tenant owns; themes feature-detect
     // on them on every page, so every site's cache must roll over.
     await this.invalidateTenantSites();
+    this.plugins.bustProvidedPermissions(actor.tenantId);
 
     await this.audit.record(actor, "org-plugin.activated", "plugin", key, {
       version: row.version.version,
@@ -278,6 +307,7 @@ export class OrgPluginsController {
     const row = await this.installRow(key);
     await db().orgPlugin.update({ where: { id: row.id }, data: { status: "INACTIVE" } });
     await this.invalidateTenantSites();
+    this.plugins.bustProvidedPermissions(actor.tenantId);
 
     await this.audit.record(actor, "org-plugin.deactivated", "plugin", key, {});
 

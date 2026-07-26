@@ -8,8 +8,15 @@ import {
   Post,
 } from "@nestjs/common";
 import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
-import { db, withTenant } from "@zcmsorg/database";
+import { db, getSystemDb, withTenant } from "@zcmsorg/database";
 import { createHash } from "node:crypto";
+import {
+  buildPluginDelete,
+  buildPluginInsert,
+  buildPluginSelect,
+  buildPluginUpdate,
+  type PluginTableSchema,
+} from "@zcmsorg/plugin-sdk";
 import type { Permission } from "@zcmsorg/schemas";
 import { Internal, Public } from "../auth/decorators";
 import {
@@ -47,6 +54,13 @@ const METHOD_SCOPES: Record<string, Permission | null> = {
   "content.get": "content:read",
   "content.list": "content:read",
   "jobs.enqueue": null,
+  // The plugin's own tables. The scope is necessary but not sufficient: dispatch
+  // additionally refuses a plugin that is not first-party and a table the plugin
+  // did not declare, both read from the install's manifest, never from the params.
+  "db.insert": "data:own",
+  "db.select": "data:own",
+  "db.update": "data:own",
+  "db.delete": "data:own",
   "mail.send": "mail:send",
   // The scope is half the answer. The other half is the manifest's `network.hosts`,
   // which PluginEgressService reads from the install on every call: this row lets a
@@ -310,6 +324,48 @@ export class PluginGatewayController {
         return { data: true };
       }
 
+      case "db.insert": {
+        const table = await this.resolvePluginTable(claims, params.table);
+        const row = (params.row ?? {}) as Record<string, unknown>;
+        const q = buildPluginInsert(table, { tenantId: claims.tid, siteId: claims.sid }, row);
+        const rows = await db().$queryRawUnsafe<Record<string, unknown>[]>(
+          q.text,
+          ...q.values,
+        );
+        return { data: rows[0] ?? null };
+      }
+
+      case "db.select": {
+        const table = await this.resolvePluginTable(claims, params.table);
+        const options = (params.options ?? {}) as Parameters<typeof buildPluginSelect>[2];
+        const q = buildPluginSelect(table, { tenantId: claims.tid, siteId: claims.sid }, options);
+        const rows = await db().$queryRawUnsafe<Record<string, unknown>[]>(
+          q.text,
+          ...q.values,
+        );
+        return { data: rows };
+      }
+
+      case "db.update": {
+        const table = await this.resolvePluginTable(claims, params.table);
+        const patch = (params.patch ?? {}) as Record<string, unknown>;
+        const where = (params.where ?? {}) as Record<string, unknown>;
+        const q = buildPluginUpdate(table, { tenantId: claims.tid, siteId: claims.sid }, patch, where);
+        const rows = await db().$queryRawUnsafe<Record<string, unknown>[]>(
+          q.text,
+          ...q.values,
+        );
+        return { data: rows };
+      }
+
+      case "db.delete": {
+        const table = await this.resolvePluginTable(claims, params.table);
+        const where = (params.where ?? {}) as Record<string, unknown>;
+        const q = buildPluginDelete(table, { tenantId: claims.tid, siteId: claims.sid }, where);
+        const deleted = await db().$executeRawUnsafe(q.text, ...q.values);
+        return { data: { deleted } };
+      }
+
       case "mail.send": {
         // The plugin says WHAT to send. It never says who it is from, which
         // server carries it, or with what credential — all three come from the
@@ -346,5 +402,59 @@ export class PluginGatewayController {
       throw new BadRequestException(t()("errors.validation.requiredParam", { name }));
     }
     return value;
+  }
+
+  /**
+   * Resolves a `db.*` call's table to the schema the plugin actually declared —
+   * and refuses everything that is not that.
+   *
+   * Ownership is decided from the INSTALLED manifest, read here from the database,
+   * never from the request: a plugin cannot widen what it owns by naming a table
+   * in a parameter, only by having declared it and been approved. Two further
+   * gates sit in front of the lookup — the plugin must be first-party (owning
+   * tables is not a community-tier privilege) and it must actually declare the
+   * named table. A miss on any of these is a Forbidden, the same answer a call on
+   * a table that does not exist deserves: "not yours."
+   */
+  private async resolvePluginTable(
+    claims: PluginTokenClaims,
+    rawTable: unknown,
+  ): Promise<PluginTableSchema> {
+    const name = this.requireString(rawTable, "table");
+
+    // The install for this (plugin, site) at either tier — a SitePlugin, or the
+    // tenant's OrgPlugin. getSystemDb() reads the catalogue directly; the manifest
+    // and the isCore flag are platform data, not tenant rows.
+    const sys = getSystemDb();
+    const include = {
+      plugin: { select: { isCore: true } },
+      version: { select: { manifest: true } },
+    } as const;
+    const install =
+      (await sys.sitePlugin.findFirst({
+        where: { siteId: claims.sid, pluginId: claims.pid, status: "ACTIVE" },
+        include,
+      })) ??
+      (await sys.orgPlugin.findFirst({
+        where: { tenantId: claims.tid, pluginId: claims.pid, status: "ACTIVE" },
+        include,
+      }));
+
+    if (!install) {
+      throw new ForbiddenException(t()("errors.plugins.tableNotOwned", { table: name }));
+    }
+    if (!install.plugin.isCore) {
+      // A community plugin holds no tables even if it somehow held the scope.
+      throw new ForbiddenException(t()("errors.plugins.tableNotOwned", { table: name }));
+    }
+
+    const manifest = install.version.manifest as {
+      database?: { tables?: PluginTableSchema[] };
+    } | null;
+    const table = manifest?.database?.tables?.find((tbl) => tbl.name === name);
+    if (!table) {
+      throw new ForbiddenException(t()("errors.plugins.tableNotOwned", { table: name }));
+    }
+    return table;
   }
 }

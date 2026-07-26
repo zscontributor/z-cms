@@ -12,9 +12,18 @@ import {
 import { ApiOperation, ApiParam, ApiTags } from "@nestjs/swagger";
 import { db, getSystemDb } from "@zcmsorg/database";
 import { normalizeChangelog } from "@zcmsorg/package";
-import { pluginTablePrefix, validatePluginTables } from "@zcmsorg/plugin-sdk";
+import {
+  pluginTablePrefix,
+  validatePluginTableSchemas,
+  type PluginTableSchema,
+} from "@zcmsorg/plugin-sdk";
 import { invalidHostDeclarations } from "./plugin-egress";
-import { PERMISSIONS, type Permission } from "@zcmsorg/schemas";
+import {
+  PERMISSIONS,
+  validateProvidedPermissions,
+  type Permission,
+  type ProvidedPermission,
+} from "@zcmsorg/schemas";
 import { Actor, RequirePermissions, SiteId, SiteScoped } from "../auth/decorators";
 import { t } from "../common/i18n";
 import type { RequestActor } from "../common/request-context";
@@ -319,15 +328,39 @@ export class PluginsController {
     // run — a plugin that declares `content` or `users` never gets installed, so
     // it never gets the chance to migrate them.
     const manifest = (latest.manifest ?? {}) as {
-      database?: { tables?: string[] };
+      database?: { tables?: PluginTableSchema[] };
       network?: { hosts?: string[] };
+      permissionsProvided?: ProvidedPermission[];
     };
-    const violations = validatePluginTables(plugin.key, manifest.database?.tables);
+    // Owning relational tables is a first-party privilege. A community plugin that
+    // declares a `database` block is refused here rather than silently ignored, so
+    // its author learns at install that `ctx.storage` is the tier they are on.
+    if (manifest.database?.tables?.length && !plugin.isCore) {
+      throw new BadRequestException(t()("errors.plugins.tablesFirstPartyOnly"));
+    }
+    const violations = validatePluginTableSchemas(plugin.key, manifest.database?.tables);
     if (violations.length) {
       throw new BadRequestException(
         t()("errors.plugins.invalidTables", {
           tables: violations.map((v) => v.table).join(", "),
           prefix: pluginTablePrefix(plugin.key),
+        }),
+      );
+    }
+
+    // The permissions the plugin *introduces* (to guard its own screens) must be
+    // namespaced to it, and a community plugin may not mint a bare core-shaped key
+    // — same reasoning as the table prefix, checked at the same install-time gate,
+    // before the plugin exists here and before a role could be handed one of them.
+    const badPermissions = validateProvidedPermissions(
+      plugin.key,
+      plugin.isCore,
+      manifest.permissionsProvided,
+    );
+    if (badPermissions.length) {
+      throw new BadRequestException(
+        t()("errors.plugins.invalidProvidedPermissions", {
+          permissions: badPermissions.map((v) => v.key).join(", "),
         }),
       );
     }
@@ -413,6 +446,10 @@ export class PluginsController {
     // running: its capabilities go into render payloads and its hooks start
     // firing. A plugin is active because it started, not before it tried.
     try {
+      // The plugin's own tables come into being before its setup runs, so setup
+      // can seed them. A no-op for any plugin without a first-party `database`
+      // block; idempotent for one that has it.
+      await this.plugins.ensurePluginTables(key);
       await this.plugins.runSetup(actor.tenantId, siteId, key);
     } catch (err) {
       const message = (err as Error).message;
@@ -430,6 +467,9 @@ export class PluginsController {
 
     // Capabilities changed, and themes feature-detect on them on every page.
     await this.cache.invalidateSite(siteId);
+    // A newly active plugin may introduce permissions; drop the cached grant set
+    // so the next request sees them without waiting out the TTL.
+    this.plugins.bustProvidedPermissions(actor.tenantId);
 
     await this.audit.record(actor, "plugin.activated", "plugin", key, {
       version: row.version.version,
@@ -461,13 +501,24 @@ export class PluginsController {
     @Param("key") key: string,
   ): Promise<{ ok: true }> {
     const row = await this.installRow(siteId, key);
+
+    // teardown() runs while the plugin is still ACTIVE — it needs its scopes to do
+    // whatever winding-down it does. Unlike activation, its outcome does not gate
+    // the transition: the admin asked for this plugin off, so off it goes whether
+    // or not its teardown was clean. A failure is recorded, not raised.
+    const teardown = await this.plugins.runTeardown(actor.tenantId, siteId, key);
+
     await db().sitePlugin.update({
       where: { id: row.id },
       data: { status: "INACTIVE" },
     });
     await this.cache.invalidateSite(siteId);
+    this.plugins.bustProvidedPermissions(actor.tenantId);
 
-    await this.audit.record(actor, "plugin.deactivated", "plugin", key, {});
+    await this.audit.record(actor, "plugin.deactivated", "plugin", key, {
+      teardownOk: teardown.ok,
+      ...(teardown.error ? { teardownError: teardown.error } : {}),
+    });
 
     return { ok: true };
   }

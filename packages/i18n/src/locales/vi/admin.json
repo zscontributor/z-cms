@@ -176,6 +176,17 @@
       "updateBadge": "Cập nhật lên {version}",
       "installFailed": "Không cài được gói.",
       "installDenied": "Bạn không có quyền cài cái này.",
+      "sections": {
+        "installed": "Đã cài trên site này",
+        "installedDescription": "Giao diện và plugin đang được cài trên site hiện tại.",
+        "available": "Chợ ứng dụng",
+        "availableDescription": "Giao diện và plugin của cộng đồng mà bạn có thể cài vào site này."
+      },
+      "installedEmpty": "Chưa có gì được cài trên site này.",
+      "manage": "Quản lý",
+      "activeBadge": "Đang bật",
+      "inactiveBadge": "Đang tắt",
+      "updateAvailableBadge": "Có bản cập nhật",
       "tabsLabel": "Loại gói marketplace",
       "categoriesLabel": "Danh mục marketplace",
       "tabs": {

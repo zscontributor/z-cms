@@ -10,6 +10,7 @@ import { getSystemDb } from "@zcmsorg/database";
 import {
   highestRole,
   permissionsForRole,
+  pluginPermissionGrants,
   type AcceptInviteInput,
   type AccessTokenClaims,
   type AuthResult,
@@ -26,6 +27,7 @@ import { createHash, randomUUID } from "node:crypto";
 import type { SignOptions } from "jsonwebtoken";
 import { t } from "../common/i18n";
 import { MfaService } from "./mfa.service";
+import { PluginsService } from "../plugins/plugins.service";
 import { RevocationService } from "./revocation.service";
 import { SecurityEventService } from "../audit/security-event.service";
 
@@ -63,6 +65,7 @@ export class AuthService {
     private readonly revocations: RevocationService,
     private readonly events: SecurityEventService,
     private readonly mfa: MfaService,
+    private readonly plugins: PluginsService,
   ) {}
 
   /**
@@ -422,6 +425,11 @@ export class AuthService {
     });
     const role = highestRole(memberships.map((m) => m.role as Role));
 
+    // This baseline has no site in hand, so only the tenant-wide (org) tier of
+    // provided-permissions applies. Site-scoped grants (the common case for a
+    // shop) are resolved per request by AuthGuard, which does hold a site id.
+    const provided = await this.plugins.activeProvidedPermissions(tenantId, undefined);
+
     return {
       id: user.id,
       email: user.email,
@@ -430,7 +438,10 @@ export class AuthService {
       tenantId: user.tenantId,
       tenantSlug: user.tenant.slug,
       role,
-      permissions: [...permissionsForRole(role)],
+      permissions: [
+        ...permissionsForRole(role),
+        ...pluginPermissionGrants([role], provided),
+      ],
       twoFactorEnabled: user.totpEnabledAt !== null,
     };
   }
