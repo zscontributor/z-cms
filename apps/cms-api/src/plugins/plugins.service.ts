@@ -78,6 +78,17 @@ const PROVIDED_PERMISSIONS_TTL_MS = 30_000;
 
 export type PluginTrust = "builtin" | "marketplace" | "operator";
 
+/**
+ * A core-runtime plugin (see manifest `runtime: "core"`) ships no bundle — its
+ * behaviour is a core module, not sandbox code. The sandbox dispatch must skip it
+ * (there is nothing to execute), while the manifest-reading paths — capabilities,
+ * provided permissions, admin, projectors — still count it, because those are
+ * what a core-runtime plugin contributes through.
+ */
+function isCoreRuntimePlugin(manifest: unknown): boolean {
+  return (manifest as { runtime?: string } | null)?.runtime === "core";
+}
+
 /** Maps a version's stored origin to the runtime's load route. */
 export function originToTrust(origin: string): PluginTrust {
   switch (origin) {
@@ -603,6 +614,10 @@ export class PluginsService {
     });
     if (!row) throw new NotFoundException(t()("errors.plugins.notInstalled"));
 
+    // A core-runtime plugin has no setup() to run — activation is just the state
+    // change and the permission grant. Nothing to dispatch, so return clean.
+    if (isCoreRuntimePlugin(row.version.manifest)) return;
+
     await this.execute(tenantId, siteId, this.toTarget(row), { kind: "setup" });
   }
 
@@ -660,6 +675,9 @@ export class PluginsService {
       include: { plugin: true, version: true },
     });
     if (!row) return { ok: true };
+    // No bundle, no teardown() — deactivating a core-runtime plugin is just the
+    // state change and dropping its permission grant.
+    if (isCoreRuntimePlugin(row.version.manifest)) return { ok: true };
 
     const res = await this.execute(tenantId, siteId, this.toTarget(row), {
       kind: "teardown",
@@ -772,7 +790,11 @@ export class PluginsService {
       }),
     ]);
 
-    return [...siteRows, ...orgRows].map((row) => this.toTarget(row));
+    // A core-runtime plugin has no bundle to dispatch to; it is active for the sake
+    // of its capabilities and permissions, not its (non-existent) sandbox handlers.
+    return [...siteRows, ...orgRows]
+      .filter((row) => !isCoreRuntimePlugin(row.version.manifest))
+      .map((row) => this.toTarget(row));
   }
 
   /**

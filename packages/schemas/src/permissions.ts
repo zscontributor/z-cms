@@ -139,20 +139,24 @@ export const PERMISSIONS = [
   "audit:read",
   /**
    * Read the shop's orders — the customer names, contact details and delivery
-   * addresses attached to each. Operational, like reading content, and so it sits
-   * with EDITOR: the person who runs the shop day to day needs to see what sold.
+   * addresses attached to each.
+   *
+   * Still in the vocabulary, but held by no role by default: the commerce plugin
+   * PROVIDES it (to EDITOR, via `permissionsProvided`) when it is active on a site,
+   * so a site with no shop never grants it. It stays a first-class core permission
+   * — the Orders controller gates on it, the consent screen describes it — because
+   * commerce is a FIRST-PARTY plugin, and a first-party plugin may mint bare keys.
    */
   "order:read",
   /**
    * Move an order along: confirm it, mark it fulfilled, cancel or refund it.
-   *
-   * Separate from `order:read` because seeing an order and changing its state are
-   * different trusts — a refund moves money. Belongs to ADMIN.
+   * Provided by the commerce plugin to ADMIN when active — a refund moves money, so
+   * it is a graver trust than `order:read`. Held by no role by default.
    */
   "order:manage",
   /**
    * Configure the storefront: currency, shipping, which payment methods are on.
-   * Configuration, so it rides with the other `settings`-class acts in ADMIN.
+   * Provided by the commerce plugin to ADMIN when active. Held by no role by default.
    */
   "commerce:configure",
   /**
@@ -202,8 +206,12 @@ const EDITOR: Permission[] = [
   "content:publish",
   "media:delete",
   "menu:manage",
-  // Running the shop is editorial work: an EDITOR sees the orders that come in.
-  "order:read",
+  // NB: order:read is deliberately NOT here. The shop is a plugin now — the
+  // commerce plugin *provides* order:read to EDITOR (via permissionsProvided with
+  // defaultRoles), so a site without commerce active never grants it, and the
+  // Orders menu is absent there. Baking it into the role would put a shop on every
+  // site whether or not one is installed — exactly the WooCommerce-unlike behaviour
+  // this change removes.
 ];
 
 const ADMIN: Permission[] = [
@@ -224,10 +232,8 @@ const ADMIN: Permission[] = [
   // Without this, "send a test email" would be a button no role could press.
   "mail:send",
   "audit:read",
-  // Moving an order along and configuring the storefront are administrative acts:
-  // a refund moves money, and turning off checkout takes the shop down.
-  "order:manage",
-  "commerce:configure",
+  // order:manage and commerce:configure are likewise NOT baked in — the commerce
+  // plugin provides them to ADMIN when it is active. See the EDITOR note above.
 ];
 
 const OWNER: Permission[] = [

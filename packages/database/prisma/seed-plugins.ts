@@ -23,9 +23,95 @@ import { getSystemDb, disconnectDb } from "../src/clients";
  * payload digest against the pinned first-party key. What lands in the database is
  * what was signed, or nothing lands at all.
  */
+/**
+ * The commerce plugin has no signed package, because it has no bundle: it is a
+ * `runtime: "core"` first-party plugin whose logic is the core CommerceModule (see
+ * apps/cms-api/src/commerce/commerce-plugin.ts, the runtime source of its key). It
+ * is registered here directly so a site gets it INSTALLED-but-OFF like every other
+ * built-in, and turning it on is what makes that site a shop.
+ *
+ * This manifest must stay in step with COMMERCE_PLUGIN_MANIFEST in cms-api. It is
+ * duplicated rather than imported because a seed in the database package cannot
+ * reach into an app; the shape is small and changes rarely.
+ */
+const COMMERCE_MANIFEST = {
+  id: "vn.zsoft.commerce",
+  name: "Commerce",
+  version: "1.0.0",
+  description:
+    "The storefront: a cart, COD checkout and orders. Activate it on a site to turn " +
+    "that site into a shop; leave it off and the site has no commerce at all.",
+  author: { name: "Z-SOFT" },
+  engine: ">=0.1.0",
+  runtime: "core",
+  permissions: [] as string[],
+  capabilities: ["commerce.checkout"],
+  permissionsProvided: [
+    {
+      key: "order:read",
+      description:
+        "Read the shop's orders — customer names, contact details and delivery addresses.",
+      defaultRoles: ["EDITOR", "ADMIN", "OWNER"],
+    },
+    {
+      key: "order:manage",
+      description: "Move an order along: confirm, fulfil, cancel or refund it.",
+      defaultRoles: ["ADMIN", "OWNER"],
+    },
+    {
+      key: "commerce:configure",
+      description: "Configure the storefront: currency, shipping and payment methods.",
+      defaultRoles: ["ADMIN", "OWNER"],
+    },
+  ],
+};
+
+async function registerCommercePlugin(db: ReturnType<typeof getSystemDb>): Promise<void> {
+  const plugin = await db.plugin.upsert({
+    where: { key: COMMERCE_MANIFEST.id },
+    update: { name: COMMERCE_MANIFEST.name, description: COMMERCE_MANIFEST.description, isCore: true, scope: "SITE" as never },
+    create: {
+      key: COMMERCE_MANIFEST.id,
+      name: COMMERCE_MANIFEST.name,
+      description: COMMERCE_MANIFEST.description,
+      publisher: COMMERCE_MANIFEST.author.name,
+      isCore: true,
+      scope: "SITE" as never,
+    },
+  });
+
+  await db.pluginVersion.upsert({
+    where: { pluginId_version: { pluginId: plugin.id, version: COMMERCE_MANIFEST.version } },
+    update: {
+      manifest: COMMERCE_MANIFEST as never,
+      permissions: COMMERCE_MANIFEST.permissions,
+      // Codeless: no bundle, no signature. plugin-runtime never loads it — a
+      // core-runtime plugin is skipped by the sandbox dispatch entirely.
+      origin: "BUILTIN",
+      bundleUrl: null,
+      checksum: null,
+      publisherSignature: null,
+      marketplaceSignature: null,
+    },
+    create: {
+      pluginId: plugin.id,
+      version: COMMERCE_MANIFEST.version,
+      engine: COMMERCE_MANIFEST.engine,
+      manifest: COMMERCE_MANIFEST as never,
+      permissions: COMMERCE_MANIFEST.permissions,
+      origin: "BUILTIN",
+    },
+  });
+
+  console.log(`  ${COMMERCE_MANIFEST.id}@${COMMERCE_MANIFEST.version} — core-runtime (no bundle), provides: order:read, order:manage, commerce:configure`);
+}
+
 async function main() {
   const db = getSystemDb();
   const root = path.resolve(__dirname, "../../../plugins");
+
+  // Codeless first-party plugins first — they have no package on disk to loop over.
+  await registerCommercePlugin(db);
 
   if (!fs.existsSync(root)) {
     console.log("No /plugins directory.");

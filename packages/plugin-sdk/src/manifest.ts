@@ -111,6 +111,22 @@ export interface PluginManifest {
   engine: string;
 
   /**
+   * Where this plugin's code runs. `"sandbox"` (the default, and the only option
+   * for a marketplace plugin) means an isolated bundle the runtime executes.
+   *
+   * `"core"` is the FIRST-PARTY escape hatch for a feature that ships with the CMS
+   * and whose logic is a core module, not a sandbox bundle — commerce, whose
+   * pricing engine and orders belong in the database layer, not a V8 isolate. A
+   * core-runtime plugin has a manifest (so it is catalogued, consented to, and
+   * activated exactly like any other, which is what gates its menu and permissions
+   * per site) but no bundle: it ships no actions, filters, jobs, calls or setup, so
+   * activation runs none, and the sandbox dispatch skips it. It contributes through
+   * the same declared surfaces — `capabilities`, `permissionsProvided`, `admin` —
+   * that a core module then backs. Reserved for `isCore` plugins; ignored otherwise.
+   */
+  runtime?: "sandbox" | "core";
+
+  /**
    * Scopes the plugin is asking for. The admin sees exactly this list on the
    * consent screen, and the gateway rejects any call outside it — a plugin that
    * never asked for `content:read` cannot read content even if it tries.

@@ -22,6 +22,7 @@ import type {
   QuoteResultDto,
 } from "@zcmsorg/schemas";
 import { PluginsService } from "../plugins/plugins.service";
+import { COMMERCE_PLUGIN_KEY } from "./commerce-plugin";
 
 /**
  * The storefront's server half.
@@ -78,15 +79,16 @@ export class CommerceService implements OnModuleInit {
 
   /**
    * Registers commerce as a render projector — the same extension point the AI
-   * assistant uses. Core-provided today (commerce lives in this module); the day
-   * commerce becomes a first-party plugin, this single `provider` line changes to
-   * `{ kind: "plugin", pluginKey: ... }` and nothing else about the render path
-   * does. Until then, `"core"` means "eligible on every site", gated by the theme
-   * opting in and the shop being switched on — both decided in `publicConfig`.
+   * assistant uses. Now `provider.kind: "plugin"`: the storefront contributes only
+   * where the commerce plugin is ACTIVE, so switching commerce off on a site takes
+   * its checkout off that site's pages, in one mechanism with everything else the
+   * plugin gates. `resolve` still narrows further — the theme must opt in and the
+   * shop must be enabled — but eligibility is now the plugin's activation, not a
+   * core special case.
    */
   onModuleInit(): void {
     this.plugins.registerCapabilityProjector("commerce.checkout", {
-      provider: { kind: "core", version: "1.0.0" },
+      provider: { kind: "plugin", pluginKey: COMMERCE_PLUGIN_KEY },
       resolve: ({ siteId, themeCapabilities }) =>
         this.publicConfig(siteId, themeCapabilities),
     });

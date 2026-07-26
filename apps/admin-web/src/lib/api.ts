@@ -256,7 +256,12 @@ export const getSession = cache(async (): Promise<SessionUser | null> => {
   if (!token && !refresh) return null;
 
   try {
-    return await apiFetch<SessionUser>("/auth/me", { siteScoped: false });
+    // Site-scoped on purpose: the session's role and permissions are resolved for
+    // the current site (X-Site-Id), so they include what a site-scoped plugin like
+    // commerce grants. That is what lets `can(user, "order:read")` — and so the
+    // Orders menu — be true only on a site where commerce is active. With no site
+    // selected yet, the header is simply absent and the tenant baseline is returned.
+    return await apiFetch<SessionUser>("/auth/me");
   } catch (error) {
     if (error instanceof UnauthenticatedError) return null;
     throw error;

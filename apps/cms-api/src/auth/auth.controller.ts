@@ -196,11 +196,20 @@ export class AuthController {
   @Get("me")
   @ApiOperation({
     summary: "The signed-in user",
-    description: "Identity, role, and the permissions that role grants — what the admin UI gates on.",
+    description:
+      "Identity, and the role and permissions resolved FOR THE CURRENT SITE (from " +
+      "X-Site-Id). The permissions include ones a site-scoped plugin grants — which " +
+      "is why the shop menu appears only on a site where commerce is active.",
   })
   @ApiAuthed()
   @ApiZodResponse("SessionUser")
-  me(@Actor() actor: RequestActor): Promise<SessionUser> {
-    return this.auth.sessionUser(actor.userId, actor.tenantId);
+  async me(@Actor() actor: RequestActor): Promise<SessionUser> {
+    const user = await this.auth.sessionUser(actor.userId, actor.tenantId);
+    // The guard already resolved the actor's role and permissions for the site in
+    // X-Site-Id, unioning in whatever a site-scoped plugin grants that role. Prefer
+    // those over the tenant baseline `sessionUser` computes, so the admin UI gates
+    // on the site actually in view — the Orders menu shows where commerce is on and
+    // nowhere else.
+    return { ...user, role: actor.role, permissions: actor.permissions };
   }
 }

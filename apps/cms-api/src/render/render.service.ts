@@ -12,11 +12,9 @@ import type {
   Block,
   CollectionQuery,
   CollectionSort,
-  CommercePublicConfig,
   ContentDto,
   LocaleAlternate,
   MenuDto,
-  RenderIntegration,
   RenderPayload,
   SiteBrand,
 } from "@zcmsorg/schemas";
