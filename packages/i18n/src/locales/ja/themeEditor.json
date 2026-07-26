@@ -178,6 +178,22 @@
       "description": "サイトの実際のページや投稿（例：最新6件）。"
     }
   },
+  "changelog": {
+    "heading": "リリースノート",
+    "hint": "このバージョンの変更点。テーマのインストールや更新時に、管理者の言語で表示されます。英語は必須で、必要に応じて他の言語も追加できます。保存するとビルドが再ステージされます — 署名する前に再度ビルドしてください。",
+    "englishLabel": "英語（必須）",
+    "englishPlaceholder": "- モバイルのヘッダーを修正\n- 新しいフッターレイアウト",
+    "localeCodeLabel": "言語コード",
+    "localeCodePlaceholder": "vi、ja、pt-BR…",
+    "notesPlaceholder": "この言語でのメモ",
+    "addLanguage": "言語を追加",
+    "remove": "削除",
+    "save": "リリースノートを保存",
+    "saved": "リリースノートを保存しました。署名する前に再度ビルドしてください。",
+    "englishRequired": "他の言語を追加する前に、英語のリリースノートが必要です。",
+    "invalidLocale": "「{locale}」は言語コードではありません — 例：vi、ja、pt-BR。",
+    "saveFailed": "リリースノートを保存できませんでした。"
+  },
   "publish": {
     "heading": "公開",
     "noKey": "テーマに署名するにはパブリッシャーキーが必要です。マーケットプレイス上のあなたの身元です。",

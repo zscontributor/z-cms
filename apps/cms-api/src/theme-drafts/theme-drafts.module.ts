@@ -21,9 +21,11 @@ import os from "node:os";
 import path from "node:path";
 import { db } from "@zcmsorg/database";
 import {
+  normalizeChangelog,
   readManifest,
   sha256,
   unpackTo,
+  validateChangelog,
   verifyChecksumSignature,
   wrap,
   type PackageEnvelope,
@@ -77,6 +79,12 @@ export interface ThemeDraftDto {
   key: string;
   version: string;
   description: string | null;
+  /**
+   * This version's release notes as a locale → notes map (`{ en, vi }`, English
+   * required), or null if the author wrote none. Fed into the build so it lands in
+   * the signed theme.json — see the build worker.
+   */
+  changelog: Record<string, string> | null;
   document: LayoutDocument;
   status: "DRAFT" | "BUILDING" | "BUILT" | "SUBMITTED" | "FAILED";
   buildError: string | null;
@@ -144,6 +152,9 @@ function toDto(row: NonNullable<DraftRow>): ThemeDraftDto {
     key: row.key,
     version: row.version,
     description: row.description,
+    // Stored already normalized (a clean locale → notes map, or null) by `update`,
+    // so this only needs the JSONB cast the column's type forces.
+    changelog: (row.changelog as Record<string, string> | null) ?? null,
     // Parsed rather than cast. The column is JSONB and Prisma types it as
     // `JsonValue`; a row written by an older build (or by a hand-run UPDATE) is
     // not automatically the shape this build's schema describes.
@@ -400,6 +411,7 @@ class ThemeDraftsController {
       name?: string;
       description?: string;
       version?: string;
+      changelog?: string | Record<string, string> | null;
       document?: LayoutDocument;
     },
   ): Promise<ThemeDraftDto> {
@@ -414,12 +426,26 @@ class ThemeDraftsController {
 
     if (body.document) this.service.assertRenderable(body.document);
 
+    // The same rule the manifest is held to (English required when localized, safe
+    // multi-line text per locale). Checked here so a bad changelog is a sentence at
+    // save time, not a build failure the author has to decode later. `null` clears
+    // it and validates as "absent".
+    if (body.changelog !== undefined) {
+      const errors = validateChangelog(body.changelog ?? undefined);
+      if (errors.length > 0) throw new BadRequestException(errors.join(" "));
+    }
+
     const row = await db().themeDraft.update({
       where: { id: existing.id },
       data: {
         ...(body.name !== undefined ? { name: body.name } : {}),
         ...(body.description !== undefined ? { description: body.description } : {}),
         ...(body.version !== undefined ? { version: body.version } : {}),
+        // Stored normalized (a clean map, or null): the build reads it straight into
+        // theme.json, so the canonical shape lives in the column, not in the codegen.
+        ...(body.changelog !== undefined
+          ? { changelog: normalizeChangelog(body.changelog) as never }
+          : {}),
         // ANY edit drops the staged build — not just a document change.
         //
         // The staged payload contains a theme.json built from the name, version and

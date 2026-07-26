@@ -207,6 +207,14 @@ export const UpdateThemeDraftSchema = z
     name: z.string().min(1).optional(),
     description: z.string().optional(),
     version: z.string().min(1).optional(),
+    // This version's release notes. Either a plain string (English) or a locale →
+    // notes map; `null` clears them. The domain rules (English required when
+    // localized, per-locale text safety) run in the controller via validateChangelog.
+    changelog: z
+      .union([z.string(), z.record(z.string(), z.string())])
+      .nullable()
+      .optional()
+      .describe('Release notes for this version, e.g. { "en": "…", "vi": "…" }. null clears them.'),
     document: LayoutDocumentSchema.optional(),
   })
   // A PATCH with no fields is a no-op the client did not mean to send; refusing it
@@ -871,6 +879,9 @@ const ThemeDraftSummaryDtoSchema = z.object({
 // of names is megabytes nobody asked for.
 const ThemeDraftDtoSchema = ThemeDraftSummaryDtoSchema.extend({
   document: LayoutDocumentSchema,
+  // Release notes, only on the full DTO the editor loads — the list does not need
+  // them. A locale → notes map (English present when set), or null.
+  changelog: z.record(z.string(), z.string()).nullable(),
   submissionRef: z.string().nullable(),
   payloadChecksum: z.string().nullable(),
   createdAt: z.string(),

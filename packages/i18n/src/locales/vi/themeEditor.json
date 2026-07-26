@@ -178,6 +178,22 @@
       "description": "Trang hoặc bài viết thật từ site — ví dụ 6 bài mới nhất."
     }
   },
+  "changelog": {
+    "heading": "Ghi chú phát hành",
+    "hint": "Những thay đổi ở phiên bản này. Hiển thị cho quản trị viên khi họ cài hoặc cập nhật theme, theo ngôn ngữ của họ. Tiếng Anh là bắt buộc; thêm ngôn ngữ khác nếu muốn. Khi lưu, bản build sẽ được dựng lại — hãy build lại trước khi ký.",
+    "englishLabel": "Tiếng Anh (bắt buộc)",
+    "englishPlaceholder": "- Sửa phần đầu trang trên di động\n- Bố cục chân trang mới",
+    "localeCodeLabel": "Mã ngôn ngữ",
+    "localeCodePlaceholder": "vi, ja, pt-BR…",
+    "notesPlaceholder": "Ghi chú bằng ngôn ngữ này",
+    "addLanguage": "Thêm ngôn ngữ",
+    "remove": "Xóa",
+    "save": "Lưu ghi chú phát hành",
+    "saved": "Đã lưu ghi chú phát hành. Hãy build lại trước khi ký.",
+    "englishRequired": "Cần có ghi chú phát hành tiếng Anh trước khi thêm ngôn ngữ khác.",
+    "invalidLocale": "\"{locale}\" không phải mã ngôn ngữ — ví dụ vi, ja hoặc pt-BR.",
+    "saveFailed": "Không thể lưu ghi chú phát hành."
+  },
   "publish": {
     "heading": "Phát hành",
     "noKey": "Bạn cần một publisher key để ký theme. Đây là danh tính của bạn trên marketplace.",

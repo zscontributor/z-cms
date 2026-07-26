@@ -471,6 +471,12 @@ export interface ThemeDraftSummaryDto {
 
 export interface ThemeDraftDto extends ThemeDraftSummaryDto {
   document: LayoutDocument;
+  /**
+   * This version's release notes as a locale → notes map (English present when set),
+   * or null. Edited in the theme editor and fed into the build so it lands in the
+   * signed theme.json.
+   */
+  changelog: Record<string, string> | null;
   submissionRef: string | null;
   /** The digest the author signs. Null until a build stages one. */
   payloadChecksum: string | null;

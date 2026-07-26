@@ -1,0 +1,12 @@
+-- A per-version, per-locale changelog for a theme DRAFT, as a FORWARD migration.
+--
+-- The editor collects release notes (English required, other locales optional) and
+-- the build feeds them into the generated theme.json, so they end up INSIDE the
+-- signed manifest rather than as a separate unsigned field. This column is only the
+-- draft's holding place for that text between edits and the next build.
+--
+-- JSONB and nullable: the localized shape ({ "en": "…", "vi": "…" }) must never need
+-- a migration to add a language, and a draft may carry no notes at all.
+--
+-- Idempotent (IF NOT EXISTS): a database hotfixed by hand applies this as a no-op.
+ALTER TABLE "theme_drafts" ADD COLUMN IF NOT EXISTS "changelog" JSONB;

@@ -178,6 +178,22 @@
       "description": "Real pages or posts from the site — the newest six, say."
     }
   },
+  "changelog": {
+    "heading": "Release notes",
+    "hint": "What changed in this version. Shown to admins when they install or update the theme, in their own language. English is required; add other languages if you like. Saving re-stages the build — build again before you sign.",
+    "englishLabel": "English (required)",
+    "englishPlaceholder": "- Fixed the header on mobile\n- New footer layout",
+    "localeCodeLabel": "Language code",
+    "localeCodePlaceholder": "vi, ja, pt-BR…",
+    "notesPlaceholder": "Notes in this language",
+    "addLanguage": "Add a language",
+    "remove": "Remove",
+    "save": "Save release notes",
+    "saved": "Release notes saved. Build again before signing.",
+    "englishRequired": "English release notes are required before adding other languages.",
+    "invalidLocale": "\"{locale}\" is not a language code — use e.g. vi, ja or pt-BR.",
+    "saveFailed": "Could not save the release notes."
+  },
   "publish": {
     "heading": "Publish",
     "noKey": "You need a publisher key to sign a theme. It is your identity on the marketplace.",

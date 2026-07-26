@@ -213,6 +213,18 @@ describe("manifest derivation", () => {
     expect(manifest.settingsSchema.properties.colorPrimary).toBeDefined();
     expect(manifest.settingsSchema.properties.colorPrimary!.default).toBeUndefined();
   });
+
+  it("carries the localized changelog into the manifest when the author wrote one", () => {
+    const changelog = { en: "- Fixed the header", vi: "- Sửa phần đầu trang" };
+    const manifest = buildManifest({ ...identity, changelog }, doc());
+    // Rides in the manifest, so it ends up inside the signed theme.json — not beside it.
+    expect(manifest.changelog).toEqual(changelog);
+  });
+
+  it("omits changelog entirely when the author wrote none", () => {
+    const manifest = buildManifest(identity, doc());
+    expect("changelog" in manifest).toBe(false);
+  });
 });
 
 describe("buildThemeDir — the artifact is real", () => {

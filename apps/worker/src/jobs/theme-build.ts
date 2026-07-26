@@ -32,6 +32,9 @@ interface DraftRow {
   name: string;
   version: string;
   description: string | null;
+  // A locale → notes map (`{ en, vi }`), validated to that shape when cms-api stored
+  // it. Typed loosely here because it arrives as JSONB; the codegen re-narrows it.
+  changelog: Record<string, string> | null;
   document: unknown;
   author: { name: string } | null;
 }
@@ -149,6 +152,9 @@ export async function runThemeBuild(data: JobPayloads["theme.build"]): Promise<u
         name: draft.name,
         version: draft.version,
         ...(draft.description ? { description: draft.description } : {}),
+        // The release notes the author typed for this version, fed into the build so
+        // they ride inside the signed theme.json. Absent when they wrote none.
+        ...(draft.changelog ? { changelog: draft.changelog } : {}),
         // The person who drew it. Not the tenant: a theme's author is a credit,
         // shown to whoever installs the package.
         authorName: draft.author?.name ?? "Unknown",

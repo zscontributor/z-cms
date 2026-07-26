@@ -21,6 +21,14 @@ export interface ThemeIdentity {
   name: string;
   version: string;
   description?: string;
+  /**
+   * This version's release notes, keyed by locale (`{ en, vi, ja }`, English
+   * required). Unlike every other field here it is NOT derived from the drawing —
+   * an author types it — but it is fed into the build so it lands inside the signed
+   * theme.json, which is the whole point of putting it here rather than attaching it
+   * to the submission after the fact.
+   */
+  changelog?: Record<string, string>;
   authorName: string;
   authorUrl?: string;
 }
@@ -60,6 +68,7 @@ export interface GeneratedManifest {
   version: string;
   kind: "theme";
   description?: string;
+  changelog?: Record<string, string>;
   author: { name: string; url?: string };
   engine: string;
   entry: string;
@@ -120,6 +129,9 @@ export function buildManifest(identity: ThemeIdentity, doc: LayoutDocument): Gen
     version: identity.version,
     kind: "theme",
     ...(identity.description ? { description: identity.description } : {}),
+    // Only when the author wrote notes. An absent changelog is a theme that shipped
+    // none, not an empty one — the same distinction `normalizeChangelog` keeps.
+    ...(identity.changelog ? { changelog: identity.changelog } : {}),
     author: { name: identity.authorName, ...(identity.authorUrl ? { url: identity.authorUrl } : {}) },
     engine: GENERATED_ENGINE,
     entry: "dist/index.mjs",

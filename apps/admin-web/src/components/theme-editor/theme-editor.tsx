@@ -51,6 +51,7 @@ import type { ThemeDraftDto } from "@/lib/api";
 import { Canvas } from "./canvas";
 import { Inspector } from "./inspector";
 import { Palette } from "./palette";
+import { ChangelogEditor } from "./changelog-editor";
 import { PublishPanel } from "./publish-panel";
 
 /**
@@ -482,11 +483,13 @@ export function ThemeEditor({
                 onDuplicate={() => selectedId && mutate(duplicateNode(tree, selectedId))}
               />
             </div>
-            {/* Signing lives beside the design, not on a settings page: it is the
-                last step of the same job, and the checksum it signs belongs to the
-                build of THIS draft. Capped so a tall key-management form scrolls
-                itself instead of crowding out the Inspector. */}
+            {/* Release notes then signing, both beside the design rather than on a
+                settings page: they are the last steps of the same job, and the notes
+                the author writes here are packed into the build the checksum covers.
+                Capped so these tall forms scroll themselves instead of crowding out
+                the Inspector. */}
             <div className="max-h-[45%] shrink-0 overflow-y-auto">
+              <ChangelogEditor draftId={draft.id} changelog={draft.changelog} />
               <PublishPanel
                 draftId={draft.id}
                 draftKey={draft.key}

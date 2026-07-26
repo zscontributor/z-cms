@@ -58,7 +58,14 @@ export async function createThemeDraftAction(input: {
  */
 export async function saveThemeDraftAction(
   id: string,
-  patch: { name?: string; description?: string; version?: string; document?: LayoutDocument },
+  patch: {
+    name?: string;
+    description?: string;
+    version?: string;
+    /** A locale → notes map (English required when non-empty), or null to clear. */
+    changelog?: Record<string, string> | null;
+    document?: LayoutDocument;
+  },
 ): Promise<DraftActionResult<ThemeDraftDto>> {
   const t = await getT();
   const user = await getSession();

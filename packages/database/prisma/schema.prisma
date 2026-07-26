@@ -1044,6 +1044,16 @@ model ThemeDraft {
   description String?
 
   /**
+   * This version's release notes, keyed by locale — `{ "en": "…", "vi": "…" }`,
+   * English required. Entered in the editor and fed into the build, so it lands
+   * inside the signed theme.json (it is not a separate, unsigned field). JSONB and
+   * nullable: a draft need not carry notes, and the localized shape must never
+   * require a migration to add a language. Validated on write against
+   * `validateChangelog` (@zcmsorg/package), the same rule the manifest is held to.
+   */
+  changelog Json? @map("changelog")
+
+  /**
    * The LayoutDocument (see packages/schemas/src/layout.ts). JSONB, because the
    * node model grows as widgets are added and a drawing must never require a
    * migration. Validated against LayoutDocumentSchema on every write — this column
