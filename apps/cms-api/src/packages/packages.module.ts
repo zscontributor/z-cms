@@ -27,6 +27,7 @@ import { CacheService } from "../redis/cache.service";
 import type { Response } from "express";
 import { Internal } from "../auth/decorators";
 import { t } from "../common/i18n";
+import { serviceReplicaBases } from "../common/service-replicas";
 
 const MAX_PACKAGE_BYTES = 20 * 1024 * 1024;
 
@@ -683,30 +684,45 @@ export class PackagesService implements OnModuleInit {
         ? (this.config.get<string>("SITE_RUNTIME_INTERNAL_TOKEN") ?? privileged)
         : privileged;
 
-    const url =
+    // Address the runtime by its INTERNAL Swarm name so the kill-switch reaches
+    // EVERY replica: a revoked bundle forgotten by one task but still cached by
+    // another is not revoked. serviceReplicaBases fans a VIP name out to all tasks;
+    // a single instance / dev host is used as-is. (SITE_RUNTIME_URL is the public
+    // origin and load-balances to ONE replica — the wrong target for a broadcast.)
+    const base =
       kind === "theme"
-        ? `${this.config.get("SITE_RUNTIME_URL") ?? "http://localhost:3100"}/api/purge-package`
-        : `${this.config.get("PLUGIN_RUNTIME_URL") ?? "http://localhost:4200"}/purge`;
+        ? (this.config.get<string>("SITE_RUNTIME_INTERNAL_URL") ??
+          this.config.get<string>("SITE_RUNTIME_URL") ??
+          "http://localhost:3100")
+        : (this.config.get<string>("PLUGIN_RUNTIME_URL") ?? "http://localhost:4200");
+    const path = kind === "theme" ? "/api/purge-package" : "/purge";
 
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "content-type": "application/json", "x-internal-token": token },
-        body: JSON.stringify({ key, version }),
-        signal: AbortSignal.timeout(5000),
-      });
-      if (!res.ok) {
-        this.logger.error(
-          `Purge of ${key}@${version} rejected by ${url}: HTTP ${res.status}. ` +
-            `That runtime may still be executing the revoked package.`,
-        );
-      }
-    } catch (err) {
-      this.logger.error(
-        `Purge of ${key}@${version} could not reach ${url}: ${(err as Error).message}. ` +
-          `That runtime may still be executing the revoked package.`,
-      );
-    }
+    const replicas = await serviceReplicaBases(base);
+
+    await Promise.all(
+      replicas.map(async (replica) => {
+        const url = `${replica}${path}`;
+        try {
+          const res = await fetch(url, {
+            method: "POST",
+            headers: { "content-type": "application/json", "x-internal-token": token },
+            body: JSON.stringify({ key, version }),
+            signal: AbortSignal.timeout(5000),
+          });
+          if (!res.ok) {
+            this.logger.error(
+              `Purge of ${key}@${version} rejected by ${url}: HTTP ${res.status}. ` +
+                `That runtime may still be executing the revoked package.`,
+            );
+          }
+        } catch (err) {
+          this.logger.error(
+            `Purge of ${key}@${version} could not reach ${url}: ${(err as Error).message}. ` +
+              `That runtime may still be executing the revoked package.`,
+          );
+        }
+      }),
+    );
   }
 
 

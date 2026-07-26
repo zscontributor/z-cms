@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { getSystemDb } from "@zcmsorg/database";
 import { hostnameVariants } from "@zcmsorg/schemas";
 import Redis from "ioredis";
+import { serviceReplicaBases } from "../common/service-replicas";
 
 /**
  * Redis is the read path for public pages.
@@ -196,13 +197,20 @@ export class CacheService implements OnModuleDestroy {
    * chrome of every page).
    */
   private async revalidateSiteRuntime(siteId: string, paths: string[]): Promise<void> {
-    const url = this.config.get<string>("SITE_RUNTIME_URL");
+    // Broadcast INTERNALLY when we can. SITE_RUNTIME_URL is the public origin, and
+    // pinging it means the purge loops out through the CDN and load-balances to a
+    // SINGLE replica — every OTHER replica keeps its own Next.js ISR copy until the
+    // 60s TTL, which is exactly the "new theme takes a minute to show" lag. The
+    // internal Swarm name lets us resolve every task and hit each replica directly.
+    const base =
+      this.config.get<string>("SITE_RUNTIME_INTERNAL_URL") ??
+      this.config.get<string>("SITE_RUNTIME_URL");
     // site-runtime verifies this against the token IT holds — its render token
     // when one is configured, else the shared privileged token.
     const token =
       this.config.get<string>("SITE_RUNTIME_INTERNAL_TOKEN") ??
       this.config.get<string>("CMS_INTERNAL_TOKEN");
-    if (!url || !token) return;
+    if (!base || !token) return;
 
     let hostnames: string[];
     try {
@@ -217,31 +225,39 @@ export class CacheService implements OnModuleDestroy {
       this.logger.warn(`Could not resolve hostnames for site ${siteId}: ${(err as Error).message}`);
       return;
     }
+    if (hostnames.length === 0) return;
+
+    // One base URL per running replica (or just `base` when it is not a Swarm VIP).
+    const replicas = await serviceReplicaBases(base);
 
     await Promise.all(
-      hostnames.map(async (hostname) => {
-        try {
-          const res = await fetch(`${url}/api/revalidate`, {
-            method: "POST",
-            headers: {
-              "content-type": "application/json",
-              "x-internal-token": token,
-            },
-            body: JSON.stringify({ hostname, paths }),
-            signal: AbortSignal.timeout(3000),
-          });
+      replicas.flatMap((replica) =>
+        hostnames.map(async (hostname) => {
+          try {
+            const res = await fetch(`${replica}/api/revalidate`, {
+              method: "POST",
+              headers: {
+                "content-type": "application/json",
+                "x-internal-token": token,
+              },
+              body: JSON.stringify({ hostname, paths }),
+              signal: AbortSignal.timeout(3000),
+            });
 
-          if (!res.ok) {
-            this.logger.warn(
-              `Revalidate rejected for ${hostname}: HTTP ${res.status} ${await res.text()}`,
+            if (!res.ok) {
+              this.logger.warn(
+                `Revalidate rejected for ${hostname} at ${replica}: HTTP ${res.status} ${await res.text()}`,
+              );
+            }
+          } catch (err) {
+            // site-runtime may simply not be running (API-only deploys). Content is
+            // still correct, just cached until its TTL expires.
+            this.logger.debug(
+              `Revalidate ping to ${hostname} at ${replica} failed: ${(err as Error).message}`,
             );
           }
-        } catch (err) {
-          // site-runtime may simply not be running (API-only deploys). Content is
-          // still correct, just cached until its TTL expires.
-          this.logger.debug(`Revalidate ping to ${hostname} failed: ${(err as Error).message}`);
-        }
-      }),
+        }),
+      ),
     );
   }
 
