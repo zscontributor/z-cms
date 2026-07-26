@@ -59,15 +59,15 @@ interface ResolvedSite {
   tenantId: string;
   name: string;
   /**
-   * The site's primary hostname — the one it was created with.
+   * Every hostname this site is registered under, primary first.
    *
-   * A site answers to more than one host ("z-cms.org" and "www.z-cms.org" are the
-   * same site to everyone except a string comparison), but a page must still have
-   * ONE address: two hosts serving identical HTML is duplicate content, and search
-   * engines split the ranking between them. So site-runtime redirects any other
-   * spelling to this one, and this is how it knows which that is.
+   * A site answers on more than one domain ("z-soft.com.vn" and "z-soft.vn" are the
+   * same site), and each is a first-class address that serves at its own name. The
+   * runtime folds only the www/apex SPELLING of a registered host onto it — never
+   * one registered domain onto another — using `canonicalHostFor`. Host-independent,
+   * so it rides safely in the per-site render cache that is not keyed by host.
    */
-  canonicalHost: string;
+  domains: string[];
   defaultLocale: string;
   locales: string[];
   /**
@@ -156,13 +156,12 @@ export class RenderService {
       normalizedPath === "/search" ? `q=${normalizedSearchQuery}` : undefined,
     );
     const cached = await this.cache.get<RenderPayload>(cacheKey);
-    // A hit is only a hit if it carries `canonicalHost`. Neither cache key is
-    // versioned by the shape of what it stores, so an entry written by a build
-    // that predates the field outlives the deploy that added it — and site-runtime
-    // reads the missing field as `undefined` and redirects the site to
-    // "https://undefined/". Rebuilding costs one render; the alternative is a
-    // permanent redirect that visitors' browsers then cache.
-    if (cached?.site.canonicalHost) return cached;
+    // A hit is only a hit if it carries `domains`. Neither cache key is versioned by
+    // the shape of what it stores, so an entry written by a build that predates the
+    // field outlives the deploy that added it — and site-runtime, reading a missing
+    // list, would have nothing to fold www/apex spellings onto. Rebuilding costs one
+    // render; serving a payload of the wrong shape costs correctness.
+    if (cached?.site.domains?.length) return cached;
 
     const payload = await withTenant(site.tenantId, () =>
       this.build(site, normalizedPath, page, normalizedSearchQuery),
@@ -180,9 +179,9 @@ export class RenderService {
   private async resolveHost(hostname: string): Promise<ResolvedSite> {
     const key = CacheService.hostKey(hostname);
     const cached = await this.cache.get<ResolvedSite>(key);
-    // Same reason as in `resolve`: an entry without `canonicalHost` is stale by
-    // shape, not by age, and re-resolving is cheaper than serving it.
-    if (cached?.canonicalHost) return cached;
+    // Same reason as in `resolve`: an entry without `domains` is stale by shape, not
+    // by age, and re-resolving is cheaper than serving it.
+    if (cached?.domains?.length) return cached;
 
     // Both spellings of the host, because "www.z-cms.org" is not a different site
     // from "z-cms.org" — it is the same site, reached by the other name for it.
@@ -202,10 +201,13 @@ export class RenderService {
       id: domain.site.id,
       tenantId: domain.site.tenantId,
       name: domain.site.name,
-      // The primary domain, falling back to the row we matched — a site always has
-      // one, but a row with no primary flag must still resolve rather than crash.
-      canonicalHost:
-        domain.site.domains.find((d) => d.isPrimary)?.hostname ?? domain.hostname,
+      // Every registered hostname, primary first. The matched row is guaranteed to
+      // be in here; the ordering only decides which one a theme treats as the site's
+      // main address, not which ones serve.
+      domains: [
+        ...domain.site.domains.filter((d) => d.isPrimary),
+        ...domain.site.domains.filter((d) => !d.isPrimary),
+      ].map((d) => d.hostname),
       defaultLocale: domain.site.defaultLocale,
       locales: domain.site.locales,
       brand: parseSiteBrand(domain.site.settings),
@@ -287,7 +289,7 @@ export class RenderService {
       site: {
         id: site.id,
         name: site.name,
-        canonicalHost: site.canonicalHost,
+        domains: site.domains,
         locale,
         defaultLocale: site.defaultLocale,
         locales: site.locales,

@@ -12,6 +12,7 @@ import {
   InviteUserSchema,
   LoginSchema,
   normalizeHostname,
+  parseHostnameList,
   wwwVariant,
   PASSWORD_MAX,
   PASSWORD_MIN,
@@ -497,6 +498,36 @@ describe("normalizeHostname", () => {
   it("does not invent a hostname out of something that is not one", () => {
     expect(HOSTNAME_RE.test(normalizeHostname("not a host"))).toBe(false);
     expect(HOSTNAME_RE.test(normalizeHostname("https://"))).toBe(false);
+  });
+});
+
+describe("parseHostnameList", () => {
+  // The admin's one domain field is a comma-separated list, so a site can answer on
+  // both "z-soft.com.vn" and "z-soft.vn" without a second form.
+  it("splits a comma-separated string and normalizes each host", () => {
+    expect(parseHostnameList("z-soft.com.vn, https://z-soft.vn/")).toEqual([
+      "z-soft.com.vn",
+      "z-soft.vn",
+    ]);
+  });
+
+  it("also accepts an already-split array", () => {
+    expect(parseHostnameList(["z-soft.com.vn", "z-soft.vn"])).toEqual([
+      "z-soft.com.vn",
+      "z-soft.vn",
+    ]);
+  });
+
+  it("drops blanks and de-duplicates, preserving order — the first is primary", () => {
+    expect(parseHostnameList("z-soft.vn, , z-soft.com.vn, z-soft.vn")).toEqual([
+      "z-soft.vn",
+      "z-soft.com.vn",
+    ]);
+  });
+
+  it("returns an empty list for an empty input, so callers can reject it", () => {
+    expect(parseHostnameList("")).toEqual([]);
+    expect(parseHostnameList("  ,  ")).toEqual([]);
   });
 });
 

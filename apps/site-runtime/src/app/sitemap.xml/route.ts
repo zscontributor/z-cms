@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { canonicalHostFor } from "@zcmsorg/schemas";
 import {
   canonicalUrl,
   currentHostname,
@@ -67,11 +68,11 @@ export async function GET(): Promise<Response> {
     return new NextResponse("Not found", { status: 404 });
   }
 
-  // One sitemap per site, on one host — the same canonicalisation the page does,
-  // so the sitemap a crawler indexes lists URLs on the host it was fetched from
-  // rather than splitting the site across both spellings of its name.
-  const canonicalHost = payload.site.canonicalHost;
-  if (canonicalHost && hostname && hostname !== canonicalHost) {
+  // The same canonicalisation the page does: only a www/apex spelling of a
+  // registered host folds onto it, so each registered domain keeps its own sitemap
+  // rather than one domain's crawler being bounced to another's.
+  const canonicalHost = hostname ? canonicalHostFor(hostname, payload.site.domains) : null;
+  if (canonicalHost) {
     return NextResponse.redirect(await canonicalUrl(canonicalHost), 308);
   }
 
@@ -95,7 +96,9 @@ export async function GET(): Promise<Response> {
       // is served after that.
       next: {
         revalidate: RENDER_REVALIDATE_SECONDS,
-        tags: [siteTag(canonicalHost || hostname)],
+        // Tagged by the host actually served — cms-api purges every registered
+        // hostname's siteTag on publish, so this drops with the rest.
+        tags: [siteTag(hostname)],
       },
     });
   } catch {

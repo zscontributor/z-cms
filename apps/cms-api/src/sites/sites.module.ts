@@ -238,14 +238,25 @@ export class SitesController {
         },
       });
 
+      // The first hostname is the primary — the one every other spelling redirects
+      // to — and the rest are aliases that resolve to the same site. Each is its own
+      // row because `Domain.hostname` is globally unique and resolution is a lookup
+      // on that column; a P2002 on any of them is caught below and, because the whole
+      // request is one transaction, takes the site row down with it.
+      const [primaryHost, ...aliasHosts] = body.hostnames;
       await db().domain.create({
         data: {
           tenantId: actor.tenantId,
           siteId: created.id,
-          hostname: body.hostname,
+          hostname: primaryHost,
           isPrimary: true,
         },
       });
+      for (const hostname of aliasHosts) {
+        await db().domain.create({
+          data: { tenantId: actor.tenantId, siteId: created.id, hostname, isPrimary: false },
+        });
+      }
 
       await seedStarterContent(
         actor.tenantId,
@@ -345,12 +356,34 @@ export class SitesController {
         include: SITE_INCLUDE,
       });
 
-      if (body.hostname !== undefined) {
-        const primary = existing.domains.find((domain) => domain.isPrimary) ?? existing.domains[0];
-        if (!primary) throw new ConflictException("This site has no hostname to update.");
-        await db().domain.update({
-          where: { id: primary.id },
-          data: { hostname: body.hostname },
+      if (body.hostnames !== undefined) {
+        // The list REPLACES the site's domains. Reconcile rather than delete-all-and-
+        // recreate: a hostname already on this site keeps its row (and its `verified`
+        // flag), one no longer in the list is removed, and a new one is inserted —
+        // where a P2002 means it belongs to another site and, because the request is
+        // one transaction, rolls back the whole PATCH. The first entry is the primary.
+        const desired = body.hostnames;
+        const desiredSet = new Set(desired);
+        const existingHosts = new Set(existing.domains.map((domain) => domain.hostname));
+
+        const toRemove = existing.domains.filter((domain) => !desiredSet.has(domain.hostname));
+        if (toRemove.length > 0) {
+          await db().domain.deleteMany({ where: { id: { in: toRemove.map((d) => d.id) } } });
+        }
+        for (const hostname of desired) {
+          if (!existingHosts.has(hostname)) {
+            await db().domain.create({
+              data: { tenantId: existing.tenantId, siteId: id, hostname, isPrimary: false },
+            });
+          }
+        }
+        // Exactly one primary, and it is the first in the list. Clear every flag on
+        // this site, then set the one — two statements so a former primary that is
+        // still present does not keep the flag.
+        await db().domain.updateMany({ where: { siteId: id }, data: { isPrimary: false } });
+        await db().domain.updateMany({
+          where: { siteId: id, hostname: desired[0] },
+          data: { isPrimary: true },
         });
         site = await db().site.findUniqueOrThrow({ where: { id }, include: SITE_INCLUDE });
       }

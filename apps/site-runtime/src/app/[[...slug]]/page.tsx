@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
-import type { RenderPayload } from "@zcmsorg/schemas";
+import { canonicalHostFor, type RenderPayload } from "@zcmsorg/schemas";
 import { organizationJsonLd, resolveSeo } from "@zcmsorg/theme-sdk";
 import { buildThemeContext } from "@/lib/theme-context";
 import { resolveTheme, withPlatformIcons } from "@/lib/theme-registry";
@@ -179,20 +179,19 @@ export default async function CatchAllPage(props: RouteProps) {
   // No site for this hostname: a clean 404, never a 500.
   if (!payload) notFound();
 
-  // Reached by one of the site's other names — "www.z-cms.org" when the site is
-  // "z-cms.org". It resolved, so the visitor is in the right place; they are just
-  // at the wrong address for it. 308 rather than 302: this is a property of the
-  // site, not of today, and a permanent redirect is what moves the search ranking
-  // onto the canonical host instead of splitting it across both.
+  // A site answers on several registered domains, and each is a first-class address:
+  // "z-soft.vn" stays on "z-soft.vn", it is NOT bounced to "z-soft.com.vn". Only a
+  // www/apex SPELLING of a registered host that is not itself registered gets folded
+  // onto it — "www.z-soft.vn" -> "z-soft.vn" — so each domain still has one address
+  // rather than two that rank against each other. 308, not 302: a spelling is a
+  // property of the site, not of today.
   //
-  // The canonical host must be non-empty before it can be redirected to. A payload
-  // from an older cms-api — or one served from a cache written before this field
-  // existed — carries no `canonicalHost`, and `!==` against `undefined` is true for
-  // every request: without this check the whole site 308s to "https://undefined/",
-  // permanently, in every visitor's browser cache. Serving the page on a
-  // non-canonical host is a far smaller harm than that.
-  const canonicalHost = payload.site.canonicalHost;
-  if (canonicalHost && hostname && hostname !== canonicalHost) {
+  // `canonicalHostFor` returns null when the request is already canonical, when the
+  // spelling is unrecognised, OR when `domains` is empty — the last is a payload from
+  // an older cms-api or a cache written before this field, and serving where the
+  // visitor is beats redirecting the whole site to "https://undefined/" permanently.
+  const canonicalHost = hostname ? canonicalHostFor(hostname, payload.site.domains) : null;
+  if (canonicalHost) {
     permanentRedirect(await canonicalUrl(canonicalHost));
   }
 

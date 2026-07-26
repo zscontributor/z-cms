@@ -21,7 +21,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.stubEnv("NODE_ENV", "production");
   render.currentHostname.mockResolvedValue("site.test");
-  render.resolveChrome.mockResolvedValue({ site: { id: "s1", canonicalHost: "site.test" } });
+  render.resolveChrome.mockResolvedValue({ site: { id: "s1", domains: ["site.test"] } });
   render.canonicalUrl.mockResolvedValue("https://site.test/robots.txt");
 });
 
@@ -45,14 +45,27 @@ describe("GET /robots.txt", () => {
     expect(await res.text()).toContain("Disallow: /");
   });
 
-  it("redirects a non-canonical host to the canonical robots.txt", async () => {
+  it("folds the www spelling of a registered host onto it", async () => {
     render.currentHostname.mockResolvedValue("www.site.test");
-    render.resolveChrome.mockResolvedValue({ site: { id: "s1", canonicalHost: "site.test" } });
+    render.resolveChrome.mockResolvedValue({ site: { id: "s1", domains: ["site.test"] } });
     render.canonicalUrl.mockResolvedValue("https://site.test/robots.txt");
 
     const res = await GET();
 
     expect(res.status).toBe(308);
     expect(res.headers.get("location")).toBe("https://site.test/robots.txt");
+  });
+
+  it("serves a second registered domain's own robots.txt, pointing at its own sitemap", async () => {
+    render.currentHostname.mockResolvedValue("z-soft.vn");
+    render.resolveChrome.mockResolvedValue({
+      site: { id: "s1", domains: ["z-soft.com.vn", "z-soft.vn"] },
+    });
+
+    const res = await GET();
+
+    expect(res.status).toBe(200);
+    expect(render.canonicalUrl).not.toHaveBeenCalled();
+    expect(await res.text()).toContain("Sitemap: https://z-soft.vn/sitemap.xml");
   });
 });

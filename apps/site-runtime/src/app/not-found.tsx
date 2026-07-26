@@ -3,15 +3,19 @@ import { DEFAULT_SITE_BRAND } from "@zcmsorg/schemas";
 import type { RenderPayload } from "@zcmsorg/schemas";
 import { buildThemeContext } from "@/lib/theme-context";
 import { DEFAULT_THEME_KEY, resolveTheme } from "@/lib/theme-registry";
-import { currentHostname, resolveChrome } from "@/lib/render-client";
+import {
+  currentHostname,
+  resolveChrome,
+  resolveDocumentPayload,
+} from "@/lib/render-client";
 
 /**
  * The 404 page, rendered inside the site's own theme.
  *
  * Next serves this with a real 404 status whenever a route calls notFound(). To
- * draw it in the right theme it needs the site chrome, which it gets from the
- * homepage resolve — the single hottest cache entry on the site, so this costs no
- * uncached round trip in practice. The page's own (missing) content is ignored.
+ * draw it in the right theme and language it first resolves the requested URL.
+ * Even when content is missing, that payload still carries the locale selected by
+ * the URL. The homepage chrome remains a fallback when no request payload exists.
  *
  * When even the chrome cannot be had — an unknown hostname, or cms-api down — it
  * falls back to the default theme with its manifest defaults. A 404 must never be
@@ -24,8 +28,8 @@ const FALLBACK_PAYLOAD: RenderPayload = {
     id: "",
     name: "",
     // Empty, like the id and the name: this payload renders when no site was
-    // resolved, so there is no canonical host to send anyone to.
-    canonicalHost: "",
+    // resolved, so there are no domains to fold a spelling onto.
+    domains: [],
     locale: BASE_LOCALE,
     defaultLocale: BASE_LOCALE,
     locales: [BASE_LOCALE],
@@ -50,11 +54,22 @@ const FALLBACK_PAYLOAD: RenderPayload = {
 
 async function chromePayload(): Promise<RenderPayload> {
   try {
+    // Resolve the URL that actually produced this 404 before falling back to the
+    // homepage chrome. A missing `/vi/...` path still carries the site's Vietnamese
+    // locale even though it has no content; resolving only `/` silently rebuilt the
+    // ThemeContext in the default locale and made every themed 404 read in English.
+    const requested = await resolveDocumentPayload();
+    if (requested) return requested;
+  } catch (error) {
+    console.error("[404] Could not resolve the requested URL.", error);
+  }
+
+  try {
     const hostname = await currentHostname();
     const payload = await resolveChrome(hostname);
     return payload ?? FALLBACK_PAYLOAD;
   } catch (error) {
-    console.error("[404] Could not load site chrome; using default theme.", error);
+    console.error("[404] Could not load homepage chrome; using default theme.", error);
     return FALLBACK_PAYLOAD;
   }
 }

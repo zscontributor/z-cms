@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { LocaleInfo } from "@zcmsorg/i18n";
-import { HOSTNAME_RE, normalizeHostname, type SiteDto } from "@zcmsorg/schemas";
+import { HOSTNAME_RE, parseHostnameList, type SiteDto } from "@zcmsorg/schemas";
 import { updateSiteAction } from "@/app/actions/site";
 import { MediaPickerField } from "@/components/editor/media-picker";
 import { Button } from "@/components/ui/button";
@@ -46,8 +46,15 @@ export function SiteForm({
 
   const [name, setName] = useState(site.name);
   const [slug, setSlug] = useState(site.slug);
-  const [hostname, setHostname] = useState(
-    site.domains.find((domain) => domain.isPrimary)?.hostname ?? site.domains[0]?.hostname ?? "",
+  // Primary domain first, then its aliases, joined into the one comma-separated
+  // field — the same shape the operator edits it in.
+  const [hostnames, setHostnames] = useState(
+    [
+      ...site.domains.filter((domain) => domain.isPrimary),
+      ...site.domains.filter((domain) => !domain.isPrimary),
+    ]
+      .map((domain) => domain.hostname)
+      .join(", "),
   );
   const [defaultLocale, setDefaultLocale] = useState(site.defaultLocale);
   const [primaryColor, setPrimaryColor] = useState(site.brand.primaryColor);
@@ -55,9 +62,10 @@ export function SiteForm({
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   const published = site.status === "PUBLISHED";
-  const effectiveHostname = normalizeHostname(hostname);
-  const hostnameValid = HOSTNAME_RE.test(effectiveHostname);
-  const hostnameError = effectiveHostname && !hostnameValid;
+  const effectiveHostnames = parseHostnameList(hostnames);
+  const hostnamesValid =
+    effectiveHostnames.length > 0 && effectiveHostnames.every((host) => HOSTNAME_RE.test(host));
+  const hostnamesError = hostnames.trim() !== "" && !hostnamesValid;
 
   function save(patch: Parameters<typeof updateSiteAction>[1]) {
     setResult(null);
@@ -83,11 +91,11 @@ export function SiteForm({
         onSubmit={(event) => {
           event.preventDefault();
           if (!canUpdate || pending) return;
-          if (!slug || !hostnameValid) return;
+          if (!slug || !hostnamesValid) return;
           save({
             name: name.trim() || site.name,
             slug,
-            hostname: effectiveHostname,
+            hostnames: effectiveHostnames,
             defaultLocale,
             // The colour is validated by the API as a six-digit hex; the native
             // colour input can only ever produce one, so the two agree.
@@ -126,24 +134,28 @@ export function SiteForm({
           >
             <Input
               id="site-hostname"
-              value={hostname}
-              onChange={(event) => setHostname(event.target.value)}
-              onBlur={() => setHostname(effectiveHostname)}
+              value={hostnames}
+              onChange={(event) => setHostnames(event.target.value)}
+              onBlur={() => setHostnames(effectiveHostnames.join(", "))}
               disabled={!canUpdate || pending}
-              placeholder="localhost:3100"
+              placeholder="z-soft.com.vn, z-soft.vn"
               autoComplete="off"
               spellCheck={false}
-              aria-invalid={hostnameError || undefined}
+              aria-invalid={hostnamesError || undefined}
             />
-            {hostnameError ? (
+            {hostnamesError ? (
               <p role="alert" className="mt-1 text-xs text-red-600 dark:text-red-400">
                 {t("admin.sites.hostnameInvalid")}
               </p>
-            ) : effectiveHostname && effectiveHostname !== hostname.trim() ? (
+            ) : effectiveHostnames.length > 0 &&
+              effectiveHostnames.join(", ") !== hostnames.trim() ? (
               <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                {t("admin.sites.hostnameNormalized", { hostname: effectiveHostname })}
+                {t("admin.sites.hostnameNormalized", { hostname: effectiveHostnames.join(", ") })}
               </p>
             ) : null}
+            <p className="mt-1 text-[11px] leading-4 text-amber-700 dark:text-amber-300">
+              {t("admin.sites.hostnameDnsHint")}
+            </p>
           </Field>
 
           <Field label={t("admin.sites.defaultLocale")} htmlFor="site-locale">
@@ -258,7 +270,7 @@ export function SiteForm({
         ) : null}
 
         <div className="flex items-center gap-2 border-t border-[var(--border)] pt-5">
-          <Button type="submit" disabled={!canUpdate || pending || !slug || !hostnameValid}>
+          <Button type="submit" disabled={!canUpdate || pending || !slug || !hostnamesValid}>
             {pending ? t("admin.sites.saving") : t("admin.sites.save")}
           </Button>
 

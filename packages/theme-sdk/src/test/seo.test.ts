@@ -42,7 +42,7 @@ function context(site?: Partial<RenderPayload["site"]>): ThemeContext {
     site: {
       id: "site_1",
       name: "Acme",
-      canonicalHost: "acme.test",
+      domains: ["acme.test"],
       locale: "en",
       defaultLocale: "en",
       locales: ["en"],

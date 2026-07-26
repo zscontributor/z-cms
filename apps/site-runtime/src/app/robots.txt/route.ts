@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { canonicalHostFor } from "@zcmsorg/schemas";
 import { canonicalUrl, currentHostname, resolveChrome } from "@/lib/render-client";
 
 /**
@@ -26,15 +27,18 @@ export async function GET(): Promise<Response> {
     });
   }
 
-  const canonicalHost = payload.site.canonicalHost;
-  if (canonicalHost && hostname && hostname !== canonicalHost) {
+  // Only a www/apex spelling folds onto its registered host; each registered domain
+  // serves its own robots.txt, pointing at its own sitemap.
+  const canonicalHost = hostname ? canonicalHostFor(hostname, payload.site.domains) : null;
+  if (canonicalHost) {
     return NextResponse.redirect(await canonicalUrl(canonicalHost), 308);
   }
 
-  // Absolute, on the canonical host — the spec requires the Sitemap URL be fully
-  // qualified, and it must name the same host the sitemap's own <loc> entries use.
+  // Absolute, on the host actually served — the spec requires the Sitemap URL be
+  // fully qualified, and it must name the same host the sitemap's own <loc> entries
+  // use, which for a registered domain is that domain itself.
   const proto = process.env.NODE_ENV === "production" ? "https" : "http";
-  const host = canonicalHost || hostname;
+  const host = hostname;
   const sitemapUrl = `${proto}://${host}/sitemap.xml`;
 
   const body = `User-agent: *\nAllow: /\n\nSitemap: ${sitemapUrl}\n`;

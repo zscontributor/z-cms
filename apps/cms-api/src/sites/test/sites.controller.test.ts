@@ -8,7 +8,12 @@ const site = {
   findUniqueOrThrow: vi.fn(),
   findMany: vi.fn(),
 };
-const domain = { create: vi.fn(), update: vi.fn() };
+const domain = {
+  create: vi.fn(),
+  update: vi.fn(),
+  deleteMany: vi.fn(),
+  updateMany: vi.fn(),
+};
 const contentType = { create: vi.fn() };
 const content = { create: vi.fn() };
 
@@ -47,6 +52,7 @@ const actor: RequestActor = {
 function row(overrides: Record<string, unknown> = {}) {
   return {
     id: "s1",
+    tenantId: "t1",
     slug: "acme",
     name: "Acme",
     status: "DRAFT",
@@ -73,6 +79,8 @@ beforeEach(() => {
   site.findUniqueOrThrow.mockResolvedValue(row());
   domain.create.mockResolvedValue({ id: "d1" });
   domain.update.mockResolvedValue({ id: "d1" });
+  domain.deleteMany.mockResolvedValue({ count: 0 });
+  domain.updateMany.mockResolvedValue({ count: 1 });
   contentType.create.mockResolvedValue({ id: "ct1" });
   content.create.mockResolvedValue({ id: "c1" });
 });
@@ -88,7 +96,7 @@ describe("create", () => {
     await controller().create(actor, {
       name: "Acme",
       slug: "acme",
-      hostname: "acme.test",
+      hostnames: ["acme.test"],
       defaultLocale: "vi",
     } as never);
 
@@ -105,13 +113,33 @@ describe("create", () => {
     await controller().create(actor, {
       name: "Acme",
       slug: "acme",
-      hostname: "acme.test",
+      hostnames: ["acme.test"],
       defaultLocale: "vi",
     } as never);
 
     expect(site.create).toHaveBeenCalledTimes(1);
     expect(domain.create).toHaveBeenCalledWith({
       data: { tenantId: "t1", siteId: "s1", hostname: "acme.test", isPrimary: true },
+    });
+  });
+
+  it("creates one Domain row per hostname — the first primary, the rest aliases", async () => {
+    // "z-soft.com.vn" and "z-soft.vn" are the same site. Both must become rows, or
+    // the second address resolves to nothing; only the first is the primary the
+    // others redirect to.
+    await controller().create(actor, {
+      name: "Z-SOFT",
+      slug: "z-soft",
+      hostnames: ["z-soft.com.vn", "z-soft.vn"],
+      defaultLocale: "vi",
+    } as never);
+
+    expect(domain.create).toHaveBeenCalledTimes(2);
+    expect(domain.create).toHaveBeenNthCalledWith(1, {
+      data: { tenantId: "t1", siteId: "s1", hostname: "z-soft.com.vn", isPrimary: true },
+    });
+    expect(domain.create).toHaveBeenNthCalledWith(2, {
+      data: { tenantId: "t1", siteId: "s1", hostname: "z-soft.vn", isPrimary: false },
     });
   });
 
@@ -124,7 +152,7 @@ describe("create", () => {
     await controller().create(actor, {
       name: "Acme",
       slug: "acme",
-      hostname: "acme.test",
+      hostnames: ["acme.test"],
       defaultLocale: "vi",
     } as never);
 
@@ -150,7 +178,7 @@ describe("create", () => {
     await controller().create(actor, {
       name: "Acme",
       slug: "acme",
-      hostname: "acme.test",
+      hostnames: ["acme.test"],
       defaultLocale: "en",
     } as never);
 
@@ -161,7 +189,7 @@ describe("create", () => {
     await controller().create(actor, {
       name: "Acme",
       slug: "acme",
-      hostname: "acme.test",
+      hostnames: ["acme.test"],
       defaultLocale: "vi",
       publish: false,
     } as never);
@@ -175,7 +203,7 @@ describe("create", () => {
     await controller().create(actor, {
       name: "Acme",
       slug: "acme",
-      hostname: "acme.test",
+      hostnames: ["acme.test"],
       defaultLocale: "vi",
       publish: true,
     } as never);
@@ -187,7 +215,7 @@ describe("create", () => {
     await controller().create(actor, {
       name: "Acme",
       slug: "acme",
-      hostname: "acme.test",
+      hostnames: ["acme.test"],
       defaultLocale: "vi",
       brand: { primaryColor: "#112233", logo: "/uploads/l.png" },
     } as never);
@@ -203,7 +231,7 @@ describe("create", () => {
     await controller().create(actor, {
       name: "Acme",
       slug: "acme",
-      hostname: "acme.test",
+      hostnames: ["acme.test"],
       defaultLocale: "vi",
     } as never);
 
@@ -216,7 +244,7 @@ describe("create", () => {
     await controller().create(actor, {
       name: "Acme",
       slug: "acme",
-      hostname: "acme.test",
+      hostnames: ["acme.test"],
       defaultLocale: "vi",
       locales: ["en"],
     } as never);
@@ -230,7 +258,7 @@ describe("create", () => {
     await controller().create(actor, {
       name: "Acme",
       slug: "acme",
-      hostname: "acme.test",
+      hostnames: ["acme.test"],
       defaultLocale: "vi",
     } as never);
 
@@ -241,7 +269,7 @@ describe("create", () => {
     await controller().create(actor, {
       name: "Acme",
       slug: "acme",
-      hostname: "acme.test",
+      hostnames: ["acme.test"],
       defaultLocale: "fr",
     } as never);
 
@@ -257,7 +285,7 @@ describe("create", () => {
       controller().create(actor, {
         name: "Acme",
         slug: "acme",
-        hostname: "taken.test",
+        hostnames: ["taken.test"],
         defaultLocale: "vi",
       } as never),
     ).rejects.toBeInstanceOf(ConflictException);
@@ -270,7 +298,7 @@ describe("create", () => {
       .create(actor, {
         name: "Acme",
         slug: "acme",
-        hostname: "fresh.test",
+        hostnames: ["fresh.test"],
         defaultLocale: "vi",
       } as never)
       .catch((err: Error) => err);
@@ -287,7 +315,7 @@ describe("create", () => {
       controller().create(actor, {
         name: "Acme",
         slug: "acme",
-        hostname: "acme.test",
+        hostnames: ["acme.test"],
         defaultLocale: "vi",
       } as never),
     ).rejects.toThrow("connection reset");
@@ -325,25 +353,70 @@ describe("update", () => {
     expect(data).not.toHaveProperty("status");
   });
 
-  it("updates the slug and primary hostname from the edit-site form", async () => {
+  it("replaces the hostname from the edit-site form — old one removed, new one added", async () => {
+    // The list REPLACES the site's domains. Renaming the only hostname drops the old
+    // row and inserts the new one; the new one is the primary.
     site.findUnique.mockResolvedValueOnce(row());
     site.findUniqueOrThrow.mockResolvedValueOnce(
       row({
         slug: "renamed",
-        domains: [{ id: "d1", hostname: "renamed.test", isPrimary: true }],
+        domains: [{ id: "d2", hostname: "renamed.test", isPrimary: true }],
       }),
     );
     site.update.mockResolvedValue(row({ slug: "renamed" }));
 
     await controller().update("s1", {
       slug: "renamed",
-      hostname: "renamed.test",
+      hostnames: ["renamed.test"],
     } as never);
 
     expect(site.update.mock.calls[0][0].data).toMatchObject({ slug: "renamed" });
-    expect(domain.update).toHaveBeenCalledWith({
-      where: { id: "d1" },
-      data: { hostname: "renamed.test" },
+    // acme.test (d1) is no longer in the list, so it goes.
+    expect(domain.deleteMany).toHaveBeenCalledWith({ where: { id: { in: ["d1"] } } });
+    // renamed.test is new, so it is inserted.
+    expect(domain.create).toHaveBeenCalledWith({
+      data: { tenantId: "t1", siteId: "s1", hostname: "renamed.test", isPrimary: false },
+    });
+    // Exactly one primary, set to the first of the list.
+    expect(domain.updateMany).toHaveBeenNthCalledWith(1, {
+      where: { siteId: "s1" },
+      data: { isPrimary: false },
+    });
+    expect(domain.updateMany).toHaveBeenNthCalledWith(2, {
+      where: { siteId: "s1", hostname: "renamed.test" },
+      data: { isPrimary: true },
+    });
+  });
+
+  it("adds an alias without touching the existing primary's row", async () => {
+    // Existing site answers on acme.test (d1, primary). The operator adds a second
+    // domain: acme.test stays as-is, only the new alias is inserted.
+    site.findUnique.mockResolvedValueOnce(row());
+    site.findUniqueOrThrow.mockResolvedValueOnce(
+      row({
+        domains: [
+          { id: "d1", hostname: "acme.test", isPrimary: true },
+          { id: "d3", hostname: "acme.vn", isPrimary: false },
+        ],
+      }),
+    );
+    site.update.mockResolvedValue(row());
+
+    await controller().update("s1", {
+      hostnames: ["acme.test", "acme.vn"],
+    } as never);
+
+    // Nothing removed: both desired hosts are wanted.
+    expect(domain.deleteMany).not.toHaveBeenCalled();
+    // Only the new alias is created; acme.test already exists on this site.
+    expect(domain.create).toHaveBeenCalledTimes(1);
+    expect(domain.create).toHaveBeenCalledWith({
+      data: { tenantId: "t1", siteId: "s1", hostname: "acme.vn", isPrimary: false },
+    });
+    // The primary stays the first entry.
+    expect(domain.updateMany).toHaveBeenNthCalledWith(2, {
+      where: { siteId: "s1", hostname: "acme.test" },
+      data: { isPrimary: true },
     });
   });
 
@@ -383,7 +456,7 @@ describe("update", () => {
   });
 });
 
-describe("CreateSiteSchema hostname", () => {
+describe("CreateSiteSchema hostnames", () => {
   // The field is described to people as the address of their site, so they paste
   // the thing in their address bar. The resolver matches the Host header, which
   // has no scheme and no path — so accept the URL and reduce it, don't reject it.
@@ -391,31 +464,53 @@ describe("CreateSiteSchema hostname", () => {
     const parsed = CreateSiteSchema.parse({
       name: "Z-CMS",
       slug: "z-cms",
-      hostname: "https://z-cms.org/",
+      hostnames: "https://z-cms.org/",
       defaultLocale: "vi",
     });
 
-    expect(parsed.hostname).toBe("z-cms.org");
+    expect(parsed.hostnames).toEqual(["z-cms.org"]);
   });
 
-  it("still accepts a bare hostname, and a host with a port", () => {
-    expect(CreateSiteSchema.parse({ name: "a", slug: "a", hostname: "z-cms.org" }).hostname).toBe(
-      "z-cms.org",
+  it("splits a comma-separated list into several hostnames, primary first", () => {
+    // The one domain field lets an operator enter both spellings of a site at once.
+    const parsed = CreateSiteSchema.parse({
+      name: "Z-SOFT",
+      slug: "z-soft",
+      hostnames: "z-soft.com.vn, z-soft.vn",
+    });
+
+    expect(parsed.hostnames).toEqual(["z-soft.com.vn", "z-soft.vn"]);
+  });
+
+  it("de-duplicates the same host typed twice", () => {
+    expect(
+      CreateSiteSchema.parse({ name: "a", slug: "a", hostnames: "z-cms.org, z-cms.org" }).hostnames,
+    ).toEqual(["z-cms.org"]);
+  });
+
+  it("also accepts an array, and a host with a port", () => {
+    expect(CreateSiteSchema.parse({ name: "a", slug: "a", hostnames: ["z-cms.org"] }).hostnames).toEqual(
+      ["z-cms.org"],
     );
     expect(
-      CreateSiteSchema.parse({ name: "a", slug: "a", hostname: "localhost:3100" }).hostname,
-    ).toBe("localhost:3100");
+      CreateSiteSchema.parse({ name: "a", slug: "a", hostnames: "localhost:3100" }).hostnames,
+    ).toEqual(["localhost:3100"]);
   });
 
   it("defaults publish to false, so the safe thing happens when nobody asked", () => {
-    expect(CreateSiteSchema.parse({ name: "a", slug: "a", hostname: "z-cms.org" }).publish).toBe(
+    expect(CreateSiteSchema.parse({ name: "a", slug: "a", hostnames: "z-cms.org" }).publish).toBe(
       false,
     );
   });
 
+  it("requires at least one hostname", () => {
+    expect(CreateSiteSchema.safeParse({ name: "a", slug: "a", hostnames: "" }).success).toBe(false);
+    expect(CreateSiteSchema.safeParse({ name: "a", slug: "a", hostnames: [] }).success).toBe(false);
+  });
+
   it("rejects something that is not an address at all", () => {
     expect(
-      CreateSiteSchema.safeParse({ name: "a", slug: "a", hostname: "not a host" }).success,
+      CreateSiteSchema.safeParse({ name: "a", slug: "a", hostnames: "not a host" }).success,
     ).toBe(false);
   });
 });

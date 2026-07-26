@@ -484,9 +484,9 @@
     "name": "Name",
     "slug": "Slug",
     "slugHelp": "Lowercase letters, digits and hyphens. Unique within your tenant.",
-    "hostname": "Hostname",
-    "hostnameHelp": "The address visitors use, port included in development — e.g. localhost:3100. Unique across the platform.",
-    "hostnameInvalid": "That is not an address we can serve. Use a hostname such as example.com, or localhost:3100 in development.",
+    "hostname": "Domains",
+    "hostnameHelp": "The address(es) visitors use. Separate multiple domains with commas — e.g. z-soft.com.vn, z-soft.vn. Include the port in development (localhost:3100). Unique across the platform.",
+    "hostnameInvalid": "One of those is not an address we can serve. Use hostnames such as example.com, or localhost:3100 in development; separate multiple with commas.",
     "hostnameNormalized": "Will be saved as {hostname}",
     "publishNow": "Publish this site immediately",
     "publishNowHelp": "{hostname} starts answering requests as soon as the site is created.",
@@ -519,7 +519,8 @@
       "nameRequired": "A name is required.",
       "slugRequired": "A slug is required.",
       "hostnameRequired": "A hostname is required."
-    }
+    },
+    "hostnameDnsHint": "Note: point the domain's DNS record to the IP of the server running your z-cms FIRST, then save the hostname here — until DNS resolves, the domain will not reach the site."
   },
   "menus": {
     "title": "Menus",

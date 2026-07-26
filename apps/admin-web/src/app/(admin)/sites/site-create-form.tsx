@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { LocaleInfo } from "@zcmsorg/i18n";
-import { DEFAULT_SITE_BRAND, HOSTNAME_RE, normalizeHostname } from "@zcmsorg/schemas";
+import { DEFAULT_SITE_BRAND, HOSTNAME_RE, parseHostnameList } from "@zcmsorg/schemas";
 import { createSiteAction } from "@/app/actions/site";
 import { Checkbox, Field, Input, Select } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
@@ -37,21 +37,23 @@ export function SiteCreateForm({ locales }: { locales: LocaleInfo[] }) {
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
-  const [hostname, setHostname] = useState("");
+  const [hostnames, setHostnames] = useState("");
   const [defaultLocale, setDefaultLocale] = useState(locales[0]?.code ?? "vi");
   const [publish, setPublish] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const effectiveSlug = slugTouched ? slug : slugify(name);
 
-  // Normalized on every keystroke, so what the field shows is what will be stored
-  // and what the resolver will match. Pasting "https://z-cms.org/" is the common
-  // case, not the exotic one — the address bar is where people copy a site from.
-  const effectiveHostname = normalizeHostname(hostname);
-  const hostnameValid = HOSTNAME_RE.test(effectiveHostname);
-  const hostnameError = effectiveHostname && !hostnameValid;
+  // The domain field is a comma-separated list — "z-soft.com.vn, z-soft.vn" — so a
+  // site can answer on more than one address. `parseHostnameList` normalizes and
+  // de-duplicates each on every keystroke, which is why the preview below shows what
+  // will actually be stored; the first survivor becomes the primary domain.
+  const effectiveHostnames = parseHostnameList(hostnames);
+  const hostnamesValid =
+    effectiveHostnames.length > 0 && effectiveHostnames.every((host) => HOSTNAME_RE.test(host));
+  const hostnamesError = hostnames.trim() !== "" && !hostnamesValid;
 
-  const ready = name.trim() && effectiveSlug && hostnameValid;
+  const ready = name.trim() && effectiveSlug && hostnamesValid;
 
   function submit() {
     setError(null);
@@ -59,7 +61,7 @@ export function SiteCreateForm({ locales }: { locales: LocaleInfo[] }) {
       const result = await createSiteAction({
         name: name.trim(),
         slug: effectiveSlug,
-        hostname: effectiveHostname,
+        hostnames: effectiveHostnames,
         defaultLocale,
         publish,
         // A site is born with the platform's brand rather than with nothing, so
@@ -128,28 +130,31 @@ export function SiteCreateForm({ locales }: { locales: LocaleInfo[] }) {
         >
           <Input
             id="site-hostname"
-            value={hostname}
-            onChange={(event) => setHostname(event.target.value)}
-            // Rewriting the field while it is being typed in would fight the
-            // typist, so the pasted URL is only collapsed to its hostname once
-            // they leave the field — by which point the preview below has been
-            // telling them what it will become all along.
-            onBlur={() => setHostname(effectiveHostname)}
+            value={hostnames}
+            onChange={(event) => setHostnames(event.target.value)}
+            // Collapse each pasted URL to its bare hostname only once they leave the
+            // field — rewriting while typing a comma-separated list would fight the
+            // typist, and the preview below already shows what it will become.
+            onBlur={() => setHostnames(effectiveHostnames.join(", "))}
             disabled={pending}
-            placeholder="localhost:3100"
+            placeholder="z-soft.com.vn, z-soft.vn"
             autoComplete="off"
             spellCheck={false}
-            aria-invalid={hostnameError || undefined}
+            aria-invalid={hostnamesError || undefined}
           />
-          {hostnameError ? (
+          {hostnamesError ? (
             <p role="alert" className="mt-1 text-xs text-red-600 dark:text-red-400">
               {t("admin.sites.hostnameInvalid")}
             </p>
-          ) : effectiveHostname && effectiveHostname !== hostname.trim() ? (
+          ) : effectiveHostnames.length > 0 &&
+            effectiveHostnames.join(", ") !== hostnames.trim() ? (
             <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-              {t("admin.sites.hostnameNormalized", { hostname: effectiveHostname })}
+              {t("admin.sites.hostnameNormalized", { hostname: effectiveHostnames.join(", ") })}
             </p>
           ) : null}
+          <p className="mt-1 text-[11px] leading-4 text-amber-700 dark:text-amber-300">
+            {t("admin.sites.hostnameDnsHint")}
+          </p>
         </Field>
 
         <Field label={t("admin.sites.defaultLocale")} htmlFor="site-locale">
@@ -183,7 +188,7 @@ export function SiteCreateForm({ locales }: { locales: LocaleInfo[] }) {
             <span className="font-medium">{t("admin.sites.publishNow")}</span>
             <span className="mt-0.5 block text-xs text-zinc-500 dark:text-zinc-400">
               {publish
-                ? t("admin.sites.publishNowHelp", { hostname: effectiveHostname || "…" })
+                ? t("admin.sites.publishNowHelp", { hostname: effectiveHostnames[0] || "…" })
                 : t("admin.sites.draftHelp")}
             </span>
           </span>

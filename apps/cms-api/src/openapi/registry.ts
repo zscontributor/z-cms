@@ -21,11 +21,11 @@ import {
   HOSTNAME_RE,
   InviteUserSchema,
   LoginSchema,
-  normalizeHostname,
   MailMessageSchema,
   MailSettingsSchema,
   MfaChallengeSchema,
   MfaVerifySchema,
+  parseHostnameList,
   SiteBrandSchema,
   PermissionSchema,
   SendTestMailSchema,
@@ -242,13 +242,32 @@ export const UpdateThemeDraftSchema = z
  */
 const HostnameSchema = z
   .string()
-  .transform(normalizeHostname)
+  .min(1)
+  .max(253)
+  .regex(HOSTNAME_RE, 'A hostname, optionally with a port — "example.com" or "localhost:3100".');
+
+/**
+ * The one-or-more hostnames a site answers on.
+ *
+ * A site is reachable at more than one address — "z-soft.com.vn" and "z-soft.vn"
+ * are the same site — so this is a LIST, not a single value. It accepts either a
+ * comma-separated string ("z-soft.com.vn, z-soft.vn", which is what the admin's one
+ * domain field sends) or an already-split array, and `parseHostnameList` reduces
+ * either to normalized, de-duplicated hostnames. The FIRST survives as the primary
+ * domain; the rest are aliases that resolve to the same site and redirect to it.
+ *
+ * At least one is required — a site with no domain is a row no request can reach.
+ * The upper bound is a guard against a pasted wall of text, not a real limit anyone
+ * hits: twenty aliases on one site is already unusual.
+ */
+const HostnamesSchema = z
+  .union([z.string(), z.array(z.string())])
+  .transform((value) => parseHostnameList(value))
   .pipe(
     z
-      .string()
-      .min(1)
-      .max(253)
-      .regex(HOSTNAME_RE, 'A hostname, optionally with a port — "example.com" or "localhost:3100".'),
+      .array(HostnameSchema)
+      .min(1, "At least one hostname is required.")
+      .max(20, "A site can have at most 20 hostnames."),
   );
 
 const SlugSchema = z
@@ -264,9 +283,10 @@ export const CreateSiteSchema = z.object({
    * Required, not optional. A site with no domain cannot be resolved by any
    * request — site-runtime knows only the Host header — so a "site" without one
    * is a row that no visitor can ever reach. Creating it in the same transaction
-   * is what makes a newly created site a real thing rather than a promise.
+   * is what makes a newly created site a real thing rather than a promise. A site
+   * may answer on several domains; the first is its primary, the rest are aliases.
    */
-  hostname: HostnameSchema,
+  hostnames: HostnamesSchema,
   defaultLocale: z.string().min(2).max(10).default("vi"),
   locales: z.array(z.string().min(2).max(10)).min(1).optional(),
   brand: SiteBrandSchema.optional(),
@@ -287,7 +307,9 @@ export const UpdateSiteSchema = z
   .object({
     name: z.string().min(1).max(120),
     slug: SlugSchema,
-    hostname: HostnameSchema,
+    // The site's full set of domains, primary first. When present it REPLACES the
+    // existing set: a hostname dropped from the list is removed from the site.
+    hostnames: HostnamesSchema,
     // A new site is DRAFT, and DRAFT does not render — `resolveHost` refuses any
     // site that is not PUBLISHED. So publishing is an *update*, and this is it.
     status: z.enum(["DRAFT", "PUBLISHED", "SUSPENDED", "ARCHIVED"]),
@@ -494,10 +516,10 @@ const RenderPayloadSchema = z.object({
   site: z.object({
     id: z.uuid(),
     name: z.string(),
-    // The site's primary hostname. site-runtime redirects any other spelling of it
-    // ("www.z-cms.org" for a site created as "z-cms.org") here, so that one page
-    // has one address.
-    canonicalHost: z.string(),
+    // Every hostname this site is registered under, primary first. site-runtime
+    // folds only the www/apex spelling of one onto it, so each registered domain
+    // serves at its own name while one page still has one address per domain.
+    domains: z.array(z.string()),
     locale: z.string(),
     defaultLocale: z.string(),
     locales: z.array(z.string()),

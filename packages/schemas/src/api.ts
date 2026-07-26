@@ -382,6 +382,53 @@ export function hostnameVariants(hostname: string): string[] {
   return other ? [hostname, other] : [hostname];
 }
 
+/**
+ * Where a request should be redirected to keep one page at one address — or null.
+ *
+ * A site answers on several registered domains ("z-soft.com.vn" and "z-soft.vn")
+ * AND on the www/apex spelling of each. The first are first-class addresses: each
+ * must serve at its own name, so a visitor on "z-soft.vn" stays on "z-soft.vn" and
+ * is NOT bounced to some other domain of the same site. Only a spelling that is not
+ * itself registered — "www.z-soft.vn" when just "z-soft.vn" is — gets folded onto
+ * the registered one it is a variant of.
+ *
+ * Returns the host to 308 to, or null when the request is already on a canonical
+ * address (or on a spelling we do not recognise, in which case serving where they
+ * are beats redirecting to nothing).
+ */
+export function canonicalHostFor(requested: string, registered: string[]): string | null {
+  if (registered.includes(requested)) return null;
+  for (const host of registered) {
+    if (hostnameVariants(host).includes(requested)) return host;
+  }
+  return null;
+}
+
+/**
+ * The several hostnames one site answers on, from what a human typed into one field.
+ *
+ * A site is not always reached by a single address: "z-soft.com.vn" and "z-soft.vn"
+ * are the same site, and an operator wants to enter both without a second form. So
+ * the admin's domain field is a comma-separated list, and this is what turns that
+ * one string (or an already-split array) into the individual hostnames the resolver
+ * matches on — each `normalizeHostname`'d, blanks dropped, and de-duplicated so the
+ * same host typed twice becomes one Domain row. Order is preserved: the FIRST entry
+ * is the site's primary domain, the one every other spelling redirects to.
+ */
+export function parseHostnameList(input: string | string[]): string[] {
+  const parts = Array.isArray(input) ? input : input.split(",");
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const part of parts) {
+    const host = normalizeHostname(part);
+    if (host && !seen.has(host)) {
+      seen.add(host);
+      out.push(host);
+    }
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 // Pagination
 // ---------------------------------------------------------------------------
@@ -746,11 +793,16 @@ export interface RenderPayload {
     id: string;
     name: string;
     /**
-     * The site's primary hostname. A request that arrives on any other spelling of
-     * it — "www.z-cms.org" for a site created as "z-cms.org" — is redirected here,
-     * so that one page has one address rather than two that rank against each other.
+     * Every hostname this site is registered under, primary first.
+     *
+     * A site answers on more than one domain — "z-soft.com.vn" and "z-soft.vn" are
+     * the same site — and each is a first-class address that serves at its own name.
+     * The runtime uses this list to fold only the www/apex SPELLING of a registered
+     * host onto it (`canonicalHostFor`), so one page has one address per domain
+     * without one registered domain redirecting to another. Host-independent, so it
+     * is safe to carry in the per-site (not per-host) render cache.
      */
-    canonicalHost: string;
+    domains: string[];
     /** The locale this URL was resolved in — not the site's default. */
     locale: string;
     /** Served unprefixed. Every other locale carries its code: "/vi/blog". */

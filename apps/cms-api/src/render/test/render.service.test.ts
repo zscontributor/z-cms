@@ -56,15 +56,16 @@ function makeDb() {
 }
 
 // Doubles as a cached ResolvedSite and as the `site` of a domain row from the DB.
-// `canonicalHost` is only meaningful in the first role — resolveHost recomputes it
-// from `domains` — but a cached entry without it is stale by shape and re-resolved,
-// so the fixture has to carry it or every cache hit here becomes a miss.
+// In the first role `domains` is the string[] of registered hostnames; in the DB-row
+// role each usage overrides it with the {hostname,isPrimary} objects. A cached entry
+// without a non-empty `domains` is stale by shape and re-resolved, so the fixture has
+// to carry it or every cache hit here becomes a miss.
 const publishedSite = {
   id: "s1",
   tenantId: "t1",
   name: "Main",
   status: "PUBLISHED",
-  canonicalHost: "example.com",
+  domains: ["example.com"],
   defaultLocale: "en",
   locales: ["en"],
 };
@@ -104,7 +105,7 @@ describe("RenderService", () => {
 
   describe("resolve", () => {
     it("returns the cached payload without touching the database on a hit", async () => {
-      const cached = { site: { id: "s1", canonicalHost: "example.com" }, content: null };
+      const cached = { site: { id: "s1", domains: ["example.com"] }, content: null };
       cacheReturns({ host: publishedSite, render: cached });
 
       const out = await makeService().resolve("example.com", "/about");
@@ -113,13 +114,11 @@ describe("RenderService", () => {
       expect(holder.db.content.findMany).not.toHaveBeenCalled();
     });
 
-    it("rebuilds a cached payload that predates canonicalHost instead of serving it", async () => {
+    it("rebuilds a cached payload that predates `domains` instead of serving it", async () => {
       // Neither cache key is versioned by the shape of what it stores, so an entry
       // written before this field existed survives the deploy that added it. Served
-      // as-is, site-runtime reads `canonicalHost` as undefined, decides the visitor
-      // is on the wrong host, and 308s the whole site to "https://undefined/" — a
-      // permanent redirect that every visitor's browser then caches. A stale-by-shape
-      // entry is a miss.
+      // as-is, site-runtime reads `domains` as undefined and has nothing to fold a
+      // www/apex spelling onto. A stale-by-shape entry is a miss.
       cacheReturns({ host: null, render: { site: { id: "s1" }, content: null } });
       holder.systemDb.domain.findMany.mockResolvedValue([
         {
@@ -133,7 +132,7 @@ describe("RenderService", () => {
 
       const out = await makeService().resolve("z-cms.org", "/");
 
-      expect(out.site.canonicalHost).toBe("z-cms.org");
+      expect(out.site.domains).toEqual(["z-cms.org"]);
     });
 
     it("404s an unknown hostname", async () => {
@@ -178,26 +177,32 @@ describe("RenderService", () => {
         "www.z-cms.org",
         "z-cms.org",
       ]);
-      // ...but the payload names the canonical host, which is what makes
-      // site-runtime redirect rather than serve the page at two addresses.
-      expect(out.site.canonicalHost).toBe("z-cms.org");
+      // The payload carries the site's registered domains; site-runtime folds the
+      // www spelling onto "z-cms.org" from this list.
+      expect(out.site.domains).toEqual(["z-cms.org"]);
     });
 
-    it("serves the apex of a site created as www, since canonical is whatever was typed", async () => {
+    it("carries every registered domain, primary first, so each serves at its own name", async () => {
+      // The whole point of multi-domain: "z-soft.com.vn" and "z-soft.vn" both reach
+      // the site and both stay on their own address. The payload lists them, primary
+      // first, and site-runtime redirects between them for no reason.
       cacheReturns({ host: null, render: null });
       holder.systemDb.domain.findMany.mockResolvedValue([
         {
-          hostname: "www.z-cms.org",
+          hostname: "z-soft.vn",
           site: {
             ...publishedSite,
-            domains: [{ hostname: "www.z-cms.org", isPrimary: true }],
+            domains: [
+              { hostname: "z-soft.vn", isPrimary: false },
+              { hostname: "z-soft.com.vn", isPrimary: true },
+            ],
           },
         },
       ]);
 
-      const out = await makeService().resolve("z-cms.org", "/");
+      const out = await makeService().resolve("z-soft.vn", "/");
 
-      expect(out.site.canonicalHost).toBe("www.z-cms.org");
+      expect(out.site.domains).toEqual(["z-soft.com.vn", "z-soft.vn"]);
     });
 
     it("prefers an exact row over the www fallback", async () => {
@@ -222,7 +227,7 @@ describe("RenderService", () => {
       const out = await makeService().resolve("www.z-cms.org", "/");
 
       expect(out.site.id).toBe("www");
-      expect(out.site.canonicalHost).toBe("www.z-cms.org");
+      expect(out.site.domains).toEqual(["www.z-cms.org"]);
     });
 
     it("does not go looking for a www of localhost", async () => {

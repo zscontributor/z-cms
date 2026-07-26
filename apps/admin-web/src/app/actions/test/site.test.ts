@@ -80,7 +80,7 @@ describe("createSiteAction", () => {
     const result = await createSiteAction({
       name: "Shop",
       slug: "shop",
-      hostname: "shop.z-cms.org",
+      hostnames: ["shop.z-cms.org", "shop.z-soft.vn"],
       defaultLocale: "vi",
       publish: true,
       brand: { primaryColor: "#111111", logo: "" },
@@ -92,7 +92,7 @@ describe("createSiteAction", () => {
       body: {
         name: "Shop",
         slug: "shop",
-        hostname: "shop.z-cms.org",
+        hostnames: ["shop.z-cms.org", "shop.z-soft.vn"],
         defaultLocale: "vi",
         publish: true,
         brand: { primaryColor: "#111111", logo: "" },

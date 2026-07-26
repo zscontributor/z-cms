@@ -485,8 +485,8 @@
     "slug": "Slug",
     "slugHelp": "Chữ thường, số và dấu gạch ngang. Không trùng trong tenant.",
     "hostname": "Tên miền",
-    "hostnameHelp": "Địa chỉ người dùng truy cập, kèm cổng khi chạy dev — ví dụ localhost:3100. Không trùng trên toàn hệ thống.",
-    "hostnameInvalid": "Địa chỉ này không phục vụ được. Hãy dùng tên miền như example.com, hoặc localhost:3100 khi chạy dev.",
+    "hostnameHelp": "Địa chỉ người dùng truy cập. Nhiều tên miền phân cách bằng dấu phẩy — ví dụ z-soft.com.vn, z-soft.vn. Kèm cổng khi chạy dev (localhost:3100). Không trùng trên toàn hệ thống.",
+    "hostnameInvalid": "Có tên miền không phục vụ được. Hãy dùng tên miền như example.com, hoặc localhost:3100 khi chạy dev; nhiều tên miền phân cách bằng dấu phẩy.",
     "hostnameNormalized": "Sẽ được lưu thành {hostname}",
     "publishNow": "Xuất bản site ngay",
     "publishNowHelp": "{hostname} sẽ phục vụ truy cập ngay khi site được tạo.",
@@ -519,7 +519,8 @@
       "nameRequired": "Cần nhập tên.",
       "slugRequired": "Cần nhập slug.",
       "hostnameRequired": "Cần nhập tên miền."
-    }
+    },
+    "hostnameDnsHint": "Lưu ý: hãy trỏ bản ghi DNS của tên miền về địa chỉ IP máy chủ đang chạy z-cms của bạn TRƯỚC, rồi mới lưu tên miền ở đây — nếu chưa trỏ DNS, tên miền sẽ không truy cập được site."
   },
   "menus": {
     "title": "Menu",

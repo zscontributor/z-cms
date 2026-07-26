@@ -475,9 +475,9 @@
     "name": "名前",
     "slug": "スラッグ",
     "slugHelp": "小文字・数字・ハイフン。テナント内で一意です。",
-    "hostname": "ホスト名",
-    "hostnameHelp": "訪問者が使うアドレス。開発ではポートも含みます（例: localhost:3100）。プラットフォーム全体で一意です。",
-    "hostnameInvalid": "このアドレスは配信できません。example.com のようなホスト名、開発では localhost:3100 を使ってください。",
+    "hostname": "ドメイン",
+    "hostnameHelp": "訪問者が使うアドレス。複数のドメインはカンマで区切ります（例: z-soft.com.vn, z-soft.vn）。開発ではポートも含みます（localhost:3100）。プラットフォーム全体で一意です。",
+    "hostnameInvalid": "配信できないアドレスがあります。example.com のようなホスト名、開発では localhost:3100 を使ってください。複数はカンマで区切ります。",
     "hostnameNormalized": "{hostname} として保存されます",
     "publishNow": "このサイトをすぐに公開する",
     "publishNowHelp": "サイトの作成と同時に {hostname} がリクエストへの応答を開始します。",
@@ -510,7 +510,8 @@
       "nameRequired": "名前が必要です。",
       "slugRequired": "スラッグが必要です。",
       "hostnameRequired": "ホスト名が必要です。"
-    }
+    },
+    "hostnameDnsHint": "注意: 先にドメインのDNSレコードを z-cms を実行しているサーバーのIPに向けてから、ここでホスト名を保存してください。DNSが解決されるまでドメインはサイトに到達しません。"
   },
   "menus": {
     "title": "メニュー",

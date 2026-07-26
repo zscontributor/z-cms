@@ -50,7 +50,7 @@ export async function switchSiteAction(input: FormData | string): Promise<void> 
 export async function createSiteAction(input: {
   name: string;
   slug: string;
-  hostname: string;
+  hostnames: string[];
   defaultLocale: string;
   publish: boolean;
   brand: SiteBrand;
@@ -99,7 +99,7 @@ export async function updateSiteAction(
   patch: {
     name?: string;
     slug?: string;
-    hostname?: string;
+    hostnames?: string[];
     status?: SiteDto["status"];
     defaultLocale?: string;
     brand?: SiteBrand;

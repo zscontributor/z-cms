@@ -20,8 +20,8 @@ vi.mock("@/lib/render-client", () => render);
 import { GET } from "../route";
 
 /** A resolved payload with just the fields the route reads. */
-function chrome(id: string, canonicalHost: string) {
-  return { site: { id, canonicalHost } };
+function chrome(id: string, ...domains: string[]) {
+  return { site: { id, domains } };
 }
 
 /** Builds a fetch stub returning one canned Response, and records the call. */
@@ -70,7 +70,7 @@ describe("GET /sitemap.xml", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("redirects a non-canonical host to the canonical sitemap, permanently", async () => {
+  it("folds the www spelling of a registered host onto it, permanently", async () => {
     render.currentHostname.mockResolvedValue("www.site.test");
     render.resolveChrome.mockResolvedValue(chrome("site-1", "site.test"));
     render.canonicalUrl.mockResolvedValue("https://site.test/sitemap.xml");
@@ -80,6 +80,19 @@ describe("GET /sitemap.xml", () => {
     expect(res.status).toBe(308);
     expect(res.headers.get("location")).toBe("https://site.test/sitemap.xml");
     expect(render.canonicalUrl).toHaveBeenCalledWith("site.test");
+  });
+
+  it("serves a second registered domain at its own name, never redirecting to the primary", async () => {
+    // The multi-domain contract: "z-soft.vn" and "z-soft.com.vn" both serve their own
+    // sitemap. Landing on the alias must NOT bounce to the primary.
+    render.currentHostname.mockResolvedValue("z-soft.vn");
+    render.resolveChrome.mockResolvedValue(chrome("site-1", "z-soft.com.vn", "z-soft.vn"));
+    stubFetch(new Response("<urlset></urlset>", { status: 200 }));
+
+    const res = await GET();
+
+    expect(res.status).toBe(200);
+    expect(render.canonicalUrl).not.toHaveBeenCalled();
   });
 
   it("returns a valid empty sitemap when the object does not exist yet", async () => {
