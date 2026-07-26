@@ -83,11 +83,27 @@ function ThemeCard({
   return (
     <article
       className={cn(
-        "z-card relative p-4",
+        "z-card group relative p-4",
         sideloaded && "border-amber-300/60 dark:border-amber-800/60",
         isActive && "border-brand-500 ring-1 ring-brand-500/30",
       )}
     >
+      {/* An installed theme only has an editable canvas when it came from a
+          surviving draft. Keep the shortcut on the preview itself so editing
+          feels like an action on the theme, not a secondary list action. */}
+      {canEdit && draftId ? (
+        <LinkButton
+          href={`/theme-editor/${draftId}`}
+          size="sm"
+          variant="secondary"
+          className="absolute left-2 top-2 z-10 h-8 w-8 px-0 opacity-0 shadow-sm transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+          aria-label={t("appearance.edit")}
+          title={t("appearance.edit")}
+        >
+          <Icon name="edit" className="h-4 w-4" />
+        </LinkButton>
+      ) : null}
+
       {canConfigure ? (
         <Button
           size="sm"
@@ -138,14 +154,6 @@ function ThemeCard({
           </p>
         ) : (!sideloaded || approved) && canActivate ? (
           <ActivateButton themeKey={theme.key} name={theme.name} />
-        ) : null}
-        {/* Editable only when a draft of this theme survives — a drawn theme keeps
-            its layout there, and the installed package has none to open. */}
-        {canEdit && draftId ? (
-          <LinkButton href={`/theme-editor/${draftId}`} size="sm" variant="ghost">
-            <Icon name="edit" className="mr-1 h-3.5 w-3.5" />
-            {t("appearance.edit")}
-          </LinkButton>
         ) : null}
       </div>
 

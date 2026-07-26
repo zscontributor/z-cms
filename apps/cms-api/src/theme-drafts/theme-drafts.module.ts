@@ -22,6 +22,7 @@ import path from "node:path";
 import { db } from "@zcmsorg/database";
 import {
   normalizeChangelog,
+  parseSemver,
   readManifest,
   sha256,
   unpackTo,
@@ -221,6 +222,22 @@ function emptyDocument(): LayoutDocument {
       page: [node("s1", "section", [node("r1", "row", [node("c1", "column", [])])])],
     },
   });
+}
+
+/**
+ * A submitted drawing is the editable source module for a public theme. Its next
+ * change must be a new marketplace version: an existing version is immutable once
+ * it has been signed and submitted. Pre-release/build suffixes intentionally fall
+ * away here — a visual edit produces the next ordinary patch release.
+ */
+function nextPatchVersion(version: string): string {
+  const parsed = parseSemver(version);
+  if (!parsed || !Number.isSafeInteger(parsed.patch) || parsed.patch >= Number.MAX_SAFE_INTEGER) {
+    throw new ConflictException(
+      `Cannot create the next version from "${version}". Set a valid semantic version first.`,
+    );
+  }
+  return `${parsed.major}.${parsed.minor}.${parsed.patch + 1}`;
 }
 
 /**
@@ -435,12 +452,17 @@ class ThemeDraftsController {
       if (errors.length > 0) throw new BadRequestException(errors.join(" "));
     }
 
+    // A submitted draft remains the source module for its public theme. The first
+    // edit reopens that module as a new patch version; subsequent edits keep that
+    // pending version until it is built, signed and submitted again.
+    const version = existing.status === "SUBMITTED" ? nextPatchVersion(existing.version) : body.version;
+
     const row = await db().themeDraft.update({
       where: { id: existing.id },
       data: {
         ...(body.name !== undefined ? { name: body.name } : {}),
         ...(body.description !== undefined ? { description: body.description } : {}),
-        ...(body.version !== undefined ? { version: body.version } : {}),
+        ...(version !== undefined ? { version } : {}),
         // Stored normalized (a clean map, or null): the build reads it straight into
         // theme.json, so the canonical shape lives in the column, not in the codegen.
         ...(body.changelog !== undefined

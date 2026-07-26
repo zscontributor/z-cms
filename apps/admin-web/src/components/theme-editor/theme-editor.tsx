@@ -139,6 +139,7 @@ export function ThemeEditor({
   const [template, setTemplate] = useState<LayoutTemplateName>("page");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+  const [version, setVersion] = useState(draft.version);
   const [message, setMessage] = useState<string | null>(null);
   const [saving, startSave] = useTransition();
   // The label of whatever is mid-drag, drawn in a DragOverlay so a floating chip
@@ -347,6 +348,9 @@ export function ThemeEditor({
       const result = await saveThemeDraftAction(draft.id, { document: doc });
       if (result.ok) {
         setDirty(false);
+        // Editing a submitted theme reopens its source module as the next patch
+        // version. Reflect that immediately, before the author builds and signs.
+        setVersion(result.data.version);
         setMessage(t("themeEditor.saved"));
       } else {
         setMessage(result.error);
@@ -366,7 +370,7 @@ export function ThemeEditor({
         <header className="flex items-center justify-between gap-3 border-b border-neutral-200 px-4 py-2 dark:border-neutral-800">
           <div className="flex items-center gap-3">
             <h1 className="text-sm font-semibold">{draft.name}</h1>
-            <code className="text-xs text-neutral-500">{draft.key}</code>
+            <code className="text-xs text-neutral-500">{draft.key} · v{version}</code>
           </div>
 
           <div className="flex items-center gap-1" role="tablist" aria-label={t("themeEditor.templates.label")}>
