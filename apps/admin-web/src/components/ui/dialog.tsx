@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import { Icon } from "@/components/shell/icon";
+import { useT } from "@/lib/i18n-provider";
 
 /**
  * Built on the native <dialog>: it gives us the top layer, focus trapping and
@@ -25,6 +27,7 @@ export function Dialog({
   className?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const t = useT();
 
   useEffect(() => {
     const node = ref.current;
@@ -51,9 +54,19 @@ export function Dialog({
     >
       {open ? (
         <div className="flex flex-col">
-          <header className="border-b border-[var(--border)] px-4 py-3">
-            <h2 className="text-sm font-semibold">{title}</h2>
-            {description ? <p className="mt-0.5 text-xs z-muted">{description}</p> : null}
+          <header className="flex items-start justify-between gap-3 border-b border-[var(--border)] px-4 py-3">
+            <div className="min-w-0">
+              <h2 className="text-sm font-semibold">{title}</h2>
+              {description ? <p className="mt-0.5 text-xs z-muted">{description}</p> : null}
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={t("common.close")}
+              className="-mr-1 -mt-0.5 shrink-0 rounded-md p-1 z-muted transition-colors hover:bg-[var(--surface-sunken)] hover:text-[var(--text)]"
+            >
+              <Icon name="close" className="h-4 w-4" />
+            </button>
           </header>
           {children ? <div className="px-4 py-4">{children}</div> : null}
           {footer ? (

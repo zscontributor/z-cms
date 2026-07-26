@@ -36,7 +36,7 @@ export function Select({
   ...props
 }: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
-    <select className={cn("z-input pr-8 appearance-none bg-no-repeat", className)} {...props}>
+    <select className={cn("z-input z-select", className)} {...props}>
       {children}
     </select>
   );

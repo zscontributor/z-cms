@@ -63,6 +63,17 @@ describe("Dialog", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it("closes when the header X button is clicked", () => {
+    const onClose = vi.fn();
+    render(
+      <Dialog open onClose={onClose} title="Confirm">
+        <p>Body</p>
+      </Dialog>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "common.close" }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it("closes on the dialog's cancel event (the Escape key)", () => {
     const onClose = vi.fn();
     render(

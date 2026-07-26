@@ -10,6 +10,7 @@ out/
 coverage/
 test-results.junit.xml
 *.tsbuildinfo
+release
 
 # Compiled sandbox worker: runner.ts loads it from beside itself, so the test
 # harness builds it into src/. It is output, not source.
