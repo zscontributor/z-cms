@@ -14,7 +14,9 @@ import { db, getSystemDb } from "@zcmsorg/database";
 import { normalizeChangelog } from "@zcmsorg/package";
 import {
   pluginTablePrefix,
+  validateAdminContribution,
   validatePluginTableSchemas,
+  type PluginAdminContribution,
   type PluginTableSchema,
 } from "@zcmsorg/plugin-sdk";
 import {
@@ -186,6 +188,7 @@ export class OrgPluginsController {
       database?: { tables?: PluginTableSchema[] };
       network?: { hosts?: string[] };
       permissionsProvided?: ProvidedPermission[];
+      admin?: PluginAdminContribution;
     };
     if (manifest.database?.tables?.length && !plugin.isCore) {
       throw new BadRequestException(t()("errors.plugins.tablesFirstPartyOnly"));
@@ -209,6 +212,15 @@ export class OrgPluginsController {
       throw new BadRequestException(
         t()("errors.plugins.invalidProvidedPermissions", {
           permissions: badPermissions.map((v) => v.key).join(", "),
+        }),
+      );
+    }
+
+    const badAdmin = validateAdminContribution(manifest.admin, manifest.database?.tables);
+    if (badAdmin.length) {
+      throw new BadRequestException(
+        t()("errors.plugins.invalidAdmin", {
+          detail: badAdmin.map((v) => `${v.where} (${v.reason})`).join(", "),
         }),
       );
     }

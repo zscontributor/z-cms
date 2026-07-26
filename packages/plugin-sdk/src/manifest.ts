@@ -3,6 +3,7 @@ import type {
   Permission,
   ProvidedPermission,
 } from "@zcmsorg/schemas";
+import type { PluginAdminContribution } from "./admin";
 import type { PluginTableSchema } from "./table-schema";
 
 /**
@@ -189,4 +190,12 @@ export interface PluginManifest {
   database?: {
     tables: PluginTableSchema[];
   };
+
+  /**
+   * Screens this plugin adds to the admin — a sidebar entry and a list/detail/
+   * form over one of its own tables, declared and rendered by core. The plugin
+   * ships no admin code; it describes a screen and core draws it, gated by the
+   * permissions the entry names. See {@link PluginAdminContribution}.
+   */
+  admin?: PluginAdminContribution;
 }

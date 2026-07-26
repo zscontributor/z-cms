@@ -1,7 +1,12 @@
 import { BadGatewayException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { getSystemDb } from "@zcmsorg/database";
-import { generatePluginTableDdl, type PluginTableSchema } from "@zcmsorg/plugin-sdk";
+import {
+  generatePluginTableDdl,
+  type PluginAdminContribution,
+  type PluginAdminResource,
+  type PluginTableSchema,
+} from "@zcmsorg/plugin-sdk";
 import type { ProvidedPermission, Permission, RenderIntegration } from "@zcmsorg/schemas";
 import { t } from "../common/i18n";
 import { PluginTokenService } from "./plugin-token.service";
@@ -229,6 +234,102 @@ export class PluginsService {
     for (const key of this.providedCache.keys()) {
       if (key.startsWith(`${tenantId}:`)) this.providedCache.delete(key);
     }
+  }
+
+  /**
+   * The admin screens a user may see on this site — the sidebar entries whose
+   * permission they hold, and the descriptors for the resources those entries
+   * open. Read from the ACTIVE plugins' manifests, filtered by the caller's own
+   * permission set, so a user is never handed a nav entry to a screen the guard
+   * would then refuse them.
+   */
+  async adminContributionsFor(
+    tenantId: string,
+    siteId: string,
+    permissions: readonly string[],
+  ): Promise<{
+    nav: Array<{ pluginKey: string; label: string; icon?: string; resource: string; permission: string }>;
+    resources: Array<{ pluginKey: string; resource: PluginAdminResource }>;
+  }> {
+    const held = new Set(permissions);
+    const db = getSystemDb();
+    const include = {
+      plugin: { select: { key: true } },
+      version: { select: { manifest: true } },
+    } as const;
+    const [siteRows, orgRows] = await Promise.all([
+      db.sitePlugin.findMany({ where: { tenantId, siteId, status: "ACTIVE" }, include }),
+      db.orgPlugin.findMany({ where: { tenantId, status: "ACTIVE" }, include }),
+    ]);
+
+    const nav: Array<{ pluginKey: string; label: string; icon?: string; resource: string; permission: string }> = [];
+    const resources: Array<{ pluginKey: string; resource: PluginAdminResource }> = [];
+
+    for (const row of [...siteRows, ...orgRows]) {
+      const admin = (row.version.manifest as { admin?: PluginAdminContribution } | null)?.admin;
+      if (!admin) continue;
+      const pluginKey = row.plugin.key;
+
+      for (const item of admin.nav ?? []) {
+        // The gate that answers the original question — a plugin's menu appears
+        // only for a user whose role the plugin's permission reaches.
+        if (held.has(item.permission)) {
+          nav.push({ pluginKey, label: item.label, icon: item.icon, resource: item.resource, permission: item.permission });
+        }
+      }
+      for (const resource of admin.resources ?? []) {
+        if (held.has(resource.permissions.read)) {
+          resources.push({ pluginKey, resource });
+        }
+      }
+    }
+
+    return { nav, resources };
+  }
+
+  /**
+   * Resolves one admin resource to render or serve — its descriptor, its backing
+   * table schema, and whether the plugin is first-party (only first-party plugins
+   * own tables, so only they can back a resource).
+   *
+   * Read from the installed manifest, never the request, exactly as the gateway's
+   * `resolvePluginTable` is: the user names a plugin and a resource key, and gets
+   * back what the plugin declared or nothing at all.
+   */
+  async adminResourceFor(
+    tenantId: string,
+    siteId: string,
+    pluginKey: string,
+    resourceKey: string,
+  ): Promise<{ resource: PluginAdminResource; table: PluginTableSchema } | null> {
+    const db = getSystemDb();
+    const include = {
+      plugin: { select: { isCore: true } },
+      version: { select: { manifest: true } },
+    } as const;
+    const install =
+      (await db.sitePlugin.findFirst({
+        where: { siteId, plugin: { key: pluginKey }, status: "ACTIVE" },
+        include,
+      })) ??
+      (await db.orgPlugin.findFirst({
+        where: { tenantId, plugin: { key: pluginKey }, status: "ACTIVE" },
+        include,
+      }));
+
+    if (!install || !install.plugin.isCore) return null;
+
+    const manifest = install.version.manifest as {
+      admin?: PluginAdminContribution;
+      database?: { tables?: PluginTableSchema[] };
+    } | null;
+
+    const resource = manifest?.admin?.resources?.find((r) => r.key === resourceKey);
+    if (!resource) return null;
+    const table = manifest?.database?.tables?.find((t) => t.name === resource.table);
+    if (!table) return null;
+
+    return { resource, table };
   }
 
   /** Capabilities contributed by the site's ACTIVE plugins — themes read these. */

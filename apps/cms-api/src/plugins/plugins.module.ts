@@ -1,5 +1,6 @@
 import { Global, Module } from "@nestjs/common";
 import { OrgPluginsController } from "./org-plugins.controller";
+import { PluginAdminController } from "./plugin-admin.controller";
 import { PluginEgressService } from "./plugin-egress.service";
 import { PluginGatewayController } from "./plugin-gateway.controller";
 import { PluginTokenService } from "./plugin-token.service";
@@ -10,7 +11,12 @@ import { PluginsService } from "./plugins.service";
 // should have to import a plugin module to publish a page.
 @Global()
 @Module({
-  controllers: [PluginsController, OrgPluginsController, PluginGatewayController],
+  controllers: [
+    PluginsController,
+    OrgPluginsController,
+    PluginGatewayController,
+    PluginAdminController,
+  ],
   // PluginEgressService is deliberately NOT exported. The only caller that should
   // ever be able to make an outbound request on a plugin's behalf is the gateway,
   // which has a verified token in its hand.

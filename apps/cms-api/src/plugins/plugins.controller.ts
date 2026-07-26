@@ -14,7 +14,9 @@ import { db, getSystemDb } from "@zcmsorg/database";
 import { normalizeChangelog } from "@zcmsorg/package";
 import {
   pluginTablePrefix,
+  validateAdminContribution,
   validatePluginTableSchemas,
+  type PluginAdminContribution,
   type PluginTableSchema,
 } from "@zcmsorg/plugin-sdk";
 import { invalidHostDeclarations } from "./plugin-egress";
@@ -331,6 +333,7 @@ export class PluginsController {
       database?: { tables?: PluginTableSchema[] };
       network?: { hosts?: string[] };
       permissionsProvided?: ProvidedPermission[];
+      admin?: PluginAdminContribution;
     };
     // Owning relational tables is a first-party privilege. A community plugin that
     // declares a `database` block is refused here rather than silently ignored, so
@@ -361,6 +364,18 @@ export class PluginsController {
       throw new BadRequestException(
         t()("errors.plugins.invalidProvidedPermissions", {
           permissions: badPermissions.map((v) => v.key).join(", "),
+        }),
+      );
+    }
+
+    // Admin screens must resolve to what the plugin owns: a resource onto a
+    // declared table, a listed column that exists, a nav entry onto a real
+    // resource. A dangling reference is refused here, not rendered broken later.
+    const badAdmin = validateAdminContribution(manifest.admin, manifest.database?.tables);
+    if (badAdmin.length) {
+      throw new BadRequestException(
+        t()("errors.plugins.invalidAdmin", {
+          detail: badAdmin.map((v) => `${v.where} (${v.reason})`).join(", "),
         }),
       );
     }
