@@ -22,9 +22,12 @@ import {
 import { invalidHostDeclarations } from "./plugin-egress";
 import {
   PERMISSIONS,
+  coerceSettings,
+  validateFormDefinitions,
   validateProvidedPermissions,
   type Permission,
   type ProvidedPermission,
+  type SettingsSchema,
 } from "@zcmsorg/schemas";
 import { Actor, RequirePermissions, SiteId, SiteScoped } from "../auth/decorators";
 import { t } from "../common/i18n";
@@ -104,61 +107,6 @@ export interface CatalogPlugin {
    * language in the admin. Null if the plugin shipped none.
    */
   changelog: Record<string, string> | null;
-}
-
-export interface SettingsSchema {
-  properties?: Record<
-    string,
-    { type?: "string" | "number" | "boolean"; enum?: string[] }
-  >;
-}
-
-/**
- * Filters a settings payload down to what the plugin's schema actually declares.
- *
- * The settings blob is JSONB written by an admin and read by plugin code, so it
- * is an injection point into the sandbox: without this, any client could store
- * arbitrary keys and shapes, and a plugin reading `settings.foo.bar` would get
- * whatever an attacker put there.
- *
- * Unknown keys are DROPPED, not rejected: a plugin that removes a setting in a
- * new version must not make every existing site's saved settings un-saveable.
- * Wrong types are coerced where that is unambiguous, and skipped where it is not.
- */
-export function coerceSettings(
-  schema: SettingsSchema | undefined,
-  input: Record<string, unknown>,
-): Record<string, unknown> {
-  const properties = schema?.properties;
-  // A plugin with no schema declares no settings, so it gets none.
-  if (!properties) return {};
-
-  const out: Record<string, unknown> = {};
-
-  for (const [key, def] of Object.entries(properties)) {
-    if (!(key in input)) continue;
-    const value = input[key];
-    if (value === null || value === undefined) continue;
-
-    switch (def.type) {
-      case "boolean":
-        out[key] = value === true || value === "true";
-        break;
-      case "number": {
-        const n = Number(value);
-        if (!Number.isNaN(n)) out[key] = n;
-        break;
-      }
-      default: {
-        const s = String(value);
-        // An enum is a closed set; a value outside it is not a setting.
-        if (def.enum?.length && !def.enum.includes(s)) break;
-        out[key] = s;
-      }
-    }
-  }
-
-  return out;
 }
 
 @ApiTags("Plugins")
@@ -334,6 +282,7 @@ export class PluginsController {
       network?: { hosts?: string[] };
       permissionsProvided?: ProvidedPermission[];
       admin?: PluginAdminContribution;
+      forms?: unknown;
     };
     // Owning relational tables is a first-party privilege. A community plugin that
     // declares a `database` block is refused here rather than silently ignored, so
@@ -348,6 +297,16 @@ export class PluginsController {
           tables: violations.map((v) => v.table).join(", "),
           prefix: pluginTablePrefix(plugin.key),
         }),
+      );
+    }
+
+    // Declared public forms must be well-formed — a valid id, a non-empty field
+    // list, unique field names, compilable patterns — before the plugin exists on
+    // this site, the same install-time gate the tables and permissions pass.
+    const formErrors = validateFormDefinitions(manifest.forms);
+    if (formErrors.length) {
+      throw new BadRequestException(
+        t()("errors.plugins.invalidForms", { detail: formErrors.join("; ") }),
       );
     }
 

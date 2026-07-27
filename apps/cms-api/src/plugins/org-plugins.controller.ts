@@ -21,9 +21,12 @@ import {
 } from "@zcmsorg/plugin-sdk";
 import {
   PERMISSIONS,
+  coerceSettings,
+  validateFormDefinitions,
   validateProvidedPermissions,
   type Permission,
   type ProvidedPermission,
+  type SettingsSchema,
 } from "@zcmsorg/schemas";
 import { invalidHostDeclarations } from "./plugin-egress";
 import { Actor, RequirePermissions } from "../auth/decorators";
@@ -35,8 +38,6 @@ import { CacheService } from "../redis/cache.service";
 import { PluginsService } from "./plugins.service";
 import {
   type CatalogPlugin,
-  type SettingsSchema,
-  coerceSettings,
   derivePluginTier,
 } from "./plugins.controller";
 
@@ -189,6 +190,7 @@ export class OrgPluginsController {
       network?: { hosts?: string[] };
       permissionsProvided?: ProvidedPermission[];
       admin?: PluginAdminContribution;
+      forms?: unknown;
     };
     if (manifest.database?.tables?.length && !plugin.isCore) {
       throw new BadRequestException(t()("errors.plugins.tablesFirstPartyOnly"));
@@ -200,6 +202,12 @@ export class OrgPluginsController {
           tables: violations.map((v) => v.table).join(", "),
           prefix: pluginTablePrefix(plugin.key),
         }),
+      );
+    }
+    const formErrors = validateFormDefinitions(manifest.forms);
+    if (formErrors.length) {
+      throw new BadRequestException(
+        t()("errors.plugins.invalidForms", { detail: formErrors.join("; ") }),
       );
     }
 

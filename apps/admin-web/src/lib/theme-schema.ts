@@ -1,17 +1,18 @@
 /**
- * The theme settings schema is JSON Schema (see packages/theme-sdk ThemeSettingsSchema):
+ * The admin's TOLERANT reader for a theme/plugin settings schema.
  *
- *   { type: "object", properties: { key: { type, title?, description?, format?, default?, enum? } } }
- *
- * It is NOT exported from @zcmsorg/schemas — the SDK owns it — and admin-web must
- * not depend on the theme SDK, so the shape is mirrored here, deliberately
- * tolerant: an unknown `type` degrades to a text input rather than an empty
- * form. The whole point of this file is that adding a setting to a theme
- * requires zero changes in the admin.
+ * The strict authoring shape is the shared `SettingsSchema` in `@zcmsorg/schemas`
+ * (what a theme/plugin declares, what cms-api coerces with). This file is not a
+ * duplicate of it but its deliberately loose counterpart: admin-web parses a
+ * possibly-malformed manifest it does not control, so every field is optional and
+ * an unknown `type`/`format` degrades to a text input rather than an empty form.
+ * The base scalar/format unions are reused from the canonical type; the `| string`
+ * slack is what keeps a strange manifest renderable instead of a type error.
  */
+import type { SettingsFieldFormat, SettingsFieldType } from "@zcmsorg/schemas";
 
-export type ThemeFieldType = "string" | "number" | "boolean";
-export type ThemeFieldFormat = "color" | "url" | "image" | "textarea" | "password";
+export type ThemeFieldType = SettingsFieldType;
+export type ThemeFieldFormat = SettingsFieldFormat;
 
 export interface ThemeSchemaProperty {
   type?: ThemeFieldType | string;

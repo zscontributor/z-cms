@@ -4,5 +4,7 @@ export * from "./widgets";
 export * from "./content";
 export * from "./permissions";
 export * from "./mail";
+export * from "./forms";
+export * from "./settings-schema";
 export * from "./commerce";
 export * from "./api";

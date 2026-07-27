@@ -1,0 +1,26 @@
+{
+  "id": "vn.zsoft.plugin.feedback",
+  "name": "Feedback",
+  "version": "0.1.0",
+  "description": "A public feedback form. Declares the form; core validates and renders it, and this plugin stores each submission — the reference example of a plugin-provided form.",
+  "author": {
+    "name": "Z-SOFT Co., Ltd",
+    "url": "https://z-soft.com.vn"
+  },
+  "engine": ">=0.1.0",
+  "entry": "dist/index.js",
+  "scope": "site",
+  "permissions": [],
+  "forms": [
+    {
+      "id": "feedback",
+      "title": "Send feedback",
+      "submitLabel": "Send feedback",
+      "fields": [
+        { "name": "name", "type": "text", "required": true, "maxLength": 120, "label": "Name" },
+        { "name": "email", "type": "email", "maxLength": 320, "label": "Email (optional)" },
+        { "name": "message", "type": "textarea", "required": true, "minLength": 10, "maxLength": 2000, "label": "Message" }
+      ]
+    }
+  ]
+}

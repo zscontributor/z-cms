@@ -285,6 +285,11 @@ export class RenderService {
     const capabilities = pluginContributions.capabilities;
     const integrations = pluginContributions.integrations;
 
+    // Public forms declared by active plugins — what a `core/form` block renders.
+    // Keyed by id, browser-safe field data only (the plugin's handler never leaves
+    // cms-api). Same active-plugins scan as the contributions above.
+    const forms = await this.plugins.publicFormsFor(site.tenantId, site.id);
+
     const base = {
       site: {
         id: site.id,
@@ -314,6 +319,7 @@ export class RenderService {
       // one plugin for another without touching the theme.
       capabilities,
       integrations,
+      forms,
       // Kept for one compatibility window; new runtimes read integrations.
       ...(legacyAiAssistant ? { aiAssistant: legacyAiAssistant } : {}),
     };

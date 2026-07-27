@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { getSystemDb } from "@zcmsorg/database";
 import { t as translatorFor } from "@zcmsorg/i18n";
+import { CONTACT_FORM_FIELDS, buildFormSchema } from "@zcmsorg/schemas";
 import { z } from "zod";
 import { t } from "../common/i18n";
 import { MailService } from "../mail/mail.service";
@@ -13,16 +14,26 @@ import { MailService } from "../mail/mail.service";
  * site's own `contactEmail`, read server-side from the active theme's settings,
  * and the visitor's own address rides as `replyTo` (never `from`, never `to`), so
  * the site owner can hit reply and reach them.
+ *
+ * The submission is validated by the SHARED form schema — the same
+ * `CONTACT_FORM_FIELDS` the site-runtime client enhancer validates against — so a
+ * bad email is rejected identically in the browser and here, not caught only on
+ * this side. See `@zcmsorg/schemas/forms`.
  */
-const ContactSubmissionSchema = z.object({
-  name: z.string().trim().min(1).max(200),
-  company: z.string().trim().max(200).optional(),
-  email: z.email().max(320),
-  need: z.string().trim().max(200).optional(),
-  message: z.string().trim().min(1).max(5_000),
-});
+const ContactSubmissionSchema = buildFormSchema(CONTACT_FORM_FIELDS);
 
-export type ContactSubmission = z.infer<typeof ContactSubmissionSchema>;
+/**
+ * The parsed shape. A schema built from a field list at runtime can't be inferred
+ * statically, so the known contact shape is named here; `ContactSubmissionSchema`
+ * remains the single authoritative validator (derived from `CONTACT_FORM_FIELDS`).
+ */
+export interface ContactSubmission {
+  name: string;
+  company?: string;
+  email: string;
+  need?: string;
+  message: string;
+}
 
 @Injectable()
 export class ContactService {
@@ -49,7 +60,7 @@ export class ContactService {
         .join("; ");
       throw new BadRequestException(t()("errors.contact.invalidSubmission", { detail }));
     }
-    const input = parsed.data;
+    const input = parsed.data as unknown as ContactSubmission;
 
     const domain = await getSystemDb().domain.findUnique({
       where: { hostname: hostname.toLowerCase() },

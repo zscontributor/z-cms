@@ -10,6 +10,7 @@ import {
 } from "@zcmsorg/theme-sdk";
 import { BlockBoundary } from "@/components/block-boundary";
 import { renderIntegrationSlot } from "@/lib/integration-registry";
+import { runtimeCoreBlocks } from "@/lib/runtime-blocks";
 
 /**
  * Turns a RenderPayload into the ThemeContext a template sees.
@@ -74,6 +75,10 @@ export function buildThemeContext<S = Record<string, unknown>>(
     // list, not a crash, on the one render that spans a deploy.
     collections: payload.collections ?? {},
 
+    // Public forms from active plugins. Defaulted to {} like collections — a
+    // payload cached before forms existed must not crash the `core/form` block.
+    forms: payload.forms ?? {},
+
     // Resolved by the SAME function the document shell used to build the bootstrap
     // script (lib/color-mode-server.ts). Deriving it twice from one rule is what
     // stops a theme from drawing a toggle the runtime has decided to ignore — a
@@ -108,7 +113,10 @@ export function renderBlocks<S>(
       {blocks.map((block) => {
         if (!block || typeof block.type !== "string") return null;
 
-        const Component = theme.blocks[block.type];
+        // The theme's own map first; then the runtime's own `core/*` blocks (e.g.
+        // `core/form`), so a plugin-declared form renders on EVERY theme without
+        // each one having to bridge the block. Theme wins on a name clash.
+        const Component = theme.blocks[block.type] ?? runtimeCoreBlocks[block.type];
 
         if (!Component) {
           if (process.env.NODE_ENV !== "production") {

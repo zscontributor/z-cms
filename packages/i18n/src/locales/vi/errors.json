@@ -67,6 +67,7 @@
     "methodNotSupported": "Method \"{method}\" chưa được hỗ trợ.",
     "scopeNotGranted": "Plugin \"{plugin}\" không được cấp quyền \"{scope}\".",
     "invalidTables": "Plugin chỉ được tạo bảng có tiền tố \"{prefix}\". Bị từ chối: {tables}.",
+    "invalidForms": "Các biểu mẫu plugin khai báo không hợp lệ: {detail}",
     "invalidProvidedPermissions": "Plugin chỉ được giới thiệu quyền có namespace của chính nó, và không được trùng quyền lõi. Bị từ chối: {permissions}.",
     "tablesFirstPartyOnly": "Bảng quan hệ là đặc quyền của plugin first-party. Plugin này phải dùng lưu trữ key-value thay thế.",
     "tableNotOwned": "Plugin này không thể thao tác bảng \"{table}\": đây không phải bảng do plugin khai báo và sở hữu.",
@@ -168,5 +169,11 @@
     "invalidSubmission": "Thông tin liên hệ không hợp lệ: {detail}",
     "siteNotFound": "Không có website nào đã xuất bản tại địa chỉ này.",
     "noRecipient": "Website này chưa cấu hình email nhận liên hệ. Quản trị viên thiết lập trong phần cài đặt của giao diện."
+  },
+  "forms": {
+    "hostnameRequired": "Không xác định được website.",
+    "siteNotFound": "Không có website nào đã xuất bản tại địa chỉ này.",
+    "notFound": "Biểu mẫu này không có trên website.",
+    "invalidSubmission": "Dữ liệu gửi không hợp lệ: {detail}"
   }
 }

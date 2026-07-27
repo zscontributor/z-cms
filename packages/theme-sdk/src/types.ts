@@ -6,8 +6,10 @@ import type {
   LocaleAlternate,
   MenuDto,
   PackageMediaDeclaration,
+  PublicFormDef,
   RenderIntegration,
   RenderPayload,
+  SettingsSchema,
 } from "@zcmsorg/schemas";
 import type { ThemeMessageCatalog, Translate } from "./i18n";
 
@@ -197,25 +199,12 @@ export interface ColorModeContext {
 }
 
 /**
- * JSON Schema describing the theme's settings. The admin renders a settings
- * form straight from this, so a theme adds a customisation option without any
- * change to admin-web.
+ * JSON Schema describing the theme's settings. The admin renders a settings form
+ * straight from this, so a theme adds a customisation option without any change to
+ * admin-web. It is the shared {@link SettingsSchema} — the same shape a plugin
+ * declares — defined once in `@zcmsorg/schemas`.
  */
-export interface ThemeSettingsSchema {
-  type: "object";
-  properties: Record<
-    string,
-    {
-      type: "string" | "number" | "boolean";
-      title?: string;
-      description?: string;
-      format?: "color" | "url" | "image" | "textarea";
-      default?: unknown;
-      enum?: string[];
-    }
-  >;
-  required?: string[];
-}
+export type ThemeSettingsSchema = SettingsSchema;
 
 // ---------------------------------------------------------------------------
 // SEO
@@ -621,6 +610,13 @@ export interface ThemeContext<S = Record<string, unknown>> {
    * the first person to see it will be the owner of a site with no posts yet.
    */
   collections: Record<string, ContentDto[]>;
+  /**
+   * Public forms declared by active plugins, keyed by id. A theme almost never
+   * reads this directly — the runtime's `core/form` block renders a form by id on
+   * every theme. It is here so the runtime block can reach the definition through
+   * the one object a block receives; a theme MAY read it to check a form exists.
+   */
+  forms: Record<string, PublicFormDef>;
 }
 
 export interface PageTemplateProps<S = Record<string, unknown>> {

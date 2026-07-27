@@ -77,6 +77,7 @@ const cache = {
 };
 const plugins = {
   renderContributionsFor: vi.fn().mockResolvedValue({ capabilities: [], integrations: {} }),
+  publicFormsFor: vi.fn().mockResolvedValue({}),
   applyFilter: vi.fn().mockImplementation((_t, _s, _f, value) => value),
 };
 

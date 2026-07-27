@@ -67,6 +67,7 @@
     "methodNotSupported": "メソッド「{method}」はまだサポートされていません。",
     "scopeNotGranted": "プラグイン「{plugin}」には「{scope}」権限が付与されていません。",
     "invalidTables": "プラグインは「{prefix}」というプレフィックスが付いたテーブルのみを作成できます。拒否されました: {tables}。",
+    "invalidForms": "このプラグインが宣言したフォームが不正です: {detail}",
     "invalidProvidedPermissions": "プラグインは自身の名前空間に属する権限のみを導入でき、コア権限を上書きすることはできません。拒否されました: {permissions}。",
     "tablesFirstPartyOnly": "リレーショナルテーブルはファーストパーティ専用の権限です。このプラグインは代わりにキーバリューストレージを使用する必要があります。",
     "tableNotOwned": "このプラグインはテーブル「{table}」を操作できません。プラグインが宣言・所有するテーブルではありません。",
@@ -168,5 +169,11 @@
     "invalidSubmission": "お問い合わせ内容が不正です: {detail}",
     "siteNotFound": "このアドレスで公開されているサイトはありません。",
     "noRecipient": "このサイトには問い合わせ先メールが設定されていません。管理者がテーマ設定で指定します。"
+  },
+  "forms": {
+    "hostnameRequired": "サイトを特定できませんでした。",
+    "siteNotFound": "このアドレスで公開されているサイトはありません。",
+    "notFound": "このフォームはこのサイトでは利用できません。",
+    "invalidSubmission": "送信内容が不正です: {detail}"
   }
 }

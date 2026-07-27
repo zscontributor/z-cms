@@ -1,9 +1,14 @@
 {
   "id": "vn.zsoft.theme.magazine",
   "name": "Z Magazine",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "kind": "theme",
   "description": "An editorial theme for news sites, magazines and publications: a dateline bar, a serif masthead, a lead story with secondaries, a river of latest news, a most-read rail and an opinion strip. English, Japanese and Vietnamese, with dark and light modes.",
+  "changelog": {
+    "en": "The footer and newsletter sign-up form linked to a /newsletter page that did not exist, so both led to a 404. There is now a real Newsletter page — what the email is, what arrives and how to subscribe — seeded in English, Japanese and Vietnamese.\nAdded a fresh Technology long read to the demo news so a newly seeded site opens with more to read.",
+    "ja": "フッターとニュースレター登録フォームが、存在しない /newsletter ページにリンクしており、どちらも 404 になっていました。実際のニュースレターページ（内容・届くもの・登録方法）を用意し、英語・日本語・ベトナム語で初期投入します。\nデモのニュースに、新しいテクノロジー長編ルポを追加しました。新規サイトを立ち上げた時点で、読み物がより充実します。",
+    "vi": "Chân trang và biểu mẫu đăng ký bản tin trỏ tới trang /newsletter vốn không tồn tại, nên cả hai đều dẫn tới lỗi 404. Nay đã có một trang Bản tin thật sự — email là gì, bạn nhận được gì và cách đăng ký — được tạo sẵn bằng tiếng Anh, tiếng Nhật và tiếng Việt.\nĐã thêm một bài Công nghệ dài kỳ mới vào tin demo để một trang vừa khởi tạo đã có thêm nội dung để đọc."
+  },
   "author": {
     "name": "Z-SOFT Co., Ltd.",
     "url": "https://z-soft.com.vn"
@@ -1069,6 +1074,330 @@
             "type": "core/richtext",
             "props": {
               "html": "<p>Tám giờ tối, khán phòng tắt đèn, và cứ tối như thế. Không có nhạc trưởng nào để nhìn, bởi bạn không thể nhìn thấy ông; các nhạc công thì đã thôi cố nhìn từ lâu.</p><h2>Học cách nghe bằng hai bên tai</h2><p>Chơi mà không nhìn nghĩa là chơi hoàn toàn bằng tai — điều mà mọi dàn nhạc đều tuyên bố mình làm, và thực ra không làm: một nửa việc hòa tấu là liếc sang bè trước mặt. Bỏ đi phần ấy, bè dây mất mười tám tháng, bè kèn đồng còn lâu hơn.</p><blockquote>Chúng tôi tưởng mình là một dàn nhạc biết nhìn. Hóa ra chúng tôi chỉ là một dàn nhạc đang nhìn.</blockquote><h2>Khán giả cũng ngồi trong bóng tối</h2><p>Không ai kiểm tra điện thoại, bởi một màn hình sáng trong khán phòng tối là một hành vi phá hoại nhỏ, và ai cũng biết thế. Theo các nhân viên soát vé, tiếng ho đã giảm khoảng một nửa.</p><h2>Điều sẽ diễn ra tiếp theo</h2><p>Ba dàn nhạc khác đã hỏi xin biên bản tập luyện. Nữ nghệ sĩ cello chính, người mất phần lớn thị lực năm 2019 và là tác giả của ý tưởng này, nói bà không quan tâm tới việc trở thành nguồn cảm hứng. Bà quan tâm tới chương hai.</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "en",
+        "slug": "the-model-that-learned-to-say-i-dont-know",
+        "title": "The model that learned to say ‘I don’t know’",
+        "translationGroup": "magazine-post-uncertainty",
+        "excerpt": "For a decade, machine confidence was a bug we shipped as a feature. A quiet change in how models are trained is teaching them the most useful sentence in any language.",
+        "seo": {
+          "title": "The model that learned to say ‘I don’t know’ | Z Magazine",
+          "description": "A quiet change in how language models are trained is teaching them to admit uncertainty — and it is worth more than raw accuracy."
+        },
+        "data": {
+          "readingTime": 8,
+          "category": "Technology",
+          "kicker": "The long read"
+        },
+        "blocks": [
+          {
+            "id": "mag-idk-en-1",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>The first thing the new model does, when it does not know the answer, is admit it. This sounds unremarkable until you remember that for most of the last decade, admitting ignorance was the one thing these systems were built never to do.</p><p>A language model is trained to continue text, and a confident continuation scores better than a hesitant one — so the machines learned to bluff. They bluffed fluently, in full paragraphs, with citations to papers that did not exist. The industry gave the failure a gentle name, <em>hallucination</em>, as though the model were dreaming rather than simply making things up.</p><h2>Rewarding the shrug</h2><p>What changed is not the size of the models but what they are rewarded for. A newer training step scores an honest ‘I’m not sure’ above a confident wrong answer, and only slightly below a confident right one. It is a small adjustment with a large effect: the machine now has a reason to hedge, and hedging, it turns out, is most of what expertise sounds like.</p><blockquote>A doctor who never says ‘I don’t know’ is not a better doctor. They are a more dangerous one.</blockquote><p>The people who work with these systems all day noticed first. The answers got shorter. The footnotes got real. And a certain kind of question — the kind with no answer yet — started coming back with the only correct response, which is that nobody knows.</p>"
+            }
+          },
+          {
+            "id": "mag-idk-en-2",
+            "type": "core/features",
+            "props": {
+              "heading": "What the change actually does",
+              "subheading": "Three shifts, none of them about raw capability.",
+              "items": [
+                {
+                  "title": "Calibrated confidence",
+                  "body": "The model now reports how sure it is, and that number tracks how often it is actually right."
+                },
+                {
+                  "title": "Cheaper to check",
+                  "body": "A hedged answer tells a reader where to look, which is faster than catching a fluent lie after the fact."
+                },
+                {
+                  "title": "Slower to impress",
+                  "body": "It demos worse. A system that says ‘I don’t know’ loses every side-by-side against one that guesses boldly — until the guesses are checked."
+                }
+              ]
+            }
+          },
+          {
+            "id": "mag-idk-en-3",
+            "type": "core/richtext",
+            "props": {
+              "html": "<h2>The cost of humility</h2><p>There is a reason this took so long, and it is not technical. Uncertainty is bad marketing. A model that hedges is harder to put in an advertisement, and the first company to ship one honestly took a quarter of ridicule before the numbers came in.</p><p>They came in. On the questions that matter — medical, legal, financial — a system that knows the edges of its own knowledge is worth more than one that is right slightly more often and wrong with total conviction the rest of the time. The whole industry is now, quietly, copying the shrug.</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "ja",
+        "slug": "the-model-that-learned-to-say-i-dont-know",
+        "title": "「わかりません」と言えるようになったモデル",
+        "translationGroup": "magazine-post-uncertainty",
+        "excerpt": "この十年、機械の自信は「機能」として出荷された「バグ」だった。学習方法の静かな変化が、どんな言語でも最も役に立つ一文を機械に教えている。",
+        "seo": {
+          "title": "「わかりません」と言えるようになったモデル | Z Magazine",
+          "description": "言語モデルの学習方法の静かな変化が、不確実性を認めることを機械に教えている——それは生の正確さよりも価値がある。"
+        },
+        "data": {
+          "readingTime": 8,
+          "category": "テクノロジー",
+          "kicker": "長編ルポ"
+        },
+        "blocks": [
+          {
+            "id": "mag-idk-ja-1",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>新しいモデルが、答えを知らないときにまずすること——それは、知らないと認めることだ。当たり前に聞こえるかもしれない。だが思い出してほしい。この十年のほとんどの間、これらのシステムが決してしないよう作られていた唯一のことが、無知を認めることだったのだ。</p><p>言語モデルは文章の続きを生成するよう学習される。そして自信ありげな続きは、ためらいがちな続きよりも高く評価される——だから機械は堂々とはったりをかけることを覚えた。しかも流暢に、段落まるごとで、存在しない論文まで引用して。業界はこの失敗に<em>ハルシネーション</em>という優しい名を与えた。まるで機械が夢を見ているだけで、でっち上げているのではないかのように。</p><h2>「肩をすくめる」ことに報酬を</h2><p>変わったのはモデルの大きさではなく、何に対して報酬が与えられるかだ。新しい学習の段階では、正直な「よくわかりません」が、自信満々の誤答よりも高く評価され、自信満々の正答よりわずかに低いだけの評価を得る。小さな調整だが、効果は大きい。機械にいまや言葉を濁す理由ができた。そして言葉を濁すことこそ、専門知識の響きのほとんどなのだ。</p><blockquote>「わかりません」と決して言わない医師は、より優れた医師ではない。より危険な医師だ。</blockquote><p>これらのシステムを一日中扱う人々が、まず気づいた。答えが短くなった。脚注が本物になった。そして、まだ答えのない種類の問い——それには、唯一正しい応答が返ってくるようになった。すなわち「誰にもわからない」と。</p>"
+            }
+          },
+          {
+            "id": "mag-idk-ja-2",
+            "type": "core/features",
+            "props": {
+              "heading": "この変化が実際にもたらすもの",
+              "subheading": "三つの転換。いずれも生の性能の話ではない。",
+              "items": [
+                {
+                  "title": "較正された自信",
+                  "body": "モデルはいまや自分の確信度を数値で示し、その数値は実際の正答率とよく一致する。"
+                },
+                {
+                  "title": "検証が安くなる",
+                  "body": "言葉を濁した答えは、読者にどこを見ればよいかを教える。流暢な嘘を後から見抜くより、ずっと速い。"
+                },
+                {
+                  "title": "感心されにくい",
+                  "body": "デモの見栄えは悪くなる。「わかりません」と言うシステムは、大胆に当て推量するシステムとの一騎打ちに毎回負ける——推量が検証されるまでは。"
+                }
+              ]
+            }
+          },
+          {
+            "id": "mag-idk-ja-3",
+            "type": "core/richtext",
+            "props": {
+              "html": "<h2>謙虚さの代償</h2><p>これほど時間がかかったのには理由があり、それは技術的なものではない。不確実性は、宣伝には向かない。言葉を濁すモデルは広告に載せにくく、それを正直に出荷した最初の企業は、数字が出るまでの一四半期を嘲笑のうちに過ごした。</p><p>そして数字が出た。重要な問い——医療、法律、金融——において、自らの知識の境界を知るシステムは、正答率がわずかに高いだけで残りを完全な確信とともに間違えるシステムよりも価値がある。いま業界全体が、静かに、その「肩をすくめる仕草」を真似ている。</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "post",
+        "locale": "vi",
+        "slug": "co-may-hoc-duoc-cach-noi-toi-khong-biet",
+        "title": "Cỗ máy học được cách nói ‘Tôi không biết’",
+        "translationGroup": "magazine-post-uncertainty",
+        "excerpt": "Suốt một thập kỷ, sự tự tin của máy móc là một lỗi mà ta xuất xưởng như một tính năng. Một thay đổi lặng lẽ trong cách huấn luyện đang dạy chúng câu nói hữu ích nhất trong mọi ngôn ngữ.",
+        "seo": {
+          "title": "Cỗ máy học được cách nói ‘Tôi không biết’ | Z Magazine",
+          "description": "Một thay đổi lặng lẽ trong cách huấn luyện mô hình ngôn ngữ đang dạy chúng thừa nhận sự bất định — và điều đó đáng giá hơn độ chính xác thô."
+        },
+        "data": {
+          "readingTime": 8,
+          "category": "Công nghệ",
+          "kicker": "Phóng sự dài kỳ"
+        },
+        "blocks": [
+          {
+            "id": "mag-idk-vi-1",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>Điều đầu tiên mô hình mới làm, khi nó không biết câu trả lời, là thừa nhận điều đó. Nghe có vẻ tầm thường, cho tới khi bạn nhớ rằng trong phần lớn thập kỷ vừa qua, thừa nhận sự thiếu hiểu biết chính là điều duy nhất mà những hệ thống này được tạo ra để không bao giờ làm.</p><p>Một mô hình ngôn ngữ được huấn luyện để viết tiếp văn bản, và một đoạn viết tiếp đầy tự tin được chấm điểm cao hơn một đoạn ngập ngừng — thế nên máy móc học cách nói phét. Chúng nói phét trôi chảy, thành từng đoạn hoàn chỉnh, kèm trích dẫn những bài báo không hề tồn tại. Ngành công nghiệp đặt cho lỗi này một cái tên nhẹ nhàng, <em>ảo giác</em>, như thể mô hình đang mơ chứ không phải đang bịa đặt.</p><h2>Thưởng cho cái nhún vai</h2><p>Thứ thay đổi không phải kích cỡ của mô hình mà là điều chúng được thưởng. Một bước huấn luyện mới chấm câu ‘Tôi không chắc’ trung thực cao hơn một câu sai đầy tự tin, và chỉ thấp hơn đôi chút so với một câu đúng đầy tự tin. Một điều chỉnh nhỏ với hiệu ứng lớn: cỗ máy giờ có lý do để dè dặt, và hóa ra, dè dặt chính là phần lớn âm hưởng của sự thành thạo.</p><blockquote>Một bác sĩ không bao giờ nói ‘Tôi không biết’ không phải là bác sĩ giỏi hơn. Đó là một bác sĩ nguy hiểm hơn.</blockquote><p>Những người làm việc với các hệ thống này cả ngày nhận ra trước tiên. Câu trả lời ngắn lại. Chú thích trở nên có thật. Và một loại câu hỏi nhất định — loại chưa có lời giải — bắt đầu quay về với câu trả lời đúng duy nhất, rằng chưa ai biết cả.</p>"
+            }
+          },
+          {
+            "id": "mag-idk-vi-2",
+            "type": "core/features",
+            "props": {
+              "heading": "Thay đổi ấy thực sự làm gì",
+              "subheading": "Ba chuyển dịch, không cái nào nói về năng lực thô.",
+              "items": [
+                {
+                  "title": "Tự tin được hiệu chỉnh",
+                  "body": "Mô hình giờ báo mức độ chắc chắn của mình, và con số đó bám sát tần suất nó thực sự đúng."
+                },
+                {
+                  "title": "Kiểm tra rẻ hơn",
+                  "body": "Một câu trả lời dè dặt chỉ cho người đọc biết nên tra ở đâu, nhanh hơn nhiều so với việc bắt lỗi một lời nói dối trôi chảy sau đó."
+                },
+                {
+                  "title": "Chậm gây ấn tượng",
+                  "body": "Nó trình diễn kém hơn. Một hệ thống nói ‘Tôi không biết’ thua mọi cuộc so kè với hệ thống đoán bạo dạn — cho tới khi các phỏng đoán được kiểm chứng."
+                }
+              ]
+            }
+          },
+          {
+            "id": "mag-idk-vi-3",
+            "type": "core/richtext",
+            "props": {
+              "html": "<h2>Cái giá của sự khiêm tốn</h2><p>Có một lý do khiến chuyện này mất nhiều thời gian đến vậy, và nó không mang tính kỹ thuật. Sự bất định là quảng cáo tồi. Một mô hình biết dè dặt thì khó đưa vào một mẩu quảng cáo, và công ty đầu tiên xuất xưởng nó một cách trung thực đã hứng chịu một quý bị chê cười trước khi các con số lên tiếng.</p><p>Rồi các con số lên tiếng. Với những câu hỏi hệ trọng — y khoa, pháp lý, tài chính — một hệ thống biết rõ ranh giới hiểu biết của chính mình đáng giá hơn một hệ thống đúng nhiều hơn đôi chút rồi sai với niềm tin tuyệt đối ở phần còn lại. Cả ngành, một cách lặng lẽ, giờ đang sao chép cái nhún vai ấy.</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "page",
+        "locale": "en",
+        "slug": "newsletter",
+        "title": "The newsletter",
+        "translationGroup": "magazine-newsletter",
+        "excerpt": "One email, every weekday morning. The stories that matter, and why.",
+        "seo": {
+          "title": "The newsletter | Z Magazine",
+          "description": "One free email every weekday: the three or four stories that matter, and why. Written by the front-page desk."
+        },
+        "blocks": [
+          {
+            "id": "mag-nl-en-1",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>Every weekday at seven, we send one email: the three or four stories worth your attention that morning, each in a paragraph, each with a line on why it matters and not just that it happened.</p><p>It is written by the same desk that edits the front page, read by hundreds of thousands of people, and free. There is no advertising in it and never will be — it is funded by readers, like everything else we do.</p>"
+            }
+          },
+          {
+            "id": "mag-nl-en-2",
+            "type": "core/features",
+            "props": {
+              "heading": "What arrives",
+              "subheading": "Not a digest of headlines. A short, edited brief.",
+              "items": [
+                {
+                  "title": "The morning brief",
+                  "body": "Three or four stories, explained in a paragraph each, before the day gets loud."
+                },
+                {
+                  "title": "The weekend long read",
+                  "body": "One deeper piece every Saturday, for when there is time to sit with it."
+                },
+                {
+                  "title": "Corrections in full",
+                  "body": "When we get something wrong, subscribers hear it first — plainly, at the top."
+                }
+              ]
+            }
+          },
+          {
+            "id": "mag-nl-en-3",
+            "type": "core/cta",
+            "props": {
+              "heading": "Sign up in one line",
+              "body": "The subscribe box sits at the foot of the front page. Add your email and you are in — unsubscribe in one click, any time.",
+              "ctaLabel": "Go to the front page",
+              "ctaHref": "/"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "page",
+        "locale": "ja",
+        "slug": "newsletter",
+        "title": "ニュースレター",
+        "translationGroup": "magazine-newsletter",
+        "excerpt": "平日の毎朝、一通のメールを。大切なニュースと、その理由を。",
+        "seo": {
+          "title": "ニュースレター | Z Magazine",
+          "description": "平日の毎朝、無料の一通を。大切な三つか四つのニュースと、その理由を。一面のデスクが執筆します。"
+        },
+        "blocks": [
+          {
+            "id": "mag-nl-ja-1",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>平日の朝七時、私たちは一通のメールをお送りします。その朝、注目に値する三つか四つのニュースを、それぞれ一段落で、しかも「何が起きたか」だけでなく「なぜ重要か」を一行添えて。</p><p>一面を編集するのと同じデスクが書き、数十万人が読み、無料です。広告は入っていませんし、これからも入りません——ほかのすべてと同じく、読者の支えで成り立っています。</p>"
+            }
+          },
+          {
+            "id": "mag-nl-ja-2",
+            "type": "core/features",
+            "props": {
+              "heading": "届くもの",
+              "subheading": "見出しのまとめではありません。短く、編集された要約です。",
+              "items": [
+                {
+                  "title": "朝のブリーフ",
+                  "body": "三つか四つのニュースを、それぞれ一段落で。一日が騒がしくなる前に。"
+                },
+                {
+                  "title": "週末の長編",
+                  "body": "毎週土曜に、じっくり読める深掘りの一本を。"
+                },
+                {
+                  "title": "訂正はすべて",
+                  "body": "私たちが誤ったとき、購読者が最初に知ります——率直に、冒頭で。"
+                }
+              ]
+            }
+          },
+          {
+            "id": "mag-nl-ja-3",
+            "type": "core/cta",
+            "props": {
+              "heading": "一行で登録",
+              "body": "登録ボックスは、トップページの一番下にあります。メールアドレスを入れれば完了です——解除はいつでもワンクリックで。",
+              "ctaLabel": "トップページへ",
+              "ctaHref": "/"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "page",
+        "locale": "vi",
+        "slug": "newsletter",
+        "title": "Bản tin",
+        "translationGroup": "magazine-newsletter",
+        "excerpt": "Một email, mỗi sáng ngày thường. Những câu chuyện đáng chú ý, và vì sao.",
+        "seo": {
+          "title": "Bản tin | Z Magazine",
+          "description": "Một email miễn phí mỗi sáng ngày thường: ba hoặc bốn câu chuyện đáng chú ý, và vì sao. Do ban biên tập trang nhất viết."
+        },
+        "blocks": [
+          {
+            "id": "mag-nl-vi-1",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>Bảy giờ mỗi sáng ngày thường, chúng tôi gửi một email: ba hoặc bốn câu chuyện đáng để bạn chú ý sáng hôm ấy, mỗi câu chuyện gói trong một đoạn, kèm một dòng về lý do nó quan trọng — chứ không chỉ rằng nó đã xảy ra.</p><p>Nó do chính ban biên tập trang nhất viết, được hàng trăm nghìn người đọc, và miễn phí. Không có quảng cáo trong đó và sẽ không bao giờ có — nó được nuôi bằng bạn đọc, như mọi thứ khác chúng tôi làm.</p>"
+            }
+          },
+          {
+            "id": "mag-nl-vi-2",
+            "type": "core/features",
+            "props": {
+              "heading": "Bạn nhận được gì",
+              "subheading": "Không phải một bản tổng hợp tiêu đề. Một bản tóm tắt ngắn, đã biên tập.",
+              "items": [
+                {
+                  "title": "Bản tin buổi sáng",
+                  "body": "Ba hoặc bốn câu chuyện, mỗi câu một đoạn, trước khi ngày mới trở nên ồn ào."
+                },
+                {
+                  "title": "Bài dài cuối tuần",
+                  "body": "Mỗi thứ Bảy một bài sâu hơn, dành cho lúc bạn có thời gian ngồi lại với nó."
+                },
+                {
+                  "title": "Đính chính đầy đủ",
+                  "body": "Khi chúng tôi sai, bạn đọc dài hạn biết trước tiên — thẳng thắn, ngay ở đầu."
+                }
+              ]
+            }
+          },
+          {
+            "id": "mag-nl-vi-3",
+            "type": "core/cta",
+            "props": {
+              "heading": "Đăng ký chỉ trong một dòng",
+              "body": "Ô đăng ký nằm ở chân trang nhất. Thêm email của bạn là xong — hủy đăng ký chỉ với một cú nhấp, bất cứ lúc nào.",
+              "ctaLabel": "Về trang nhất",
+              "ctaHref": "/"
             }
           }
         ]

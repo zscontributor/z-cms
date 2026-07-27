@@ -10,7 +10,8 @@ import {
   type PluginAdminResource,
   type PluginTableSchema,
 } from "@zcmsorg/plugin-sdk";
-import type { ProvidedPermission, Permission, RenderIntegration } from "@zcmsorg/schemas";
+import type { FormDefinition, ProvidedPermission, Permission, PublicFormDef, RenderIntegration } from "@zcmsorg/schemas";
+import { toPublicForm } from "@zcmsorg/schemas";
 import { t } from "../common/i18n";
 import { PluginTokenService } from "./plugin-token.service";
 
@@ -118,6 +119,8 @@ export interface DispatchTarget {
   /** Declared secret name -> is it configured. Booleans; the values never leave here. */
   secrets: Record<string, boolean>;
   scopes: Permission[];
+  /** Public forms this plugin declared, read from its installed manifest. */
+  forms: FormDefinition[];
 }
 
 export interface PluginRenderContributions {
@@ -877,6 +880,77 @@ export class PluginsService {
     return res.result;
   }
 
+  /**
+   * Invokes a `call` on ONE named plugin and returns its value.
+   *
+   * The by-key twin of `callCapability`: used where the caller already knows which
+   * plugin must answer — a form submission goes to the plugin that DECLARED that
+   * form, not to "whoever provides a capability". Same sandbox path, same
+   * fail-loud contract (a waiting caller hears the error).
+   */
+  async callPlugin(
+    tenantId: string,
+    siteId: string,
+    pluginKey: string,
+    name: string,
+    payload: Record<string, unknown>,
+  ): Promise<unknown> {
+    const targets = await this.activePlugins(tenantId, siteId);
+    const target = targets.find((t) => t.pluginKey === pluginKey);
+    if (!target) {
+      throw new NotFoundException(`Plugin ${pluginKey} is not active on this site.`);
+    }
+
+    const res = await this.execute(tenantId, siteId, target, { kind: "call", name, payload });
+    if (!res.ok) {
+      throw new BadGatewayException(
+        res.error ?? `Plugin ${pluginKey} failed to answer "${name}".`,
+      );
+    }
+    return res.result;
+  }
+
+  /**
+   * Finds the active plugin that declared a public form by id, with its
+   * definition — read from the installed manifest, never from the request. Returns
+   * null when no active plugin on this site owns the form.
+   */
+  async findForm(
+    tenantId: string,
+    siteId: string,
+    formId: string,
+  ): Promise<{ pluginKey: string; form: FormDefinition } | null> {
+    const targets = await this.activePlugins(tenantId, siteId);
+    for (const target of targets) {
+      const form = target.forms.find((f) => f.id === formId);
+      if (form) return { pluginKey: target.pluginKey, form };
+    }
+    return null;
+  }
+
+  /**
+   * Every public form active on this site, projected for the browser and keyed by
+   * id — what the render payload carries so a `core/form` block can render one.
+   *
+   * This is the public projection boundary for forms, the twin of a capability
+   * projector: the plugin declared the fields, core decides they may reach the page
+   * (they are all presentational — no handler, no settings, no secrets). First
+   * declarer of an id wins, so a duplicate across plugins can't shadow silently.
+   */
+  async publicFormsFor(
+    tenantId: string,
+    siteId: string,
+  ): Promise<Record<string, PublicFormDef>> {
+    const targets = await this.activePlugins(tenantId, siteId);
+    const forms: Record<string, PublicFormDef> = {};
+    for (const target of targets) {
+      for (const form of target.forms) {
+        if (!forms[form.id]) forms[form.id] = toPublicForm(form);
+      }
+    }
+    return forms;
+  }
+
   private async activePlugins(
     tenantId: string,
     siteId: string,
@@ -923,6 +997,7 @@ export class PluginsService {
       settingsSchema?: SettingsSchema;
       capabilities?: string[];
       network?: { secrets?: Record<string, string> };
+      forms?: FormDefinition[];
     } | null;
 
     const stored = (row.settings ?? {}) as Record<string, unknown>;
@@ -955,6 +1030,7 @@ export class PluginsService {
       // The GRANTED scopes, not the requested ones. An admin who approved only some
       // of what a plugin asked for gets exactly that.
       scopes: (row.grantedPermissions ?? []) as Permission[],
+      forms: manifest?.forms ?? [],
     };
   }
 

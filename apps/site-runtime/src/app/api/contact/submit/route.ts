@@ -3,17 +3,23 @@ import { NextResponse } from "next/server";
 import { CMS_API_URL, CMS_INTERNAL_TOKEN } from "@/lib/env";
 
 /**
- * The contact form's no-JavaScript submit target.
+ * The contact form's submit target.
  *
- * The z-soft theme (like every theme) ships no client JS, so its contact form is
- * a plain HTML `POST` to this same-origin route. We forward the fields to cms-api
- * with the internal token — the browser never sees that token or the API's
- * address — and then send the visitor back to the page they came from with a
- * `#contact-sent` or `#contact-error` fragment. The theme reveals the matching
- * banner with a pure-CSS `:target` rule, so the whole round-trip needs no script.
+ * Two callers, one handler. A theme ships no client JS, so its form is a plain
+ * HTML `POST` and this route answers with a 303 back to the page carrying a
+ * `#contact-sent` / `#contact-error` fragment (the no-JS path). When the runtime's
+ * progressive-enhancement script is present it sends the same POST with
+ * `Accept: application/json` and this route answers `{ ok }` instead — so the
+ * script can reveal the result without a navigation, keeping what the visitor
+ * typed on error and clearing the form only on success.
+ *
+ * Either way the fields are forwarded to cms-api with the internal token (the
+ * browser never sees that token or the API's address), and cms-api decides who the
+ * mail goes to and validates it.
  */
 export async function POST(request: Request): Promise<Response> {
   const incoming = await headers();
+  const wantsJson = (incoming.get("accept") ?? "").includes("application/json");
   const proto = (incoming.get("x-forwarded-proto") ?? "https").split(",")[0]!.trim();
   const hostname = (incoming.get("x-forwarded-host") ?? incoming.get("host") ?? "")
     .split(",")[0]!
@@ -21,8 +27,12 @@ export async function POST(request: Request): Promise<Response> {
     .toLowerCase();
 
   const back = safeReturn(incoming.get("referer"), proto, hostname);
+  const done = (ok: boolean): Response =>
+    wantsJson
+      ? NextResponse.json({ ok }, { status: 200 })
+      : redirectWith(back, ok ? "sent" : "error");
 
-  if (!hostname) return redirectWith(back, "error");
+  if (!hostname) return done(false);
 
   let payload: Record<string, string>;
   try {
@@ -35,7 +45,7 @@ export async function POST(request: Request): Promise<Response> {
       message: field(form.get("message")),
     };
   } catch {
-    return redirectWith(back, "error");
+    return done(false);
   }
 
   try {
@@ -53,9 +63,9 @@ export async function POST(request: Request): Promise<Response> {
       body: JSON.stringify(payload),
       cache: "no-store",
     });
-    return redirectWith(back, response.ok ? "sent" : "error");
+    return done(response.ok);
   } catch {
-    return redirectWith(back, "error");
+    return done(false);
   }
 }
 

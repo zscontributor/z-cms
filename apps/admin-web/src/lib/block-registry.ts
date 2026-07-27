@@ -286,6 +286,27 @@ export const BLOCK_SPECS: BlockSpec[] = [
       heading: "",
     }),
   },
+  {
+    /**
+     * Places a plugin-declared public form by id. The runtime's `core/form` block
+     * renders it as an interactive island on every theme; the plugin owns the
+     * fields, validation and handler. The author only names which form.
+     */
+    type: "core/form",
+    labelKey: "content.blocks.specs.form.label",
+    descriptionKey: "content.blocks.specs.form.description",
+    icon: "F",
+    props: [
+      {
+        key: "formId",
+        labelKey: "content.blocks.props.formId",
+        kind: "text",
+        hintKey: "content.blocks.hints.formId",
+        placeholderKey: "content.blocks.placeholders.formId",
+      },
+    ],
+    defaults: () => ({ formId: "" }),
+  },
 ];
 
 export function getBlockSpec(type: string): BlockSpec | undefined {

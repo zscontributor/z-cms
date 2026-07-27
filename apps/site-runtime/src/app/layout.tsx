@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import type { ReactNode } from "react";
 import { colorModeIconCss, colorModeScript } from "@/lib/color-mode";
+import { contactEnhanceScript } from "@/lib/contact-enhance";
 import { revealOnTargetScript } from "@/lib/reveal-on-target";
 import { resolveDocumentColorMode } from "@/lib/color-mode-server";
 import { resolveDocumentLocale } from "@/lib/render-client";
@@ -62,6 +63,11 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             primitive for no-JS themes (see lib/reveal-on-target.ts), not tied to
             any one feature. Nonce'd like the color-mode script above. */}
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: revealOnTargetScript() }} />
+        {/* Progressive enhancement for the contact form: stricter email
+            validation, and submit-over-fetch so a failed send keeps what the
+            visitor typed (only a real success clears the form). Falls back to the
+            plain POST + redirect above when this does not run. */}
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: contactEnhanceScript() }} />
       </body>
     </html>
   );

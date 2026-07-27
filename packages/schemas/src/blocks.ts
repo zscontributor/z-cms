@@ -84,7 +84,11 @@ export const BlockDocumentSchema = z
   .pipe(z.array(BlockSchema));
 export type BlockDocument = z.infer<typeof BlockDocumentSchema>;
 
-/** Block types core ships and every theme is expected to style. */
+/**
+ * Block types core ships. Most are themed (every theme styles them); `core/form`
+ * is the exception — the runtime renders it as an interactive island on any theme,
+ * so a theme need not (and cannot meaningfully) style it.
+ */
 export const CORE_BLOCK_TYPES = [
   "core/hero",
   "core/richtext",
@@ -92,6 +96,7 @@ export const CORE_BLOCK_TYPES = [
   "core/image",
   "core/cta",
   "core/content-list",
+  "core/form",
 ] as const;
 
 export type CoreBlockType = (typeof CORE_BLOCK_TYPES)[number];

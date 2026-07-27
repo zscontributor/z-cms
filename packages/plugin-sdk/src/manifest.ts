@@ -1,7 +1,9 @@
 import type {
+  FormDefinition,
   PackageMediaDeclaration,
   Permission,
   ProvidedPermission,
+  SettingsSchema,
 } from "@zcmsorg/schemas";
 import type { PluginAdminContribution } from "./admin";
 import type { PluginTableSchema } from "./table-schema";
@@ -22,32 +24,18 @@ export interface PluginAuthor {
 }
 
 /**
- * Settings form, rendered by the admin straight from this JSON Schema.
- * Same mechanism as themes: a plugin adds an option without admin-web changing.
+ * Settings form, rendered by the admin straight from this JSON Schema. Same
+ * mechanism, and now the same type, as themes: the shared {@link SettingsSchema}
+ * in `@zcmsorg/schemas`.
+ *
+ * The load-bearing format for plugins is `"password"`: it masks the input AND
+ * withholds the value from the sandbox — a password setting is stripped from
+ * `ctx.settings` before the isolate ever starts, and spent only via
+ * `network.secrets` + `{{secret:...}}` substitution. That stripping happens in
+ * cms-api/plugin-runtime; the type only records the intent. It is not encryption
+ * at rest — the value is stored as given, safe from the plugin, not from a dump.
  */
-export interface PluginSettingsSchema {
-  type: "object";
-  properties: Record<
-    string,
-    {
-      type: "string" | "number" | "boolean";
-      title?: string;
-      description?: string;
-      // "password" does two things. It masks the input, and — the load-bearing
-      // one — it withholds the value from the sandbox: a password setting is
-      // stripped from `ctx.settings` before the isolate ever starts. A plugin
-      // spends such a setting through `network.secrets` and `{{secret:...}}`
-      // substitution, or not at all.
-      //
-      // What it is still NOT is encryption at rest. The value is stored as given,
-      // so it is safe from the plugin, not from a database dump.
-      format?: "color" | "url" | "image" | "textarea" | "password";
-      default?: unknown;
-      enum?: string[];
-    }
-  >;
-  required?: string[];
-}
+export type PluginSettingsSchema = SettingsSchema;
 
 /**
  * The hosts a plugin may reach, and the credentials it may spend without seeing.
@@ -214,4 +202,19 @@ export interface PluginManifest {
    * permissions the entry names. See {@link PluginAdminContribution}.
    */
   admin?: PluginAdminContribution;
+
+  /**
+   * Public-site forms this plugin provides — the visitor-facing counterpart of
+   * `admin`. Each is a declared field list (validated by the shared
+   * `buildFormSchema`, client and server alike); when one is submitted, core
+   * dispatches `{ formId, values }` to the plugin's `calls["forms.submit"]`
+   * handler, which decides what to do with it — store it, email it, forward it —
+   * using the same `ctx` (storage/db/mail/http) and scopes it already holds.
+   *
+   * This is what lets a community plugin ship a real, validated public form (a
+   * newsletter box, a booking request) without shipping browser code or a route:
+   * it describes the fields, core validates and renders them, and the plugin only
+   * writes the handler. See `@zcmsorg/schemas` `FormDefinition`.
+   */
+  forms?: FormDefinition[];
 }

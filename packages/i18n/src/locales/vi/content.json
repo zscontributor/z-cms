@@ -170,6 +170,10 @@
       "contentList": {
         "label": "Danh sách nội dung",
         "description": "Danh sách hoặc lưới nội dung được lấy tự động, ví dụ các bài viết mới nhất."
+      },
+      "form": {
+        "label": "Biểu mẫu",
+        "description": "Biểu mẫu do một plugin đã cài cung cấp — hộp liên hệ, đăng ký nhận tin."
       }
     },
     "props": {
@@ -207,18 +211,21 @@
       "sortTitle": "Theo tiêu đề",
       "layout": "Bố cục",
       "layoutList": "Danh sách",
-      "layoutGrid": "Lưới"
+      "layoutGrid": "Lưới",
+      "formId": "Biểu mẫu"
     },
     "hints": {
       "contentType": "Nội dung mà khối này liệt kê. Chỉ hiển thị các mục đã xuất bản.",
-      "limit": "Từ {min} đến {max} mục."
+      "limit": "Từ {min} đến {max} mục.",
+      "formId": "Id của biểu mẫu do một plugin đã cài cung cấp, ví dụ \"feedback\"."
     },
     "placeholders": {
       "heroHeading": "Xây dựng website nhanh hơn",
       "ctaLabel": "Bắt đầu ngay",
       "ctaHref": "/lien-he",
       "imageSrc": "https://…",
-      "contentListHeading": "Tin mới nhất"
+      "contentListHeading": "Tin mới nhất",
+      "formId": "feedback"
     },
     "defaults": {
       "heroHeading": "Tiêu đề hero",

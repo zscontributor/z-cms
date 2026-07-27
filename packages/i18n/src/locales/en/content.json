@@ -170,6 +170,10 @@
       "contentList": {
         "label": "Content list",
         "description": "A list or grid of content, filled in automatically — the latest posts, say."
+      },
+      "form": {
+        "label": "Form",
+        "description": "A form provided by an installed plugin — a contact box, a newsletter sign-up."
       }
     },
     "props": {
@@ -207,18 +211,21 @@
       "sortTitle": "By title",
       "layout": "Layout",
       "layoutList": "List",
-      "layoutGrid": "Grid"
+      "layoutGrid": "Grid",
+      "formId": "Form"
     },
     "hints": {
       "contentType": "Which content this block lists. Only published items appear.",
-      "limit": "Between {min} and {max} items."
+      "limit": "Between {min} and {max} items.",
+      "formId": "The id of a form an installed plugin provides, e.g. \"feedback\"."
     },
     "placeholders": {
       "heroHeading": "Build websites faster",
       "ctaLabel": "Get started",
       "ctaHref": "/contact",
       "imageSrc": "https://…",
-      "contentListHeading": "Latest news"
+      "contentListHeading": "Latest news",
+      "formId": "feedback"
     },
     "defaults": {
       "heroHeading": "Hero heading",

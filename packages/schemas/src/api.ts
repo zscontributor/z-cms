@@ -7,6 +7,7 @@ import {
   isBrowserSafeUrl,
 } from "./content";
 import { RoleSchema, type Role } from "./permissions";
+import type { PublicFormDef } from "./forms";
 
 /**
  * The wire contract between cms-api and its two front ends.
@@ -893,4 +894,11 @@ export interface RenderPayload {
   integrations: Record<string, RenderIntegration>;
   /** Safe, public zAI presentation settings. Provider keys never enter this payload. */
   aiAssistant?: { name: string; welcomeMessage: string };
+  /**
+   * Public forms declared by active plugins, keyed by form id — browser-safe field
+   * definitions only (labels + validation rules, no handler, no secrets). A
+   * `core/form` block renders one by id. Optional so a payload cached before forms
+   * existed still deserialises; the runtime defaults it to `{}`.
+   */
+  forms?: Record<string, PublicFormDef>;
 }

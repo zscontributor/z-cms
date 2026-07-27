@@ -18,6 +18,7 @@ import { Public } from "./auth/decorators";
 import { LocaleMiddleware } from "./common/i18n";
 import { TenantInterceptor } from "./common/tenant.interceptor";
 import { ContactModule } from "./contact/contact.module";
+import { FormsModule } from "./forms/forms.module";
 import { ContentTypesModule } from "./content-types/content-types.module";
 import { ContentsModule } from "./contents/contents.module";
 import { JobsModule } from "./jobs/jobs.module";
@@ -88,6 +89,9 @@ class HealthController {
     // contact-form enquiry as CMS mail (pluginKey null, so no plugin quota).
     ContactModule,
     PluginsModule,
+    // After PluginsModule: FormsService injects PluginsService (global) to resolve
+    // and dispatch plugin-declared public forms.
+    FormsModule,
     PackagesModule,
     MarketplaceModule,
     PublisherKeysModule,

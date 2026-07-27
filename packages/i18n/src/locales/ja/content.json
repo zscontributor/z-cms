@@ -170,6 +170,10 @@
       "contentList": {
         "label": "コンテンツ一覧",
         "description": "最新の投稿など、コンテンツを自動で集めてリストまたはグリッドで表示します。"
+      },
+      "form": {
+        "label": "フォーム",
+        "description": "インストール済みプラグインが提供するフォーム（問い合わせ欄、ニュースレター登録など）。"
       }
     },
     "props": {
@@ -207,18 +211,21 @@
       "sortTitle": "タイトル順",
       "layout": "レイアウト",
       "layoutList": "リスト",
-      "layoutGrid": "グリッド"
+      "layoutGrid": "グリッド",
+      "formId": "フォーム"
     },
     "hints": {
       "contentType": "このブロックが一覧表示するコンテンツ。公開済みの項目のみ表示されます。",
-      "limit": "{min}〜{max} 件の範囲で指定します。"
+      "limit": "{min}〜{max} 件の範囲で指定します。",
+      "formId": "インストール済みプラグインが提供するフォームの id（例: \"feedback\"）。"
     },
     "placeholders": {
       "heroHeading": "ウェブサイトをより速く構築する",
       "ctaLabel": "始めましょう",
       "ctaHref": "/接触",
       "imageSrc": "https://…",
-      "contentListHeading": "最新のお知らせ"
+      "contentListHeading": "最新のお知らせ",
+      "formId": "feedback"
     },
     "defaults": {
       "heroHeading": "ヒーローの見出し",
