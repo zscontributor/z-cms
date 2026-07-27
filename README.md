@@ -44,6 +44,23 @@ pnpm verify   # 50 attacks: RLS (6) · sandbox escape (6) · package signing (9)
 
 ## Quick start
 
+> **Just want to run or self-host Z-CMS?** You don't need to build from source.
+> Official multi-arch images (`linux/amd64` + `linux/arm64`) are published on
+> Docker Hub under **[`zcms`](https://hub.docker.com/u/zcms)**, with a ready-made
+> `docker compose` stack, reverse-proxy examples (Traefik, Caddy, Nginx, Apache,
+> Portainer) and a full operator guide in the
+> **[z-cms-docker-offical-image](https://github.com/zscontributor/z-cms-docker-offical-image)**
+> repository:
+>
+> ```bash
+> git clone https://github.com/zscontributor/z-cms-docker-offical-image.git zcms
+> cd zcms && cp .env.example .env && ./scripts/generate-secrets.sh --write
+> docker compose up -d && ./scripts/first-run-seed.sh
+> ```
+>
+> The rest of this section is for **contributing to Z-CMS itself** — running the
+> monorepo from source.
+
 Requires **Node 22+**, **pnpm 10+** and **Docker**. Contributors also need
 **[gitleaks](https://github.com/gitleaks/gitleaks#installing)** (`brew install gitleaks`)
 for the secret-scanning git hooks — see [Git hooks and secret scanning](#git-hooks-and-secret-scanning).
@@ -273,6 +290,12 @@ real credential still fails. Never commit a real secret — see
 the full workflow.
 
 ### Docker
+
+> This compose file is the **development backing stack** (databases + tooling for
+> running the monorepo from source), not a production deployment. To run Z-CMS
+> itself from the prebuilt official images, use the
+> [z-cms-docker-offical-image](https://github.com/zscontributor/z-cms-docker-offical-image)
+> repo — see [Quick start](#quick-start).
 
 `infrastructure/docker/docker-compose.yml` brings up the whole backing stack:
 

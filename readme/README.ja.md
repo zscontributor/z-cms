@@ -39,6 +39,22 @@ pnpm verify   # RLS、sandbox、パッケージ署名、失効、マルウェア
 
 ## クイックスタート
 
+> **Z-CMS を実行・セルフホストしたいだけですか？** ソースからビルドする必要は
+> ありません。マルチアーキテクチャ（`linux/amd64` + `linux/arm64`）の公式イメージが
+> Docker Hub の **[`zcms`](https://hub.docker.com/u/zcms)** で公開されています。すぐ
+> 使える `docker compose` スタック、リバースプロキシの例（Traefik、Caddy、Nginx、
+> Apache、Portainer）、運用ガイド一式は
+> **[z-cms-docker-offical-image](https://github.com/zscontributor/z-cms-docker-offical-image)**
+> リポジトリにあります:
+>
+> ```bash
+> git clone https://github.com/zscontributor/z-cms-docker-offical-image.git zcms
+> cd zcms && cp .env.example .env && ./scripts/generate-secrets.sh --write
+> docker compose up -d && ./scripts/first-run-seed.sh
+> ```
+>
+> このセクションの残りは、**Z-CMS 自体への貢献**（モノレポをソースから実行）向けです。
+
 **Node 22+**、**pnpm 10+**、**Docker** が必要です。コントリビューターは
 Git hooks のシークレットスキャン用に
 **[gitleaks](https://github.com/gitleaks/gitleaks#installing)** も必要です。

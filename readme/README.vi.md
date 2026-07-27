@@ -38,6 +38,22 @@ pnpm verify   # chạy các bộ kiểm thử tấn công cho RLS, sandbox, ch�
 
 ## Bắt đầu nhanh
 
+> **Chỉ muốn chạy hoặc tự host Z-CMS?** Bạn không cần build từ mã nguồn. Image
+> chính thức đa kiến trúc (`linux/amd64` + `linux/arm64`) đã có trên Docker Hub tại
+> **[`zcms`](https://hub.docker.com/u/zcms)**, kèm sẵn stack `docker compose`, ví dụ
+> reverse proxy (Traefik, Caddy, Nginx, Apache, Portainer) và hướng dẫn vận hành đầy
+> đủ trong repo
+> **[z-cms-docker-offical-image](https://github.com/zscontributor/z-cms-docker-offical-image)**:
+>
+> ```bash
+> git clone https://github.com/zscontributor/z-cms-docker-offical-image.git zcms
+> cd zcms && cp .env.example .env && ./scripts/generate-secrets.sh --write
+> docker compose up -d && ./scripts/first-run-seed.sh
+> ```
+>
+> Phần còn lại của mục này dành cho việc **đóng góp cho chính Z-CMS** — chạy monorepo
+> từ mã nguồn.
+
 Yêu cầu **Node 22+**, **pnpm 10+** và **Docker**. Contributor cũng cần
 **[gitleaks](https://github.com/gitleaks/gitleaks#installing)** để chạy secret scan
 trong Git hooks.
