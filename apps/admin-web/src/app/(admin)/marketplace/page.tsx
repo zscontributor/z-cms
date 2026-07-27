@@ -77,7 +77,11 @@ export default async function MarketplacePage({
           <h2 className="text-sm font-semibold">{t("admin.marketplace.browse.sections.installed")}</h2>
           <p className="text-xs z-muted">{t("admin.marketplace.browse.sections.installedDescription")}</p>
         </div>
-        <InstalledGrid items={installed} />
+        <InstalledGrid
+          items={installed}
+          canInstallTheme={canInstallTheme}
+          canInstallPlugin={canInstallPlugin}
+        />
       </section>
 
       <section className="mt-6 flex flex-col gap-3">

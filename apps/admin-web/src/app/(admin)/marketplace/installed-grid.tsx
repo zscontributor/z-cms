@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useState, useTransition } from "react";
+import { installFromMarketplaceAction } from "@/app/actions/marketplace";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/shell/icon";
 import { MediaGallery } from "@/components/ui/media-gallery";
 import { cn } from "@/lib/cn";
@@ -38,7 +41,15 @@ export type InstalledPackage = {
  * (plugins / appearance), and flags when the marketplace holds a newer version
  * than the one this site runs.
  */
-export function InstalledGrid({ items }: { items: InstalledPackage[] }) {
+export function InstalledGrid({
+  items,
+  canInstallTheme,
+  canInstallPlugin,
+}: {
+  items: InstalledPackage[];
+  canInstallTheme: boolean;
+  canInstallPlugin: boolean;
+}) {
   const t = useT();
 
   if (items.length === 0) {
@@ -52,16 +63,36 @@ export function InstalledGrid({ items }: { items: InstalledPackage[] }) {
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
       {items.map((item) => (
-        <InstalledCard key={`${item.kind}:${item.key}`} item={item} />
+        <InstalledCard
+          key={`${item.kind}:${item.key}`}
+          item={item}
+          canInstall={item.kind === "theme" ? canInstallTheme : canInstallPlugin}
+        />
       ))}
     </div>
   );
 }
 
-function InstalledCard({ item }: { item: InstalledPackage }) {
+function InstalledCard({ item, canInstall }: { item: InstalledPackage; canInstall: boolean }) {
   const t = useT();
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
   const updatable =
     item.version != null && item.latestVersion != null && item.version !== item.latestVersion;
+
+  function update() {
+    if (!item.latestVersion) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await installFromMarketplaceAction(item.kind, item.key, item.latestVersion!);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setNotice(result.message);
+    });
+  }
 
   return (
     <article className="z-card flex flex-col gap-3 p-4">
@@ -95,7 +126,12 @@ function InstalledCard({ item }: { item: InstalledPackage }) {
       <MediaGallery screenshots={item.screenshots} video={null} name={item.name} />
 
       <footer className="mt-auto flex items-center justify-between gap-2 pt-1">
-        {updatable ? (
+        {notice ? (
+          <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400">
+            <Icon name="check" className="h-3.5 w-3.5" />
+            {notice}
+          </span>
+        ) : updatable ? (
           <span className="inline-flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400">
             <Icon name="install" className="h-3.5 w-3.5" />
             {t("admin.marketplace.browse.updateAvailableBadge")}
@@ -107,17 +143,37 @@ function InstalledCard({ item }: { item: InstalledPackage }) {
           </span>
         )}
 
-        <Link
-          href={item.manageHref}
-          className={cn(
-            "inline-flex items-center gap-1 rounded-md border border-[var(--border)] px-2.5 py-1 text-[11px] font-medium",
-            "text-[var(--text)] transition hover:bg-[var(--surface-sunken)]",
-          )}
-        >
-          {t("admin.marketplace.browse.manage")}
-          <Icon name="chevron-right" className="h-3.5 w-3.5" />
-        </Link>
+        <div className="flex items-center gap-2">
+          {updatable && canInstall && !notice ? (
+            <Button size="sm" variant="primary" onClick={update} disabled={pending}>
+              <Icon name="install" className="mr-1 h-3.5 w-3.5" />
+              {pending
+                ? t("admin.marketplace.browse.installing")
+                : t("admin.marketplace.browse.update")}
+            </Button>
+          ) : null}
+
+          <Link
+            href={item.manageHref}
+            className={cn(
+              "inline-flex items-center gap-1 rounded-md border border-[var(--border)] px-2.5 py-1 text-[11px] font-medium",
+              "text-[var(--text)] transition hover:bg-[var(--surface-sunken)]",
+            )}
+          >
+            {t("admin.marketplace.browse.manage")}
+            <Icon name="chevron-right" className="h-3.5 w-3.5" />
+          </Link>
+        </div>
       </footer>
+
+      {error ? (
+        <p
+          role="alert"
+          className="rounded-md border border-red-200 bg-red-50 px-2.5 py-2 text-[11px] text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
+        >
+          {error}
+        </p>
+      ) : null}
     </article>
   );
 }
