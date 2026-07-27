@@ -132,6 +132,9 @@ packages/
 ├── database         Prisma schema, migrations, RLS, tenant-scoped client
 ├── schemas          Zod contracts shared by the API and both front ends
 ├── theme-sdk        The contract for writing a theme
+├── theme-widgets    Pre-reviewed widget library that GUI-drawn themes render with
+├── theme-runner     Renders a theme off the request thread, in a killable worker
+├── theme-codegen    Turns a Theme Editor layout into a buildable theme package
 ├── plugin-sdk       The contract for writing a plugin
 ├── i18n             Core message catalogue. English is the base locale
 ├── queue            Job names, payloads and the producer. One definition, both sides
