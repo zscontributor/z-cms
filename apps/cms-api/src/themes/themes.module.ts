@@ -808,7 +808,22 @@ export class ThemesController {
     const threshold =
       typeof commerce?.freeShippingThreshold === "number" ? commerce.freeShippingThreshold : null;
 
-    let sequence = await db().order.count({ where: { siteId } });
+    // Demo order numbers must start ABOVE every number already on the site, not at its
+    // count. Order numbers are not dense: the deleteMany above drops this theme's demo
+    // orders but leaves every real order (and any other theme's demo) behind with its
+    // number intact, so count()+1 can walk straight into a number a surviving order
+    // already holds — the (siteId, orderNumber) unique violation the real checkout
+    // survives by retrying, but this loop does not, so the whole seed 500s. Starting
+    // past the current maximum sidesteps the clash. parseInt (not lexicographic max)
+    // so it stays correct once numbers pass 9999 and gain a fifth digit.
+    const existingNumbers = await db().order.findMany({
+      where: { siteId },
+      select: { orderNumber: true },
+    });
+    let sequence = existingNumbers.reduce((max, o) => {
+      const n = Number.parseInt(o.orderNumber, 10);
+      return Number.isFinite(n) && n > max ? n : max;
+    }, 0);
     let created = 0;
 
     for (const order of orders) {

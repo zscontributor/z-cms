@@ -70,6 +70,9 @@ function makeDb(demo: unknown, siteLocales: string[] = ["en"]) {
     },
     order: {
       deleteMany: vi.fn().mockResolvedValue({}),
+      // The seeder reads the site's surviving order numbers to start above the highest
+      // one; default to none so a demo with no prior orders numbers from 0001.
+      findMany: vi.fn().mockResolvedValue([]),
       count: vi.fn().mockResolvedValue(0),
       create: vi.fn().mockResolvedValue({ id: "o1" }),
     },
@@ -346,6 +349,60 @@ describe("ThemesController.seedActiveDemo", () => {
       expect(holder.db.order.deleteMany).toHaveBeenCalledWith({
         where: { siteId: "s1", demoThemeKey: "acme/theme" },
       });
+    });
+
+    it("numbers demo orders above the highest surviving order, not from the row count", async () => {
+      // Regression: a real order placed AFTER a demo seed sits at a high number
+      // (e.g. "0006"). Re-seeding deletes this theme's demo rows, dropping the count
+      // to 1 — so the old count()+1 scheme regenerated 0002..0006 and collided with
+      // the real "0006" on the (siteId, orderNumber) unique index, 500-ing the seed
+      // with no retry. Numbering must start ABOVE every surviving order instead.
+      holder.db = makeDb({
+        contentTypes: productTypes,
+        contents: products,
+        menus: [],
+        orders: [
+          {
+            customer: { name: "Ann", email: "a@x.com", phone: "1", address: "1 St", city: "Hanoi" },
+            items: [{ slug: "serum", quantity: 1 }],
+          },
+          {
+            customer: { name: "Bo", email: "b@x.com", phone: "2", address: "2 St", city: "Hue" },
+            items: [{ slug: "balm", quantity: 1 }],
+          },
+        ],
+      });
+      // The only order that survives deleteMany is a real one at "0006"; count() would
+      // report 1 here, which is exactly the trap.
+      holder.db.order.findMany = vi.fn().mockResolvedValue([{ orderNumber: "0006" }]);
+      holder.db.order.count = vi.fn().mockResolvedValue(1);
+
+      const res = await makeController().seedActiveDemo(actor, "s1");
+
+      expect(res.orders).toBe(2);
+      const numbers = holder.db.order.create.mock.calls.map((c: any) => c[0].data.orderNumber);
+      expect(numbers).toEqual(["0007", "0008"]);
+    });
+
+    it("keeps demo numbering correct once order numbers pass 9999 (parses, not lexicographic)", async () => {
+      // "10000" is lexicographically LESS than "9999", so a string-max would restart
+      // the sequence and collide. parseInt keeps it monotonic past the fifth digit.
+      holder.db = makeDb({
+        contentTypes: productTypes,
+        contents: products,
+        menus: [],
+        orders: [
+          {
+            customer: { name: "Ann", email: "a@x.com", phone: "1", address: "1 St", city: "Hanoi" },
+            items: [{ slug: "serum", quantity: 1 }],
+          },
+        ],
+      });
+      holder.db.order.findMany = vi.fn().mockResolvedValue([{ orderNumber: "10000" }]);
+
+      await makeController().seedActiveDemo(actor, "s1");
+
+      expect(holder.db.order.create.mock.calls[0][0].data.orderNumber).toBe("10001");
     });
 
     it("skips a demo order line whose product was not seeded rather than inventing a price", async () => {
