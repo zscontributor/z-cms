@@ -70,6 +70,8 @@
     "publishSection": "Publishing",
     "status": "Status",
     "locale": "Language",
+    "parent": "Parent page",
+    "parentNone": "None (top-level)",
     "save": "Save changes",
     "create": "Create content",
     "saveAndPublish": "Save & publish",

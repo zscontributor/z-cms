@@ -296,6 +296,16 @@ describe("CreateContentSchema", () => {
     ).toBe(false);
   });
 
+  it("accepts a parentId UUID, and null for a top-level page", () => {
+    const uuid = "0e9c1b6a-0000-4000-8000-000000000002";
+    expect(CreateContentSchema.safeParse(minimalCreate({ parentId: uuid })).success).toBe(true);
+    expect(CreateContentSchema.safeParse(minimalCreate({ parentId: null })).success).toBe(true);
+  });
+
+  it("rejects a parentId that is not a UUID", () => {
+    expect(CreateContentSchema.safeParse(minimalCreate({ parentId: "nope" })).success).toBe(false);
+  });
+
   it("rejects a non-ISO publishedAt", () => {
     expect(CreateContentSchema.safeParse(minimalCreate({ publishedAt: "yesterday" })).success).toBe(
       false,

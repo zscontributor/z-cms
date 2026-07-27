@@ -66,6 +66,7 @@ async function main() {
         contentTypeId: type.id,
         locale: "vi",
         slug: "secret",
+        path: "/secret",
         title: `SECRET OF TENANT ${label}`,
         },
       });
@@ -113,6 +114,7 @@ async function main() {
           contentTypeId: typeB!.id,
           locale: "vi",
           slug: "planted",
+          path: "/planted",
           title: "planted by tenant A",
         },
       });

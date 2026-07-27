@@ -62,7 +62,7 @@ type ContentContextScope = "public" | "admin";
 type ContextContentRow = {
   id: string;
   title: string;
-  slug: string;
+  path: string;
   locale: string;
   excerpt: string | null;
   data: unknown;
@@ -70,7 +70,7 @@ type ContextContentRow = {
   seo: unknown;
   status: string;
   updatedAt: Date;
-  contentType: { key: string; name: string; routePrefix: string };
+  contentType: { key: string; name: string };
 };
 
 type DocsContextRow = { title: string; source: string; text: string; score: number };
@@ -269,7 +269,7 @@ export class AiService {
       select: {
         id: true,
         title: true,
-        slug: true,
+        path: true,
         locale: true,
         excerpt: true,
         data: true,
@@ -277,7 +277,7 @@ export class AiService {
         seo: true,
         status: true,
         updatedAt: true,
-        contentType: { select: { key: true, name: true, routePrefix: true } },
+        contentType: { select: { key: true, name: true } },
       },
       orderBy: scope === "public" ? { publishedAt: "desc" } : { updatedAt: "desc" },
       take: 8,
@@ -301,8 +301,6 @@ export class AiService {
       this.extractText(row.blocks),
       this.extractText(row.seo),
     ].filter(Boolean);
-    const routePrefix = row.contentType.routePrefix ? `/${row.contentType.routePrefix}` : "";
-    const path = row.slug ? `${routePrefix}/${row.slug}` : routePrefix || "/";
     const body = parts.join("\n").replace(/\s+/g, " ").slice(0, 1_200);
     return [
       `[${index}] ${row.title}`,
@@ -310,7 +308,7 @@ export class AiService {
       `type: ${row.contentType.key}`,
       `status: ${row.status}`,
       `locale: ${row.locale}`,
-      `path: ${path}`,
+      `path: ${row.path}`,
       `updatedAt: ${row.updatedAt.toISOString()}`,
       `content: ${body || "(no text content)"}`,
     ].join("\n");

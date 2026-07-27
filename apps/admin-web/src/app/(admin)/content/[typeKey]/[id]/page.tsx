@@ -17,6 +17,7 @@ import { TranslationsPanel } from "@/components/editor/translations-panel";
 import { PageHeader } from "@/components/page-header";
 import { STATUS_TONES, statusKey } from "@/lib/format";
 import { getT } from "@/lib/locale";
+import { loadParentOptions } from "@/lib/parent-options";
 
 export const dynamic = "force-dynamic";
 
@@ -61,9 +62,12 @@ export default async function EditContentPage({ params }: PageProps) {
   // with the wrong field set.
   if (content.contentType.key !== typeKey) notFound();
 
-  // After the content, not alongside it: this needs the id to have resolved, and
-  // it must not delay the editor for a site that has one language.
-  const translations = await getContentTranslations(content.id);
+  // After the content, not alongside it: these need the id to have resolved, and
+  // must not delay the editor for a site that has one language / a flat content set.
+  const [translations, parentOptions] = await Promise.all([
+    getContentTranslations(content.id),
+    loadParentOptions(typeKey, content.locale, content.id),
+  ]);
 
   const initial: EditorInitial = {
     id: content.id,
@@ -76,6 +80,7 @@ export default async function EditContentPage({ params }: PageProps) {
     blocks: content.blocks ?? [],
     seo: content.seo ?? {},
     path: content.path,
+    parentId: content.parentId,
     updatedAt: content.updatedAt,
   };
 
@@ -105,6 +110,7 @@ export default async function EditContentPage({ params }: PageProps) {
         type={type}
         initial={initial}
         contentTypes={contentTypes.map(({ key, name }) => ({ key, name }))}
+        parentOptions={parentOptions}
         themeBlocks={themeBlocks}
         permissions={{
           canSave: can(user, "content:update"),

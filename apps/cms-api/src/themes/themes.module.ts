@@ -17,6 +17,7 @@ import { normalizeChangelog } from "@zcmsorg/package";
 import { BlockDocumentSchema } from "@zcmsorg/schemas";
 import { Actor, RequirePermissions, SiteId, SiteScoped } from "../auth/decorators";
 import { t } from "../common/i18n";
+import { contentPath } from "../common/mappers";
 import { sanitizeBlocks } from "../common/sanitize-blocks";
 import type { RequestActor } from "../common/request-context";
 import { AuditService } from "../audit/audit.module";
@@ -550,6 +551,7 @@ export class ThemesController {
     await db().content.deleteMany({ where: { siteId, demoThemeKey: themeKey } });
 
     const typeByKey = new Map<string, string>();
+    const prefixByKey = new Map<string, string>();
     for (const item of contentTypes) {
       if (!item.key || !item.name || !item.pluralName) {
         throw new BadRequestException("Theme demo contentTypes require key, name and pluralName.");
@@ -576,6 +578,7 @@ export class ThemesController {
         },
       });
       typeByKey.set(item.key, row.id);
+      prefixByKey.set(item.key, row.routePrefix);
     }
 
     const groups = new Map<string, string>();
@@ -600,6 +603,9 @@ export class ThemesController {
           locale: item.locale,
           translationGroupId,
           slug: item.slug,
+          // Demo content is flat (no parent), so the path is derived from the type's
+          // route prefix and the slug — the same rule top-level content follows.
+          path: contentPath(prefixByKey.get(item.contentType) ?? "", item.slug),
           title: item.title,
           excerpt: item.excerpt ?? null,
           data: (item.data ?? {}) as never,

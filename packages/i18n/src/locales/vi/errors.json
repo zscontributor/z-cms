@@ -25,7 +25,14 @@
     "translationExists": "Trang này đã có bản dịch {locale}. Hãy sửa bản đó thay vì tạo thêm một bản nữa.",
     "publishForbidden": "Bạn không có quyền xuất bản nội dung.",
     "draftOnly": "Bạn chỉ có thể lưu nháp — quyền xuất bản thuộc về Editor trở lên.",
-    "editOwnOnly": "Bạn chỉ được sửa nội dung do mình tạo."
+    "editOwnOnly": "Bạn chỉ được sửa nội dung do mình tạo.",
+    "parentNotFound": "Không tìm thấy trang cha trên site này.",
+    "parentTypeMismatch": "Trang cha phải cùng content type với trang con.",
+    "parentLocaleMismatch": "Trang cha phải cùng ngôn ngữ với trang con.",
+    "parentCycle": "Một trang không thể là cha của chính nó hoặc của trang con cấp dưới của nó.",
+    "parentOnHome": "Trang chủ không thể có trang cha.",
+    "hasChildren": "Hãy di chuyển hoặc xoá các trang con trước khi xoá trang này.",
+    "pathTaken": "Đã có trang khác ở \"{path}\". Hãy chọn slug hoặc trang cha khác."
   },
   "contentTypes": {
     "keyTaken": "Content type với key \"{key}\" đã tồn tại.",

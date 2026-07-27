@@ -21,6 +21,8 @@ export interface ContentFormPayload {
   title: string;
   slug: string;
   locale: string;
+  /** The parent page for a nested URL; null for a top-level page. */
+  parentId?: string | null;
   /**
    * Set only when this document is being created as the translation of another.
    * Carrying it on an update would be a way to silently re-parent a page into
@@ -75,6 +77,9 @@ export async function saveContentAction(payload: ContentFormPayload): Promise<Sa
   const base = {
     title: payload.title,
     slug: payload.slug,
+    // Always sent (null = top-level), so an update can also *remove* a parent. The
+    // API decides whether the path actually changes.
+    parentId: payload.parentId ?? null,
     // No fallback locale here on purpose. An empty value means "the site's
     // default", and the API is the only side that knows what that is — a constant
     // written here would file the entry under a language the site may not publish.

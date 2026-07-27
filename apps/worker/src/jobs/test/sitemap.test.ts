@@ -43,7 +43,7 @@ const SITE = {
 };
 
 function contentRow(overrides: Record<string, unknown> = {}) {
-  return {
+  const row: Record<string, unknown> = {
     slug: "about",
     locale: "en",
     status: "PUBLISHED",
@@ -53,6 +53,15 @@ function contentRow(overrides: Record<string, unknown> = {}) {
     contentType: { routePrefix: "", isRoutable: true },
     ...overrides,
   };
+  // The sitemap reads the materialized `path`; derive it from the (possibly
+  // overridden) slug + route prefix unless a test sets it explicitly.
+  if (row.path === undefined) {
+    const prefix = (row.contentType as { routePrefix?: string }).routePrefix
+      ? `/${(row.contentType as { routePrefix: string }).routePrefix}`
+      : "";
+    row.path = row.slug ? `${prefix}/${row.slug as string}` : prefix || "/";
+  }
+  return row;
 }
 
 /** Runs the job and returns the XML body it wrote to S3. */

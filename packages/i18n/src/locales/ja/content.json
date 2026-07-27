@@ -70,6 +70,8 @@
     "publishSection": "出版",
     "status": "状態",
     "locale": "言語",
+    "parent": "親ページ",
+    "parentNone": "なし（トップレベル）",
     "save": "変更を保存する",
     "create": "コンテンツの作成",
     "saveAndPublish": "保存して公開する",

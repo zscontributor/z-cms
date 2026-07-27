@@ -12,13 +12,14 @@ vi.mock("@zcmsorg/database", () => ({
 import { RenderService } from "../render.service";
 
 function publishedRow(over: Record<string, unknown> = {}) {
-  return {
+  const row: Record<string, unknown> = {
     id: "c1",
     siteId: "s1",
     locale: "en",
     translationGroupId: "g1",
     title: "Hello",
     slug: "hello",
+    parentId: null,
     excerpt: null,
     data: {},
     blocks: [],
@@ -35,6 +36,16 @@ function publishedRow(over: Record<string, unknown> = {}) {
     author: { id: "u1", name: "Ann" },
     ...over,
   };
+  // Mirror the materialized column: unless a test sets `path` explicitly, derive it
+  // from the (possibly overridden) slug + route prefix, the way a top-level row is
+  // written. Keeps every fixture's path consistent with its slug/type.
+  if (row.path === undefined) {
+    const prefix = (row.contentType as { routePrefix?: string }).routePrefix
+      ? `/${(row.contentType as { routePrefix: string }).routePrefix}`
+      : "";
+    row.path = row.slug ? `${prefix}/${row.slug as string}` : prefix || "/";
+  }
+  return row;
 }
 
 function makeDb() {
@@ -462,6 +473,27 @@ describe("RenderService", () => {
       const contentQueries = holder.db.content.findMany.mock.calls.map((c: any) => c[0].where);
       expect(contentQueries.some((w: any) => w.locale === "vi")).toBe(true);
     });
+
+    it("resolves a nested page by its full materialized path", async () => {
+      // "/product/zpets" is a child page. It is matched by an exact path lookup,
+      // not by splitting the URL into a route prefix + slug.
+      cacheReturns({ host: publishedSite, render: null });
+      holder.db.content.findMany.mockResolvedValueOnce([
+        publishedRow({
+          slug: "zpets",
+          path: "/product/zpets",
+          contentType: { id: "ct-page", key: "page", name: "Page", routePrefix: "" },
+        }),
+      ]);
+
+      const out = await makeService().resolve("example.com", "/product/zpets");
+
+      const findWhere = holder.db.content.findMany.mock.calls
+        .map((c: any) => c[0].where)
+        .find((w: any) => w.path !== undefined);
+      expect(findWhere.path).toBe("/product/zpets");
+      expect(out.content?.path).toBe("/product/zpets");
+    });
   });
 
   /**
@@ -479,8 +511,9 @@ describe("RenderService", () => {
     function siblingRow(locale: string, slug: string) {
       return {
         locale,
-        slug,
-        contentType: { routePrefix: "blog", isRoutable: true },
+        // The materialized, locale-relative path — what alternatesFor now reads.
+        path: `/blog/${slug}`,
+        contentType: { isRoutable: true },
       };
     }
 
@@ -607,8 +640,8 @@ describe("RenderService", () => {
 
         // alternatesFor
         if (where.translationGroupId) return Promise.resolve([]);
-        // findContent
-        if (where.slug !== undefined) return Promise.resolve(page ? [page] : []);
+        // findContent — now keyed on the materialized path, not slug + prefix.
+        if (where.path !== undefined) return Promise.resolve(page ? [page] : []);
         return Promise.resolve([]);
       });
     }

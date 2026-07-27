@@ -111,6 +111,13 @@ export const CreateContentSchema = z.object({
    * /about and /vi/gioi-thieu one page rather than two unrelated ones.
    */
   translationGroupId: z.uuid().optional(),
+  /**
+   * The parent page, for a nested URL like /product/zpets. Omitted (or null) for a
+   * top-level page. The API enforces that the parent is the same content type and
+   * the same locale, and rejects a cycle. Unlike `translationGroupId`, this IS
+   * updatable — re-parenting a page is a legitimate edit (it moves the URL).
+   */
+  parentId: z.uuid().nullable().optional(),
   excerpt: z.string().max(500).optional(),
   data: z.record(z.string(), z.unknown()).default({}),
   blocks: BlockDocumentSchema.default([]),

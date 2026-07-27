@@ -14,7 +14,7 @@ import {
   type UpdateContentInput,
 } from "@zcmsorg/schemas";
 import { t } from "../common/i18n";
-import { toContentDto } from "../common/mappers";
+import { childPath, contentPath, toContentDto } from "../common/mappers";
 import { sanitizeBlocks } from "../common/sanitize-blocks";
 import type { RequestActor } from "../common/request-context";
 import { AuditService } from "../audit/audit.module";
@@ -249,6 +249,16 @@ export class ContentsService {
       }
     }
 
+    // A parent makes this a nested page: its URL is the parent's path + this slug.
+    // Validated (same type, same locale, no cycle) before the row is written.
+    const parent = await this.resolveParent(siteId, input.parentId, {
+      contentTypeId: contentType.id,
+      locale,
+      demoThemeKey: null,
+      slug: input.slug,
+    });
+    const path = this.pathFor(parent, contentType.routePrefix, input.slug);
+
     // An AUTHOR may create content but not publish it. Enforced here rather than
     // by permissions alone, because the rule is about the *transition*, not the
     // resource: the same role may edit a draft it owns but never push it live.
@@ -260,6 +270,8 @@ export class ContentsService {
         siteId,
         contentTypeId: contentType.id,
         locale,
+        ...(parent ? { parentId: parent.id } : {}),
+        path,
         // Omitted for a new page: the column defaults to a fresh uuid, so the page
         // is the sole member of its own group. Supplied when this entry is a
         // translation of an existing one.
@@ -346,6 +358,49 @@ export class ContentsService {
       ? this.resolveStatus(actor, input.status)
       : (existing.status as string);
 
+    // The URL is derived from slug + parent, so recompute `path` only when one of
+    // those actually changes — and, when it does, re-validate the parent and check
+    // the new address is free before writing it.
+    const parentProvided = input.parentId !== undefined;
+    const slugChanged = input.slug !== undefined && input.slug !== existing.slug;
+    const parentChanged =
+      parentProvided && (input.parentId ?? null) !== (existing.parentId ?? null);
+    const recompute = slugChanged || parentChanged;
+
+    let newPath: string | undefined;
+    let newParentId: string | null | undefined;
+    if (recompute) {
+      const newSlug = input.slug ?? existing.slug;
+      const newLocale = input.locale ?? existing.locale;
+      newParentId = parentProvided ? input.parentId : existing.parentId;
+      const parent = await this.resolveParent(siteId, newParentId, {
+        id,
+        contentTypeId: existing.contentTypeId,
+        locale: newLocale,
+        demoThemeKey: existing.demoThemeKey,
+        slug: newSlug,
+      });
+      newPath = this.pathFor(parent, existing.contentType.routePrefix, newSlug);
+
+      if (newPath !== existing.path) {
+        const clash = await db().content.findFirst({
+          where: {
+            siteId,
+            locale: newLocale,
+            path: newPath,
+            demoThemeKey: existing.demoThemeKey,
+            NOT: { id },
+          },
+          select: { id: true },
+        });
+        if (clash) {
+          throw new BadRequestException(
+            t()("errors.content.pathTaken", { path: newPath }),
+          );
+        }
+      }
+    }
+
     const content = await db().content.update({
       where: { id },
       data: {
@@ -353,6 +408,7 @@ export class ContentsService {
         ...(input.slug !== undefined ? { slug: input.slug } : {}),
         ...(input.excerpt !== undefined ? { excerpt: input.excerpt } : {}),
         ...(input.locale !== undefined ? { locale: input.locale } : {}),
+        ...(recompute ? { path: newPath, parentId: newParentId ?? null } : {}),
         ...(input.data !== undefined ? { data: input.data as never } : {}),
         // Sanitised on update too: an edit is a write, and a page that was clean
         // on create must not become dirty on its second save.
@@ -371,15 +427,25 @@ export class ContentsService {
       include: CONTENT_INCLUDE,
     });
 
+    // A moved page drags its whole subtree with it: every descendant's path embeds
+    // this row's, so they are recomputed depth-first (atomic within the request).
+    const movedPaths: string[] = [];
+    if (recompute) {
+      await this.cascadeDescendantPaths(siteId, id, content.path, movedPaths);
+    }
+
     await this.snapshot(actor, content.id, "Updated");
-    // Both paths: the slug may have changed, so the old URL must be purged too.
-    // Site-wide when the row is (or was) public: its title in a list, or its very
-    // presence in one, may have just changed.
+    // Both paths: the slug may have changed, so the old URL must be purged too, plus
+    // every descendant URL that moved. Site-wide when the row is (or was) public, or
+    // when any descendant moved — a moved published child is invisible otherwise.
     await this.invalidate(
       siteId,
-      existing.status === "PUBLISHED" || content.status === "PUBLISHED",
+      existing.status === "PUBLISHED" ||
+        content.status === "PUBLISHED" ||
+        movedPaths.length > 0,
       toContentDto(existing).path,
       toContentDto(content).path,
+      ...movedPaths,
     );
 
     // Field NAMES, not values. An audit row is read by a human looking for "who
@@ -462,6 +528,14 @@ export class ContentsService {
     });
     if (!existing) throw new NotFoundException(t()("errors.content.notFound"));
 
+    // A page with children cannot be deleted — the database enforces it (onDelete:
+    // Restrict), but a raw FK violation reaches the admin as a 500. This is the same
+    // rule with a message the author can act on: move or delete the children first.
+    const childCount = await db().content.count({ where: { siteId, parentId: id } });
+    if (childCount > 0) {
+      throw new BadRequestException(t()("errors.content.hasChildren"));
+    }
+
     const gone = toContentDto(existing);
 
     await db().content.delete({ where: { id } });
@@ -506,6 +580,127 @@ export class ContentsService {
         authorId: actor.userId,
       },
     });
+  }
+
+  /**
+   * The path a row is served at: a child's is its parent's path + its own slug, a
+   * top-level page's is derived from its content type's route prefix. Materialized
+   * onto the row so the router never walks the chain at read time.
+   */
+  private pathFor(
+    parent: { path: string } | null,
+    routePrefix: string,
+    slug: string,
+  ): string {
+    return parent ? childPath(parent.path, slug) : contentPath(routePrefix, slug);
+  }
+
+  /**
+   * Validates a requested parent and returns it (or null when there is none).
+   *
+   * A parent must exist on this site, be the SAME content type and SAME locale (so a
+   * locale's tree is self-contained and a translation nests under the translated
+   * parent), and share the row's demo scope. On update, it must also not be the row
+   * itself or one of its descendants — that would make a cycle the path cascade
+   * could never terminate. The homepage (empty slug) cannot be nested at all.
+   */
+  private async resolveParent(
+    siteId: string,
+    parentId: string | null | undefined,
+    child: {
+      id?: string;
+      contentTypeId: string;
+      locale: string;
+      demoThemeKey: string | null;
+      slug: string;
+    },
+  ): Promise<{ id: string; path: string } | null> {
+    if (!parentId) return null;
+
+    if (child.slug === "") {
+      throw new BadRequestException(t()("errors.content.parentOnHome"));
+    }
+    if (parentId === child.id) {
+      throw new BadRequestException(t()("errors.content.parentCycle"));
+    }
+
+    const parent = await db().content.findFirst({
+      where: { id: parentId, siteId },
+      select: {
+        id: true,
+        path: true,
+        contentTypeId: true,
+        locale: true,
+        demoThemeKey: true,
+      },
+    });
+    if (!parent) throw new BadRequestException(t()("errors.content.parentNotFound"));
+    if (parent.contentTypeId !== child.contentTypeId) {
+      throw new BadRequestException(t()("errors.content.parentTypeMismatch"));
+    }
+    if (parent.locale !== child.locale) {
+      throw new BadRequestException(t()("errors.content.parentLocaleMismatch"));
+    }
+    if ((parent.demoThemeKey ?? null) !== (child.demoThemeKey ?? null)) {
+      throw new BadRequestException(t()("errors.content.parentNotFound"));
+    }
+    if (child.id) await this.assertNotDescendant(siteId, child.id, parent.id);
+
+    return { id: parent.id, path: parent.path };
+  }
+
+  /**
+   * Refuses to parent `rowId` under `candidateParentId` if that would close a loop.
+   *
+   * Walks UP from the candidate parent to the root of its chain: if `rowId` appears,
+   * the candidate is a descendant of the row, so making it the parent would create a
+   * cycle. Bounded by a `seen` set in case pre-existing data already holds one.
+   */
+  private async assertNotDescendant(
+    siteId: string,
+    rowId: string,
+    candidateParentId: string,
+  ): Promise<void> {
+    let cursor: string | null = candidateParentId;
+    const seen = new Set<string>();
+    while (cursor) {
+      if (cursor === rowId) {
+        throw new BadRequestException(t()("errors.content.parentCycle"));
+      }
+      if (seen.has(cursor)) break;
+      seen.add(cursor);
+      const row: { parentId: string | null } | null = await db().content.findFirst({
+        where: { id: cursor, siteId },
+        select: { parentId: true },
+      });
+      cursor = row?.parentId ?? null;
+    }
+  }
+
+  /**
+   * Recomputes the `path` of every descendant of a row whose own path just changed,
+   * depth-first. Each call is a write inside the request's transaction, so a mid-way
+   * collision rolls the whole edit back. Every path that actually changes (old and
+   * new) is collected so the caller can purge exactly those cached URLs.
+   */
+  private async cascadeDescendantPaths(
+    siteId: string,
+    parentId: string,
+    parentPath: string,
+    changed: string[],
+  ): Promise<void> {
+    const children = await db().content.findMany({
+      where: { siteId, parentId },
+      select: { id: true, slug: true, path: true },
+    });
+    for (const child of children) {
+      const next = childPath(parentPath, child.slug);
+      if (next !== child.path) {
+        await db().content.update({ where: { id: child.id }, data: { path: next } });
+        changed.push(child.path, next);
+      }
+      await this.cascadeDescendantPaths(siteId, child.id, next, changed);
+    }
   }
 
   private validateData(fields: unknown, data: Record<string, unknown>) {

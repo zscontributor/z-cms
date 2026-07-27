@@ -13,6 +13,7 @@ import {
 import { ContentEditor, type EditorInitial } from "@/components/editor/content-editor";
 import { PageHeader } from "@/components/page-header";
 import { getT } from "@/lib/locale";
+import { loadParentOptions } from "@/lib/parent-options";
 
 export const dynamic = "force-dynamic";
 
@@ -84,6 +85,9 @@ export default async function NewContentPage({ params, searchParams }: PageProps
 
   // A source of another type would carry a field set this editor cannot render.
   const translating = source?.contentType.key === typeKey ? source : null;
+
+  // Pages of this type in the chosen language that this new page could nest under.
+  const parentOptions = await loadParentOptions(typeKey, selectedLocale);
 
   const initial: EditorInitial = translating
     ? {
@@ -170,6 +174,7 @@ export default async function NewContentPage({ params, searchParams }: PageProps
         type={type}
         initial={initial}
         contentTypes={contentTypes.map(({ key, name }) => ({ key, name }))}
+        parentOptions={parentOptions}
         themeBlocks={themeBlocks}
         permissions={{
           canSave: true,

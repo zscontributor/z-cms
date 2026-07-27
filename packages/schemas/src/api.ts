@@ -589,8 +589,14 @@ export interface ContentDto {
   translationGroupId: string;
   title: string;
   slug: string;
-  /** Full path the site-runtime serves this at, e.g. "/blog/hello". */
+  /**
+   * Full, locale-relative path the site-runtime serves this at, e.g. "/blog/hello"
+   * or, for a child page, "/product/zpets". Materialized on write from the parent
+   * chain + slug, so it already reflects the page's place in the hierarchy.
+   */
   path: string;
+  /** Parent page for nested URLs; null when this page is top-level. */
+  parentId: string | null;
   excerpt: string | null;
   data: Record<string, unknown>;
   blocks: z.infer<typeof BlockDocumentSchema>;

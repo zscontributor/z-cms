@@ -25,7 +25,14 @@
     "translationExists": "This page already has a {locale} translation. Edit that one instead of creating a second.",
     "publishForbidden": "You do not have permission to publish content.",
     "draftOnly": "You can only save drafts — publishing requires the Editor role or above.",
-    "editOwnOnly": "You may only edit content you created yourself."
+    "editOwnOnly": "You may only edit content you created yourself.",
+    "parentNotFound": "The parent page could not be found on this site.",
+    "parentTypeMismatch": "A page's parent must be the same content type.",
+    "parentLocaleMismatch": "A page's parent must be in the same language.",
+    "parentCycle": "A page cannot be its own parent or a descendant of itself.",
+    "parentOnHome": "The homepage cannot have a parent page.",
+    "hasChildren": "Move or delete this page's child pages before deleting it.",
+    "pathTaken": "Another page already lives at \"{path}\". Choose a different slug or parent."
   },
   "contentTypes": {
     "keyTaken": "A content type with the key \"{key}\" already exists.",

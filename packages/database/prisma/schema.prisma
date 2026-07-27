@@ -600,6 +600,18 @@ model Content {
   translationGroupId String        @default(uuid()) @map("translation_group_id") @db.Uuid
   title              String
   slug               String
+  // The full, locale-relative URL path this row is served at, WITHOUT the locale
+  // prefix: "/product/zpets", "/blog/hello", "/about", "/" for a homepage. It is
+  // materialized — computed from the parent chain + slug (+ the content type's
+  // routePrefix at the root) on write — so the router resolves a request with a
+  // single indexed lookup instead of walking ancestors. Recomputed for a row AND
+  // all its descendants whenever a slug or parent in the chain changes.
+  path               String        @default("/")
+  // A page's parent, for WordPress-style nested URLs. Null = top-level. The parent
+  // is always the SAME content type and SAME locale, so a locale's tree is
+  // self-contained; a translation points at the translated parent. onDelete is
+  // Restrict: a page with children cannot be deleted until they are moved or gone.
+  parentId           String?       @map("parent_id") @db.Uuid
   excerpt            String?
   // Typed field values, shaped by ContentType.fields.
   data               Json          @default("{}")
@@ -620,11 +632,16 @@ model Content {
   site        Site             @relation(fields: [siteId], references: [id], onDelete: Cascade)
   contentType ContentType      @relation(fields: [contentTypeId], references: [id], onDelete: Restrict)
   author      User?            @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  parent      Content?         @relation("ContentTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children    Content[]        @relation("ContentTree")
   versions    ContentVersion[]
   terms       ContentTerm[]
 
-  // A slug is unique per site + locale, which is what the router resolves on.
-  @@unique([siteId, locale, slug, demoThemeKey])
+  // The path is what the router resolves on, and it is unique per site + locale:
+  // two siblings cannot share a slug (their full paths would collide), and no two
+  // pages anywhere in the tree can occupy the same URL. Replaces the old per-slug
+  // uniqueness now that a slug is only unique among its siblings, not site-wide.
+  @@unique([siteId, locale, path, demoThemeKey])
   // One row per locale within a group: a page cannot have two Vietnamese
   // translations, and the database is where that is settled rather than in the
   // admin, which is not the only thing that writes here.
@@ -636,6 +653,9 @@ model Content {
   // Fetching a page's siblings is on the public render path — it happens on every
   // request that resolves to content, to emit hreflang and the language switcher.
   @@index([siteId, translationGroupId])
+  // Fetching a page's children — for the parent picker and the descendant-path
+  // cascade when a slug or parent changes.
+  @@index([siteId, parentId])
   @@map("contents")
 }
 

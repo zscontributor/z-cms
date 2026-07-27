@@ -55,7 +55,16 @@ export interface EditorInitial {
     noindex?: boolean;
   };
   path?: string;
+  /** The page's parent, for a nested URL. null/undefined = top-level. */
+  parentId?: string | null;
   updatedAt?: string;
+}
+
+/** A page this one may be nested under: same content type, same locale. */
+export interface ParentOption {
+  id: string;
+  title: string;
+  path: string;
 }
 
 export interface EditorPermissions {
@@ -69,11 +78,18 @@ export function ContentEditor({
   initial,
   permissions,
   contentTypes,
+  parentOptions = [],
   themeBlocks,
 }: {
   type: ContentTypeDto;
   initial: EditorInitial;
   permissions: EditorPermissions;
+  /**
+   * Pages this one may be nested under — same content type, same locale, already
+   * with self and its descendants removed by the server. Empty for a type that
+   * cannot nest (e.g. the homepage's, or when nothing else exists yet).
+   */
+  parentOptions?: ParentOption[];
   /**
    * Every content type on the site — not just the one being edited. A
    * `core/content-list` block on this page lists *some other* type ("the latest
@@ -101,6 +117,7 @@ export function ContentEditor({
   const [id, setId] = useState(initial.id);
   const [title, setTitle] = useState(initial.title);
   const [slug, setSlug] = useState(initial.slug);
+  const [parentId, setParentId] = useState<string | null>(initial.parentId ?? null);
   const locale = initial.locale;
   const [excerpt, setExcerpt] = useState(initial.excerpt);
   const [status, setStatus] = useState<ContentStatus>(initial.status);
@@ -118,10 +135,20 @@ export function ContentEditor({
   const [savedAt, setSavedAt] = useState<string | null>(initial.updatedAt ?? null);
   const readOnly = !permissions.canSave;
 
+  // Options minus this page itself — a page cannot be its own parent. (The server
+  // also removes descendants; self is the one it cannot know from the id alone.)
+  const parents = useMemo(
+    () => parentOptions.filter((p) => p.id !== initial.id),
+    [parentOptions, initial.id],
+  );
+
+  // The preview mirrors the server's rule: a child's path is its parent's path plus
+  // this slug; a top-level page's comes from the content type's route prefix.
   const path = useMemo(() => {
-    const prefix = type.routePrefix ? `/${type.routePrefix}` : "";
-    return `${prefix}/${slug}`.replace(/\/+$/, "") || "/";
-  }, [type.routePrefix, slug]);
+    const parentPath = parents.find((p) => p.id === parentId)?.path;
+    const base = parentPath ?? (type.routePrefix ? `/${type.routePrefix}` : "");
+    return `${base}/${slug}`.replace(/\/{2,}/g, "/").replace(/\/+$/, "") || "/";
+  }, [parents, parentId, type.routePrefix, slug]);
 
   const slugError = slug !== "" && !isValidSlug(slug);
 
@@ -138,6 +165,7 @@ export function ContentEditor({
       title: title.trim(),
       slug,
       locale,
+      parentId,
       ...(initial.translationGroupId
         ? { translationGroupId: initial.translationGroupId }
         : {}),
@@ -358,6 +386,26 @@ export function ContentEditor({
                 ))}
               </Select>
             </Field>
+
+            {/* The homepage (empty slug) cannot be nested; a type with no other
+                pages has nothing to nest under. */}
+            {slug !== "" && parents.length > 0 ? (
+              <Field label={t("content.editor.parent")} htmlFor="parent">
+                <Select
+                  id="parent"
+                  value={parentId ?? ""}
+                  disabled={readOnly}
+                  onChange={(event) => setParentId(event.target.value || null)}
+                >
+                  <option value="">{t("content.editor.parentNone")}</option>
+                  {parents.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.title} ({option.path})
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            ) : null}
 
             {error ? (
               <p

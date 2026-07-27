@@ -440,6 +440,10 @@ const ContentDtoSchema = z.object({
   title: z.string(),
   slug: z.string(),
   path: z.string().describe('Where site-runtime serves this, e.g. "/blog/hello".'),
+  parentId: z
+    .uuid()
+    .nullable()
+    .describe("Parent page for a nested URL; null when top-level."),
   excerpt: z.string().nullable(),
   data: z.record(z.string(), z.unknown()),
   blocks: BlockDocumentSchema,

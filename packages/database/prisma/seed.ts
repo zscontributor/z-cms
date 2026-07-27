@@ -35,9 +35,15 @@ async function upsertNormalContent(args: {
   siteId: string;
   locale: string;
   slug: string;
+  // The content type's route prefix, so the materialized `path` is right: "" for a
+  // page ("/about"), "blog" for a post ("/blog/hello"). Seeded content is flat.
+  routePrefix?: string;
   update: Record<string, unknown>;
   create: Record<string, unknown>;
 }) {
+  const prefix = args.routePrefix ? `/${args.routePrefix}` : "";
+  const path = args.slug ? `${prefix}/${args.slug}` : prefix || "/";
+
   const existing = await db.content.findFirst({
     where: {
       siteId: args.siteId,
@@ -48,13 +54,14 @@ async function upsertNormalContent(args: {
   });
 
   if (existing) {
+    // Re-seeding also heals a row written before `path` existed.
     return db.content.update({
       where: { id: existing.id },
-      data: args.update as never,
+      data: { ...args.update, path } as never,
     });
   }
 
-  return db.content.create({ data: args.create as never });
+  return db.content.create({ data: { ...args.create, path } as never });
 }
 
 async function upsertNormalMenu(args: {
@@ -354,6 +361,7 @@ async function main() {
     siteId: site.id,
     locale: "en",
     slug: "hello-world",
+    routePrefix: "blog",
     update: { translationGroupId: GROUP.hello },
     create: {
       translationGroupId: GROUP.hello,
@@ -475,6 +483,7 @@ async function main() {
     siteId: site.id,
     locale: "vi",
     slug: "xin-chao",
+    routePrefix: "blog",
     update: { translationGroupId: GROUP.hello },
     create: {
       translationGroupId: GROUP.hello,
@@ -596,6 +605,7 @@ async function main() {
     siteId: site.id,
     locale: "ja",
     slug: "konnichiwa",
+    routePrefix: "blog",
     update: { translationGroupId: GROUP.hello },
     create: {
       translationGroupId: GROUP.hello,

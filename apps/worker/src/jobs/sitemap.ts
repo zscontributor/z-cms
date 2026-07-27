@@ -32,7 +32,7 @@ export async function runSitemap(
         // `site.locales` — so listing them would be advertising 404s.
         locale: { in: site.locales },
       },
-      include: { contentType: { select: { routePrefix: true, isRoutable: true } } },
+      include: { contentType: { select: { isRoutable: true } } },
       orderBy: { publishedAt: "desc" },
       take: 50_000,
     }),
@@ -41,21 +41,14 @@ export async function runSitemap(
   const routable = rows.filter((r) => r.contentType.isRoutable);
 
   /**
-   * The public URL of a row. Every locale carries its code — the default included,
-   * the same rule the router applies in reverse. An English page slugged "about"
-   * is submitted as "/en/about", never a bare "/about": the unprefixed spelling
-   * also serves the page, but "/en/about" is its canonical URL and a sitemap must
-   * advertise the canonical, not the alias.
-   *
-   * This used to ignore the locale entirely, which was harmless while every site
-   * was monolingual and wrong the moment one was not: a Vietnamese page slugged
-   * "gioi-thieu" was submitted to search engines as "/gioi-thieu", a URL that
-   * resolves to nothing. It lives at "/vi/gioi-thieu".
+   * The public URL of a row. Its materialized `path` already carries the route
+   * prefix and any parent hierarchy ("/en"'s "/about", "/blog/hello", the nested
+   * "/product/zpets"); only the locale code is added in front. Every locale carries
+   * it, the default included: the unprefixed spelling also serves the page, but
+   * "/en/about" is its canonical URL and a sitemap must advertise the canonical.
    */
   const locate = (r: (typeof routable)[number]): string => {
-    const prefix = r.contentType.routePrefix ? `/${r.contentType.routePrefix}` : "";
-    const path = r.slug ? `${prefix}/${r.slug}` : prefix || "/";
-    const joined = `/${r.locale}${path}`.replace(/\/{2,}/g, "/");
+    const joined = `/${r.locale}${r.path}`.replace(/\/{2,}/g, "/");
     return joined.length > 1 ? joined.replace(/\/$/, "") : joined || "/";
   };
 

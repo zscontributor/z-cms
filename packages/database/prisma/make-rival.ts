@@ -50,6 +50,7 @@ async function main() {
       contentTypeId: type.id,
       locale: "vi",
       slug: "secret",
+      path: "/secret",
       title: "RIVAL CONFIDENTIAL",
       status: "PUBLISHED",
       },

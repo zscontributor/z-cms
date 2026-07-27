@@ -19,7 +19,7 @@ import type {
   SiteBrand,
 } from "@zcmsorg/schemas";
 import { t } from "../common/i18n";
-import { contentPath, toContentDto, toMenuDto } from "../common/mappers";
+import { toContentDto, toMenuDto } from "../common/mappers";
 import { PluginsService } from "../plugins/plugins.service";
 import { CacheService } from "../redis/cache.service";
 
@@ -733,35 +733,30 @@ export class RenderService {
     if (locale === site.defaultLocale) return;
 
     const items = Object.values(menus).flatMap((menu) => flattenMenu(menu.items));
-    const targets = new Map<string, { prefix: string; slug: string }>();
+    const paths = new Set<string>();
 
     for (const item of items) {
-      const parsed = this.parseInternalPath(item.url);
-      if (parsed) targets.set(item.url, parsed);
+      const internal = this.internalPathOf(item.url);
+      if (internal) paths.add(internal);
     }
-    if (targets.size === 0) return;
+    if (paths.size === 0) return;
 
-    // What each menu path points at, in the site's own language.
+    // What each menu path points at, in the site's own language. The stored URL is
+    // the page's materialized `path`, so this is a direct match — no route-prefix
+    // guessing, and a nested page ("/product/zpets") resolves like any other.
     const originals = await db().content.findMany({
       where: {
         siteId: site.id,
         locale: site.defaultLocale,
         status: "PUBLISHED",
-        AND: [
-          { OR: [{ demoThemeKey: null }, { demoThemeKey: activeThemeKey }] },
-          {
-            OR: [...targets.values()].map(({ prefix, slug }) => ({
-              slug,
-              contentType: { routePrefix: prefix, isRoutable: true },
-            })),
-          },
-        ],
+        path: { in: [...paths] },
+        contentType: { isRoutable: true },
+        OR: [{ demoThemeKey: null }, { demoThemeKey: activeThemeKey }],
       },
       select: {
-        slug: true,
+        path: true,
         demoThemeKey: true,
         translationGroupId: true,
-        contentType: { select: { routePrefix: true } },
       },
     });
 
@@ -769,8 +764,7 @@ export class RenderService {
 
     const groupByPath = new Map<string, string>();
     for (const row of this.preferThemeDemo(originals, activeThemeKey)) {
-      const prefix = row.contentType.routePrefix;
-      groupByPath.set(contentPath(prefix, row.slug), row.translationGroupId);
+      groupByPath.set(row.path, row.translationGroupId);
     }
 
     // Those same pages, in the language being rendered.
@@ -783,11 +777,10 @@ export class RenderService {
         OR: [{ demoThemeKey: null }, { demoThemeKey: activeThemeKey }],
       },
       select: {
-        slug: true,
+        path: true,
         title: true,
         demoThemeKey: true,
         translationGroupId: true,
-        contentType: { select: { routePrefix: true } },
       },
     });
 
@@ -806,16 +799,13 @@ export class RenderService {
   private rewriteItems(
     items: MenuDto["items"],
     groupByPath: Map<string, string>,
-    byGroup: Map<
-      string,
-      { slug: string; title: string; contentType: { routePrefix: string } }
-    >,
+    byGroup: Map<string, { path: string; title: string }>,
   ): MenuDto["items"] {
     const out: MenuDto["items"] = [];
 
     for (const item of items) {
       const children = this.rewriteItems(item.children, groupByPath, byGroup);
-      const group = groupByPath.get(item.url);
+      const group = groupByPath.get(this.internalPathOf(item.url) ?? item.url);
 
       // Not content: an archive, an external link, or a path matching nothing.
       // Those are locale-independent and stay exactly as the admin wrote them.
@@ -832,7 +822,7 @@ export class RenderService {
       out.push({
         ...item,
         label: translated.title,
-        url: contentPath(translated.contentType.routePrefix, translated.slug),
+        url: translated.path,
         children,
       });
     }
@@ -840,17 +830,15 @@ export class RenderService {
     return out;
   }
 
-  /** "/blog/hello" -> { prefix: "blog", slug: "hello" }. External URLs -> null. */
-  private parseInternalPath(url: string): { prefix: string; slug: string } | null {
+  /**
+   * The internal, comparable form of a menu URL — the site-relative path with any
+   * query/fragment and trailing slash stripped, so it matches a row's `path`. An
+   * external or protocol-relative URL returns null (it is not content).
+   */
+  private internalPathOf(url: string): string | null {
     if (!url.startsWith("/") || url.startsWith("//")) return null;
-
-    const clean = url.split(/[?#]/)[0] ?? "";
-    const segments = clean.replace(/^\//, "").replace(/\/$/, "").split("/").filter(Boolean);
-
-    const slug = segments.length ? segments[segments.length - 1]! : "";
-    const prefix = segments.slice(0, -1).join("/");
-
-    return { prefix, slug };
+    const clean = (url.split(/[?#]/)[0] ?? "").replace(/\/+$/, "");
+    return clean === "" ? "/" : clean;
   }
 
   /**
@@ -891,19 +879,19 @@ export class RenderService {
       },
       select: {
         locale: true,
-        slug: true,
-        contentType: { select: { routePrefix: true, isRoutable: true } },
+        path: true,
+        contentType: { select: { isRoutable: true } },
       },
     });
 
     return siblings
       .filter((row) => row.contentType.isRoutable)
       .map((row) => {
-        const prefix = row.contentType.routePrefix ? `/${row.contentType.routePrefix}` : "";
-        const path = row.slug ? `${prefix}/${row.slug}` : prefix || "/";
         return {
           locale: row.locale,
-          path: this.localePath(site, row.locale, path),
+          // The sibling's materialized path already carries its whole hierarchy;
+          // only the locale prefix is added here.
+          path: this.localePath(site, row.locale, row.path),
           current: row.locale === current,
           // Derived from the code, not stored: a site's locales are free text in
           // the database and were never validated against the registry Z-CMS
@@ -1065,6 +1053,7 @@ export class RenderService {
       items.push({
         id: `theme-static:${parsed.id ?? opts.activeThemeKey}`,
         siteId: opts.siteId,
+        parentId: null,
         contentType: { id: "theme-static", key: "theme", name: "Theme" },
         locale: opts.locale,
         translationGroupId: `theme-static:${parsed.id ?? opts.activeThemeKey}`,
@@ -1107,6 +1096,8 @@ export class RenderService {
         title: content.title,
         slug: content.slug,
         path: contentPathValue,
+        // Theme demo content is flat — it never has a parent.
+        parentId: null,
         excerpt: content.excerpt ?? null,
         data: content.data ?? {},
         blocks: (Array.isArray(content.blocks) ? content.blocks : []) as ContentDto["blocks"],
@@ -1141,10 +1132,16 @@ export class RenderService {
   }
 
   /**
-   * Path -> content. The path carries the route prefix, so "/blog/hello" must
-   * match a post with slug "hello" *whose type is routed at /blog* — not a page
-   * that happens to be called "hello". Matching on the slug alone would let a
-   * page shadow a post.
+   * Path -> content, in one indexed lookup.
+   *
+   * The full URL is materialized on each row's `path`, so "/blog/hello" and the
+   * nested "/product/zpets" both resolve by exact match — the router no longer
+   * guesses which leading segments are a route prefix. `isRoutable` still gates it:
+   * a non-routable type has a path but is not a page anyone can navigate to.
+   *
+   * A normal row (demoThemeKey null) and the active theme's demo row can both sit at
+   * one path; the demo one wins while its theme is active, matching everywhere else
+   * that prefers theme demo content.
    */
   private async findContent(
     siteId: string,
@@ -1152,20 +1149,14 @@ export class RenderService {
     path: string,
     activeThemeKey: string,
   ) {
-    const trimmed = path.replace(/^\//, "");
-    const segments = trimmed ? trimmed.split("/") : [];
-
-    const slug = segments.length ? segments[segments.length - 1]! : "";
-    const prefix = segments.slice(0, -1).join("/");
-
     const candidates = await db().content.findMany({
       where: {
         siteId,
         locale,
-        slug,
+        path: this.normalizePath(path),
         status: "PUBLISHED",
         OR: [{ demoThemeKey: null }, { demoThemeKey: activeThemeKey }],
-        contentType: { routePrefix: prefix, isRoutable: true },
+        contentType: { isRoutable: true },
       },
       include: CONTENT_INCLUDE,
     });

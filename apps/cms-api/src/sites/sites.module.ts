@@ -110,6 +110,8 @@ async function seedStarterContent(
       contentTypeId: page.id,
       // The empty slug IS the homepage — see RenderService.findContent.
       slug: "",
+      // Materialized routing path; the homepage lives at the locale root.
+      path: "/",
       locale,
       title: "Hello",
       status: "PUBLISHED",

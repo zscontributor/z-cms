@@ -25,6 +25,8 @@ function contentRow(over: Partial<Parameters<typeof toContentDto>[0]> = {}) {
     translationGroupId: "g1",
     title: "Hello",
     slug: "hello",
+    path: "/blog/hello",
+    parentId: null,
     excerpt: null,
     data: null,
     blocks: null,
@@ -60,8 +62,15 @@ describe("contentPath", () => {
 });
 
 describe("toContentDto", () => {
-  it("derives the public path from the content type's route prefix", () => {
-    expect(toContentDto(contentRow()).path).toBe("/blog/hello");
+  it("carries the materialized path straight through", () => {
+    // The path is computed on write (from the parent chain + slug) and stored on
+    // the row; the mapper reads it rather than deriving it from routePrefix + slug.
+    expect(toContentDto(contentRow({ path: "/product/zpets" })).path).toBe("/product/zpets");
+  });
+
+  it("exposes the parent id for nested pages", () => {
+    expect(toContentDto(contentRow({ parentId: "p1" })).parentId).toBe("p1");
+    expect(toContentDto(contentRow()).parentId).toBeNull();
   });
 
   it("substitutes empty objects and arrays for null json columns", () => {

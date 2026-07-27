@@ -10,16 +10,26 @@ import type {
 } from "@zcmsorg/schemas";
 
 /**
- * The public path a piece of content is served at.
+ * The public path of a TOP-LEVEL piece of content, from its route prefix and slug.
  *
  * Slugs are stored bare; routing lives on the content type. That way changing a
  * blog's URL prefix from /blog to /tin-tuc is one row update, not a rewrite of
  * every post's slug.
+ *
+ * This is the root of a page's path. A CHILD page's path is its parent's path plus
+ * its own slug (see `childPath`), and both are materialized on the row's `path`
+ * column — so at read time the DTO just carries `row.path`, never recomputes it.
  */
 export function contentPath(routePrefix: string, slug: string): string {
   const prefix = routePrefix ? `/${routePrefix}` : "";
   if (!slug) return prefix || "/";
   return `${prefix}/${slug}`;
+}
+
+/** A child's path: the parent's path with this slug appended, slashes collapsed. */
+export function childPath(parentPath: string, slug: string): string {
+  const joined = `${parentPath}/${slug}`.replace(/\/{2,}/g, "/");
+  return joined.length > 1 ? joined.replace(/\/$/, "") : joined || "/";
 }
 
 type ContentRow = {
@@ -29,6 +39,8 @@ type ContentRow = {
   translationGroupId: string;
   title: string;
   slug: string;
+  path: string;
+  parentId: string | null;
   excerpt: string | null;
   data: unknown;
   blocks: unknown;
@@ -54,7 +66,8 @@ export function toContentDto(row: ContentRow): ContentDto {
     translationGroupId: row.translationGroupId,
     title: row.title,
     slug: row.slug,
-    path: contentPath(row.contentType.routePrefix, row.slug),
+    path: row.path,
+    parentId: row.parentId,
     excerpt: row.excerpt,
     data: (row.data ?? {}) as Record<string, unknown>,
     blocks: (row.blocks ?? []) as ContentDto["blocks"],

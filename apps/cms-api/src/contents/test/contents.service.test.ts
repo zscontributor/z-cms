@@ -29,6 +29,8 @@ function contentRow(over: Record<string, unknown> = {}) {
     translationGroupId: "g1",
     title: "Hello",
     slug: "hello",
+    path: "/blog/hello",
+    parentId: null,
     excerpt: null,
     data: {},
     blocks: [],
@@ -498,6 +500,135 @@ describe("ContentsService", () => {
         "c1",
         expect.any(Object),
       );
+    });
+
+    it("refuses to delete a page that still has children", async () => {
+      // The database would refuse it too (onDelete: Restrict); this is the same
+      // rule with a message an author can act on, before the raw FK violation.
+      holder.db.content.findFirst.mockResolvedValue(contentRow());
+      holder.db.content.count.mockResolvedValue(2);
+
+      await expect(makeService().remove(editor, "s1", "c1")).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      expect(holder.db.content.delete).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("hierarchy", () => {
+    // A page type: route prefix "", so a top-level page is "/slug" and a child is
+    // "/parent/slug".
+    const pageType = { ...CONTENT_TYPE_ROW, routePrefix: "" };
+    const parentRow = {
+      id: "p1",
+      path: "/product",
+      contentTypeId: "ct1",
+      locale: "en",
+      demoThemeKey: null,
+    };
+
+    it("materializes a top-level path from route prefix + slug on create", async () => {
+      holder.db.content.create.mockResolvedValue(contentRow());
+
+      await makeService().create(editor, "s1", {
+        contentTypeId: "ct1",
+        title: "Hello",
+        slug: "hello",
+        data: {},
+      } as any);
+
+      expect(holder.db.content.create.mock.calls[0][0].data.path).toBe("/blog/hello");
+    });
+
+    it("nests a new page under its parent, deriving the path from the parent's", async () => {
+      holder.db.contentType.findFirst.mockResolvedValue(pageType);
+      holder.db.content.findFirst.mockResolvedValue(parentRow);
+      holder.db.content.create.mockResolvedValue(contentRow());
+
+      await makeService().create(editor, "s1", {
+        contentTypeId: "ct1",
+        title: "Z Pets",
+        slug: "zpets",
+        parentId: "p1",
+        data: {},
+      } as any);
+
+      const data = holder.db.content.create.mock.calls[0][0].data;
+      expect(data.path).toBe("/product/zpets");
+      expect(data.parentId).toBe("p1");
+    });
+
+    it("refuses a parent of a different content type", async () => {
+      holder.db.content.findFirst.mockResolvedValue({ ...parentRow, contentTypeId: "OTHER" });
+
+      await expect(
+        makeService().create(editor, "s1", {
+          contentTypeId: "ct1",
+          title: "X",
+          slug: "x",
+          parentId: "p1",
+          data: {},
+        } as any),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(holder.db.content.create).not.toHaveBeenCalled();
+    });
+
+    it("refuses a parent in a different locale", async () => {
+      holder.db.content.findFirst.mockResolvedValue({ ...parentRow, locale: "vi" });
+
+      await expect(
+        makeService().create(editor, "s1", {
+          contentTypeId: "ct1",
+          title: "X",
+          slug: "x",
+          parentId: "p1",
+          data: {},
+        } as any),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it("recomputes every descendant's path when a page is re-parented", async () => {
+      // "zpets" (/zpets) with a child "detail" (/zpets/detail) moves under /product.
+      holder.db.content.findFirst
+        .mockResolvedValueOnce(
+          contentRow({ id: "c1", slug: "zpets", path: "/zpets", parentId: null, contentType: pageType }),
+        ) // the existing row
+        .mockResolvedValueOnce(parentRow) // resolveParent
+        .mockResolvedValueOnce({ parentId: null }) // assertNotDescendant walk on p1
+        .mockResolvedValueOnce(null); // path-collision check
+      holder.db.content.update.mockResolvedValueOnce(
+        contentRow({ id: "c1", slug: "zpets", path: "/product/zpets", contentType: pageType }),
+      );
+      holder.db.content.findMany
+        .mockResolvedValueOnce([{ id: "c2", slug: "detail", path: "/zpets/detail" }]) // children of c1
+        .mockResolvedValueOnce([]); // children of c2
+
+      await makeService().update(editor, "s1", "c1", { parentId: "p1" } as any);
+
+      const childUpdate = holder.db.content.update.mock.calls.find(
+        (call: any) => call[0].where.id === "c2",
+      );
+      expect(childUpdate?.[0].data.path).toBe("/product/zpets/detail");
+    });
+
+    it("rejects re-parenting a page under its own descendant", async () => {
+      holder.db.content.findFirst
+        .mockResolvedValueOnce(
+          contentRow({ id: "c1", slug: "product", path: "/product", parentId: null, contentType: pageType }),
+        ) // existing
+        .mockResolvedValueOnce({
+          id: "c2",
+          path: "/product/zpets",
+          contentTypeId: "ct1",
+          locale: "en",
+          demoThemeKey: null,
+        }) // resolveParent = the descendant
+        .mockResolvedValueOnce({ parentId: "c1" }); // walk: c2's parent is c1 -> cycle
+
+      await expect(
+        makeService().update(editor, "s1", "c1", { parentId: "c2" } as any),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(holder.db.content.update).not.toHaveBeenCalled();
     });
   });
 });

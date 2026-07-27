@@ -70,6 +70,8 @@
     "publishSection": "Xuất bản",
     "status": "Trạng thái",
     "locale": "Ngôn ngữ",
+    "parent": "Trang cha",
+    "parentNone": "Không (trang gốc)",
     "save": "Lưu thay đổi",
     "create": "Tạo nội dung",
     "saveAndPublish": "Lưu & xuất bản",
