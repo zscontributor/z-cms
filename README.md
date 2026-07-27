@@ -139,8 +139,8 @@ packages/
 ├── scanner          Static analysis of a submitted package, before anyone runs it
 └── cli              zcms — keygen, pack, verify
 
-themes/              default (the reference theme), z-cms-portal
-plugins/             seo (the reference plugin), zai
+themes/              default (the reference theme), magazine, market, z-soft
+plugins/             seo (the reference plugin), zai, shop, feedback, helloworld, content-pack
 ```
 
 ## What is in the box
