@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import type { ReactNode } from "react";
 import { colorModeIconCss, colorModeScript } from "@/lib/color-mode";
+import { revealOnTargetScript } from "@/lib/reveal-on-target";
 import { resolveDocumentColorMode } from "@/lib/color-mode-server";
 import { resolveDocumentLocale } from "@/lib/render-client";
 import "./globals.css";
@@ -53,7 +54,15 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             theme's toggle swaps its icon without shipping CSS for it. */}
         <style dangerouslySetInnerHTML={{ __html: colorModeIconCss }} />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        {/* Runs after the DOM is parsed: reveals any `data-reveal-on-target`
+            element the URL fragment points at, working around Blink not
+            activating `:target` after an HTTP redirect. A generic platform
+            primitive for no-JS themes (see lib/reveal-on-target.ts), not tied to
+            any one feature. Nonce'd like the color-mode script above. */}
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: revealOnTargetScript() }} />
+      </body>
     </html>
   );
 }
