@@ -80,6 +80,13 @@ function builtinThemeKeys(): string[] {
   return fs
     .readdirSync(root, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
+    // A `.not-builtin` marker means this directory is a PRIVATE, marketplace-distributed
+    // theme that merely lives beside the built-ins on disk — a test or sample theme, not
+    // one we ship in the image. The Dockerfile staging, `sign-builtins.mts`, `verify-
+    // builtins.mts` and `seed-themes.ts` already skip these directories; this runtime scan
+    // is the fifth consumer of the same marker and must skip them too, so that a marked
+    // theme is not discovered as built-in in local dev (where THEME_DIR is the repo tree).
+    .filter((entry) => !fs.existsSync(path.join(root, entry.name, ".not-builtin")))
     .map((entry) => path.join(root, entry.name, "theme.json"))
     .filter((file) => fs.existsSync(file))
     .map((file) => (JSON.parse(fs.readFileSync(file, "utf8")) as { id: string }).id);

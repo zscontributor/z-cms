@@ -73,6 +73,11 @@ function themeDirWith(...ids: string[]): string {
   return root;
 }
 
+/** Drops a `.not-builtin` marker into a theme's directory inside an existing THEME_DIR. */
+function markNotBuiltin(root: string, id: string): void {
+  fs.writeFileSync(path.join(root, id.split(".").pop()!, ".not-builtin"), "marketplace-distributed\n");
+}
+
 beforeEach(() => {
   ensureBundle.mockReset();
   ensureBuiltinBundle.mockReset();
@@ -124,6 +129,29 @@ describe("loadTheme", () => {
     expect(ensureBuiltinBundle).not.toHaveBeenCalled();
     expect(loaded.degraded).toBe(true);
     expect(loaded.theme).toBe(defaultTheme);
+  });
+
+  it("does NOT treat a `.not-builtin` theme as built-in — it takes the marketplace path", async () => {
+    // A test/sample theme (e.g. aurora) can sit in the themes tree beside the real
+    // built-ins. The marker keeps it OUT of the built-in set, so its key is verified
+    // against the marketplace key on the marketplace route, never the first-party one.
+    const key = "vn.zsoft.theme.sample";
+    const root = themeDirWith(key);
+    markNotBuiltin(root, key);
+    vi.stubEnv("THEME_DIR", root);
+    ensureBundle.mockResolvedValue(bundleFor(key, "1.0.0"));
+
+    await loadTheme(key, "1.0.0");
+
+    expect(ensureBuiltinBundle).not.toHaveBeenCalled();
+    expect(ensureBundle).toHaveBeenCalledWith(
+      expect.anything(),
+      "marketplace",
+      "theme",
+      key,
+      "1.0.0",
+      undefined,
+    );
   });
 
   it("degrades to the COMPILED-IN default when the built-in default fails its own signature", async () => {
