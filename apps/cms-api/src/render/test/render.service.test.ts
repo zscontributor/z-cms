@@ -492,9 +492,22 @@ describe("RenderService", () => {
 
       const payload = await makeService().resolve("example.com", "/blog/hello");
 
+      // The default locale carries its prefix like every other: "en" is "/en/blog/…",
+      // not a bare "/blog/…". site-runtime uses the `current` alternate's path as the
+      // canonical URL, so this is the address "/en" gets indexed under.
       expect(payload.alternates).toEqual([
-        expect.objectContaining({ locale: "en", flagUrl: "/z-flags/gb.svg" }),
-        expect.objectContaining({ locale: "vi", flagUrl: "/z-flags/vn.svg" }),
+        expect.objectContaining({
+          locale: "en",
+          path: "/en/blog/hello",
+          current: true,
+          flagUrl: "/z-flags/gb.svg",
+        }),
+        expect.objectContaining({
+          locale: "vi",
+          path: "/vi/blog/xin-chao",
+          current: false,
+          flagUrl: "/z-flags/vn.svg",
+        }),
       ]);
     });
 

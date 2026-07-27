@@ -1,6 +1,6 @@
 {
   "name": "@zcmsorg/theme-sdk",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "The contract for writing a Z-CMS theme: templates, blocks, settings, SEO and translations.",
   "license": "MIT",
   "author": "Z-SOFT Co., Ltd. <support@z-cms.org> (https://z-cms.org)",

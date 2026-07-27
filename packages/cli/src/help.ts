@@ -93,7 +93,11 @@ zcms — the packaging tool for Z-CMS themes and plugins
       The private key must NEVER be committed or sent to anyone.
 
   zcms pack <dir> --kind theme|plugin --key <private.pem> --pub <public.pem> [--out <file>]
-      Packs a built directory into one signed .zcms file.
+            [--bump patch|minor|major] [--no-bump] [--set-version <semver>]
+      Packs a built directory into one signed .zcms file. It ships the version the
+      manifest declares, then advances it (patch by default) so the NEXT pack is
+      automatically a new version — pass --bump minor|major to advance further,
+      --no-bump to leave the manifest as-is, or --set-version to ship an exact one.
       Add --operator-key <private.pem> to also stamp an operator signature for the
       sideload route (a self-hosted instance that pins the matching public key).
 
@@ -137,7 +141,11 @@ zcms — Z-CMS のテーマとプラグインをパッケージ化するツー�
       秘密鍵は決してコミットしたり、誰かに送ったりしてはいけません。
 
   zcms pack <dir> --kind theme|plugin --key <private.pem> --pub <public.pem> [--out <file>]
-      ビルド済みのディレクトリを、署名付きの .zcms ファイル 1 つにまとめます。
+            [--bump patch|minor|major] [--no-bump] [--set-version <semver>]
+      ビルド済みのディレクトリを、署名付きの .zcms ファイル 1 つにまとめます。マニフェストに
+      書かれたバージョンでパックし、その後バージョンを（既定では patch）1 つ進めるので、
+      次回のパックは自動的に新しいバージョンになります。--bump minor|major でさらに進め、
+      --no-bump でマニフェストをそのまま、--set-version で明示したバージョンでパックできます。
       --operator-key <private.pem> を付けると、サイドロード経路（対応する公開鍵を
       ピン留めした自己ホスト型インスタンス）向けのオペレーター署名も付与します。
 
@@ -181,7 +189,11 @@ zcms — công cụ đóng gói theme và plugin cho Z-CMS
       Khóa riêng TUYỆT ĐỐI không được commit hay gửi cho bất kỳ ai.
 
   zcms pack <dir> --kind theme|plugin --key <private.pem> --pub <public.pem> [--out <file>]
-      Đóng gói một thư mục đã build thành một file .zcms có chữ ký.
+            [--bump patch|minor|major] [--no-bump] [--set-version <semver>]
+      Đóng gói một thư mục đã build thành một file .zcms có chữ ký. Nó pack đúng version
+      đang khai báo trong manifest, rồi tự tăng version đó (mặc định là patch) để lần pack
+      SAU tự động là version mới — dùng --bump minor|major để tăng nhiều hơn, --no-bump để
+      giữ nguyên manifest, hoặc --set-version để pack một version cụ thể.
       Thêm --operator-key <private.pem> để đóng thêm chữ ký operator cho luồng sideload
       (một instance tự vận hành có ghim khóa công khai tương ứng).
 

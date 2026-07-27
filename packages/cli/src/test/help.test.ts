@@ -83,6 +83,7 @@ describe("usage", () => {
       "zcms init [<dir>] [--kind theme|plugin]",
       "zcms keygen [--out <dir>]",
       "zcms pack <dir> --kind theme|plugin --key <private.pem> --pub <public.pem> [--out <file>]",
+      "[--bump patch|minor|major] [--no-bump] [--set-version <semver>]",
       "zcms verify <file.zcms> [--marketplace-key <public.pem>]",
       "zcms help [--lang en|ja|vi]",
     ];

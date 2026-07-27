@@ -42,7 +42,7 @@ interface Run {
  * shell is set to Japanese does not turn every English assertion below red. A test
  * that cares about language sets ZCMS_LANG (or passes --lang) explicitly.
  */
-async function zcms(args: string[], env?: Record<string, string>): Promise<Run> {
+async function zcms(args: string[], env?: Record<string, string>, cwd?: string): Promise<Run> {
   const base = { ...process.env };
   delete base.LANG;
   delete base.LC_ALL;
@@ -52,6 +52,7 @@ async function zcms(args: string[], env?: Record<string, string>): Promise<Run> 
   try {
     const { stdout, stderr } = await execFileAsync(TSX, [MAIN, ...args], {
       env: { ...base, ...env },
+      cwd,
     });
     return { stdout, stderr, code: 0 };
   } catch (err) {
@@ -80,6 +81,11 @@ function themeDir(id = "vn.zsoft.theme.corporate"): string {
   );
   fs.writeFileSync(path.join(dir, "dist", "index.js"), "export default {}\n");
   return dir;
+}
+
+/** The `version` currently written in a package's manifest on disk. */
+function manifestVersion(dir: string, file = "theme.json"): string {
+  return JSON.parse(fs.readFileSync(path.join(dir, file), "utf8")).version;
 }
 
 /** Runs keygen into a fresh dir and returns the two key paths. */
@@ -265,6 +271,109 @@ describe("pack", () => {
 
     expect(code).toBe(1);
   });
+
+  it("packs the declared version, then advances the manifest for the next pack", async () => {
+    // The whole feature: an author never edits the version by hand. The artifact
+    // ships what the manifest declares (1.0.0), and the manifest is left at 1.0.1
+    // so the next pack is automatically new.
+    const { priv, pub } = await keys();
+    const dir = themeDir();
+    const out = path.join(tmp, "corp.zcms");
+
+    const { stdout, code } = await zcms([
+      "pack", dir, "--kind", "theme", "--key", priv, "--pub", pub, "--out", out,
+    ]);
+
+    expect(code).toBe(0);
+    expect(stdout).toMatch(/packed 1\.0\.0/);
+    expect(stdout).toMatch(/advanced to 1\.0\.1/);
+    expect(manifestVersion(dir)).toBe("1.0.1");
+  });
+
+  it("advances by the level --bump names", async () => {
+    const { priv, pub } = await keys();
+    const dir = themeDir();
+
+    await zcms([
+      "pack", dir, "--kind", "theme", "--key", priv, "--pub", pub,
+      "--out", path.join(tmp, "a.zcms"), "--bump", "minor",
+    ]);
+
+    expect(manifestVersion(dir)).toBe("1.1.0");
+  });
+
+  it("leaves the manifest untouched with --no-bump", async () => {
+    // The escape hatch: re-pack the same version without it climbing.
+    const { priv, pub } = await keys();
+    const dir = themeDir();
+
+    const { stdout } = await zcms([
+      "pack", dir, "--kind", "theme", "--key", priv, "--pub", pub,
+      "--out", path.join(tmp, "a.zcms"), "--no-bump",
+    ]);
+
+    expect(stdout).toMatch(/packed 1\.0\.0/);
+    expect(manifestVersion(dir)).toBe("1.0.0");
+  });
+
+  it("ships an exact --set-version, and still advances from it", async () => {
+    const { priv, pub } = await keys();
+    const dir = themeDir();
+
+    const { stdout } = await zcms([
+      "pack", dir, "--kind", "theme", "--key", priv, "--pub", pub,
+      "--out", path.join(tmp, "a.zcms"), "--set-version", "2.5.0",
+    ]);
+
+    expect(stdout).toMatch(/packed 2\.5\.0/);
+    expect(manifestVersion(dir)).toBe("2.5.1");
+  });
+
+  it("rejects a --bump level that is not major, minor or patch", async () => {
+    const { priv, pub } = await keys();
+
+    const { stderr, code } = await zcms([
+      "pack", themeDir(), "--kind", "theme", "--key", priv, "--pub", pub, "--bump", "huge",
+    ]);
+
+    expect(stderr).toMatch(/--bump must be major, minor or patch/);
+    expect(code).toBe(1);
+  });
+
+  it("keeps package.json in sync with the manifest when it is present", async () => {
+    const { priv, pub } = await keys();
+    const dir = themeDir();
+    fs.writeFileSync(
+      path.join(dir, "package.json"),
+      JSON.stringify({ name: "corporate", version: "1.0.0", private: true }, null, 2),
+    );
+
+    await zcms([
+      "pack", dir, "--kind", "theme", "--key", priv, "--pub", pub, "--out", path.join(tmp, "a.zcms"),
+    ]);
+
+    expect(manifestVersion(dir)).toBe("1.0.1");
+    expect(manifestVersion(dir, "package.json")).toBe("1.0.1");
+  });
+
+  it("rolls the version back when the pack itself fails", async () => {
+    // A --set-version writes before packing; if the pack then fails, the author's
+    // manifest must not be left holding a version whose artifact never shipped.
+    const { priv, pub } = await keys();
+    const dir = path.join(tmp, "unbuilt");
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, "theme.json"),
+      JSON.stringify({ id: "x", name: "X", version: "1.0.0", author: { name: "Z" }, engine: ">=0.1.0" }),
+    );
+
+    const { code } = await zcms([
+      "pack", dir, "--kind", "theme", "--key", priv, "--pub", pub, "--set-version", "9.9.9",
+    ]);
+
+    expect(code).toBe(1);
+    expect(manifestVersion(dir)).toBe("1.0.0");
+  });
 });
 
 describe("verify", () => {
@@ -276,11 +385,27 @@ describe("verify", () => {
     return { file, keys: k };
   }
 
-  it("refuses to verify with no file argument", async () => {
-    const { stderr, code } = await zcms(["verify"]);
+  it("errors when no file is given and none can be found in the directory", async () => {
+    // `tmp` is empty at this point, so there is no .zcms to fall back to.
+    const { stderr, code } = await zcms(["verify"], undefined, tmp);
 
-    expect(stderr).toMatch(/Missing .zcms file/);
+    expect(stderr).toMatch(/none found in the current directory/);
     expect(code).toBe(1);
+  });
+
+  it("verifies the newest .zcms in the directory when given no file", async () => {
+    // Because `pack` bumps the version, the artifact filename moves every time; a
+    // `verify` script cannot hardcode it, so no-file means "the one I just packed".
+    const k = await keys();
+    await zcms([
+      "pack", themeDir(), "--kind", "theme", "--key", k.priv, "--pub", k.pub,
+      "--out", path.join(tmp, "vn.zsoft.theme.corporate-1.0.0.zcms"),
+    ]);
+
+    const { stdout, code } = await zcms(["verify"], undefined, tmp);
+
+    expect(stdout).toMatch(/publisher signature\s*: VALID/);
+    expect(code).toBe(0);
   });
 
   it("reports a valid publisher signature on a freshly packed package", async () => {

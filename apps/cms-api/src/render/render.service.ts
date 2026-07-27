@@ -669,11 +669,13 @@ export class RenderService {
   /**
    * "/vi/blog/hello" -> { locale: "vi", path: "/blog/hello" }.
    *
-   * The default locale is served unprefixed, and its prefix is deliberately *not*
-   * accepted: on a site whose default is English, "/en/about" resolves to nothing
-   * rather than to a second copy of "/about". Two URLs serving one page is the
-   * duplicate-content problem canonical tags exist to clean up after — better not
-   * to create it.
+   * Every locale is addressed under its own prefix — the default included:
+   * "/en/about" is English, "/vi/about" Vietnamese, and "/en/about" is the one
+   * canonical URL for its page. The unprefixed spelling ("/about") resolves to the
+   * default locale here too — both spellings serve a 200, and site-runtime marks
+   * "/en/about" as canonical so only it is indexed. (This used to reject the
+   * default prefix and serve the default unprefixed instead; the prefix is now
+   * kept so "/en" is a real, indexable URL.)
    *
    * A first segment that merely looks like a language ("/vi") is only treated as
    * one when the site actually publishes in it. A site with a page slugged "vi"
@@ -686,10 +688,7 @@ export class RenderService {
     const segments = path.replace(/^\//, "").split("/");
     const head = segments[0] ?? "";
 
-    const isLocalePrefix =
-      head !== "" &&
-      head !== site.defaultLocale &&
-      site.locales.includes(head);
+    const isLocalePrefix = head !== "" && site.locales.includes(head);
 
     if (!isLocalePrefix) return { locale: site.defaultLocale, path };
 
@@ -854,10 +853,15 @@ export class RenderService {
     return { prefix, slug };
   }
 
-  /** The site-root-relative URL of `path` in `locale`. The inverse of splitLocale. */
-  private localePath(site: ResolvedSite, locale: string, path: string): string {
-    const prefix = locale === site.defaultLocale ? "" : `/${locale}`;
-    const joined = `${prefix}${path}`.replace(/\/{2,}/g, "/");
+  /**
+   * The site-root-relative URL of `path` in `locale`. The inverse of splitLocale.
+   *
+   * Every locale carries its prefix, the default included: the switcher, hreflang
+   * and the sitemap all name "/en/about" rather than a bare "/about", so each page
+   * has exactly one indexable address per language.
+   */
+  private localePath(_site: ResolvedSite, locale: string, path: string): string {
+    const joined = `/${locale}${path}`.replace(/\/{2,}/g, "/");
     return joined.length > 1 ? joined.replace(/\/$/, "") : joined || "/";
   }
 

@@ -806,7 +806,13 @@ export interface RenderPayload {
     domains: string[];
     /** The locale this URL was resolved in — not the site's default. */
     locale: string;
-    /** Served unprefixed. Every other locale carries its code: "/vi/blog". */
+    /**
+     * The locale served when a URL carries no prefix. Every locale — the default
+     * included — is addressed under its own code ("/en/blog", "/vi/blog"); an
+     * unprefixed URL resolves to this locale and serves a 200, but the runtime
+     * marks the prefixed form as canonical, so each page has one indexable address
+     * per language.
+     */
     defaultLocale: string;
     /** Every locale this site publishes in. */
     locales: string[];

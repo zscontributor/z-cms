@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compareSemver, maxSemver, parseSemver, validateVersion } from "../semver";
+import { bumpSemver, compareSemver, maxSemver, parseSemver, validateVersion } from "../semver";
 
 /**
  * This module exists to answer one question — "is this version newer than that
@@ -89,6 +89,40 @@ describe("maxSemver", () => {
   it("skips unparseable entries", () => {
     expect(maxSemver(["banana", "1.0.0", "garbage"])).toBe("1.0.0");
     expect(maxSemver(["banana"])).toBeNull();
+  });
+});
+
+describe("bumpSemver", () => {
+  it("increments each level, resetting the ones below it", () => {
+    expect(bumpSemver("1.2.3", "patch")).toBe("1.2.4");
+    expect(bumpSemver("1.2.3", "minor")).toBe("1.3.0");
+    expect(bumpSemver("1.2.3", "major")).toBe("2.0.0");
+  });
+
+  it("is monotonically increasing — the whole point", () => {
+    const next = bumpSemver("1.2.3", "patch");
+    expect(compareSemver(next, "1.2.3")).toBeGreaterThan(0);
+  });
+
+  /**
+   * A pre-release RELEASES to its own core rather than climbing past it: the
+   * author was clearly working toward that version, so "1.2.3-rc.1" patched is
+   * 1.2.3, not 1.2.4. The same holds for minor/major on a fresh core.
+   */
+  it("releases a pre-release to the version it precedes", () => {
+    expect(bumpSemver("1.2.3-rc.1", "patch")).toBe("1.2.3");
+    expect(bumpSemver("1.2.0-rc.1", "minor")).toBe("1.2.0");
+    expect(bumpSemver("2.0.0-rc.1", "major")).toBe("2.0.0");
+  });
+
+  it("still climbs when the pre-release does not sit on a fresh core", () => {
+    // 1.2.3-rc is not headed for 1.2.0 or 2.0.0, so minor/major move on normally.
+    expect(bumpSemver("1.2.3-rc.1", "minor")).toBe("1.3.0");
+    expect(bumpSemver("1.2.3-rc.1", "major")).toBe("2.0.0");
+  });
+
+  it("throws on garbage rather than emitting a nonsense version", () => {
+    expect(() => bumpSemver("banana", "patch")).toThrow(/semantic version/);
   });
 });
 

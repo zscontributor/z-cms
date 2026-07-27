@@ -69,13 +69,18 @@ async function resolveRoute(props: RouteProps): Promise<{
  * names only the page itself is noise, and hreflang naming a page that does not
  * exist is an error.
  */
+/** "localhost:3000" has no TLS; every other host is https. */
+function originFor(hostname: string): string {
+  return hostname.startsWith("localhost") ? `http://${hostname}` : `https://${hostname}`;
+}
+
 function localeAlternates(
   payload: RenderPayload,
   hostname: string,
 ): Record<string, string> | undefined {
   if (payload.alternates.length < 2) return undefined;
 
-  const origin = hostname.startsWith("localhost") ? `http://${hostname}` : `https://${hostname}`;
+  const origin = originFor(hostname);
   const languages: Record<string, string> = {};
 
   for (const alternate of payload.alternates) {
@@ -126,8 +131,19 @@ export async function generateMetadata(props: RouteProps): Promise<Metadata> {
   const robots = isNotFound ? { index: false, follow: false } : seo.robots;
 
   const languages = isNotFound ? undefined : localeAlternates(payload, hostname);
+
+  // The canonical URL is always the LOCALE-PREFIXED address of this page ("/en",
+  // "/en/about"), even when the visitor reached it unprefixed ("/", "/about").
+  // Both spellings serve a 200 — neither redirects — so this <link rel="canonical">
+  // is what tells a search engine the two are one page and "/en" is the copy to
+  // index. The `current` alternate carries that prefixed path (cms-api built it);
+  // a page's own `content.seo.canonical`, if set, still wins.
+  const selfPath = payload.alternates.find((a) => a.current)?.path;
+  const canonical = isNotFound
+    ? undefined
+    : (seo.canonical ?? (selfPath ? `${originFor(hostname)}${selfPath}` : undefined));
   const alternates = {
-    ...(seo.canonical ? { canonical: seo.canonical } : {}),
+    ...(canonical ? { canonical } : {}),
     ...(languages ? { languages } : {}),
   };
 
@@ -194,6 +210,13 @@ export default async function CatchAllPage(props: RouteProps) {
   if (canonicalHost) {
     permanentRedirect(await canonicalUrl(canonicalHost));
   }
+
+  // Every locale is addressed under its own prefix — the default included, so
+  // "/en" is a real, indexable English URL. The unprefixed spelling ("/", "/about")
+  // ALSO serves a 200 here rather than redirecting: cms-api resolves it to the same
+  // default-locale page. The two are kept from competing in search by the canonical
+  // <link> generateMetadata emits, which always names the "/en/…" form — so "/en"
+  // is the copy that gets indexed while "/" stays a working entry point.
 
   // The theme is fetched, signature-verified and imported on demand — a theme
   // installed a minute ago renders here without this app being rebuilt.

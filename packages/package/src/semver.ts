@@ -106,6 +106,44 @@ export function compareSemver(a: string, b: string): number {
   return pa.prerelease.length - pb.prerelease.length;
 }
 
+/** The three release levels a version can be incremented by. */
+export type ReleaseLevel = "major" | "minor" | "patch";
+
+/**
+ * Increments a version by one release level, returning the new version string.
+ *
+ * The rules match `npm version` / node-semver's `inc`, and the pre-release cases
+ * are the only interesting part: incrementing a pre-release does not bump the
+ * core past the release it is a pre-release OF, it RELEASES it. So a `patch` on
+ * "1.2.3-rc.1" is "1.2.3" (the release the rc was leading up to), not "1.2.4" —
+ * bumping to 1.2.4 would skip the 1.2.3 release the author was clearly working
+ * toward. The same logic applies to `minor` when the pre-release already sits on
+ * a fresh minor (x.y.0-*), and to `major` on a fresh major (x.0.0-*).
+ *
+ * Throws on an unparseable input — a caller incrementing a version has one it
+ * read from a manifest it already validated, and bumping garbage should be loud.
+ */
+export function bumpSemver(version: string, level: ReleaseLevel): string {
+  const p = parseSemver(version);
+  if (!p) throw new Error(`Not a semantic version: "${version}".`);
+
+  const pre = p.prerelease.length > 0;
+
+  switch (level) {
+    case "patch":
+      // A pre-release releases to its own core; a release moves to the next patch.
+      return pre ? `${p.major}.${p.minor}.${p.patch}` : `${p.major}.${p.minor}.${p.patch + 1}`;
+    case "minor":
+      // "1.2.0-rc" is already headed for 1.2.0; only a real 1.2.x climbs to 1.3.0.
+      return pre && p.patch === 0 ? `${p.major}.${p.minor}.0` : `${p.major}.${p.minor + 1}.0`;
+    case "major":
+      // Same idea one level up: "2.0.0-rc" releases to 2.0.0, "2.1.3" goes to 3.0.0.
+      return pre && p.minor === 0 && p.patch === 0
+        ? `${p.major}.0.0`
+        : `${p.major + 1}.0.0`;
+  }
+}
+
 /**
  * The highest version in a list by precedence, or null if the list is empty.
  *

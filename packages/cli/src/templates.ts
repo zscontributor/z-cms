@@ -167,7 +167,7 @@ function pluginFiles(vars: TemplateVars): Files {
       test: "vitest run",
       keygen: "zcms keygen",
       pack: `zcms pack . --kind plugin --key publisher-private.pem --pub publisher-public.pem`,
-      verify: `zcms verify ${vars.id}-${vars.version}.zcms`,
+      verify: `zcms verify`,
     },
     devDependencies: {
       "@zcmsorg/cli": CLI_RANGE,
@@ -428,7 +428,7 @@ function themeFiles(vars: TemplateVars): Files {
       typecheck: "tsc --noEmit",
       keygen: "zcms keygen",
       pack: `zcms pack . --kind theme --key publisher-private.pem --pub publisher-public.pem`,
-      verify: `zcms verify ${vars.id}-${vars.version}.zcms`,
+      verify: `zcms verify`,
     },
     // React is a peer, never a dependency: the theme renders inside the host's
     // React tree, and a second copy of React in one render is the classic way to

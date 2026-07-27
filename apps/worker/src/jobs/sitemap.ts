@@ -41,8 +41,11 @@ export async function runSitemap(
   const routable = rows.filter((r) => r.contentType.isRoutable);
 
   /**
-   * The public URL of a row. The default locale is served unprefixed; every other
-   * locale carries its code — the same rule the router applies in reverse.
+   * The public URL of a row. Every locale carries its code — the default included,
+   * the same rule the router applies in reverse. An English page slugged "about"
+   * is submitted as "/en/about", never a bare "/about": the unprefixed spelling
+   * also serves the page, but "/en/about" is its canonical URL and a sitemap must
+   * advertise the canonical, not the alias.
    *
    * This used to ignore the locale entirely, which was harmless while every site
    * was monolingual and wrong the moment one was not: a Vietnamese page slugged
@@ -52,8 +55,7 @@ export async function runSitemap(
   const locate = (r: (typeof routable)[number]): string => {
     const prefix = r.contentType.routePrefix ? `/${r.contentType.routePrefix}` : "";
     const path = r.slug ? `${prefix}/${r.slug}` : prefix || "/";
-    const locale = r.locale === site.defaultLocale ? "" : `/${r.locale}`;
-    const joined = `${locale}${path}`.replace(/\/{2,}/g, "/");
+    const joined = `/${r.locale}${path}`.replace(/\/{2,}/g, "/");
     return joined.length > 1 ? joined.replace(/\/$/, "") : joined || "/";
   };
 
