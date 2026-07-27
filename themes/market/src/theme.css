@@ -1542,6 +1542,130 @@ a.zmarket__skip:focus {
   color: var(--zm-muted);
 }
 
+/* ------------------------------------------------------------------ contact */
+
+/* The `market/contact` block: a contact card beside a no-JS enquiry form. Placed
+   inside `.zmarket__prose` on the contact page, so it resets that column's prose
+   colouring for its own form controls. */
+.zmarket__contact {
+  display: grid;
+  grid-template-columns: 0.85fr 1.15fr;
+  gap: 48px;
+  align-items: start;
+  margin: 40px 0 8px;
+}
+.zmarket__contact-card {
+  padding: 34px;
+  border-radius: 22px;
+  background: var(--zm-blush);
+}
+.zmarket__contact-card h2 {
+  font-family: var(--zm-serif);
+  font-weight: 400;
+  font-size: clamp(24px, 2.4vw, 30px);
+  letter-spacing: -0.02em;
+  margin: 10px 0 12px;
+}
+.zmarket__contact-card .zmarket__section-copy {
+  margin: 0;
+}
+.zmarket__contact-lines {
+  margin: 26px 0 0;
+  display: grid;
+  gap: 16px;
+}
+.zmarket__contact-lines dt {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--zm-accent);
+}
+.zmarket__contact-lines dd {
+  margin: 2px 0 0;
+  font-size: 15px;
+  color: var(--zm-ink);
+}
+.zmarket__contact-form {
+  display: grid;
+  gap: 18px;
+}
+.zmarket__contact-field {
+  display: grid;
+  gap: 7px;
+}
+.zmarket__contact-field label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--zm-muted);
+}
+.zmarket__contact-form input,
+.zmarket__contact-form select,
+.zmarket__contact-form textarea {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--zm-blush-deep);
+  border-radius: 14px;
+  background: var(--zm-card);
+  color: var(--zm-ink);
+  font-family: inherit;
+  font-size: 15px;
+}
+.zmarket__contact-form textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+.zmarket__contact-form input::placeholder,
+.zmarket__contact-form textarea::placeholder {
+  color: var(--zm-muted);
+}
+.zmarket__contact-form input:focus-visible,
+.zmarket__contact-form select:focus-visible,
+.zmarket__contact-form textarea:focus-visible {
+  outline: 2px solid var(--zm-accent);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+.zmarket__contact-form .zmarket__btn--rose {
+  justify-self: start;
+}
+/* Status banners: hidden until the submit route redirects back to `#contact-sent`
+   / `#contact-error`. `:target` covers direct fragment navigation; `[data-revealed]`
+   is set by the platform's runtime helper so the reveal also fires after the POST
+   redirect, which Blink does not apply `:target` to. */
+.zmarket__contact-alert {
+  display: none;
+  margin: 0;
+  scroll-margin-top: 120px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.zmarket__contact-alert:target,
+.zmarket__contact-alert[data-revealed] {
+  display: block;
+}
+.zmarket__contact-alert--ok {
+  background: rgba(22, 163, 74, 0.12);
+  border: 1px solid rgba(22, 163, 74, 0.35);
+  color: #15803d;
+}
+.zmarket__contact-alert--error {
+  background: rgba(220, 38, 38, 0.12);
+  border: 1px solid rgba(220, 38, 38, 0.35);
+  color: #b91c1c;
+}
+html[data-theme="dark"] .zmarket .zmarket__contact-alert--ok {
+  color: #4ade80;
+}
+html[data-theme="dark"] .zmarket .zmarket__contact-alert--error {
+  color: #f87171;
+}
+
 /* --------------------------------------------------------------------- dark */
 
 /*
@@ -1838,6 +1962,13 @@ html[data-theme="dark"] .zmarket__letter-box {
   }
   .zmarket__block-cta {
     padding: 32px 22px;
+  }
+  .zmarket__contact {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  .zmarket__contact-card {
+    padding: 26px;
   }
   .zmarket__footer {
     padding-top: 56px;

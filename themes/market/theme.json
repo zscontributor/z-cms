@@ -1,9 +1,14 @@
 {
   "id": "vn.zsoft.theme.market",
   "name": "Z Market",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "kind": "theme",
   "description": "An elegant storefront for cosmetics and beauty brands: hero, category tiles, product grid, ingredients accordion and newsletter — plus add-to-cart, a slide-in cart and cash-on-delivery checkout. English, Japanese and Vietnamese, dark and light modes.",
+  "changelog": {
+    "en": "The footer's Shipping, Returns, FAQ and Contact links now lead to real pages instead of a 404 — each seeded as demo content in English, Japanese and Vietnamese.\nThe Contact page carries a working, no-JS enquiry form: a visitor's message is emailed to the site's Contact email, with their address as reply-to so you can answer straight from your inbox.\nAfter sending, a success or error banner appears reliably beneath the button, in every browser. It sends through the site's own mail server — configure it once in Settings → Mail.\nSet the recipient in the theme's new Contact email setting.",
+    "ja": "フッターの「配送」「返品」「よくあるご質問」「お問い合わせ」の各リンクが、404 ではなく実際のページに移動するようになりました。英語・日本語・ベトナム語のデモコンテンツとして初期投入されます。\nお問い合わせページには、JavaScript 不要の実際に動く問い合わせフォームを用意しました。訪問者のメッセージはサイトの連絡先メールに送信され、返信先には訪問者のアドレスが設定されるため、受信トレイからそのまま返信できます。\n送信後は、成功・失敗のバナーがボタンの下に確実に表示されます。送信はサイト自身のメールサーバー経由です（設定 → メールで一度だけ設定）。\n宛先はテーマの新しい「連絡先メール」設定で指定してください。",
+    "vi": "Các liên kết Vận chuyển, Đổi trả, Câu hỏi thường gặp và Liên hệ ở chân trang nay dẫn tới các trang thật thay vì lỗi 404 — mỗi trang được tạo sẵn dưới dạng nội dung demo bằng tiếng Anh, tiếng Nhật và tiếng Việt.\nTrang Liên hệ có biểu mẫu hoạt động thật, không cần JavaScript: tin nhắn của khách được gửi email đến địa chỉ Liên hệ của trang, với địa chỉ của họ làm reply-to để bạn trả lời ngay từ hộp thư.\nSau khi gửi, một thông báo thành công hoặc lỗi hiện ra ổn định ngay dưới nút, trên mọi trình duyệt. Nó gửi qua máy chủ thư của chính trang — cấu hình một lần trong Cài đặt → Thư.\nĐặt người nhận trong thiết lập Email liên hệ mới của giao diện."
+  },
   "author": {
     "name": "Z-SOFT Co., Ltd.",
     "url": "https://z-soft.com.vn"
@@ -132,6 +137,13 @@
         "description": "ISO code used to format prices, e.g. USD, JPY, VND.",
         "default": "USD"
       },
+      "contactEmail": {
+        "type": "string",
+        "title": "Contact email",
+        "format": "email",
+        "description": "Where the contact form's enquiries are emailed. Set this to a mailbox you monitor.",
+        "default": "hello@lumiere.example"
+      },
       "colorMode": {
         "type": "string",
         "title": "Default colour mode",
@@ -199,6 +211,98 @@
       }
     }
   },
+  "editorBlocks": {
+    "market/contact": {
+      "label": {
+        "en": "Contact",
+        "vi": "Liên hệ",
+        "ja": "お問い合わせ"
+      },
+      "description": {
+        "en": "A contact card beside a no-JS enquiry form that emails the site's contact address.",
+        "vi": "Thẻ thông tin liên hệ bên cạnh biểu mẫu gửi email đến địa chỉ liên hệ của trang.",
+        "ja": "サイトの連絡先へメールを送るお問い合わせフォームと連絡先カード。"
+      },
+      "icon": "@",
+      "props": [
+        {
+          "key": "eyebrow",
+          "label": {
+            "en": "Eyebrow",
+            "vi": "Nhãn dẫn",
+            "ja": "補助見出し"
+          },
+          "kind": "text"
+        },
+        {
+          "key": "heading",
+          "label": {
+            "en": "Heading",
+            "vi": "Tiêu đề",
+            "ja": "見出し"
+          },
+          "kind": "text"
+        },
+        {
+          "key": "copy",
+          "label": {
+            "en": "Copy",
+            "vi": "Nội dung",
+            "ja": "本文"
+          },
+          "kind": "textarea"
+        },
+        {
+          "key": "lines",
+          "label": {
+            "en": "Contact lines",
+            "vi": "Thông tin liên hệ",
+            "ja": "連絡先情報"
+          },
+          "kind": "items",
+          "itemLabel": {
+            "en": "Line",
+            "vi": "Dòng thông tin",
+            "ja": "情報"
+          },
+          "itemFields": [
+            {
+              "key": "label",
+              "label": {
+                "en": "Label",
+                "vi": "Nhãn",
+                "ja": "ラベル"
+              },
+              "kind": "text"
+            },
+            {
+              "key": "value",
+              "label": {
+                "en": "Value",
+                "vi": "Giá trị",
+                "ja": "値"
+              },
+              "kind": "text"
+            }
+          ]
+        },
+        {
+          "key": "needOptions",
+          "label": {
+            "en": "Enquiry options",
+            "vi": "Các lựa chọn nhu cầu",
+            "ja": "相談内容の選択肢"
+          },
+          "kind": "stringList",
+          "itemLabel": {
+            "en": "Option",
+            "vi": "Lựa chọn",
+            "ja": "選択肢"
+          }
+        }
+      ]
+    }
+  },
   "demo": {
     "settings": {
       "siteTitle": "Lumière",
@@ -206,7 +310,8 @@
       "announcement": "Complimentary shipping on orders over $50 · Free samples with every order",
       "shopUrl": "/shop",
       "currency": "USD",
-      "footerText": "© 2026 Lumière. Made in small batches."
+      "footerText": "© 2026 Lumière. Made in small batches.",
+      "contactEmail": "hello@lumiere.example"
     },
     "contentTypes": [
       {
@@ -860,6 +965,339 @@
             }
           }
         ]
+      },
+      {
+        "contentType": "page",
+        "locale": "en",
+        "slug": "shipping",
+        "title": "Shipping",
+        "translationGroup": "market-shipping",
+        "excerpt": "Where we ship, how long it takes, and what it costs.",
+        "seo": {
+          "title": "Shipping — Lumière",
+          "description": "Shipping rates, delivery times and tracking for Lumière orders."
+        },
+        "blocks": [
+          {
+            "id": "market-shipping-en",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>Every order is packed by hand in recyclable materials and dispatched from our studio within one to two working days.</p><h2>Rates &amp; times</h2><ul><li><strong>Standard</strong> — 3–5 working days. Complimentary on orders over $50, otherwise $5.</li><li><strong>Express</strong> — 1–2 working days, $12.</li><li><strong>International</strong> — 7–14 working days, calculated at checkout. Duties and taxes may be charged on arrival.</li></ul><h2>Tracking</h2><p>You will receive a tracking link by email the moment your parcel leaves us. If it has not arrived within the window above, write to us and we will chase it.</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "page",
+        "locale": "ja",
+        "slug": "shipping",
+        "title": "配送について",
+        "translationGroup": "market-shipping",
+        "excerpt": "配送先、お届け日数、送料についてご案内します。",
+        "seo": {
+          "title": "配送について — Lumière",
+          "description": "Lumière のご注文の送料・お届け日数・追跡について。"
+        },
+        "blocks": [
+          {
+            "id": "market-shipping-ja",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>すべてのご注文は、リサイクル可能な素材でひとつずつ手作業で梱包し、1〜2営業日以内にスタジオから発送します。</p><h2>送料とお届け日数</h2><ul><li><strong>通常配送</strong> — 3〜5営業日。50ドル以上のご注文は無料、それ以外は5ドル。</li><li><strong>速達</strong> — 1〜2営業日、12ドル。</li><li><strong>海外配送</strong> — 7〜14営業日、購入手続き時に計算します。到着時に関税・税金がかかる場合があります。</li></ul><h2>追跡</h2><p>発送と同時に、追跡リンクをメールでお送りします。上記の日数を過ぎても届かない場合は、ご連絡ください。お調べします。</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "page",
+        "locale": "vi",
+        "slug": "shipping",
+        "title": "Vận chuyển",
+        "translationGroup": "market-shipping",
+        "excerpt": "Chúng tôi giao đến đâu, mất bao lâu và chi phí thế nào.",
+        "seo": {
+          "title": "Vận chuyển — Lumière",
+          "description": "Phí vận chuyển, thời gian giao hàng và theo dõi đơn hàng Lumière."
+        },
+        "blocks": [
+          {
+            "id": "market-shipping-vi",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>Mọi đơn hàng đều được đóng gói thủ công bằng vật liệu tái chế và gửi đi từ xưởng của chúng tôi trong vòng một đến hai ngày làm việc.</p><h2>Phí và thời gian</h2><ul><li><strong>Tiêu chuẩn</strong> — 3–5 ngày làm việc. Miễn phí cho đơn trên $50, còn lại $5.</li><li><strong>Hỏa tốc</strong> — 1–2 ngày làm việc, $12.</li><li><strong>Quốc tế</strong> — 7–14 ngày làm việc, tính khi thanh toán. Thuế và phí hải quan có thể được thu khi hàng đến.</li></ul><h2>Theo dõi đơn</h2><p>Bạn sẽ nhận được liên kết theo dõi qua email ngay khi kiện hàng rời khỏi chúng tôi. Nếu quá thời gian trên mà chưa nhận được, hãy nhắn cho chúng tôi để kiểm tra giúp bạn.</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "page",
+        "locale": "en",
+        "slug": "returns",
+        "title": "Returns",
+        "translationGroup": "market-returns",
+        "excerpt": "Thirty days, no forms, and a bottle you never need to send back.",
+        "seo": {
+          "title": "Returns — Lumière",
+          "description": "Lumière's 30-day, no-forms return policy and how to start one."
+        },
+        "blocks": [
+          {
+            "id": "market-returns-en",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>If something is not right for your skin, return it within 30 days of delivery for a full refund — opened or not. Skincare is personal, and a patch test that does not agree with you is not a mistake you should pay for.</p><h2>How to return</h2><ol><li>Email us at hello@lumiere.example with your order number.</li><li>We send a prepaid label — no printer needed for local returns.</li><li>Drop the parcel off. Your refund is issued within five working days of it reaching us.</li></ol><h2>The glass stays with you</h2><p>You never need to return a bottle for a refund. Keep it, refill it, or send it back separately for sterilising through our refill programme.</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "page",
+        "locale": "ja",
+        "slug": "returns",
+        "title": "返品について",
+        "translationGroup": "market-returns",
+        "excerpt": "30日間、書類不要。ボトルは返送不要です。",
+        "seo": {
+          "title": "返品について — Lumière",
+          "description": "Lumière の30日間・書類不要の返品ポリシーと手続き方法。"
+        },
+        "blocks": [
+          {
+            "id": "market-returns-ja",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>お肌に合わない場合は、お届けから30日以内であれば、開封済みでも全額返金いたします。スキンケアは人それぞれ。パッチテストで合わなかったことに、お客様が費用を負担する必要はありません。</p><h2>返品の流れ</h2><ol><li>ご注文番号を添えて hello@lumiere.example までメールをお送りください。</li><li>着払いラベルをお送りします。国内返品ならプリンターは不要です。</li><li>荷物をお預けください。当方に到着後、5営業日以内に返金いたします。</li></ol><h2>ボトルはお手元に</h2><p>返金のためにボトルを返送する必要はありません。そのままお使いいただくか、詰め替えるか、詰め替えプログラムを通じて別途、洗浄のためにお送りください。</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "page",
+        "locale": "vi",
+        "slug": "returns",
+        "title": "Đổi trả",
+        "translationGroup": "market-returns",
+        "excerpt": "Ba mươi ngày, không giấy tờ, và chai thì bạn không cần gửi lại.",
+        "seo": {
+          "title": "Đổi trả — Lumière",
+          "description": "Chính sách đổi trả 30 ngày, không giấy tờ của Lumière và cách thực hiện."
+        },
+        "blocks": [
+          {
+            "id": "market-returns-vi",
+            "type": "core/richtext",
+            "props": {
+              "html": "<p>Nếu sản phẩm không hợp với làn da của bạn, hãy trả lại trong vòng 30 ngày kể từ khi nhận hàng để được hoàn tiền đầy đủ — dù đã mở hay chưa. Chăm sóc da là chuyện riêng của mỗi người, và một lần thử da không hợp không phải lỗi mà bạn phải trả giá.</p><h2>Cách đổi trả</h2><ol><li>Gửi email cho chúng tôi tại hello@lumiere.example kèm mã đơn hàng.</li><li>Chúng tôi gửi nhãn trả hàng trả trước — đổi trả trong nước không cần máy in.</li><li>Gửi kiện hàng đi. Tiền được hoàn trong vòng năm ngày làm việc kể từ khi hàng về đến chúng tôi.</li></ol><h2>Chai thủy tinh ở lại với bạn</h2><p>Bạn không bao giờ phải trả lại chai để được hoàn tiền. Hãy giữ lại, nạp đầy lại, hoặc gửi riêng để tiệt trùng qua chương trình tái nạp của chúng tôi.</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "page",
+        "locale": "en",
+        "slug": "faq",
+        "title": "Frequently asked questions",
+        "translationGroup": "market-faq",
+        "excerpt": "Ingredients, refills, testing and everything else people ask.",
+        "seo": {
+          "title": "FAQ — Lumière",
+          "description": "Answers on Lumière's ingredients, refills, testing and shipping."
+        },
+        "blocks": [
+          {
+            "id": "market-faq-en",
+            "type": "core/richtext",
+            "props": {
+              "html": "<h2>Are your products vegan and cruelty-free?</h2><p>Yes. Every formula is certified vegan and cruelty-free, and we never test on animals at any stage.</p><h2>Why is the ingredient list so short?</h2><p>Because most of what lengthens a list is there to sell the product, not to work on your skin. We keep only what a study can justify, and we print the percentages on the bottle.</p><h2>How does the refill programme work?</h2><p>Keep your glass bottle. Order a refill pouch, or send the bottle back for us to sterilise and refill. Either way you stop buying new packaging.</p><h2>Are the products suitable for sensitive skin?</h2><p>Every formula is dermatologist patch-tested across skin types. We still recommend a patch test at home — and if it does not agree with you, our 30-day return covers it.</p><h2>Where do you ship?</h2><p>Worldwide. See the <a href=\"/shipping\">shipping page</a> for rates and times.</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "page",
+        "locale": "ja",
+        "slug": "faq",
+        "title": "よくあるご質問",
+        "translationGroup": "market-faq",
+        "excerpt": "成分、詰め替え、テスト、そのほかよくいただくご質問。",
+        "seo": {
+          "title": "よくあるご質問 — Lumière",
+          "description": "Lumière の成分・詰め替え・テスト・配送についてのご質問。"
+        },
+        "blocks": [
+          {
+            "id": "market-faq-ja",
+            "type": "core/richtext",
+            "props": {
+              "html": "<h2>製品はヴィーガン・クルエルティフリーですか?</h2><p>はい。すべての処方がヴィーガンおよびクルエルティフリー認証を取得しており、いかなる段階でも動物実験は行いません。</p><h2>成分表がとても短いのはなぜですか?</h2><p>成分表を長くしているものの多くは、肌に働きかけるためではなく、製品を売るためにあるからです。私たちは研究で正当化できるものだけを残し、その配合率をボトルに印刷しています。</p><h2>詰め替えプログラムはどう使うのですか?</h2><p>ガラスボトルはそのままお使いください。詰め替えパウチをご注文いただくか、ボトルを返送いただければ洗浄して詰め替えます。いずれの場合も、新しい容器を買い続ける必要はありません。</p><h2>敏感肌でも使えますか?</h2><p>すべての処方は、さまざまな肌質で皮膚科医によるパッチテストを実施しています。それでもご自宅でのパッチテストをおすすめします。合わない場合は30日間の返品制度が適用されます。</p><h2>配送地域はどこですか?</h2><p>世界各国へお届けします。送料とお届け日数は<a href=\"/shipping\">配送ページ</a>をご覧ください。</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "page",
+        "locale": "vi",
+        "slug": "faq",
+        "title": "Câu hỏi thường gặp",
+        "translationGroup": "market-faq",
+        "excerpt": "Thành phần, tái nạp, kiểm nghiệm và mọi điều mọi người hay hỏi.",
+        "seo": {
+          "title": "Câu hỏi thường gặp — Lumière",
+          "description": "Giải đáp về thành phần, tái nạp, kiểm nghiệm và vận chuyển của Lumière."
+        },
+        "blocks": [
+          {
+            "id": "market-faq-vi",
+            "type": "core/richtext",
+            "props": {
+              "html": "<h2>Sản phẩm có thuần chay và không thử nghiệm trên động vật không?</h2><p>Có. Mọi công thức đều được chứng nhận thuần chay và cruelty-free, và chúng tôi không bao giờ thử trên động vật ở bất kỳ khâu nào.</p><h2>Vì sao bảng thành phần lại ngắn như vậy?</h2><p>Vì phần lớn những gì làm bảng thành phần dài ra là để bán sản phẩm, chứ không phải để tác động lên da bạn. Chúng tôi chỉ giữ những gì có nghiên cứu bảo chứng, và in nồng độ ngay trên chai.</p><h2>Chương trình tái nạp hoạt động thế nào?</h2><p>Giữ lại chai thủy tinh của bạn. Đặt một túi nạp, hoặc gửi chai về để chúng tôi tiệt trùng và nạp lại. Dù cách nào, bạn cũng thôi phải mua bao bì mới.</p><h2>Sản phẩm có phù hợp với da nhạy cảm không?</h2><p>Mọi công thức đều được bác sĩ da liễu thử áp da trên nhiều loại da. Chúng tôi vẫn khuyên bạn thử da tại nhà — và nếu không hợp, chính sách đổi trả 30 ngày sẽ bảo vệ bạn.</p><h2>Chúng tôi giao hàng đến đâu?</h2><p>Toàn cầu. Xem <a href=\"/shipping\">trang vận chuyển</a> để biết phí và thời gian.</p>"
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "page",
+        "locale": "en",
+        "slug": "contact",
+        "title": "Contact us",
+        "translationGroup": "market-contact",
+        "excerpt": "Questions about an order, an ingredient, or your skin — write to us.",
+        "seo": {
+          "title": "Contact us — Lumière",
+          "description": "Reach the Lumière team about an order, an ingredient or your routine."
+        },
+        "blocks": [
+          {
+            "id": "market-contact-en",
+            "type": "market/contact",
+            "props": {
+              "eyebrow": "Contact Lumière",
+              "heading": "We read every message.",
+              "copy": "Whether it is an order, an ingredient question or advice on where to start, a real person on our team will reply — usually within one working day.",
+              "needOptions": [
+                "An order",
+                "Product advice",
+                "The refill programme",
+                "Press or partnership",
+                "Something else"
+              ],
+              "lines": [
+                {
+                  "label": "Email",
+                  "value": "hello@lumiere.example"
+                },
+                {
+                  "label": "Phone",
+                  "value": "(+84) 972 995 943"
+                },
+                {
+                  "label": "Studio",
+                  "value": "Da Nang, Vietnam"
+                },
+                {
+                  "label": "Hours",
+                  "value": "Mon–Fri, 9:00–17:00 (GMT+7)"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "page",
+        "locale": "ja",
+        "slug": "contact",
+        "title": "お問い合わせ",
+        "translationGroup": "market-contact",
+        "excerpt": "ご注文、成分、お肌のことなど、なんでもお寄せください。",
+        "seo": {
+          "title": "お問い合わせ — Lumière",
+          "description": "ご注文・成分・お手入れについて Lumière のチームへご連絡ください。"
+        },
+        "blocks": [
+          {
+            "id": "market-contact-ja",
+            "type": "market/contact",
+            "props": {
+              "eyebrow": "Lumière へのお問い合わせ",
+              "heading": "いただいたメッセージは、すべて読んでいます。",
+              "copy": "ご注文のこと、成分のご質問、どこから始めればよいかのご相談まで、チームの担当者が実際にご返信します。通常は1営業日以内です。",
+              "needOptions": [
+                "ご注文について",
+                "商品のご相談",
+                "詰め替えプログラム",
+                "取材・提携",
+                "その他"
+              ],
+              "lines": [
+                {
+                  "label": "メール",
+                  "value": "hello@lumiere.example"
+                },
+                {
+                  "label": "電話",
+                  "value": "(+84) 972 995 943"
+                },
+                {
+                  "label": "スタジオ",
+                  "value": "ベトナム・ダナン"
+                },
+                {
+                  "label": "受付時間",
+                  "value": "月〜金 9:00–17:00 (GMT+7)"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "contentType": "page",
+        "locale": "vi",
+        "slug": "contact",
+        "title": "Liên hệ",
+        "translationGroup": "market-contact",
+        "excerpt": "Thắc mắc về đơn hàng, thành phần hay làn da của bạn — hãy nhắn cho chúng tôi.",
+        "seo": {
+          "title": "Liên hệ — Lumière",
+          "description": "Liên hệ đội ngũ Lumière về đơn hàng, thành phần hoặc chu trình của bạn."
+        },
+        "blocks": [
+          {
+            "id": "market-contact-vi",
+            "type": "market/contact",
+            "props": {
+              "eyebrow": "Liên hệ Lumière",
+              "heading": "Chúng tôi đọc mọi tin nhắn.",
+              "copy": "Dù là về một đơn hàng, một câu hỏi về thành phần hay lời khuyên nên bắt đầu từ đâu, một người thật trong đội ngũ của chúng tôi sẽ trả lời — thường trong vòng một ngày làm việc.",
+              "needOptions": [
+                "Một đơn hàng",
+                "Tư vấn sản phẩm",
+                "Chương trình tái nạp",
+                "Báo chí hoặc hợp tác",
+                "Việc khác"
+              ],
+              "lines": [
+                {
+                  "label": "Email",
+                  "value": "hello@lumiere.example"
+                },
+                {
+                  "label": "Điện thoại",
+                  "value": "(+84) 972 995 943"
+                },
+                {
+                  "label": "Xưởng",
+                  "value": "Đà Nẵng, Việt Nam"
+                },
+                {
+                  "label": "Giờ làm việc",
+                  "value": "T2–T6, 9:00–17:00 (GMT+7)"
+                }
+              ]
+            }
+          }
+        ]
       }
     ],
     "menus": [
@@ -922,7 +1360,12 @@
           "address": "12 Nguyễn Huệ, Quận 1",
           "city": "Hồ Chí Minh"
         },
-        "items": [{ "slug": "lumiere-glow-serum", "quantity": 1 }],
+        "items": [
+          {
+            "slug": "lumiere-glow-serum",
+            "quantity": 1
+          }
+        ],
         "status": "FULFILLED",
         "placedAt": "2026-07-18T09:20:00.000Z"
       },
@@ -934,7 +1377,12 @@
           "address": "480 Valencia Street",
           "city": "San Francisco"
         },
-        "items": [{ "slug": "lumiere-milk-cleanser", "quantity": 2 }],
+        "items": [
+          {
+            "slug": "lumiere-milk-cleanser",
+            "quantity": 2
+          }
+        ],
         "status": "CONFIRMED",
         "placedAt": "2026-07-20T14:05:00.000Z"
       },
@@ -947,8 +1395,14 @@
           "city": "Tokyo"
         },
         "items": [
-          { "slug": "lumiere-glow-serum", "quantity": 1 },
-          { "slug": "lumiere-velvet-lip-balm", "quantity": 1 }
+          {
+            "slug": "lumiere-glow-serum",
+            "quantity": 1
+          },
+          {
+            "slug": "lumiere-velvet-lip-balm",
+            "quantity": 1
+          }
         ],
         "status": "PENDING",
         "note": "Please leave at the front desk.",
@@ -962,7 +1416,12 @@
           "address": "Karlova 12",
           "city": "Prague"
         },
-        "items": [{ "slug": "lumiere-velvet-lip-balm", "quantity": 1 }],
+        "items": [
+          {
+            "slug": "lumiere-velvet-lip-balm",
+            "quantity": 1
+          }
+        ],
         "status": "CANCELLED",
         "placedAt": "2026-07-22T18:15:00.000Z"
       },
@@ -975,8 +1434,14 @@
           "city": "Hà Nội"
         },
         "items": [
-          { "slug": "lumiere-glow-serum", "quantity": 2 },
-          { "slug": "lumiere-milk-cleanser", "quantity": 1 }
+          {
+            "slug": "lumiere-glow-serum",
+            "quantity": 2
+          },
+          {
+            "slug": "lumiere-milk-cleanser",
+            "quantity": 1
+          }
         ],
         "status": "PENDING",
         "placedAt": "2026-07-24T11:50:00.000Z"

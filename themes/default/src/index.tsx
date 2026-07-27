@@ -577,6 +577,12 @@ function HomeTemplate({ ctx, content }: PageTemplateProps<DefaultThemeSettings>)
                     <span>{ctx.t("market.byZSoft")}</span>
                     <span aria-hidden="true">★★★★★</span>
                   </div>
+                  {/* The whole card is the anchor, so a nested <a> is invalid — this
+                      span shows the destination and is styled to read as a default
+                      HTML link (blue, underlined). */}
+                  <span className="zdefault__market-demo">
+                    {card.demo.replace(/^https?:\/\//, "")}
+                  </span>
                 </div>
               </a>
             ))}

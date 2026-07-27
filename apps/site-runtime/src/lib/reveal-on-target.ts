@@ -18,13 +18,22 @@
  *       .flash { display: none }
  *       .flash:target, .flash[data-revealed] { display: block }
  *   - Send the visitor to `…/page#that-id`. On load this script marks the matching
- *     element `data-revealed` and scrolls it into view.
+ *     element `data-revealed`, guarantees it is visible, and scrolls it into view.
  *
  * It is deliberately generic: it knows nothing about contact forms, newsletters or
  * any specific feature. Any theme or block that opts in with the attribute gets
  * reliable post-redirect reveal. And it is bounded — it only ever touches elements
  * the theme itself opted in with `data-reveal-on-target`, so a crafted `#id` can
  * never coax it into unhiding something a theme did not mark as revealable.
+ *
+ * WHY THE INJECTED <style>, NOT JUST THE ATTRIBUTE. This page is hydrated by
+ * Next.js. Setting `data-revealed` on the server-rendered element runs *before*
+ * hydration, and hydration then strips the attribute back off — verified in
+ * Chromium: after a redirect the banner stayed `display:none`. So visibility is
+ * pinned with a `<style>` appended to `<head>`: React reconciles the body, never
+ * the head nodes it did not create, and `!important` beats the theme's
+ * `display:none`. The element also keeps `data-revealed` (re-added if hydration
+ * removes it) so a theme can hang its own styling — a fade-in, say — off it.
  */
 export const REVEAL_ON_TARGET_ATTR = "data-reveal-on-target";
 
@@ -36,7 +45,14 @@ export function revealOnTargetScript(): string {
     if(!id)return;
     var el=document.getElementById(id);
     if(!el||!el.hasAttribute("data-reveal-on-target"))return;
-    el.setAttribute("data-revealed","");
+    if(!el.hasAttribute("data-revealed"))el.setAttribute("data-revealed","");
+    var sid="__reveal-"+id;
+    if(!document.getElementById(sid)){
+      var css="#"+(window.CSS&&CSS.escape?CSS.escape(id):id)+"{display:block !important}";
+      var s=document.createElement("style");
+      s.id=sid;s.textContent=css;
+      document.head.appendChild(s);
+    }
     try{el.scrollIntoView({block:"center"});}catch(e){el.scrollIntoView();}
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",reveal);

@@ -53,6 +53,7 @@ export interface MarketThemeSettings {
   announcement: string;
   shopUrl: string;
   currency: string;
+  contactEmail: string;
   showSearch: boolean;
   footerText: string;
   ogImage: string;
@@ -1300,6 +1301,102 @@ function CtaBlock({ props }: BlockProps<Record<string, unknown>, MarketThemeSett
   );
 }
 
+/**
+ * `market/contact` — a contact card beside a real, no-JS enquiry form.
+ *
+ * The form is a plain HTML POST to `/api/contact/submit`, a same-origin route the
+ * runtime serves for every theme: site-runtime forwards the fields to cms-api,
+ * which emails them to the site's own `contactEmail` (read server-side from these
+ * theme settings — never from the request) with the visitor's address as reply-to,
+ * then redirects back here with a `#contact-sent` or `#contact-error` fragment. The
+ * two banners below are revealed by the CSS `:target` / `[data-revealed]` rules and
+ * the SDK's `data-reveal-on-target` helper — no client JavaScript in the theme.
+ */
+function ContactBlock({ props, ctx }: BlockProps<Record<string, unknown>, MarketThemeSettings>) {
+  const lines = list(props.lines);
+  const needOptions = Array.isArray(props.needOptions)
+    ? props.needOptions.map((opt) => str(opt)).filter(Boolean)
+    : [];
+
+  return (
+    <section className="zmarket__contact" id="contact">
+      <aside className="zmarket__contact-card">
+        {props.eyebrow ? <p className="zmarket__eyebrow">{str(props.eyebrow)}</p> : null}
+        {props.heading ? <h2>{str(props.heading)}</h2> : null}
+        {props.copy ? <p className="zmarket__section-copy">{str(props.copy)}</p> : null}
+        <dl className="zmarket__contact-lines">
+          {lines.map((line, i) => (
+            <div key={i}>
+              <dt>{str(line.label)}</dt>
+              <dd>{str(line.value)}</dd>
+            </div>
+          ))}
+        </dl>
+      </aside>
+
+      <form className="zmarket__contact-form" method="POST" action="/api/contact/submit">
+        <div className="zmarket__contact-field">
+          <label htmlFor="zmarket-name">{ctx.t("contact.name")}</label>
+          <input id="zmarket-name" name="name" required placeholder={ctx.t("contact.namePlaceholder")} />
+        </div>
+        <div className="zmarket__contact-field">
+          <label htmlFor="zmarket-contact-email">{ctx.t("contact.email")}</label>
+          <input
+            id="zmarket-contact-email"
+            name="email"
+            type="email"
+            required
+            placeholder={ctx.t("contact.emailPlaceholder")}
+          />
+        </div>
+        {needOptions.length > 0 ? (
+          <div className="zmarket__contact-field">
+            <label htmlFor="zmarket-need">{ctx.t("contact.need")}</label>
+            <select id="zmarket-need" name="need">
+              {needOptions.map((opt, i) => (
+                <option key={i}>{opt}</option>
+              ))}
+            </select>
+          </div>
+        ) : null}
+        <div className="zmarket__contact-field">
+          <label htmlFor="zmarket-message">{ctx.t("contact.message")}</label>
+          <textarea
+            id="zmarket-message"
+            name="message"
+            rows={5}
+            required
+            placeholder={ctx.t("contact.messagePlaceholder")}
+          />
+        </div>
+        <button className="zmarket__btn zmarket__btn--rose" type="submit">
+          {ctx.t("contact.submit")}
+        </button>
+        {/* Result banners. Hidden by default; the submit route redirects back to
+            `#contact-sent` / `#contact-error`, which the CSS `:target` rule and the
+            `data-reveal-on-target` helper (for the post-redirect case Blink skips)
+            turn on. */}
+        <p
+          id="contact-sent"
+          role="status"
+          data-reveal-on-target
+          className="zmarket__contact-alert zmarket__contact-alert--ok"
+        >
+          {ctx.t("contact.sent")}
+        </p>
+        <p
+          id="contact-error"
+          role="alert"
+          data-reveal-on-target
+          className="zmarket__contact-alert zmarket__contact-alert--error"
+        >
+          {ctx.t("contact.error")}
+        </p>
+      </form>
+    </section>
+  );
+}
+
 // ------------------------------------------------------------------------ theme
 
 const theme = defineTheme<MarketThemeSettings>({
@@ -1320,6 +1417,7 @@ const theme = defineTheme<MarketThemeSettings>({
     "core/image": ImageBlock,
     "core/cta": CtaBlock,
     "core/content-list": ContentListBlock,
+    "market/contact": ContactBlock,
   },
 
   // The theme's own strings, in the theme's own catalogue. English is the base: a

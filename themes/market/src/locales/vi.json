@@ -94,6 +94,18 @@
     "button": "Đăng ký",
     "note": "Hủy đăng ký chỉ với một cú nhấp. Chúng tôi không bao giờ bán địa chỉ của bạn."
   },
+  "contact": {
+    "name": "Họ và tên",
+    "namePlaceholder": "Nhập họ và tên của bạn",
+    "email": "Email",
+    "emailPlaceholder": "ban@example.com",
+    "need": "Bạn cần hỗ trợ về việc gì?",
+    "message": "Nội dung",
+    "messagePlaceholder": "Cho chúng tôi biết chúng tôi có thể giúp gì.",
+    "submit": "Gửi tin nhắn",
+    "sent": "Cảm ơn bạn — tin nhắn của bạn đang được gửi đi. Chúng tôi thường phản hồi trong vòng một ngày làm việc.",
+    "error": "Đã có lỗi xảy ra và tin nhắn chưa được gửi. Vui lòng thử lại, hoặc gửi email trực tiếp cho chúng tôi."
+  },
   "footer": {
     "shop": "Cửa hàng",
     "brand": "Thương hiệu",

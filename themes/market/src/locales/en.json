@@ -94,6 +94,18 @@
     "button": "Subscribe",
     "note": "Unsubscribe in one click. We never sell your address."
   },
+  "contact": {
+    "name": "Your name",
+    "namePlaceholder": "First and last name",
+    "email": "Email",
+    "emailPlaceholder": "you@example.com",
+    "need": "What is this about?",
+    "message": "Message",
+    "messagePlaceholder": "Tell us how we can help.",
+    "submit": "Send message",
+    "sent": "Thank you — your message is on its way. We usually reply within one working day.",
+    "error": "Something went wrong and your message was not sent. Please try again, or email us directly."
+  },
   "footer": {
     "shop": "Shop",
     "brand": "Brand",

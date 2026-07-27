@@ -671,6 +671,24 @@
   margin: 8px 0 6px;
   font-size: 19px;
 }
+/* The visible "link" inside the card: the browser default link look — blue and
+   underlined — asked for explicitly. A brighter blue under dark mode so it keeps
+   the same affordance without washing out. */
+.zdefault__market-demo {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 13px;
+  color: #0000ee;
+  text-decoration: underline;
+}
+html[data-theme="dark"] .zdefault__market-demo {
+  color: #6ea8ff;
+}
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) .zdefault__market-demo {
+    color: #6ea8ff;
+  }
+}
 .zdefault__tag {
   padding: 4px 8px;
   border: 1px solid var(--z-line);
