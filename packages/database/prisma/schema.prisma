@@ -1000,6 +1000,11 @@ model SiteTheme {
   theme   Theme        @relation(fields: [themeId], references: [id], onDelete: Restrict)
   version ThemeVersion @relation(fields: [versionId], references: [id], onDelete: Restrict)
 
+  // `@@unique([siteId, themeId])` does NOT stop a site holding several rows with
+  // status = ACTIVE at once. A partial unique index in
+  // migrations/20260727120000_one_active_theme_per_site enforces "exactly one
+  // ACTIVE theme per site" — the invariant renders rely on (they read the active
+  // theme with an unordered findFirst, so two ACTIVE rows made it non-deterministic).
   @@unique([siteId, themeId])
   @@index([tenantId])
   @@map("site_themes")

@@ -166,13 +166,34 @@ async function main() {
     },
   });
 
+  // The default theme is the site's safe-harbour, not the theme it chose. Keep it
+  // ACTIVE only while nothing else is: the moment an admin activates a real theme
+  // (e.g. z-soft), the default must stand down. The old code forced `status: ACTIVE`
+  // on every re-seed, and because SiteTheme only uniquely constrains
+  // (siteId, themeId) — never (siteId, status) — that left BOTH the default and the
+  // real theme ACTIVE. The render read (`findFirst({ status: ACTIVE })`, unordered)
+  // then served whichever row Postgres happened to return, so the site flipped to
+  // default after each deploy that ran the seed. Deriving the status here also
+  // self-heals a site already poisoned by the old behaviour: the next seed sees the
+  // real theme active and deactivates the stray default row.
+  const nonDefaultActive = await db.siteTheme.findFirst({
+    where: {
+      siteId: site.id,
+      status: "ACTIVE",
+      theme: { key: { not: "vn.zsoft.theme.default" } },
+    },
+  });
+
   await db.siteTheme.upsert({
     where: { siteId_themeId: { siteId: site.id, themeId: theme.id } },
     // `versionId` on update too: without it, a site seeded before the theme was
-    // re-signed stays pinned to whatever version it first got — the row said ACTIVE
-    // and pointed at 0.1.0 while the theme had moved to 1.2.0, and re-running the
-    // seed did not fix it, because "update the status" is not "update the version".
-    update: { status: "ACTIVE", versionId: themeVersion.id },
+    // re-signed stays pinned to whatever version it first got — the row pointed at
+    // 0.1.0 while the theme had moved to 1.2.0, and re-running the seed did not fix
+    // it, because "update the status" is not "update the version".
+    update: {
+      versionId: themeVersion.id,
+      status: nonDefaultActive ? "INACTIVE" : "ACTIVE",
+    },
     create: {
       tenantId: tenant.id,
       siteId: site.id,
