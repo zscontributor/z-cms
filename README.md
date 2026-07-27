@@ -139,7 +139,7 @@ packages/
 ├── scanner          Static analysis of a submitted package, before anyone runs it
 └── cli              zcms — keygen, pack, verify
 
-themes/              default (the reference theme), aurora, z-cms-portal
+themes/              default (the reference theme), z-cms-portal
 plugins/             seo (the reference plugin), zai
 ```
 
