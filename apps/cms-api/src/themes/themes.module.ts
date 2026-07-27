@@ -17,7 +17,7 @@ import { normalizeChangelog } from "@zcmsorg/package";
 import { BlockDocumentSchema } from "@zcmsorg/schemas";
 import { Actor, RequirePermissions, SiteId, SiteScoped } from "../auth/decorators";
 import { t } from "../common/i18n";
-import { contentPath } from "../common/mappers";
+import { childPath, contentPath } from "../common/mappers";
 import { sanitizeBlocks } from "../common/sanitize-blocks";
 import type { RequestActor } from "../common/request-context";
 import { AuditService } from "../audit/audit.module";
@@ -177,6 +177,13 @@ interface ThemeDemoData {
     locale: string;
     slug: string;
     title: string;
+    /**
+     * The slug of this item's parent page, in the SAME locale, for a nested URL
+     * (a product under "products" -> "/products/zpets"). Omitted for a top-level
+     * page. The parent must be another demo item of the same content type; it is
+     * created first regardless of array order.
+     */
+    parent?: string;
     translationGroup?: string;
     excerpt?: string;
     data?: Record<string, unknown>;
@@ -583,56 +590,93 @@ export class ThemesController {
 
     const groups = new Map<string, string>();
     const seededProducts: SeededProduct[] = [];
-    for (const [index, item] of contents.entries()) {
-      const contentTypeId = typeByKey.get(item.contentType);
-      if (!contentTypeId) {
-        throw new BadRequestException(
-          `Theme demo content references unknown content type "${item.contentType}".`,
-        );
-      }
+    // Created rows keyed by "locale:slug", so a child can find its parent's id and
+    // path. A child's URL is the parent's path plus its own slug, so the parent has
+    // to exist first — which is why creation is ordered by dependency, not by array
+    // position.
+    const createdBySlug = new Map<string, { id: string; path: string }>();
 
-      const groupKey = item.translationGroup ?? `${item.contentType}:${item.slug}:${item.locale}`;
-      const translationGroupId = groups.get(groupKey) ?? randomUUID();
-      groups.set(groupKey, translationGroupId);
+    // Sweep the list, creating every item whose parent is already in place, until
+    // none are left. Usually one or two passes; a parent that never resolves (a
+    // typo, or a cycle) leaves items stranded and is reported rather than silently
+    // dropped. Indices are kept so each item still gets ITS own validated blocks.
+    const pending = contents.map((item, index) => ({ item, index }));
+    let madeProgress = true;
+    while (pending.length > 0 && madeProgress) {
+      madeProgress = false;
+      for (let k = pending.length - 1; k >= 0; k--) {
+        const { item, index } = pending[k]!;
+        const contentTypeId = typeByKey.get(item.contentType);
+        if (!contentTypeId) {
+          throw new BadRequestException(
+            `Theme demo content references unknown content type "${item.contentType}".`,
+          );
+        }
 
-      const created = await db().content.create({
-        data: {
-          tenantId: actor.tenantId,
-          siteId,
-          contentTypeId,
-          locale: item.locale,
-          translationGroupId,
-          slug: item.slug,
-          // Demo content is flat (no parent), so the path is derived from the type's
-          // route prefix and the slug — the same rule top-level content follows.
-          path: contentPath(prefixByKey.get(item.contentType) ?? "", item.slug),
-          title: item.title,
-          excerpt: item.excerpt ?? null,
-          data: (item.data ?? {}) as never,
-          // Validated by BlockDocumentSchema and sanitised above, not trusted here.
-          blocks: blocksByIndex[index] as never,
-          seo: (item.seo ?? {}) as never,
-          status: (item.status ?? "PUBLISHED") as never,
-          publishedAt: item.publishedAt ? new Date(item.publishedAt) : now,
-          authorId: actor.userId,
-          demoThemeKey: themeKey,
-        },
-      });
+        const parentKey = item.parent ? `${item.locale}:${item.parent}` : null;
+        const parent = parentKey ? createdBySlug.get(parentKey) : null;
+        // Parent declared but not created yet — leave it for a later sweep.
+        if (parentKey && !parent) continue;
 
-      // Remember priced products so a demo order can be built from real rows and
-      // priced authoritatively, the same as a real checkout would be.
-      const price = readDemoPrice(item.data);
-      if (price !== null) {
-        const image = (item.data as { image?: unknown } | undefined)?.image;
-        seededProducts.push({
-          id: created.id,
-          slug: item.slug,
-          locale: item.locale,
-          title: item.title,
-          price,
-          image: typeof image === "string" && image ? image : null,
+        const groupKey =
+          item.translationGroup ?? `${item.contentType}:${item.slug}:${item.locale}`;
+        const translationGroupId = groups.get(groupKey) ?? randomUUID();
+        groups.set(groupKey, translationGroupId);
+
+        const path = parent
+          ? childPath(parent.path, item.slug)
+          : contentPath(prefixByKey.get(item.contentType) ?? "", item.slug);
+
+        const created = await db().content.create({
+          data: {
+            tenantId: actor.tenantId,
+            siteId,
+            contentTypeId,
+            locale: item.locale,
+            translationGroupId,
+            slug: item.slug,
+            path,
+            ...(parent ? { parentId: parent.id } : {}),
+            title: item.title,
+            excerpt: item.excerpt ?? null,
+            data: (item.data ?? {}) as never,
+            // Validated by BlockDocumentSchema and sanitised above, not trusted here.
+            blocks: blocksByIndex[index] as never,
+            seo: (item.seo ?? {}) as never,
+            status: (item.status ?? "PUBLISHED") as never,
+            publishedAt: item.publishedAt ? new Date(item.publishedAt) : now,
+            authorId: actor.userId,
+            demoThemeKey: themeKey,
+          },
         });
+        createdBySlug.set(`${item.locale}:${item.slug}`, {
+          id: created.id,
+          path: created.path,
+        });
+
+        // Remember priced products so a demo order can be built from real rows and
+        // priced authoritatively, the same as a real checkout would be.
+        const price = readDemoPrice(item.data);
+        if (price !== null) {
+          const image = (item.data as { image?: unknown } | undefined)?.image;
+          seededProducts.push({
+            id: created.id,
+            slug: item.slug,
+            locale: item.locale,
+            title: item.title,
+            price,
+            image: typeof image === "string" && image ? image : null,
+          });
+        }
+
+        pending.splice(k, 1);
+        madeProgress = true;
       }
+    }
+    if (pending.length > 0) {
+      throw new BadRequestException(
+        "Theme demo content has an unresolved or cyclic parent reference.",
+      );
     }
 
     for (const menu of menus) {

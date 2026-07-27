@@ -221,6 +221,18 @@ describe("runSitemap", () => {
     expect(xml).toContain("<lastmod>2026-02-02T00:00:00.000Z</lastmod>");
   });
 
+  it("advertises a nested child page at its full hierarchical path", async () => {
+    // A child page carries its whole chain in `path` ("/product/zpets"); the sitemap
+    // only adds the locale prefix, so the nested URL is what search engines get.
+    tenantDb.content.findMany.mockResolvedValue([
+      contentRow({ slug: "zpets", path: "/product/zpets", locale: "ja" }),
+    ]);
+
+    await runSitemap({ tenantId: "tenant-1", siteId: "site-1" });
+
+    expect(writtenXml()).toContain("<loc>https://example.com/ja/product/zpets</loc>");
+  });
+
   it("cross-links translation siblings with hreflang alternates", async () => {
     // Search engines treat translations as one page only when every member links every
     // other. A single-member group must NOT emit alternates for itself alone.

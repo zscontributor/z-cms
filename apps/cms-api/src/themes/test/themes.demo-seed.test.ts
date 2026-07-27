@@ -408,4 +408,61 @@ describe("ThemesController.seedActiveDemo", () => {
       expect(holder.db.site.update).not.toHaveBeenCalled();
     });
   });
+
+  describe("nested demo pages (parent references)", () => {
+    it("nests a child under its parent and materializes the full path, order-independent", async () => {
+      holder.db = makeDb({
+        contentTypes: [{ key: "page", name: "Page", pluralName: "Pages", routePrefix: "" }],
+        // The child is declared BEFORE its parent on purpose: creation is ordered by
+        // dependency, not by array position.
+        contents: [
+          {
+            contentType: "page",
+            locale: "en",
+            slug: "zpets",
+            title: "Z-Pets",
+            parent: "products",
+            blocks: [],
+          },
+          { contentType: "page", locale: "en", slug: "products", title: "Products", blocks: [] },
+        ],
+        menus: [],
+      });
+      // Echo the written path back so a child can read its parent's materialized path.
+      let n = 0;
+      holder.db.content.create = vi
+        .fn()
+        .mockImplementation((args: any) => Promise.resolve({ id: `c${++n}`, path: args.data.path }));
+
+      await makeController().seedActiveDemo(actor, "s1");
+
+      const bySlug = new Map<string, any>(
+        holder.db.content.create.mock.calls.map((c: any) => [c[0].data.slug, c[0].data]),
+      );
+      // Parent first (it has no dependency), then the child pointing at it.
+      expect(bySlug.get("products").path).toBe("/products");
+      expect(bySlug.get("products").parentId ?? null).toBeNull();
+      expect(bySlug.get("zpets").path).toBe("/products/zpets");
+      expect(bySlug.get("zpets").parentId).toBe("c1");
+    });
+
+    it("rejects a parent reference that never resolves", async () => {
+      holder.db = makeDb({
+        contentTypes: [{ key: "page", name: "Page", pluralName: "Pages", routePrefix: "" }],
+        contents: [
+          {
+            contentType: "page",
+            locale: "en",
+            slug: "zpets",
+            title: "Z-Pets",
+            parent: "does-not-exist",
+            blocks: [],
+          },
+        ],
+        menus: [],
+      });
+
+      await expect(makeController().seedActiveDemo(actor, "s1")).rejects.toThrow();
+    });
+  });
 });
