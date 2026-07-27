@@ -8,6 +8,17 @@
     "subject": "Email thử nghiệm từ Z-CMS",
     "body": "Đây là email thử nghiệm từ Z-CMS. Nếu bạn đọc được nó, cài đặt email của website này đã hoạt động."
   },
+  "contact": {
+    "subject": "Liên hệ mới từ {name}",
+    "intro": "Bạn có một liên hệ mới từ website {site}.",
+    "fields": {
+      "name": "Họ và tên",
+      "company": "Doanh nghiệp",
+      "email": "Email",
+      "need": "Quan tâm đến",
+      "message": "Nội dung"
+    }
+  },
   "server": {
     "legend": "Máy chủ email",
     "hint": "Nhà cung cấp email sẽ cho bạn bốn thông số này. Thường gặp nhất là cổng 587 với STARTTLS; cổng 465 cần bật \"TLS ngầm định\"."

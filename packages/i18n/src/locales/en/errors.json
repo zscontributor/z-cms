@@ -162,5 +162,11 @@
     "quotaExceeded": "This site's plugins have sent their hourly limit of {limit} emails. The next one will be accepted in about {retryAfterSec} seconds.",
     "quotaUnavailable": "The mail quota cannot be checked right now, so the send was refused. Plugin email is deliberately blocked rather than sent uncounted.",
     "cancelledByPlugin": "A plugin's mail.sending filter cancelled the message before it was sent."
+  },
+  "contact": {
+    "hostnameRequired": "The site could not be identified.",
+    "invalidSubmission": "The enquiry is not valid: {detail}",
+    "siteNotFound": "No published site answers on this address.",
+    "noRecipient": "This site has no contact email configured yet. An administrator sets one in the theme's settings."
   }
 }

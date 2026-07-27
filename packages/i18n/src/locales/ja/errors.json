@@ -162,5 +162,11 @@
     "quotaExceeded": "このサイトのプラグインは 1 時間あたり {limit} 通の上限に達しました。次の送信は約 {retryAfterSec} 秒後に受け付けられます。",
     "quotaUnavailable": "現在メール送信の上限を確認できないため、送信を拒否しました。プラグインのメールは、数えずに送るのではなく、意図的に遮断されます。",
     "cancelledByPlugin": "プラグインの mail.sending フィルターが、送信前にこのメッセージを取り消しました。"
+  },
+  "contact": {
+    "hostnameRequired": "サイトを特定できませんでした。",
+    "invalidSubmission": "お問い合わせ内容が不正です: {detail}",
+    "siteNotFound": "このアドレスで公開されているサイトはありません。",
+    "noRecipient": "このサイトには問い合わせ先メールが設定されていません。管理者がテーマ設定で指定します。"
   }
 }

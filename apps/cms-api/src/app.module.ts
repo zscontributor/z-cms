@@ -17,6 +17,7 @@ import { AuthModule } from "./auth/auth.module";
 import { Public } from "./auth/decorators";
 import { LocaleMiddleware } from "./common/i18n";
 import { TenantInterceptor } from "./common/tenant.interceptor";
+import { ContactModule } from "./contact/contact.module";
 import { ContentTypesModule } from "./content-types/content-types.module";
 import { ContentsModule } from "./contents/contents.module";
 import { JobsModule } from "./jobs/jobs.module";
@@ -83,6 +84,9 @@ class HealthController {
     // a send. Nest resolves @Global providers regardless of order, but the reading
     // order is the dependency order and it should stay that way.
     MailModule,
+    // After MailModule: ContactService injects MailService to queue a theme's
+    // contact-form enquiry as CMS mail (pluginKey null, so no plugin quota).
+    ContactModule,
     PluginsModule,
     PackagesModule,
     MarketplaceModule,

@@ -162,5 +162,11 @@
     "quotaExceeded": "Các plugin của website này đã gửi hết hạn mức {limit} email mỗi giờ. Email tiếp theo sẽ được chấp nhận sau khoảng {retryAfterSec} giây.",
     "quotaUnavailable": "Hiện không kiểm tra được hạn mức gửi email nên lượt gửi bị từ chối. Email của plugin bị chặn có chủ đích, thay vì gửi mà không đếm được.",
     "cancelledByPlugin": "Một bộ lọc mail.sending của plugin đã huỷ email này trước khi gửi."
+  },
+  "contact": {
+    "hostnameRequired": "Không xác định được website.",
+    "invalidSubmission": "Thông tin liên hệ không hợp lệ: {detail}",
+    "siteNotFound": "Không có website nào đã xuất bản tại địa chỉ này.",
+    "noRecipient": "Website này chưa cấu hình email nhận liên hệ. Quản trị viên thiết lập trong phần cài đặt của giao diện."
   }
 }
