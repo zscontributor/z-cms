@@ -4,6 +4,11 @@
   "description": "Design a theme by dragging widgets onto the page. No code.",
   "saved": "Saved",
   "unsaved": "Unsaved changes",
+  "version": {
+    "label": "Version",
+    "invalid": "Use a version like 1.2.3.",
+    "saved": "Version updated. Build again to install it."
+  },
   "actions": {
     "save": "Save",
     "saving": "Saving…",

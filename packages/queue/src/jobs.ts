@@ -92,6 +92,16 @@ export interface JobPayloads {
      * with nobody's name on it is the entry nobody can act on.
      */
     actorId: string;
+    /**
+     * The language the person who pressed Build reads in. A build can fail on the
+     * sideload gate ("this version already exists — bump it"), and that refusal
+     * lands verbatim on their draft card. cms-api translates such a message from
+     * the request's `Accept-Language`; the worker's call has no user behind it, so
+     * the locale has to ride here for the failure to speak the author's language
+     * rather than the server default. Optional: an old job enqueued before this
+     * field, or a caller with no locale, falls back to the base locale.
+     */
+    locale?: string;
   };
 
   /**

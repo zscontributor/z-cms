@@ -41,6 +41,7 @@ import {
   type LayoutNode,
 } from "@zcmsorg/schemas";
 import { Actor, RequirePermissions, SiteId, SiteScoped } from "../auth/decorators";
+import { currentLocale } from "../common/i18n";
 import type { RequestActor } from "../common/request-context";
 import { ZodValidationPipe } from "../common/zod-validation.pipe";
 import {
@@ -575,7 +576,16 @@ class ThemeDraftsController {
       await this.queue.discardJob(jobId).catch(() => undefined);
       await this.queue.enqueue(
         "theme.build",
-        { tenantId: actor.tenantId, siteId, draftId: existing.id, actorId: actor.userId },
+        {
+          tenantId: actor.tenantId,
+          siteId,
+          draftId: existing.id,
+          actorId: actor.userId,
+          // Captured now, from THIS request's Accept-Language, so a failure the
+          // worker surfaces later — off in a background job with no request behind
+          // it — is written in the language the author pressed Build in.
+          locale: currentLocale(),
+        },
         { jobId },
       );
     } catch (error) {

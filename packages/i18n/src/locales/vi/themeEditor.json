@@ -4,6 +4,11 @@
   "description": "Thiết kế theme bằng cách kéo widget vào trang. Không cần code.",
   "saved": "Đã lưu",
   "unsaved": "Có thay đổi chưa lưu",
+  "version": {
+    "label": "Phiên bản",
+    "invalid": "Dùng phiên bản dạng 1.2.3.",
+    "saved": "Đã cập nhật phiên bản. Build lại để cài đặt."
+  },
   "actions": {
     "save": "Lưu",
     "saving": "Đang lưu…",

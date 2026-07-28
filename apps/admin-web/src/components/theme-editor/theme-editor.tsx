@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useReducer, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState, useTransition } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -140,6 +140,10 @@ export function ThemeEditor({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [version, setVersion] = useState(draft.version);
+  // The last version the server acknowledged. The `version` state is what the field
+  // shows while someone is typing; this is what we diff against on blur so an
+  // unchanged field is a no-op, and what we revert to when a typed value is rejected.
+  const savedVersionRef = useRef(draft.version);
   const [message, setMessage] = useState<string | null>(null);
   const [saving, startSave] = useTransition();
   // The label of whatever is mid-drag, drawn in a DragOverlay so a floating chip
@@ -350,10 +354,48 @@ export function ThemeEditor({
         setDirty(false);
         // Editing a submitted theme reopens its source module as the next patch
         // version. Reflect that immediately, before the author builds and signs.
+        savedVersionRef.current = result.data.version;
         setVersion(result.data.version);
         setMessage(t("themeEditor.saved"));
       } else {
         setMessage(result.error);
+      }
+    });
+  }
+
+  /**
+   * Persists a hand-typed version.
+   *
+   * A built version is immutable: once `com.acme.theme@0.1.0` is installed, building
+   * the design again with different contents is refused — the only way forward is a
+   * new version number. So the version has to be editable here, and it is its own
+   * tiny save rather than riding on the document save, because bumping it is exactly
+   * the thing an author does when they have NOT touched the drawing.
+   *
+   * Runs on blur (and Enter): an unchanged field is a no-op, a malformed one is
+   * rejected before it reaches the server and the field snaps back to the last value
+   * the server accepted, so the header never shows a version that was not saved.
+   */
+  function commitVersion() {
+    const next = version.trim();
+    if (next === savedVersionRef.current) return;
+    // The same shape parseSemver accepts on the server: three dotted numbers with an
+    // optional -pre / +build tail. Caught here so a typo is a sentence now, not a
+    // build failure later.
+    if (!/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)*$/.test(next)) {
+      setMessage(t("themeEditor.version.invalid"));
+      setVersion(savedVersionRef.current);
+      return;
+    }
+    startSave(async () => {
+      const result = await saveThemeDraftAction(draft.id, { version: next });
+      if (result.ok) {
+        savedVersionRef.current = result.data.version;
+        setVersion(result.data.version);
+        setMessage(t("themeEditor.version.saved"));
+      } else {
+        setMessage(result.error);
+        setVersion(savedVersionRef.current);
       }
     });
   }
@@ -370,7 +412,30 @@ export function ThemeEditor({
         <header className="flex items-center justify-between gap-3 border-b border-neutral-200 px-4 py-2 dark:border-neutral-800">
           <div className="flex items-center gap-3">
             <h1 className="text-sm font-semibold">{draft.name}</h1>
-            <code className="text-xs text-neutral-500">{draft.key} · v{version}</code>
+            <div className="flex items-center gap-1.5 text-xs text-neutral-500">
+              <code>{draft.key}</code>
+              <span aria-hidden>·</span>
+              <label className="flex items-center gap-0.5">
+                <span aria-hidden className="select-none">
+                  v
+                </span>
+                <input
+                  aria-label={t("themeEditor.version.label")}
+                  value={version}
+                  onChange={(event) => setVersion(event.target.value)}
+                  onBlur={commitVersion}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      event.currentTarget.blur();
+                    }
+                  }}
+                  disabled={disabled}
+                  size={8}
+                  className="w-16 rounded border border-neutral-200 bg-transparent px-1 py-0.5 font-mono text-xs text-neutral-700 focus:border-brand-500 focus:outline-none disabled:opacity-60 dark:border-neutral-700 dark:text-neutral-300"
+                />
+              </label>
+            </div>
           </div>
 
           <div className="flex items-center gap-1" role="tablist" aria-label={t("themeEditor.templates.label")}>

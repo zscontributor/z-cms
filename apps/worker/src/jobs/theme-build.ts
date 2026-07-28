@@ -104,7 +104,7 @@ async function stagePayload(
 /** Hands the built package to cms-api's sideload gate. Mirrors mail-send's callback. */
 async function install(
   file: Buffer,
-  by: { tenantId: string; actorId: string },
+  by: { tenantId: string; actorId: string; locale?: string },
 ): Promise<{ key: string; version: string; reviewStatus: string }> {
   const apiUrl = (process.env.CMS_API_URL ?? "http://localhost:4100").replace(/\/+$/, "");
 
@@ -116,7 +116,14 @@ async function install(
 
   const res = await fetch(`${apiUrl}/api/v1/sideload/internal/built`, {
     method: "POST",
-    headers: { "x-internal-token": process.env.CMS_INTERNAL_TOKEN ?? "" },
+    headers: {
+      "x-internal-token": process.env.CMS_INTERNAL_TOKEN ?? "",
+      // Speak the author's language. cms-api's LocaleMiddleware reads Accept-Language
+      // to translate any refusal it raises (versionImmutable, keyTaken, a scan
+      // rejection); this call has no user behind it, so without this header the
+      // message the author reads on their card would fall back to the server default.
+      ...(by.locale ? { "accept-language": by.locale } : {}),
+    },
     body: form,
     // The far side scans the package, which unpacks it — generous, but bounded.
     signal: AbortSignal.timeout(60_000),
@@ -124,11 +131,40 @@ async function install(
 
   const text = await res.text();
   if (!res.ok) {
-    // The API's message is the useful one ("id impersonates a built-in", "scan
-    // rejected"), and it is what the author needs to read on their draft.
-    throw new Error(`cms-api refused the built theme (${res.status}): ${text.slice(0, 500)}`);
+    // What lands here ends up verbatim on the draft card, under a red badge the
+    // author reads to find out what to do next — so it must be the SENTENCE the API
+    // wrote ("…already exists with different contents. Bump the version."), not the
+    // machine envelope around it. Nest answers a 4xx with `{ message, error,
+    // statusCode }`; unwrap to `message` and drop the "cms-api refused (400): {…}"
+    // wrapper that turned a piece of guidance into an error code. Only when the body
+    // is not that shape (a proxy's HTML 502, say) do we fall back to the raw text.
+    throw new Error(apiErrorMessage(text));
   }
   return JSON.parse(text);
+}
+
+/**
+ * Pulls the human sentence out of cms-api's error body.
+ *
+ * `message` is either a string (most errors) or an array of strings (a validation
+ * failure lists each one). Anything else — a non-JSON body, a JSON object without a
+ * message — is not something we can improve on, so it travels as-is, trimmed to a
+ * length a card can hold.
+ */
+function apiErrorMessage(body: string): string {
+  try {
+    const parsed = JSON.parse(body) as { message?: unknown };
+    if (typeof parsed.message === "string" && parsed.message.trim()) {
+      return parsed.message.trim();
+    }
+    if (Array.isArray(parsed.message)) {
+      const joined = parsed.message.filter((m): m is string => typeof m === "string").join(" ");
+      if (joined.trim()) return joined.trim();
+    }
+  } catch {
+    // Not JSON — keep the raw text below.
+  }
+  return body.slice(0, 500);
 }
 
 export async function runThemeBuild(data: JobPayloads["theme.build"]): Promise<unknown> {
@@ -174,7 +210,11 @@ export async function runThemeBuild(data: JobPayloads["theme.build"]): Promise<u
       operatorPrivateKey: priv,
     });
 
-    const result = await install(file, { tenantId: data.tenantId, actorId: data.actorId });
+    const result = await install(file, {
+      tenantId: data.tenantId,
+      actorId: data.actorId,
+      locale: data.locale,
+    });
 
     await db.themeDraft.update({
       where: { id: draft.id },

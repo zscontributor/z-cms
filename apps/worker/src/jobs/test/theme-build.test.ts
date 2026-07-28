@@ -114,6 +114,18 @@ describe("runThemeBuild", () => {
     expect((init as RequestInit).headers).toMatchObject({ "x-internal-token": "tok" });
   });
 
+  it("tells cms-api the author's language, so a refusal is translated for them", async () => {
+    await runThemeBuild({ ...job, locale: "vi" });
+    const init = fetchMock.mock.calls[0]![1] as RequestInit;
+    expect(init.headers).toMatchObject({ "accept-language": "vi" });
+  });
+
+  it("sends no Accept-Language when the job carries no locale", async () => {
+    await runThemeBuild(job);
+    const headers = (fetchMock.mock.calls[0]![1] as RequestInit).headers as Record<string, string>;
+    expect(headers["accept-language"]).toBeUndefined();
+  });
+
   it("signs with the operator key as both publisher and operator", async () => {
     await runThemeBuild(job);
     // A locally built theme speaks only for itself — the same call packFromZip
@@ -154,6 +166,42 @@ describe("runThemeBuild", () => {
         }),
       }),
     );
+  });
+
+  it("shows cms-api's sentence, not its JSON error envelope, on the draft", async () => {
+    // The real API answers a 4xx with a Nest problem body. The author must see the
+    // guidance inside it, not `(400): {"message":…,"statusCode":400}`.
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 400,
+      text: async () =>
+        JSON.stringify({
+          message: "com.hcb.site@0.1.0 already exists with different contents. Bump the version.",
+          error: "Bad Request",
+          statusCode: 400,
+        }),
+    });
+
+    await expect(runThemeBuild(job)).rejects.toThrow(/Bump the version/);
+    const update = dbMock.themeDraft.update.mock.calls.at(-1)?.[0];
+    const buildError = update?.data?.buildError as string;
+    expect(buildError).toBe(
+      "com.hcb.site@0.1.0 already exists with different contents. Bump the version.",
+    );
+    // None of the machine envelope leaks through.
+    expect(buildError).not.toMatch(/statusCode|Bad Request|cms-api refused|\{/);
+  });
+
+  it("joins a validation error's array of messages into one sentence", async () => {
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 400,
+      text: async () => JSON.stringify({ message: ["name is required", "version is invalid"] }),
+    });
+
+    await expect(runThemeBuild(job)).rejects.toThrow();
+    const buildError = dbMock.themeDraft.update.mock.calls.at(-1)?.[0]?.data?.buildError as string;
+    expect(buildError).toBe("name is required version is invalid");
   });
 
   it("puts the reason on the row when the build itself fails", async () => {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import type { ThemeDraftSummaryDto } from "@/lib/api";
 import {
   buildThemeDraftAction,
@@ -38,6 +38,22 @@ export function ThemeDraftsPanel({
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+
+  // A build runs in the background: cms-api sets BUILDING, the worker later writes
+  // BUILT or FAILED. The card the operator is looking at is a server-rendered
+  // snapshot — nothing pushes the new status to it, so once a draft says BUILDING
+  // it says so forever until the page is reloaded by hand. That reads as a build
+  // wedged on "Building" when the build has in fact already finished.
+  //
+  // So while ANY draft is mid-build, re-fetch on a timer. router.refresh() re-runs
+  // the server component and swaps in the fresh rows; the moment none are BUILDING
+  // the effect tears the interval down, so a settled list costs nothing.
+  const anyBuilding = drafts.some((d) => d.status === "BUILDING");
+  useEffect(() => {
+    if (!anyBuilding) return;
+    const id = setInterval(() => router.refresh(), 3000);
+    return () => clearInterval(id);
+  }, [anyBuilding, router]);
 
   function create(formData: FormData) {
     const name = String(formData.get("name") ?? "").trim();
@@ -99,13 +115,21 @@ export function ThemeDraftsPanel({
           <Field label={t("appearance.drafts.key")} hint={t("appearance.drafts.keyHint")}>
             <Input name="key" required placeholder="com.acme.theme.shop" />
           </Field>
-          <div className="flex items-end gap-2">
-            <Button type="submit" size="sm" disabled={pending}>
-              {pending ? t("themeEditor.actions.saving") : t("themeEditor.actions.create")}
-            </Button>
-            <Button type="button" variant="ghost" size="sm" onClick={() => setCreating(false)}>
-              {t("common.cancel")}
-            </Button>
+          <div className="flex flex-col">
+            {/* Invisible label so the buttons land on the input line. Without it,
+                items-end drops them to the bottom of the grid row — which the key
+                field's hint text stretches well below the inputs. */}
+            <span aria-hidden className="mb-1.5 hidden text-xs font-medium sm:block">
+              &nbsp;
+            </span>
+            <div className="flex items-end gap-2 sm:min-h-9">
+              <Button type="submit" size="sm" disabled={pending}>
+                {pending ? t("themeEditor.actions.saving") : t("themeEditor.actions.create")}
+              </Button>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setCreating(false)}>
+                {t("common.cancel")}
+              </Button>
+            </div>
           </div>
         </form>
       ) : null}
