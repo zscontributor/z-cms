@@ -6,6 +6,7 @@ import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
 import { Placeholder } from "@tiptap/extensions";
 import Link from "@tiptap/extension-link";
+import TextAlign from "@tiptap/extension-text-align";
 import { ResizableImage, type ImageAlign } from "./image-extension";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -65,6 +66,14 @@ export function RichTextEditor({
         autolink: true,
         defaultProtocol: "https",
         protocols: ["http", "https", "mailto", "tel"],
+      }),
+      // Alignment lives as `style="text-align:…"` on the block, which is exactly
+      // the one style declaration cms-api's sanitiser allows through (see
+      // sanitize-blocks.ts). Restricted to headings and paragraphs so it never
+      // lands on a list item or table cell where the markup would be odd.
+      TextAlign.configure({
+        types: ["heading", "paragraph"],
+        alignments: ["left", "center", "right", "justify"],
       }),
       ResizableImage.configure({ inline: false }),
       Placeholder.configure({
@@ -241,6 +250,10 @@ function Toolbar({
       orderedList: instance?.isActive("orderedList") ?? false,
       blockquote: instance?.isActive("blockquote") ?? false,
       codeBlock: instance?.isActive("codeBlock") ?? false,
+      alignLeft: instance?.isActive({ textAlign: "left" }) ?? false,
+      alignCenter: instance?.isActive({ textAlign: "center" }) ?? false,
+      alignRight: instance?.isActive({ textAlign: "right" }) ?? false,
+      alignJustify: instance?.isActive({ textAlign: "justify" }) ?? false,
       link: instance?.isActive("link") ?? false,
       canUndo: instance?.can().undo() ?? false,
       canRedo: instance?.can().redo() ?? false,
@@ -333,6 +346,37 @@ function Toolbar({
         label={t("content.richtext.horizontalRule")}
         disabled={off}
         onClick={() => editor?.chain().focus().setHorizontalRule().run()}
+      />
+
+      <Separator />
+
+      <ToolButton
+        icon="alignLeft"
+        label={t("content.richtext.alignLeft")}
+        active={state?.alignLeft}
+        disabled={off}
+        onClick={() => editor?.chain().focus().setTextAlign("left").run()}
+      />
+      <ToolButton
+        icon="alignCenter"
+        label={t("content.richtext.alignCenter")}
+        active={state?.alignCenter}
+        disabled={off}
+        onClick={() => editor?.chain().focus().setTextAlign("center").run()}
+      />
+      <ToolButton
+        icon="alignRight"
+        label={t("content.richtext.alignRight")}
+        active={state?.alignRight}
+        disabled={off}
+        onClick={() => editor?.chain().focus().setTextAlign("right").run()}
+      />
+      <ToolButton
+        icon="alignJustify"
+        label={t("content.richtext.alignJustify")}
+        active={state?.alignJustify}
+        disabled={off}
+        onClick={() => editor?.chain().focus().setTextAlign("justify").run()}
       />
 
       <Separator />

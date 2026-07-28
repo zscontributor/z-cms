@@ -7,6 +7,8 @@
   "emptyDescription": "The catalogue is empty, or it could not be reached.",
   "installedHeading": "Installed on this site",
   "catalogHeading": "Catalogue",
+  "searchPlaceholder": "Search plugins…",
+  "noMatch": "No plugins match your search.",
   "card": {
     "core": "Core",
     "tier": {

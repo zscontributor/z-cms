@@ -1,14 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { installFromMarketplaceAction } from "@/app/actions/marketplace";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/shell/icon";
 import { MediaGallery } from "@/components/ui/media-gallery";
+import { SearchField } from "@/components/ui/search-field";
 import { cn } from "@/lib/cn";
 import { useT } from "@/lib/i18n-provider";
+
+/** Below this the shelf is short enough to scan; a search box would only clutter it. */
+const SEARCH_THRESHOLD = 4;
 
 /**
  * One thing installed on the CURRENT site, normalised across the two very
@@ -51,6 +55,19 @@ export function InstalledGrid({
   canInstallPlugin: boolean;
 }) {
   const t = useT();
+  const [query, setQuery] = useState("");
+  const needle = query.trim().toLowerCase();
+
+  const filtered = useMemo(
+    () =>
+      items.filter(
+        (item) =>
+          !needle ||
+          item.name.toLowerCase().includes(needle) ||
+          item.key.toLowerCase().includes(needle),
+      ),
+    [items, needle],
+  );
 
   if (items.length === 0) {
     return (
@@ -61,14 +78,33 @@ export function InstalledGrid({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-      {items.map((item) => (
-        <InstalledCard
-          key={`${item.kind}:${item.key}`}
-          item={item}
-          canInstall={item.kind === "theme" ? canInstallTheme : canInstallPlugin}
-        />
-      ))}
+    <div className="flex flex-col gap-4">
+      {items.length > SEARCH_THRESHOLD ? (
+        <div className="flex justify-end">
+          <SearchField
+            value={query}
+            onChange={setQuery}
+            placeholder={t("admin.marketplace.browse.searchPlaceholder")}
+            className="w-full sm:max-w-xs"
+          />
+        </div>
+      ) : null}
+
+      {filtered.length === 0 ? (
+        <p className="z-card p-8 text-center text-sm z-muted">
+          {t("admin.marketplace.browse.noMatch")}
+        </p>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {filtered.map((item) => (
+            <InstalledCard
+              key={`${item.kind}:${item.key}`}
+              item={item}
+              canInstall={item.kind === "theme" ? canInstallTheme : canInstallPlugin}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -21,7 +21,9 @@ import { CSS } from "@dnd-kit/utilities";
 import type { MenuDto, MenuItemDto } from "@zcmsorg/schemas";
 import { saveMenuAction, type MenuItemInput } from "@/app/actions/menu";
 import { Button } from "@/components/ui/button";
+import { Drawer } from "@/components/ui/drawer";
 import { Field, Input, Select } from "@/components/ui/field";
+import { Icon } from "@/components/shell/icon";
 import { useT } from "@/lib/i18n-provider";
 
 export interface PageOption {
@@ -75,18 +77,26 @@ export function MenusManager({
 }) {
   const t = useT();
   const [extra, setExtra] = useState<MenuDto[]>([]);
+  const [creating, setCreating] = useState(false);
   const [newKey, setNewKey] = useState("");
   const [newName, setNewName] = useState("");
 
   const existingKeys = new Set(menus.map((m) => m.key));
   const all = [...menus, ...extra.filter((m) => !existingKeys.has(m.key))];
 
-  const addMenu = () => {
-    const key = newKey.trim().toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "");
-    if (!key || existingKeys.has(key) || extra.some((m) => m.key === key)) return;
-    setExtra((prev) => [...prev, { key, name: newName.trim() || key, items: [] }]);
+  const normalizedKey = newKey.trim().toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "");
+  const keyTaken = !!normalizedKey && (existingKeys.has(normalizedKey) || extra.some((m) => m.key === normalizedKey));
+
+  const closeCreate = () => {
+    setCreating(false);
     setNewKey("");
     setNewName("");
+  };
+
+  const addMenu = () => {
+    if (!normalizedKey || keyTaken) return;
+    setExtra((prev) => [...prev, { key: normalizedKey, name: newName.trim() || normalizedKey, items: [] }]);
+    closeCreate();
   };
 
   return (
@@ -100,6 +110,15 @@ export function MenusManager({
         ))}
       </datalist>
 
+      {canManage ? (
+        <div className="flex justify-end">
+          <Button variant="primary" onClick={() => setCreating(true)}>
+            <Icon name="plus" className="h-4 w-4" />
+            {t("admin.menus.create")}
+          </Button>
+        </div>
+      ) : null}
+
       {all.length === 0 ? (
         <p className="rounded-md border border-[var(--border)] bg-[var(--surface-raised)] p-4 text-sm z-muted">
           {t("admin.menus.empty")}
@@ -109,15 +128,38 @@ export function MenusManager({
       )}
 
       {canManage ? (
-        <div className="rounded-lg border border-dashed border-[var(--border-strong)] bg-[var(--surface-raised)] p-4">
-          <p className="mb-2 text-sm font-medium">{t("admin.menus.create")}</p>
-          <div className="flex flex-wrap items-start gap-3">
-            <Field label={t("admin.menus.newLocation")} hint={t("admin.menus.newLocationHint")}>
+        <Drawer
+          open={creating}
+          onClose={closeCreate}
+          title={t("admin.menus.create")}
+          description={t("admin.menus.createHint")}
+          footer={
+            <>
+              <Button variant="secondary" onClick={closeCreate}>
+                {t("common.cancel")}
+              </Button>
+              <Button variant="primary" onClick={addMenu} disabled={!normalizedKey || keyTaken}>
+                {t("admin.menus.create")}
+              </Button>
+            </>
+          }
+        >
+          <form
+            className="flex flex-col gap-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              addMenu();
+            }}
+          >
+            <Field
+              label={t("admin.menus.newLocation")}
+              hint={keyTaken ? t("admin.menus.keyTaken") : t("admin.menus.newLocationHint")}
+            >
               <Input
+                autoFocus
                 value={newKey}
                 onChange={(e) => setNewKey(e.target.value)}
                 placeholder="primary"
-                className="w-40"
               />
             </Field>
             <Field label={t("admin.menus.name")}>
@@ -125,19 +167,12 @@ export function MenusManager({
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="Primary menu"
-                className="w-56"
               />
             </Field>
-            <div className="flex flex-col">
-              <span aria-hidden className="mb-1.5 block text-xs">
-                &nbsp;
-              </span>
-              <Button variant="secondary" onClick={addMenu} disabled={!newKey.trim()}>
-                {t("admin.menus.create")}
-              </Button>
-            </div>
-          </div>
-        </div>
+            {/* Lets Enter submit the form even though the visible submit lives in the footer. */}
+            <button type="submit" className="hidden" aria-hidden tabIndex={-1} />
+          </form>
+        </Drawer>
       ) : null}
     </div>
   );

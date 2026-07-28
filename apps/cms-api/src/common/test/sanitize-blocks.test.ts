@@ -109,12 +109,51 @@ describe("sanitizeRichText", () => {
   });
 
   describe("style and class", () => {
-    it("drops a style attribute", () => {
+    it("drops a dangerous style attribute", () => {
       expect(sanitizeRichText('<p style="position:fixed;inset:0">x</p>')).toBe("<p>x</p>");
     });
 
     it("drops a class attribute", () => {
       expect(sanitizeRichText('<p class="theme-header">x</p>')).toBe("<p>x</p>");
+    });
+
+    it("keeps text-align: center on a paragraph (the editor's alignment)", () => {
+      const out = sanitizeRichText('<p style="text-align: center">x</p>');
+      expect(out).toContain("text-align:center");
+      expect(out).toContain(">x</p>");
+    });
+
+    it("keeps every legal alignment keyword", () => {
+      for (const align of ["left", "right", "center", "justify"]) {
+        const out = sanitizeRichText(`<h2 style="text-align: ${align}">x</h2>`);
+        expect(out).toContain(`text-align:${align}`);
+      }
+    });
+
+    it("strips other declarations but keeps the text-align beside them", () => {
+      // The attack — text-align as a Trojan horse for position/background — is
+      // exactly what allowedStyles is pinned to prevent.
+      const out = sanitizeRichText(
+        '<p style="text-align:center;position:fixed;background:url(//evil.test)">x</p>',
+      );
+      expect(out).toContain("text-align:center");
+      expect(out).not.toContain("position");
+      expect(out).not.toContain("background");
+      expect(out).not.toContain("evil.test");
+    });
+
+    it("drops an out-of-allowlist alignment value", () => {
+      // `text-align: end` is legitimate CSS but not one the editor emits; the
+      // value allowlist rejects it rather than widening the surface.
+      const out = sanitizeRichText('<p style="text-align: end">x</p>');
+      expect(out).toBe("<p>x</p>");
+    });
+
+    it("does not let text-align onto a list item", () => {
+      // Only headings and paragraphs carry the style attribute; a crafted <li>
+      // style is dropped whole.
+      const out = sanitizeRichText('<ul><li style="text-align:center">x</li></ul>');
+      expect(out).not.toContain("text-align");
     });
   });
 

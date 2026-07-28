@@ -29,6 +29,7 @@
   "siteSwitcher": {
     "label": "サイト",
     "empty": "サイトがありません",
+    "openSite": "サイトを開く",
     "notFound": "そのサイトは存在しないか、アクセスできません。"
   },
   "themeToggle": {
@@ -538,6 +539,8 @@
     "create": "メニューを追加",
     "newLocation": "ロケーションキー",
     "newLocationHint": "例: primary または footer",
+    "createHint": "メニューのロケーションキーと名前を入力してください。リンクは作成後に追加できます。",
+    "keyTaken": "そのロケーションキーはすでに使用されています。",
     "itemsEmpty": "項目がありません。追加してメニューを作成してください。",
     "fromTheme": "テーマのデモから — 保存すると自分のメニューになります。"
   }

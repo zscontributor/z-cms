@@ -2,6 +2,8 @@
   "metaTitle": "Appearance",
   "title": "Appearance",
   "description": "Activate a theme and adjust the settings it declares.",
+  "searchPlaceholder": "Search themes…",
+  "noMatch": "No themes match your search.",
   "denied": "You do not have permission to view themes.",
   "drafts": {
     "heading": "Your designs",

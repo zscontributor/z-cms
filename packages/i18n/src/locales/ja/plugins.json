@@ -7,6 +7,8 @@
   "emptyDescription": "カタログが空であるか、カタログに到達できませんでした。",
   "installedHeading": "このサイトにインストールされています",
   "catalogHeading": "カタログ",
+  "searchPlaceholder": "プラグインを検索…",
+  "noMatch": "検索に一致するプラグインはありません。",
   "card": {
     "core": "コア",
     "tier": {

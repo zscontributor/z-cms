@@ -11,13 +11,9 @@ import {
   type ThemeDraftSummaryDto,
 } from "@/lib/api";
 import { PageHeader } from "@/components/page-header";
-import { EmptyState } from "@/components/ui/table";
-import { MediaGallery } from "@/components/ui/media-gallery";
 import { getT } from "@/lib/locale";
-import { SideloadUpload } from "@/components/sideload-controls";
-import { ActivateButton } from "./activate-button";
 import { ThemeDraftsPanel } from "./theme-drafts-panel";
-import { ThemeGrid } from "./theme-grid";
+import { ThemeBrowser } from "./theme-browser";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getT();
@@ -73,79 +69,17 @@ export default async function AppearancePage() {
         <ThemeDraftsPanel drafts={drafts} canAuthor canBuild={canSideload} />
       ) : null}
 
-      {canSideload || sideloaded.length > 0 ? (
-        <section className="mb-5">
-          <div className="mb-2">
-            <div>
-              <h2 className="text-sm font-semibold">{t("appearance.sideload.heading")}</h2>
-              <p className="mt-0.5 text-[11px] z-muted">{t("appearance.sideload.hint")}</p>
-            </div>
-            {canSideload ? (
-              <div className="mt-2 flex justify-start">
-                <SideloadUpload kind="theme" />
-              </div>
-            ) : null}
-          </div>
-
-          {sideloaded.length > 0 ? (
-            <ThemeGrid
-              themes={sideloaded}
-              activeKey={activeKey}
-              canActivate={canActivate}
-              canConfigure={canConfigure}
-              canSideload={canSideload}
-              canEdit={canAuthor}
-              draftIdByKey={draftIdByKey}
-              sideloaded
-            />
-          ) : null}
-        </section>
-      ) : null}
-
-      {installed.length === 0 ? (
-        <div className="z-card">
-          <EmptyState
-            title={t("appearance.emptyTitle")}
-            description={t("appearance.emptyDescription")}
-          />
-        </div>
-      ) : (
-        <ThemeGrid
-          themes={verified}
-          activeKey={activeKey}
-          canActivate={canActivate}
-          canConfigure={canConfigure}
-          canEdit={canAuthor}
-          draftIdByKey={draftIdByKey}
-        />
-      )}
-
-      {available.length > 0 ? (
-        <section className="mt-5">
-          <h2 className="mb-2 text-sm font-semibold">{t("appearance.available")}</h2>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {available.map((entry) => (
-              <article key={entry.key} className="z-card p-4">
-                <MediaGallery
-                  screenshots={entry.screenshots}
-                  name={entry.name}
-                  className="mb-3"
-                />
-                <h3 className="text-sm font-semibold">{entry.name}</h3>
-                <p className="mt-0.5 text-[11px] z-muted">
-                  {entry.author} · v{entry.versions[entry.versions.length - 1]?.version ?? "—"}
-                </p>
-                <p className="mt-2 line-clamp-3 text-xs z-muted">{entry.description}</p>
-                {canActivate ? (
-                  <div className="mt-3">
-                    <ActivateButton themeKey={entry.key} name={entry.name} />
-                  </div>
-                ) : null}
-              </article>
-            ))}
-          </div>
-        </section>
-      ) : null}
+      <ThemeBrowser
+        sideloaded={sideloaded}
+        verified={verified}
+        available={available}
+        activeKey={activeKey}
+        draftIdByKey={draftIdByKey}
+        canActivate={canActivate}
+        canConfigure={canConfigure}
+        canSideload={canSideload}
+        canAuthor={canAuthor}
+      />
     </>
   );
 }

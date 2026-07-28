@@ -29,6 +29,7 @@
   "siteSwitcher": {
     "label": "Site",
     "empty": "No sites",
+    "openSite": "Open site",
     "notFound": "That site does not exist, or you do not have access to it."
   },
   "themeToggle": {
@@ -547,6 +548,8 @@
     "create": "Add menu",
     "newLocation": "Location key",
     "newLocationHint": "e.g. primary or footer",
+    "createHint": "Give the menu a location key and a name. Add its links after it's created.",
+    "keyTaken": "That location key is already in use.",
     "itemsEmpty": "No items yet. Add one to build the menu.",
     "fromTheme": "From the theme's demo — saving makes it your own."
   }

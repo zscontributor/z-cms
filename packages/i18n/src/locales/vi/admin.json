@@ -29,6 +29,7 @@
   "siteSwitcher": {
     "label": "Site",
     "empty": "Không có site nào",
+    "openSite": "Mở site",
     "notFound": "Site không tồn tại hoặc bạn không có quyền truy cập."
   },
   "themeToggle": {
@@ -547,6 +548,8 @@
     "create": "Thêm menu",
     "newLocation": "Khóa vị trí",
     "newLocationHint": "ví dụ primary hoặc footer",
+    "createHint": "Nhập khóa vị trí và tên cho menu. Bạn có thể thêm liên kết sau khi tạo.",
+    "keyTaken": "Khóa vị trí này đã được sử dụng.",
     "itemsEmpty": "Chưa có mục nào. Thêm mục để tạo menu.",
     "fromTheme": "Từ menu demo của theme — lưu lại để biến thành menu của bạn."
   }

@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ContentStatusSchema } from "@zcmsorg/schemas";
 import { Input, Select } from "@/components/ui/field";
+import { Flag } from "@/components/shell/flag";
 import { cn } from "@/lib/cn";
 import { statusKey } from "@/lib/format";
 import { useT } from "@/lib/i18n-provider";
@@ -86,12 +87,13 @@ export function ListToolbar({
                 role="tab"
                 aria-selected={active}
                 className={cn(
-                  "inline-flex h-6 items-center rounded px-2 text-xs font-medium transition-colors",
+                  "inline-flex h-6 items-center gap-1.5 rounded px-2 text-xs font-medium transition-colors",
                   active
                     ? "bg-[var(--surface-raised)] text-[var(--foreground)] shadow-sm"
                     : "z-muted hover:text-[var(--foreground)]",
                 )}
               >
+                <Flag locale={value} />
                 {languageNames.of(value) ?? value}
               </Link>
             );

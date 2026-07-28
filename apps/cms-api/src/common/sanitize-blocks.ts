@@ -51,15 +51,39 @@ const ALLOWED_TAGS = [
  * Attributes, per tag. Everything not listed is dropped — which is what removes
  * every `on*` handler without needing to enumerate them.
  *
- * No `style`: CSS alone can exfiltrate (an attribute selector plus a background
- * `url()` leaks a value character by character) and can overlay the page with an
- * invisible full-viewport element that hijacks clicks. No `class` either: a class
- * is meaningless without the theme's stylesheet, and letting authored HTML claim
- * a theme's class names lets it impersonate the site's own chrome.
+ * No arbitrary `style`: CSS alone can exfiltrate (an attribute selector plus a
+ * background `url()` leaks a value character by character) and can overlay the
+ * page with an invisible full-viewport element that hijacks clicks. No `class`
+ * either: a class is meaningless without the theme's stylesheet, and letting
+ * authored HTML claim a theme's class names lets it impersonate the site's own
+ * chrome.
+ *
+ * The one exception is `style`, allowed on `style`-carrying tags but pinned by
+ * `allowedStyles` (below) to a single declaration: `text-align` with one of four
+ * literal keywords. That is how the editor stores paragraph/heading alignment,
+ * and it carries none of the risk above — no `url()`, no positioning, no
+ * selectors, just a keyword. Any other property or value in a `style` attribute
+ * is still dropped.
  */
 const ALLOWED_ATTRIBUTES: sanitizeHtml.IOptions["allowedAttributes"] = {
   a: ["href", "title", "target", "rel"],
   img: ["src", "alt", "title", "width", "height", "loading"],
+  p: ["style"],
+  h1: ["style"], h2: ["style"], h3: ["style"],
+  h4: ["style"], h5: ["style"], h6: ["style"],
+};
+
+/**
+ * The ONLY styling authored HTML may carry: text alignment, and nothing else.
+ * `sanitize-html` enforces both the property name and the value against these
+ * patterns, so a `style` attribute smuggling `position`, `background`, `url()`
+ * or any other declaration is stripped down to (at most) the `text-align` it
+ * legitimately holds.
+ */
+const ALLOWED_STYLES: sanitizeHtml.IOptions["allowedStyles"] = {
+  "*": {
+    "text-align": [/^(left|right|center|justify)$/],
+  },
 };
 
 /**
@@ -76,6 +100,7 @@ const ALLOWED_SCHEMES = ["http", "https", "mailto", "tel"];
 const OPTIONS: sanitizeHtml.IOptions = {
   allowedTags: ALLOWED_TAGS,
   allowedAttributes: ALLOWED_ATTRIBUTES,
+  allowedStyles: ALLOWED_STYLES,
   allowedSchemes: ALLOWED_SCHEMES,
   // A relative href ("/about") carries no scheme and is how internal links are written.
   allowProtocolRelative: true,

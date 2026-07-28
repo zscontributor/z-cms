@@ -2,6 +2,8 @@
   "metaTitle": "外観",
   "title": "外観",
   "description": "テーマをアクティブ化し、テーマが宣言する設定を調整します。",
+  "searchPlaceholder": "テーマを検索…",
+  "noMatch": "検索に一致するテーマはありません。",
   "denied": "テーマを表示する権限がありません。",
   "drafts": {
     "heading": "あなたのデザイン",

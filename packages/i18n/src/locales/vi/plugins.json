@@ -7,6 +7,8 @@
   "emptyDescription": "Kho plugin đang trống hoặc không kết nối được tới API.",
   "installedHeading": "Đã cài trên site này",
   "catalogHeading": "Kho plugin",
+  "searchPlaceholder": "Tìm plugin…",
+  "noMatch": "Không có plugin nào khớp với tìm kiếm.",
   "card": {
     "core": "Lõi",
     "tier": {

@@ -49,6 +49,7 @@ import {
   Storefront,
   Sun,
   TextAlignCenter,
+  TextAlignJustify,
   TextAlignLeft,
   TextAlignRight,
   TextB,
@@ -166,6 +167,7 @@ const REGISTRY: Record<string, PhosphorIcon> = {
   alignLeft: TextAlignLeft,
   alignCenter: TextAlignCenter,
   alignRight: TextAlignRight,
+  alignJustify: TextAlignJustify,
 };
 
 export type IconName = keyof typeof REGISTRY;

@@ -39,13 +39,13 @@ export async function TranslationsPanel({
   const languageName = new Intl.DisplayNames(["en"], { type: "language" });
 
   return (
-    <section className="z-card p-4">
+    <section className="z-card mb-5 p-4">
       <h2 className="flex items-center gap-1.5 pb-3 text-[10px] font-semibold uppercase tracking-wider z-muted">
         <Icon name="language" size={16} />
         {t("content.editor.translations.title")}
       </h2>
 
-      <ul className="flex flex-col gap-1">
+      <ul className="flex flex-wrap gap-2">
         {translations.map(({ locale, content }) => {
           const isCurrent = locale === currentLocale;
 
@@ -113,16 +113,18 @@ function TranslationRow({
   isCurrent: boolean;
   muted?: boolean;
 }) {
+  // A self-sizing chip, not a full-width row: the list wraps these horizontally,
+  // so each one is only as wide as the language it names plus its badge.
   const className =
-    "flex items-center gap-3 rounded-md px-2 py-2 text-xs transition-colors " +
+    "flex items-center gap-2.5 rounded-md border px-2.5 py-1.5 text-xs transition-colors " +
     (isCurrent
-      ? "bg-[var(--surface-sunken)] font-medium"
-      : "hover:bg-[var(--surface-sunken)]");
+      ? "border-brand-500/40 bg-brand-500/10 font-medium"
+      : "border-[var(--border)] hover:bg-[var(--surface-sunken)]");
 
   const body = (
     <>
       <Flag locale={locale} />
-      <span className="min-w-0 flex-1">
+      <span className="min-w-0 max-w-[12rem]">
         <span className="block truncate">{name}</span>
         <span className={"block truncate text-[11px] z-muted" + (muted ? " italic" : "")}>
           {title}

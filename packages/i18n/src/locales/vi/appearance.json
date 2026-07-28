@@ -2,6 +2,8 @@
   "metaTitle": "Giao diện",
   "title": "Giao diện",
   "description": "Kích hoạt giao diện và tuỳ chỉnh các thiết lập do giao diện khai báo.",
+  "searchPlaceholder": "Tìm giao diện…",
+  "noMatch": "Không có giao diện nào khớp với tìm kiếm.",
   "denied": "Bạn không có quyền xem giao diện.",
   "drafts": {
     "heading": "Bản thiết kế của bạn",

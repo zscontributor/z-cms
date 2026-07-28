@@ -6,7 +6,16 @@ import { useRouter } from "next/navigation";
 import type { SiteDto } from "@zcmsorg/schemas";
 import { switchSiteAction } from "@/app/actions/site";
 import { Select } from "@/components/ui/field";
+import { Icon } from "@/components/shell/icon";
 import { useT } from "@/lib/i18n-provider";
+
+/** Build the public URL for a site from its primary domain (localhost stays http). */
+function publicSiteUrl(site: SiteDto | undefined): string | null {
+  const host = site?.domains.find((d) => d.isPrimary)?.hostname ?? site?.domains[0]?.hostname;
+  if (!host) return null;
+  const scheme = /^localhost(:|$)/.test(host) ? "http" : "https";
+  return `${scheme}://${host}`;
+}
 
 /**
  * The selected site is a cookie, not a URL segment: it has to survive a
@@ -33,6 +42,8 @@ export function SiteSwitcher({
   if (sites.length === 0) {
     return <span className="text-xs z-muted">{t("admin.siteSwitcher.empty")}</span>;
   }
+
+  const openUrl = publicSiteUrl(sites.find((site) => site.id === selectedSiteId));
 
   return (
     <div className="flex items-center gap-2">
@@ -61,6 +72,18 @@ export function SiteSwitcher({
           </option>
         ))}
       </Select>
+      {openUrl && (
+        <a
+          href={openUrl}
+          target="_blank"
+          rel="noreferrer noopener"
+          title={t("admin.siteSwitcher.openSite")}
+          className="inline-flex h-8 items-center gap-1.5 rounded px-2 text-xs font-medium text-brand-600 hover:bg-black/5 dark:text-brand-400 dark:hover:bg-white/10"
+        >
+          <Icon name="external" size={16} />
+          {t("admin.siteSwitcher.openSite")}
+        </a>
+      )}
     </div>
   );
 }
