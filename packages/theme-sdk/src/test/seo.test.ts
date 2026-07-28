@@ -59,6 +59,7 @@ function context(site?: Partial<RenderPayload["site"]>): ThemeContext {
     renderSlot: () => null,
     collections: {},
     forms: {},
+    archive: null,
     url: (path) => path,
     // The real one, against a stand-in base: these tests care that icons are put
     // through it at all, which a pass-through stub would not catch.
