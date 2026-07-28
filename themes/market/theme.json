@@ -334,25 +334,51 @@
           {
             "key": "price",
             "type": "number",
-            "label": "Price",
+            "label": { "en": "Price", "vi": "Giá bán", "ja": "価格" },
             "required": true
+          },
+          {
+            "key": "cost",
+            "type": "number",
+            "label": { "en": "Cost price", "vi": "Giá nhập", "ja": "仕入れ値" },
+            "required": false,
+            "private": true,
+            "description": "Back-office only — never shown on the storefront."
+          },
+          {
+            "key": "salePrice",
+            "type": "number",
+            "label": { "en": "Sale price", "vi": "Giá khuyến mãi", "ja": "セール価格" },
+            "required": false
+          },
+          {
+            "key": "saleStart",
+            "type": "date",
+            "label": { "en": "Sale starts", "vi": "Bắt đầu khuyến mãi", "ja": "セール開始" },
+            "required": false
+          },
+          {
+            "key": "saleEnd",
+            "type": "date",
+            "label": { "en": "Sale ends", "vi": "Kết thúc khuyến mãi", "ja": "セール終了" },
+            "required": false
           },
           {
             "key": "oldPrice",
             "type": "number",
-            "label": "Compare-at price",
+            "label": { "en": "Compare-at price", "vi": "Giá so sánh", "ja": "参考価格" },
             "required": false
           },
           {
             "key": "badge",
-            "type": "string",
-            "label": "Badge",
+            "type": "text",
+            "label": { "en": "Badge", "vi": "Nhãn", "ja": "バッジ" },
             "required": false
           },
           {
             "key": "volume",
-            "type": "string",
-            "label": "Volume",
+            "type": "text",
+            "label": { "en": "Volume", "vi": "Dung tích", "ja": "容量" },
             "required": false
           }
         ]

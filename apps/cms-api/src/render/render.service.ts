@@ -4,9 +4,11 @@ import { flagUrl } from "@zcmsorg/i18n";
 import {
   CONTENT_LIST_BLOCK,
   clampCollectionLimit,
+  collectionNameFor,
   hostnameVariants,
   normaliseCollectionSort,
   parseSiteBrand,
+  stripPrivateData,
 } from "@zcmsorg/schemas";
 import type {
   Block,
@@ -50,9 +52,30 @@ const COLLECTION_ORDER_BY: Record<CollectionSort, Record<string, "asc" | "desc">
 };
 
 const CONTENT_INCLUDE = {
-  contentType: { select: { id: true, key: true, name: true, routePrefix: true } },
+  // `fields` rides along so the public payload can be stripped of any field a
+  // content type marks `private` (a cost price, an internal note) before a theme
+  // ever sees it — see `toPublicContentDto`. It is selected only here, on the
+  // render path; the admin's own reads keep the full data for editing.
+  contentType: { select: { id: true, key: true, name: true, routePrefix: true, fields: true } },
   author: { select: { id: true, name: true } },
 } as const;
+
+/**
+ * A content DTO safe to ship to a theme: `toContentDto`, then every field the
+ * content type marks `private` removed from `data`. Used at every public exit of
+ * the render service (page, collection, archive, search) so a back-office value
+ * cannot leak through a theme, a content-list block, or a search match.
+ */
+function toPublicContentDto(
+  row: Parameters<typeof toContentDto>[0] & { contentType?: { fields?: unknown } },
+): ContentDto {
+  const dto = toContentDto(row);
+  const fields = row.contentType?.fields;
+  if (Array.isArray(fields)) {
+    dto.data = stripPrivateData(dto.data, fields as Array<{ key: string; private?: boolean }>);
+  }
+  return dto;
+}
 
 interface ResolvedSite {
   id: string;
@@ -408,7 +431,7 @@ export class RenderService {
       locale,
       content.demoThemeKey,
     );
-    const dto = toContentDto(content);
+    const dto = toPublicContentDto(content);
 
     // The theme's lists and this page's `core/content-list` blocks are the same kind
     // of question, so they are asked together: one deduplicated, concurrent batch, so
@@ -469,6 +492,39 @@ export class RenderService {
   // the limit is capped. A second path would be a second chance to forget one of
   // those, and the one it forgot would be a leak.
   // -------------------------------------------------------------------------
+
+  /**
+   * The Theme Editor's canvas, drawn with REAL rows.
+   *
+   * Public on purpose — it is the ONE door the admin has into this resolver, and it
+   * opens onto the same `runQueries` the public render uses, so the canvas shows
+   * exactly what the live site would: same tenant scope, same PUBLISHED filter, same
+   * demo-theme rule, same cap. It is called from a session-authenticated, site-scoped
+   * admin route (theme:author), so the tenant is already set on the request; there is
+   * no hostname and no `withTenant` here, unlike the public `resolve` path.
+   *
+   * Keyed by `collectionNameFor` — the deterministic name the editor derives from a
+   * binding — so the client can look a list up by the same name its widget uses. A
+   * site with no active theme still answers (published rows, no demo scope).
+   */
+  async previewCollections(
+    siteId: string,
+    locale: string,
+    queries: CollectionQuery[],
+  ): Promise<Record<string, ContentDto[]>> {
+    const themeRow = await db().siteTheme.findFirst({
+      where: { siteId, status: "ACTIVE" },
+      include: { theme: true },
+    });
+    const activeThemeKey = themeRow?.theme.key ?? "";
+
+    const results = await this.runQueries(siteId, locale, activeThemeKey, queries);
+    const out: Record<string, ContentDto[]> = {};
+    for (const query of queries) {
+      out[collectionNameFor(query)] = results.get(this.queryKey(query)) ?? [];
+    }
+    return out;
+  }
 
   /**
    * Runs a batch of collection queries: deduplicated, concurrent, bounded.
@@ -540,7 +596,7 @@ export class RenderService {
       take: clampCollectionLimit(query.limit),
     });
 
-    return rows.map(toContentDto);
+    return rows.map(toPublicContentDto);
   }
 
   /** Resolves the theme's declared lists on a page with no block tree of its own. */
@@ -989,7 +1045,7 @@ export class RenderService {
       contentTypeKey: contentType.key,
       title: contentType.pluralName,
       basePath: `/${contentType.routePrefix}`,
-      items: items.map(toContentDto),
+      items: items.map(toPublicContentDto),
       page,
       totalPages: Math.max(1, Math.ceil(total / ARCHIVE_PAGE_SIZE)),
     };
@@ -1021,7 +1077,7 @@ export class RenderService {
         take: MAX_SEARCH_SCAN,
       })
     )
-      .map(toContentDto)
+      .map(toPublicContentDto)
       .filter((item) =>
         this.matchesSearchQuery(
           [item.title, item.slug, item.excerpt, item.data, item.blocks, item.seo],

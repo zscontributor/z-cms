@@ -61,7 +61,56 @@
     "currentBinding": "Widget này hiển thị trang đang xem. Ở Trang chủ và Danh sách không có trang cụ thể nào, nên nó không hiển thị gì.",
     "dataSource": "Dữ liệu",
     "budget": "Đã dùng {used}/{max} danh sách nội dung.",
-    "budgetFull": "Đã dùng hết {max} danh sách nội dung. Hãy dùng lại một câu hỏi đã có — cùng loại, cùng số lượng, cùng thứ tự — hoặc bỏ bớt một cái."
+    "budgetFull": "Đã dùng hết {max} danh sách nội dung. Hãy dùng lại một câu hỏi đã có — cùng loại, cùng số lượng, cùng thứ tự — hoặc bỏ bớt một cái.",
+    "tabsLabel": "Tab bảng chỉnh",
+    "tab": {
+      "content": "Nội dung",
+      "style": "Kiểu dáng"
+    },
+    "noContentProps": "Block này không có tùy chọn nội dung — mở tab Kiểu dáng để đổi hình thức."
+  },
+  "studio": {
+    "blocks": "Khối",
+    "layers": "Lớp",
+    "templates": "Mẫu",
+    "leftPanel": "Khối và lớp",
+    "device": "Thiết bị xem thử",
+    "desktop": "Máy tính",
+    "tablet": "Máy tính bảng",
+    "mobile": "Điện thoại",
+    "zoomIn": "Phóng to",
+    "zoomOut": "Thu nhỏ",
+    "zoomReset": "Về 100%",
+    "preview": "Xem thử",
+    "previewTitle": "Xem thử theme",
+    "closePreview": "Đóng xem thử"
+  },
+  "patterns": {
+    "hint": "Nhấn để thả một section dựng sẵn vào canvas.",
+    "hero": {
+      "label": "Hero",
+      "description": "Tiêu đề lớn, một dòng mô tả và nút kêu gọi."
+    },
+    "features": {
+      "label": "Tính năng (3 cột)",
+      "description": "Một tiêu đề cùng ba cột tính năng ngắn."
+    },
+    "mediaText": {
+      "label": "Ảnh + chữ",
+      "description": "Ảnh cạnh tiêu đề, đoạn văn và nút."
+    },
+    "stats": {
+      "label": "Số liệu",
+      "description": "Bốn chỉ số trên dải nền tối."
+    },
+    "latestPosts": {
+      "label": "Bài mới nhất",
+      "description": "Lưới các bài mới nhất từ site của bạn."
+    },
+    "cta": {
+      "label": "Kêu gọi hành động",
+      "description": "Lời mời căn giữa với một nút."
+    }
   },
   "a11y": {
     "drag": "Kéo {label}",
@@ -126,6 +175,18 @@
     "gap": "Khoảng cách",
     "verticalAlign": "Canh dọc",
     "span": "Bề rộng (trên 12)",
+    "columns": "Số cột",
+    "images": "Hình ảnh",
+    "addImages": "Thêm ảnh",
+    "autoplay": "Tự chạy",
+    "interval": "Chu kỳ (ms)",
+    "arrows": "Mũi tên",
+    "dots": "Chấm",
+    "showNumbers": "Hiện số trang",
+    "galleryLayout": "Bố cục",
+    "galleryGrid": "Lưới",
+    "galleryMasonry": "Gạch xây",
+    "galleryCarousel": "Băng chuyền",
     "contentType": "Loại nội dung",
     "contentTypeNone": "Chọn một loại…",
     "limit": "Số lượng",
@@ -149,6 +210,96 @@
     "unset": "Mặc định",
     "clear": "Xoá"
   },
+  "style": {
+    "unset": "Mặc định",
+    "group": {
+      "colors": "Màu sắc",
+      "spacing": "Khoảng cách",
+      "border": "Viền",
+      "shadow": "Bóng đổ",
+      "typography": "Kiểu chữ",
+      "transform": "Biến đổi",
+      "filter": "Bộ lọc",
+      "effectShadow": "Bóng tùy chỉnh",
+      "hover": "Chuyển động & hover"
+    },
+    "translateX": "Dịch ngang X",
+    "translateY": "Dịch dọc Y",
+    "rotate": "Xoay",
+    "scale": "Tỉ lệ",
+    "blur": "Làm mờ",
+    "brightness": "Độ sáng %",
+    "saturate": "Độ bão hòa %",
+    "shadowX": "Bóng X",
+    "shadowY": "Bóng Y",
+    "shadowBlur": "Độ nhòe bóng",
+    "shadowSpread": "Độ lan bóng",
+    "shadowColor": "Màu bóng",
+    "hoverTranslateY": "Hover dịch Y",
+    "hoverScale": "Hover tỉ lệ",
+    "transitionDuration": "Thời lượng (ms)",
+    "transitionEasing": "Kiểu chuyển",
+    "easing": {
+      "ease": "Ease",
+      "ease-in-out": "Ease in-out",
+      "linear": "Tuyến tính",
+      "smooth": "Mượt"
+    },
+    "textColor": "Màu chữ",
+    "background": "Màu nền",
+    "backgroundGradient": "Chuyển sắc",
+    "paddingX": "Đệm — hai bên",
+    "paddingY": "Đệm — trên & dưới",
+    "marginX": "Lề — hai bên",
+    "marginY": "Lề — trên & dưới",
+    "minHeight": "Chiều cao tối thiểu",
+    "borderRadius": "Bo góc",
+    "borderWidth": "Độ dày viền",
+    "borderStyle": "Kiểu viền",
+    "borderColor": "Màu viền",
+    "boxShadow": "Bóng đổ",
+    "fontSize": "Cỡ chữ",
+    "fontWeight": "Độ đậm",
+    "textAlign": "Canh chữ",
+    "lineHeight": "Giãn dòng",
+    "letterSpacing": "Giãn chữ",
+    "opacity": "Độ mờ",
+    "gradient": {
+      "none": "Không",
+      "sunset": "Hoàng hôn",
+      "ocean": "Đại dương",
+      "twilight": "Chạng vạng",
+      "mint": "Bạc hà",
+      "slate": "Xám đá"
+    },
+    "border": {
+      "none": "Không",
+      "solid": "Liền",
+      "dashed": "Gạch đứt",
+      "dotted": "Chấm"
+    },
+    "shadow": {
+      "none": "Không",
+      "sm": "Nhỏ",
+      "md": "Vừa",
+      "lg": "Lớn",
+      "xl": "Rất lớn"
+    },
+    "weight": {
+      "300": "Mảnh",
+      "400": "Thường",
+      "500": "Vừa",
+      "600": "Đậm vừa",
+      "700": "Đậm",
+      "800": "Rất đậm"
+    },
+    "align": {
+      "left": "Trái",
+      "center": "Giữa",
+      "right": "Phải",
+      "justify": "Đều hai bên"
+    }
+  },
   "widgets": {
     "heading": {
       "label": "Tiêu đề",
@@ -165,6 +316,26 @@
     "image": {
       "label": "Ảnh",
       "description": "Ảnh theme mang theo hoặc site đã tải lên."
+    },
+    "gallery": {
+      "label": "Thư viện ảnh",
+      "description": "Nhiều ảnh từ Media library, dạng lưới, gạch xây hoặc băng chuyền."
+    },
+    "slider": {
+      "label": "Slider ảnh",
+      "description": "Trình chiếu ảnh toàn chiều rộng bạn tự chọn, có tự chạy, mũi tên và chấm."
+    },
+    "contentSlider": {
+      "label": "Slider nội dung",
+      "description": "Trình chiếu bài viết/sản phẩm thật — mỗi slide một mục, lấy từ site của bạn."
+    },
+    "archiveList": {
+      "label": "Danh sách archive",
+      "description": "Danh sách phân trang ở trang archive (vd blog) — bài của trang hiện tại."
+    },
+    "pagination": {
+      "label": "Phân trang",
+      "description": "Trước / số / Sau cho archive. Link giữ đúng ngôn ngữ hiện tại."
     },
     "logo": {
       "label": "Logo",

@@ -11,6 +11,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox, Field, Input, Select, Textarea } from "@/components/ui/field";
 import { EmptyState, TBody, TD, TH, THead, TR, Table } from "@/components/ui/table";
+import { MediaPickerField } from "@/components/editor/media-picker";
+import { RichTextEditor } from "@/components/editor/rich-text-editor";
 
 interface Props {
   pluginKey: string;
@@ -121,48 +123,68 @@ export function ResourcePanel({
 
       {editing !== null && (
         <div className="z-card flex flex-col gap-3 p-4">
-          {fields.map((f) => (
-            <Field key={f.column} label={f.label}>
-              {f.input === "textarea" ? (
-                <Textarea
-                  value={String(values[f.column] ?? "")}
-                  disabled={f.readonly || pending}
-                  onChange={(e) => setValues((v) => ({ ...v, [f.column]: e.target.value }))}
-                />
-              ) : f.input === "boolean" ? (
-                <Checkbox
-                  checked={Boolean(values[f.column])}
-                  disabled={f.readonly || pending}
-                  onChange={(e) => setValues((v) => ({ ...v, [f.column]: e.target.checked }))}
-                />
-              ) : f.input === "select" ? (
-                <Select
-                  value={String(values[f.column] ?? "")}
-                  disabled={f.readonly || pending}
-                  onChange={(e) => setValues((v) => ({ ...v, [f.column]: e.target.value }))}
-                >
-                  <option value="" />
-                  {(f.options ?? []).map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </Select>
-              ) : (
-                <Input
-                  type={f.input === "number" ? "number" : f.input === "date" ? "datetime-local" : "text"}
-                  value={String(values[f.column] ?? "")}
-                  disabled={f.readonly || pending}
-                  onChange={(e) =>
-                    setValues((v) => ({
-                      ...v,
-                      [f.column]: f.input === "number" ? Number(e.target.value) : e.target.value,
-                    }))
-                  }
-                />
-              )}
-            </Field>
-          ))}
+          {fields.map((f) => {
+            const set = (value: unknown) => setValues((v) => ({ ...v, [f.column]: value }));
+            return (
+              <Field key={f.column} label={f.label}>
+                {f.readonly ? (
+                  <Input value={formatCell(values[f.column])} disabled readOnly />
+                ) : f.input === "textarea" ? (
+                  <Textarea
+                    value={String(values[f.column] ?? "")}
+                    disabled={pending}
+                    onChange={(e) => set(e.target.value)}
+                  />
+                ) : f.input === "richtext" ? (
+                  <RichTextEditor
+                    minHeight="10rem"
+                    value={String(values[f.column] ?? "")}
+                    onChange={(html) => set(html)}
+                  />
+                ) : f.input === "boolean" ? (
+                  <Checkbox
+                    checked={Boolean(values[f.column])}
+                    disabled={pending}
+                    onChange={(e) => set(e.target.checked)}
+                  />
+                ) : f.input === "select" ? (
+                  <Select
+                    value={String(values[f.column] ?? "")}
+                    disabled={pending}
+                    onChange={(e) => set(e.target.value || null)}
+                  >
+                    <option value="" />
+                    {(f.options ?? []).map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </Select>
+                ) : f.input === "media" ? (
+                  <MediaPickerField
+                    mode="id"
+                    value={String(values[f.column] ?? "")}
+                    onChange={(next) => set(next || null)}
+                  />
+                ) : (
+                  <Input
+                    type={f.input === "number" ? "number" : f.input === "date" ? "datetime-local" : "text"}
+                    value={String(values[f.column] ?? "")}
+                    disabled={pending}
+                    onChange={(e) =>
+                      set(
+                        f.input === "number"
+                          ? e.target.value === ""
+                            ? null
+                            : Number(e.target.value)
+                          : e.target.value,
+                      )
+                    }
+                  />
+                )}
+              </Field>
+            );
+          })}
           <div className="flex gap-2">
             <Button type="button" onClick={submit} disabled={pending}>
               {labels.save}

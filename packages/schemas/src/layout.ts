@@ -131,6 +131,240 @@ export function bindingToCollectionQuery(
 }
 
 // ---------------------------------------------------------------------------
+// Per-node style — the design "drawer" of the GUI editor.
+//
+// The bounded surface a person may set on ANY node. Like everything else in this
+// file it is DATA the shared widget library interprets, so every field is closed
+// and every value is bounded: a number in a range, a token from an enum, or a
+// colour that passed CssColorSchema. Crucially, NOTHING here is a CSS string the
+// author typed — a preset NAME (a shadow size, a gradient) maps to a fixed
+// declaration inside @zcmsorg/theme-widgets; the value never flows the other way.
+// An unconstrained string in this object is a hole in the fence.
+// ---------------------------------------------------------------------------
+
+/**
+ * A CSS colour the editor will accept. Deliberately NOT "any string": the value
+ * lands in an inline `style` the runtime renders verbatim, so its shape must be
+ * incapable of carrying a `url(...)`, an `expression(...)`, a `var(...)`, a
+ * closing brace, or a second declaration. The whole vocabulary is hex
+ * (#rgb/#rgba/#rrggbb/#rrggbbaa), rgb()/rgba(), hsl()/hsla(), and a few keywords.
+ * All patterns are fully anchored, so no substring injection can pass.
+ */
+const CSS_COLOR_KEYWORDS = [
+  "transparent",
+  "currentColor",
+  "inherit",
+] as const;
+
+const CSS_COLOR_HEX = /^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+const CSS_COLOR_RGB =
+  /^rgba?\(\s*\d{1,3}%?\s*,\s*\d{1,3}%?\s*,\s*\d{1,3}%?\s*(?:,\s*(?:0|1|0?\.\d+|\d{1,3}%)\s*)?\)$/i;
+const CSS_COLOR_HSL =
+  /^hsla?\(\s*\d{1,3}(?:deg)?\s*,\s*\d{1,3}%\s*,\s*\d{1,3}%\s*(?:,\s*(?:0|1|0?\.\d+|\d{1,3}%)\s*)?\)$/i;
+
+export const CssColorSchema = z
+  .string()
+  .trim()
+  .refine(
+    (v) =>
+      CSS_COLOR_HEX.test(v) ||
+      CSS_COLOR_RGB.test(v) ||
+      CSS_COLOR_HSL.test(v) ||
+      (CSS_COLOR_KEYWORDS as readonly string[]).includes(v),
+    { message: "Not a permitted CSS colour (hex, rgb(), hsl(), or a keyword)." },
+  );
+
+/** Preset enums. A name here maps to a fixed declaration in the widget library. */
+export const BOX_SHADOW_PRESETS = ["none", "sm", "md", "lg", "xl"] as const;
+export type BoxShadowPreset = (typeof BOX_SHADOW_PRESETS)[number];
+
+export const BACKGROUND_GRADIENT_PRESETS = [
+  "none",
+  "sunset",
+  "ocean",
+  "twilight",
+  "mint",
+  "slate",
+] as const;
+export type BackgroundGradientPreset = (typeof BACKGROUND_GRADIENT_PRESETS)[number];
+
+export const BORDER_STYLES = ["none", "solid", "dashed", "dotted"] as const;
+export type BorderStyle = (typeof BORDER_STYLES)[number];
+
+export const FONT_WEIGHTS = ["300", "400", "500", "600", "700", "800"] as const;
+export type FontWeight = (typeof FONT_WEIGHTS)[number];
+
+export const TEXT_ALIGNS = ["left", "center", "right", "justify"] as const;
+export type NodeTextAlign = (typeof TEXT_ALIGNS)[number];
+
+/** Transition easings offered for the hover effect. A name maps to a fixed curve. */
+export const TRANSITION_EASINGS = ["ease", "ease-in-out", "linear", "smooth"] as const;
+export type TransitionEasing = (typeof TRANSITION_EASINGS)[number];
+
+/**
+ * Every knob is optional and bounded; `.strict()` rejects a key the widget library
+ * does not read, so a document cannot smuggle an unknown property through `props`'
+ * open record into an inline style. Numbers are px unless noted.
+ */
+export const NodeStyleSchema = z
+  .object({
+    textColor: CssColorSchema.optional(),
+    background: CssColorSchema.optional(),
+    backgroundGradient: z.enum(BACKGROUND_GRADIENT_PRESETS).optional(),
+    paddingX: z.number().min(0).max(256).optional(),
+    paddingY: z.number().min(0).max(256).optional(),
+    marginX: z.number().min(0).max(256).optional(),
+    marginY: z.number().min(0).max(256).optional(),
+    borderRadius: z.number().min(0).max(128).optional(),
+    borderWidth: z.number().min(0).max(16).optional(),
+    borderStyle: z.enum(BORDER_STYLES).optional(),
+    borderColor: CssColorSchema.optional(),
+    boxShadow: z.enum(BOX_SHADOW_PRESETS).optional(),
+    fontSize: z.number().min(8).max(160).optional(),
+    fontWeight: z.enum(FONT_WEIGHTS).optional(),
+    textAlign: z.enum(TEXT_ALIGNS).optional(),
+    lineHeight: z.number().min(0.8).max(3).optional(),
+    letterSpacing: z.number().min(-5).max(20).optional(),
+    opacity: z.number().min(0).max(1).optional(),
+    minHeight: z.number().min(0).max(2000).optional(),
+
+    // --- Effects: transform, filter, custom shadow, hover -------------------
+    // Numbers in a range are as bounded as an enum — the widget library composes
+    // them into a `transform`/`filter`/`box-shadow`/`transition` string it owns, so
+    // the author never supplies the CSS, only the magnitudes. Hover is expressed by
+    // its own fields; the interpreter turns them into a `:hover` rule via a static
+    // stylesheet reading inline custom properties (no per-theme CSS, no JS).
+    translateX: z.number().min(-1000).max(1000).optional(),
+    translateY: z.number().min(-1000).max(1000).optional(),
+    rotate: z.number().min(-360).max(360).optional(),
+    scale: z.number().min(0.1).max(3).optional(),
+    blur: z.number().min(0).max(100).optional(),
+    brightness: z.number().min(0).max(300).optional(),
+    saturate: z.number().min(0).max(300).optional(),
+    shadowX: z.number().min(-100).max(100).optional(),
+    shadowY: z.number().min(-100).max(100).optional(),
+    shadowBlur: z.number().min(0).max(200).optional(),
+    shadowSpread: z.number().min(-100).max(100).optional(),
+    shadowColor: CssColorSchema.optional(),
+    hoverTranslateY: z.number().min(-200).max(200).optional(),
+    hoverScale: z.number().min(0.1).max(3).optional(),
+    transitionDuration: z.number().min(0).max(3000).optional(),
+    transitionEasing: z.enum(TRANSITION_EASINGS).optional(),
+  })
+  .strict();
+export type NodeStyle = z.infer<typeof NodeStyleSchema>;
+
+/**
+ * Editor metadata for the Style drawer — one entry per knob, grouped for the panel.
+ * Mirrors WidgetPropSpec: a closed list the admin renders a control from, labelled
+ * by catalogue key (never text) so it localises with no per-field code. The widget
+ * library reads `NodeStyle` by name; this list is only how the editor draws it.
+ */
+export type NodeStyleControl = "color" | "number" | "select";
+export type NodeStyleGroup =
+  | "colors"
+  | "spacing"
+  | "border"
+  | "shadow"
+  | "typography"
+  | "transform"
+  | "filter"
+  | "effectShadow"
+  | "hover";
+
+export interface NodeStyleFieldSpec {
+  key: keyof NodeStyle;
+  labelKey: string;
+  control: NodeStyleControl;
+  group: NodeStyleGroup;
+  min?: number;
+  max?: number;
+  step?: number;
+  options?: readonly { value: string; labelKey: string }[];
+}
+
+const enumOptions = (
+  values: readonly string[],
+  prefix: string,
+): readonly { value: string; labelKey: string }[] =>
+  values.map((value) => ({ value, labelKey: `${prefix}.${value}` }));
+
+export const NODE_STYLE_FIELDS: readonly NodeStyleFieldSpec[] = [
+  { key: "textColor", labelKey: "themeEditor.style.textColor", control: "color", group: "colors" },
+  { key: "background", labelKey: "themeEditor.style.background", control: "color", group: "colors" },
+  {
+    key: "backgroundGradient",
+    labelKey: "themeEditor.style.backgroundGradient",
+    control: "select",
+    group: "colors",
+    options: enumOptions(BACKGROUND_GRADIENT_PRESETS, "themeEditor.style.gradient"),
+  },
+  { key: "paddingX", labelKey: "themeEditor.style.paddingX", control: "number", group: "spacing", min: 0, max: 256 },
+  { key: "paddingY", labelKey: "themeEditor.style.paddingY", control: "number", group: "spacing", min: 0, max: 256 },
+  { key: "marginX", labelKey: "themeEditor.style.marginX", control: "number", group: "spacing", min: 0, max: 256 },
+  { key: "marginY", labelKey: "themeEditor.style.marginY", control: "number", group: "spacing", min: 0, max: 256 },
+  { key: "minHeight", labelKey: "themeEditor.style.minHeight", control: "number", group: "spacing", min: 0, max: 2000 },
+  { key: "borderRadius", labelKey: "themeEditor.style.borderRadius", control: "number", group: "border", min: 0, max: 128 },
+  { key: "borderWidth", labelKey: "themeEditor.style.borderWidth", control: "number", group: "border", min: 0, max: 16 },
+  {
+    key: "borderStyle",
+    labelKey: "themeEditor.style.borderStyle",
+    control: "select",
+    group: "border",
+    options: enumOptions(BORDER_STYLES, "themeEditor.style.border"),
+  },
+  { key: "borderColor", labelKey: "themeEditor.style.borderColor", control: "color", group: "border" },
+  {
+    key: "boxShadow",
+    labelKey: "themeEditor.style.boxShadow",
+    control: "select",
+    group: "shadow",
+    options: enumOptions(BOX_SHADOW_PRESETS, "themeEditor.style.shadow"),
+  },
+  { key: "fontSize", labelKey: "themeEditor.style.fontSize", control: "number", group: "typography", min: 8, max: 160 },
+  {
+    key: "fontWeight",
+    labelKey: "themeEditor.style.fontWeight",
+    control: "select",
+    group: "typography",
+    options: enumOptions(FONT_WEIGHTS, "themeEditor.style.weight"),
+  },
+  {
+    key: "textAlign",
+    labelKey: "themeEditor.style.textAlign",
+    control: "select",
+    group: "typography",
+    options: enumOptions(TEXT_ALIGNS, "themeEditor.style.align"),
+  },
+  { key: "lineHeight", labelKey: "themeEditor.style.lineHeight", control: "number", group: "typography", min: 0.8, max: 3, step: 0.1 },
+  { key: "letterSpacing", labelKey: "themeEditor.style.letterSpacing", control: "number", group: "typography", min: -5, max: 20, step: 0.5 },
+  { key: "opacity", labelKey: "themeEditor.style.opacity", control: "number", group: "typography", min: 0, max: 1, step: 0.05 },
+
+  { key: "translateX", labelKey: "themeEditor.style.translateX", control: "number", group: "transform", min: -1000, max: 1000 },
+  { key: "translateY", labelKey: "themeEditor.style.translateY", control: "number", group: "transform", min: -1000, max: 1000 },
+  { key: "rotate", labelKey: "themeEditor.style.rotate", control: "number", group: "transform", min: -360, max: 360 },
+  { key: "scale", labelKey: "themeEditor.style.scale", control: "number", group: "transform", min: 0.1, max: 3, step: 0.05 },
+  { key: "blur", labelKey: "themeEditor.style.blur", control: "number", group: "filter", min: 0, max: 100 },
+  { key: "brightness", labelKey: "themeEditor.style.brightness", control: "number", group: "filter", min: 0, max: 300 },
+  { key: "saturate", labelKey: "themeEditor.style.saturate", control: "number", group: "filter", min: 0, max: 300 },
+  { key: "shadowX", labelKey: "themeEditor.style.shadowX", control: "number", group: "effectShadow", min: -100, max: 100 },
+  { key: "shadowY", labelKey: "themeEditor.style.shadowY", control: "number", group: "effectShadow", min: -100, max: 100 },
+  { key: "shadowBlur", labelKey: "themeEditor.style.shadowBlur", control: "number", group: "effectShadow", min: 0, max: 200 },
+  { key: "shadowSpread", labelKey: "themeEditor.style.shadowSpread", control: "number", group: "effectShadow", min: -100, max: 100 },
+  { key: "shadowColor", labelKey: "themeEditor.style.shadowColor", control: "color", group: "effectShadow" },
+  { key: "hoverTranslateY", labelKey: "themeEditor.style.hoverTranslateY", control: "number", group: "hover", min: -200, max: 200 },
+  { key: "hoverScale", labelKey: "themeEditor.style.hoverScale", control: "number", group: "hover", min: 0.1, max: 3, step: 0.01 },
+  { key: "transitionDuration", labelKey: "themeEditor.style.transitionDuration", control: "number", group: "hover", min: 0, max: 3000 },
+  {
+    key: "transitionEasing",
+    labelKey: "themeEditor.style.transitionEasing",
+    control: "select",
+    group: "hover",
+    options: enumOptions(TRANSITION_EASINGS, "themeEditor.style.easing"),
+  },
+];
+
+// ---------------------------------------------------------------------------
 // The node tree.
 //
 // Deliberately shaped like BlockSchema: a `z.lazy` self-reference guarded by an
@@ -150,6 +384,8 @@ export interface LayoutNode {
   props: Record<string, unknown>;
   /** Present only on a widget that binds to server data. */
   binding?: WidgetBinding;
+  /** Bounded per-node design overrides (colours, spacing, border, type). */
+  style?: NodeStyle;
   children?: LayoutNode[];
 }
 
@@ -160,6 +396,7 @@ export const LayoutNodeSchema: z.ZodType<LayoutNode> = z.lazy(() =>
     widgetType: WidgetTypeSchema.optional(),
     props: z.record(z.string(), z.unknown()).default({}),
     binding: WidgetBindingSchema.optional(),
+    style: NodeStyleSchema.optional(),
     children: z.array(LayoutNodeSchema).optional(),
   }),
 );

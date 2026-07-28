@@ -503,3 +503,126 @@ export function buildPluginDelete(
   const text = `DELETE FROM ${ident(table.name)} WHERE ${clause}`;
   return { text, values };
 }
+
+// ---------------------------------------------------------------------------
+// Value coercion
+// ---------------------------------------------------------------------------
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export type PluginCoercionReason = "required" | "type";
+
+export interface PluginRowCoercion {
+  /** The coerced row, ready for {@link buildPluginInsert}/{@link buildPluginUpdate}. */
+  row: Record<string, unknown>;
+  /** One entry per column that failed; empty means the row is good to write. */
+  errors: Array<{ column: string; reason: PluginCoercionReason }>;
+}
+
+/** Turn one form value into the type its declared column expects, or fail it. */
+function coerceValue(
+  type: PluginColumnType,
+  raw: unknown,
+): { value: unknown; ok: boolean } {
+  // Absent / blank is a null the caller then judges against `nullable`/`default`.
+  if (raw === undefined || raw === null || raw === "") return { value: null, ok: true };
+
+  switch (type) {
+    case "text":
+      return { value: typeof raw === "string" ? raw : String(raw), ok: true };
+    case "integer":
+    case "bigint": {
+      const n = typeof raw === "number" ? raw : Number(raw);
+      return Number.isInteger(n) ? { value: n, ok: true } : { value: null, ok: false };
+    }
+    case "numeric": {
+      const n = typeof raw === "number" ? raw : Number(raw);
+      return Number.isFinite(n) ? { value: n, ok: true } : { value: null, ok: false };
+    }
+    case "boolean": {
+      if (typeof raw === "boolean") return { value: raw, ok: true };
+      if (typeof raw === "number") return { value: raw !== 0, ok: true };
+      if (typeof raw === "string") {
+        const s = raw.trim().toLowerCase();
+        if (["true", "1", "on", "yes"].includes(s)) return { value: true, ok: true };
+        if (["false", "0", "off", "no"].includes(s)) return { value: false, ok: true };
+      }
+      return { value: null, ok: false };
+    }
+    case "timestamptz": {
+      const d = raw instanceof Date ? raw : new Date(String(raw));
+      return Number.isNaN(d.getTime())
+        ? { value: null, ok: false }
+        : { value: d.toISOString(), ok: true };
+    }
+    case "uuid": {
+      const s = String(raw);
+      return UUID_RE.test(s) ? { value: s, ok: true } : { value: null, ok: false };
+    }
+    case "jsonb":
+      return { value: raw, ok: true };
+    default:
+      return { value: raw, ok: true };
+  }
+}
+
+/**
+ * Coerce and validate a form-posted row against a plugin table's declared column
+ * types — the one place per-field typing lives, so every plugin's CRUD form gets
+ * the same guarantees without writing any of it.
+ *
+ * The builders below only check that a column NAME exists; they pass values into
+ * placeholders untouched, which turns a blank number or a bad date into a raw
+ * Postgres 500. This runs first: it maps each value to its column's type, drops a
+ * blank onto its default (or NULL when the column allows it), and reports a
+ * `required`/`type` error rather than letting the database refuse it opaquely.
+ *
+ * `partial` is for UPDATE — an absent column is "leave it", so required columns
+ * are not demanded; only a value that was sent and failed is reported.
+ */
+export function coercePluginRow(
+  table: PluginTableSchema,
+  input: Record<string, unknown>,
+  opts: { partial?: boolean } = {},
+): PluginRowCoercion {
+  const partial = opts.partial ?? false;
+  const byName = new Map(table.columns.map((c) => [c.name, c]));
+  const row: Record<string, unknown> = {};
+  const errors: Array<{ column: string; reason: PluginCoercionReason }> = [];
+
+  for (const [key, raw] of Object.entries(input)) {
+    if (RESERVED.has(key)) continue; // core owns these; never settable from a form.
+    const column = byName.get(key);
+    if (!column) {
+      row[key] = raw; // Unknown to the schema — let the builder refuse it by name.
+      continue;
+    }
+    const { value, ok } = coerceValue(column.type, raw);
+    if (!ok) {
+      errors.push({ column: key, reason: "type" });
+      continue;
+    }
+    if (value === null) {
+      if (column.nullable) {
+        row[key] = null;
+      } else if (column.default !== undefined) {
+        // Omit so the column's declared default applies.
+      } else {
+        errors.push({ column: key, reason: "required" });
+      }
+    } else {
+      row[key] = value;
+    }
+  }
+
+  if (!partial) {
+    for (const column of table.columns) {
+      if (column.nullable || column.default !== undefined) continue;
+      if (!(column.name in row) && !errors.some((e) => e.column === column.name)) {
+        errors.push({ column: column.name, reason: "required" });
+      }
+    }
+  }
+
+  return { row, errors };
+}

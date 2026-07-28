@@ -61,7 +61,56 @@
     "currentBinding": "このウィジェットは表示中のページを描画します。ホームとアーカイブには単一のページがないため、何も表示されません。",
     "dataSource": "データ",
     "budget": "コンテンツリスト {used}/{max} を使用中。",
-    "budgetFull": "コンテンツリストを {max} 件すべて使用しています。既存の条件（同じ種類・件数・並び順）を再利用するか、1つ空けてください。"
+    "budgetFull": "コンテンツリストを {max} 件すべて使用しています。既存の条件（同じ種類・件数・並び順）を再利用するか、1つ空けてください。",
+    "tabsLabel": "インスペクタータブ",
+    "tab": {
+      "content": "コンテンツ",
+      "style": "スタイル"
+    },
+    "noContentProps": "このブロックにコンテンツ設定はありません。見た目はスタイルタブで変更できます。"
+  },
+  "studio": {
+    "blocks": "ブロック",
+    "layers": "レイヤー",
+    "templates": "テンプレート",
+    "leftPanel": "ブロックとレイヤー",
+    "device": "プレビュー端末",
+    "desktop": "デスクトップ",
+    "tablet": "タブレット",
+    "mobile": "モバイル",
+    "zoomIn": "拡大",
+    "zoomOut": "縮小",
+    "zoomReset": "100%に戻す",
+    "preview": "プレビュー",
+    "previewTitle": "テーマプレビュー",
+    "closePreview": "プレビューを閉じる"
+  },
+  "patterns": {
+    "hint": "クリックすると既製のセクションをキャンバスに追加します。",
+    "hero": {
+      "label": "ヒーロー",
+      "description": "大きな見出し、一文の説明、行動喚起ボタン。"
+    },
+    "features": {
+      "label": "特長（3カラム）",
+      "description": "見出しと3つの短い特長カラム。"
+    },
+    "mediaText": {
+      "label": "画像＋テキスト",
+      "description": "見出し・本文・ボタンの横に画像。"
+    },
+    "stats": {
+      "label": "統計",
+      "description": "暗い帯の上に4つの指標。"
+    },
+    "latestPosts": {
+      "label": "最新の投稿",
+      "description": "サイトの最新投稿のグリッド。"
+    },
+    "cta": {
+      "label": "行動喚起",
+      "description": "中央寄せの案内と1つのボタン。"
+    }
   },
   "a11y": {
     "drag": "{label} をドラッグ",
@@ -126,6 +175,18 @@
     "gap": "間隔",
     "verticalAlign": "垂直配置",
     "span": "幅（12分の）",
+    "columns": "列数",
+    "images": "画像",
+    "addImages": "画像を追加",
+    "autoplay": "自動再生",
+    "interval": "間隔 (ms)",
+    "arrows": "矢印",
+    "dots": "ドット",
+    "showNumbers": "ページ番号を表示",
+    "galleryLayout": "レイアウト",
+    "galleryGrid": "グリッド",
+    "galleryMasonry": "メーソンリー",
+    "galleryCarousel": "カルーセル",
     "contentType": "コンテンツタイプ",
     "contentTypeNone": "タイプを選択…",
     "limit": "件数",
@@ -149,6 +210,96 @@
     "unset": "デフォルト",
     "clear": "クリア"
   },
+  "style": {
+    "unset": "デフォルト",
+    "group": {
+      "colors": "色",
+      "spacing": "余白",
+      "border": "枠線",
+      "shadow": "影",
+      "typography": "文字",
+      "transform": "変形",
+      "filter": "フィルター",
+      "effectShadow": "カスタム影",
+      "hover": "トランジションとホバー"
+    },
+    "translateX": "移動 X",
+    "translateY": "移動 Y",
+    "rotate": "回転",
+    "scale": "拡大縮小",
+    "blur": "ぼかし",
+    "brightness": "明るさ %",
+    "saturate": "彩度 %",
+    "shadowX": "影 X",
+    "shadowY": "影 Y",
+    "shadowBlur": "影のぼかし",
+    "shadowSpread": "影の広がり",
+    "shadowColor": "影の色",
+    "hoverTranslateY": "ホバー移動 Y",
+    "hoverScale": "ホバー拡大",
+    "transitionDuration": "時間 (ms)",
+    "transitionEasing": "イージング",
+    "easing": {
+      "ease": "Ease",
+      "ease-in-out": "Ease in-out",
+      "linear": "リニア",
+      "smooth": "スムーズ"
+    },
+    "textColor": "文字色",
+    "background": "背景色",
+    "backgroundGradient": "グラデーション",
+    "paddingX": "内側余白 — 左右",
+    "paddingY": "内側余白 — 上下",
+    "marginX": "外側余白 — 左右",
+    "marginY": "外側余白 — 上下",
+    "minHeight": "最小の高さ",
+    "borderRadius": "角の丸み",
+    "borderWidth": "枠線の太さ",
+    "borderStyle": "枠線の種類",
+    "borderColor": "枠線の色",
+    "boxShadow": "影",
+    "fontSize": "文字サイズ",
+    "fontWeight": "文字の太さ",
+    "textAlign": "文字揃え",
+    "lineHeight": "行の高さ",
+    "letterSpacing": "字間",
+    "opacity": "不透明度",
+    "gradient": {
+      "none": "なし",
+      "sunset": "サンセット",
+      "ocean": "オーシャン",
+      "twilight": "トワイライト",
+      "mint": "ミント",
+      "slate": "スレート"
+    },
+    "border": {
+      "none": "なし",
+      "solid": "実線",
+      "dashed": "破線",
+      "dotted": "点線"
+    },
+    "shadow": {
+      "none": "なし",
+      "sm": "小",
+      "md": "中",
+      "lg": "大",
+      "xl": "特大"
+    },
+    "weight": {
+      "300": "細字",
+      "400": "標準",
+      "500": "中字",
+      "600": "やや太字",
+      "700": "太字",
+      "800": "極太"
+    },
+    "align": {
+      "left": "左",
+      "center": "中央",
+      "right": "右",
+      "justify": "両端揃え"
+    }
+  },
   "widgets": {
     "heading": {
       "label": "見出し",
@@ -165,6 +316,26 @@
     "image": {
       "label": "画像",
       "description": "テーマ同梱またはサイトがアップロードした画像。"
+    },
+    "gallery": {
+      "label": "ギャラリー",
+      "description": "メディアライブラリの複数画像を、グリッド・メーソンリー・カルーセルで表示。"
+    },
+    "slider": {
+      "label": "画像スライダー",
+      "description": "選んだ画像の全幅スライドショー。自動再生・矢印・ドット付き。"
+    },
+    "contentSlider": {
+      "label": "コンテンツスライダー",
+      "description": "実際の投稿や商品のスライドショー。サイトの各アイテムを1枚ずつ表示。"
+    },
+    "archiveList": {
+      "label": "アーカイブ一覧",
+      "description": "アーカイブページ（ブログ等）のページ送り対応リスト。現在ページの投稿。"
+    },
+    "pagination": {
+      "label": "ページネーション",
+      "description": "アーカイブの前へ／番号／次へ。リンクは現在の言語を保持します。"
     },
     "logo": {
       "label": "ロゴ",

@@ -61,7 +61,56 @@
     "currentBinding": "This widget shows the page being viewed. On Home and Archive there is no single page, so it renders nothing.",
     "dataSource": "Data",
     "budget": "{used} of {max} content lists used.",
-    "budgetFull": "All {max} content lists are used. Reuse an existing question — same type, count and order — or free one up."
+    "budgetFull": "All {max} content lists are used. Reuse an existing question — same type, count and order — or free one up.",
+    "tabsLabel": "Inspector tabs",
+    "tab": {
+      "content": "Content",
+      "style": "Style"
+    },
+    "noContentProps": "This block has no content settings — open the Style tab to change how it looks."
+  },
+  "studio": {
+    "blocks": "Blocks",
+    "layers": "Layers",
+    "templates": "Templates",
+    "leftPanel": "Blocks and layers",
+    "device": "Preview device",
+    "desktop": "Desktop",
+    "tablet": "Tablet",
+    "mobile": "Mobile",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "zoomReset": "Reset zoom",
+    "preview": "Preview",
+    "previewTitle": "Theme preview",
+    "closePreview": "Close preview"
+  },
+  "patterns": {
+    "hint": "Click to drop a ready-made section onto the canvas.",
+    "hero": {
+      "label": "Hero",
+      "description": "A bold headline, a line of copy and a call to action."
+    },
+    "features": {
+      "label": "Features (3 columns)",
+      "description": "A heading with three short feature columns."
+    },
+    "mediaText": {
+      "label": "Media + text",
+      "description": "An image beside a heading, text and a button."
+    },
+    "stats": {
+      "label": "Statistics",
+      "description": "Four metrics on a dark band."
+    },
+    "latestPosts": {
+      "label": "Latest posts",
+      "description": "A grid of the newest posts from your site."
+    },
+    "cta": {
+      "label": "Call to action",
+      "description": "A centred prompt with a single button."
+    }
   },
   "a11y": {
     "drag": "Drag {label}",
@@ -126,6 +175,18 @@
     "gap": "Gap",
     "verticalAlign": "Vertical align",
     "span": "Width (of 12)",
+    "columns": "Columns",
+    "images": "Images",
+    "addImages": "Add images",
+    "autoplay": "Autoplay",
+    "interval": "Interval (ms)",
+    "arrows": "Arrows",
+    "dots": "Dots",
+    "showNumbers": "Show page numbers",
+    "galleryLayout": "Layout",
+    "galleryGrid": "Grid",
+    "galleryMasonry": "Masonry",
+    "galleryCarousel": "Carousel",
     "contentType": "Content type",
     "contentTypeNone": "Choose a type…",
     "limit": "How many",
@@ -149,6 +210,96 @@
     "unset": "Default",
     "clear": "Clear"
   },
+  "style": {
+    "unset": "Default",
+    "group": {
+      "colors": "Colours",
+      "spacing": "Spacing",
+      "border": "Border",
+      "shadow": "Shadow",
+      "typography": "Typography",
+      "transform": "Transform",
+      "filter": "Filter",
+      "effectShadow": "Custom shadow",
+      "hover": "Transition & hover"
+    },
+    "translateX": "Translate X",
+    "translateY": "Translate Y",
+    "rotate": "Rotate",
+    "scale": "Scale",
+    "blur": "Blur",
+    "brightness": "Brightness %",
+    "saturate": "Saturation %",
+    "shadowX": "Shadow X",
+    "shadowY": "Shadow Y",
+    "shadowBlur": "Shadow blur",
+    "shadowSpread": "Shadow spread",
+    "shadowColor": "Shadow colour",
+    "hoverTranslateY": "Hover translate Y",
+    "hoverScale": "Hover scale",
+    "transitionDuration": "Duration (ms)",
+    "transitionEasing": "Easing",
+    "easing": {
+      "ease": "Ease",
+      "ease-in-out": "Ease in-out",
+      "linear": "Linear",
+      "smooth": "Smooth"
+    },
+    "textColor": "Text colour",
+    "background": "Background",
+    "backgroundGradient": "Gradient",
+    "paddingX": "Padding — sides",
+    "paddingY": "Padding — top & bottom",
+    "marginX": "Margin — sides",
+    "marginY": "Margin — top & bottom",
+    "minHeight": "Min height",
+    "borderRadius": "Corner radius",
+    "borderWidth": "Border width",
+    "borderStyle": "Border style",
+    "borderColor": "Border colour",
+    "boxShadow": "Shadow",
+    "fontSize": "Font size",
+    "fontWeight": "Font weight",
+    "textAlign": "Text align",
+    "lineHeight": "Line height",
+    "letterSpacing": "Letter spacing",
+    "opacity": "Opacity",
+    "gradient": {
+      "none": "None",
+      "sunset": "Sunset",
+      "ocean": "Ocean",
+      "twilight": "Twilight",
+      "mint": "Mint",
+      "slate": "Slate"
+    },
+    "border": {
+      "none": "None",
+      "solid": "Solid",
+      "dashed": "Dashed",
+      "dotted": "Dotted"
+    },
+    "shadow": {
+      "none": "None",
+      "sm": "Small",
+      "md": "Medium",
+      "lg": "Large",
+      "xl": "Extra large"
+    },
+    "weight": {
+      "300": "Light",
+      "400": "Regular",
+      "500": "Medium",
+      "600": "Semibold",
+      "700": "Bold",
+      "800": "Extra bold"
+    },
+    "align": {
+      "left": "Left",
+      "center": "Centre",
+      "right": "Right",
+      "justify": "Justify"
+    }
+  },
   "widgets": {
     "heading": {
       "label": "Heading",
@@ -165,6 +316,26 @@
     "image": {
       "label": "Image",
       "description": "A picture the theme ships or the site uploaded."
+    },
+    "gallery": {
+      "label": "Gallery",
+      "description": "Several images from your Media library, as a grid, masonry or carousel."
+    },
+    "slider": {
+      "label": "Image slider",
+      "description": "A full-width slideshow of images you pick, with autoplay, arrows and dots."
+    },
+    "contentSlider": {
+      "label": "Content slider",
+      "description": "A slideshow of real posts or products — one slide per item, from your site."
+    },
+    "archiveList": {
+      "label": "Archive list",
+      "description": "The paginated listing on an archive page (e.g. the blog) — this page's posts."
+    },
+    "pagination": {
+      "label": "Pagination",
+      "description": "Previous / numbers / next for the archive. Links keep the current language."
     },
     "logo": {
       "label": "Logo",

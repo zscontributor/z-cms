@@ -1,0 +1,19 @@
+{
+  "name": "@zcmsorg/plugin-crm",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@zcmsorg/plugin-sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "@zcmsorg/schemas": "workspace:*",
+    "typescript": "5.9.3",
+    "vitest": "4.1.10"
+  }
+}

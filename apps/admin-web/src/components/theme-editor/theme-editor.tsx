@@ -43,6 +43,7 @@ import {
   removeNode,
   setBinding,
   setProps,
+  setStyle,
   templateTree,
   withTemplate,
 } from "@/lib/layout-doc";
@@ -52,13 +53,22 @@ import {
   getThemeDraftStatusAction,
   saveThemeDraftAction,
 } from "@/app/actions/theme-draft";
+import { previewCollectionsAction } from "@/app/actions/preview";
 import type { ThemeDraftDto } from "@/lib/api";
 import { Drawer } from "@/components/ui/drawer";
 import { Canvas } from "./canvas";
 import { Inspector, ThemeTokensFields } from "./inspector";
 import { Palette } from "./palette";
+import { Layers } from "./layers";
+import { TemplateGallery } from "./template-gallery";
 import { ChangelogEditor } from "./changelog-editor";
 import { PublishPanel } from "./publish-panel";
+import { PreviewOverlay } from "./preview-overlay";
+import { DEVICE_GLYPH, DEVICE_WIDTH, STUDIO_DEVICES, type StudioDevice } from "./devices";
+
+const ZOOM_MIN = 0.5;
+const ZOOM_MAX = 1.3;
+const ZOOM_STEP = 0.1;
 
 /**
  * The document plus its undo/redo stacks.
@@ -148,6 +158,12 @@ export function ThemeEditor({
   const canRedo = history.future.length > 0;
   const [template, setTemplate] = useState<LayoutTemplateName>("page");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Studio shell state: which viewport the canvas emulates, how zoomed it is, which
+  // left panel is showing, and whether the chrome-less preview overlay is open.
+  const [device, setDevice] = useState<StudioDevice>("desktop");
+  const [zoom, setZoom] = useState(1);
+  const [leftTab, setLeftTab] = useState<"blocks" | "layers" | "templates">("blocks");
+  const [previewOpen, setPreviewOpen] = useState(false);
   // The Theme settings drawer (colours, fonts, spacing) — opened by the gear in the
   // header. The tokens used to live in the Inspector's empty state, which meant
   // deselecting everything to reach them; a drawer makes them a deliberate place.
@@ -191,21 +207,63 @@ export function ThemeEditor({
     useSensor(KeyboardSensor),
   );
 
+  // Real rows keyed by collection name, fetched from the site's own content. Empty
+  // until the first fetch lands (and for any list still loading), where the canvas
+  // shows sample rows — so the surface is never blank waiting on the network.
+  const [realCollections, setRealCollections] = useState<Record<string, ContentDto[]>>({});
+
+  // The document's distinct collection queries, as a stable signature so the fetch
+  // effect fires when the bindings change — not on every keystroke of unrelated text.
+  const collectionQueries = useMemo(
+    () => Object.values(collectDocumentCollections(doc)),
+    [doc],
+  );
+  const querySignature = useMemo(() => JSON.stringify(collectionQueries), [collectionQueries]);
+
+  // Ask cms-api for the REAL rows those bindings resolve to, debounced. The action
+  // returns {} on any failure, so the canvas simply keeps its sample rows. Bindings
+  // that resolve to the same query share one entry, exactly as on the live site.
+  useEffect(() => {
+    if (collectionQueries.length === 0) {
+      setRealCollections({});
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      const rows = await previewCollectionsAction(locale, collectionQueries);
+      if (!cancelled) setRealCollections(rows);
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+    // querySignature is the value identity of collectionQueries; depending on it
+    // avoids refetching when an unrelated edit produces an equal query set.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [querySignature, locale]);
+
   /**
    * The canvas draws real widgets, and a post-list reads ctx.collections under the
-   * name derived from its own binding. Sample rows are keyed the same way, so the
-   * preview populates through exactly the path the live theme will use rather than
-   * a special case that could drift from it.
+   * name derived from its own binding. Real rows populate the same keys the live
+   * theme uses; a list not yet fetched falls back to sample rows so the surface is
+   * never blank — either way it flows through exactly the path the live theme will.
    */
   const ctx = useMemo(() => {
     const base = buildPreviewContext({ siteName, locale, menus });
     const collections: Record<string, ContentDto[]> = {};
     for (const [name, query] of Object.entries(collectDocumentCollections(doc))) {
+      // Once a list has been fetched it wins, even when it came back EMPTY — a type
+      // with no published content should draw the theme's real empty state, not fake
+      // rows. Sample rows are only the placeholder for a list not yet resolved.
+      if (name in realCollections) {
+        collections[name] = realCollections[name]!;
+        continue;
+      }
       const label = contentTypes.find((c) => c.key === query.contentType)?.name ?? query.contentType;
       collections[name] = sampleRows(query.limit ?? 6, label);
     }
     return { ...base, collections } as typeof base;
-  }, [doc, siteName, locale, menus, contentTypes]);
+  }, [doc, siteName, locale, menus, contentTypes, realCollections]);
 
   const mutate = useCallback(
     (next: LayoutNode[]) => {
@@ -514,8 +572,11 @@ export function ThemeEditor({
       onDragEnd={onDragEnd}
       onDragCancel={() => setDragLabel(null)}
     >
-      <div className="flex h-[calc(100vh-4rem)] flex-col">
-        <header className="flex items-center justify-between gap-3 border-b border-neutral-200 px-4 py-2 dark:border-neutral-800">
+      <div className="flex h-[100dvh] w-screen flex-col bg-neutral-950">
+        {/* The chrome is dark (studio look) while the canvas paper stays light and
+            readable, so `dark` is scoped to each chrome panel — header and the two
+            asides — not the whole tree. Tailwind v4 dark = a `.dark` ancestor. */}
+        <header className="dark flex items-center justify-between gap-3 border-b border-neutral-800 bg-neutral-900 px-4 py-2 text-neutral-100">
           <div className="flex items-center gap-3">
             <h1 className="text-sm font-semibold">{draft.name}</h1>
             <div className="flex items-center gap-1.5 text-xs text-neutral-500">
@@ -544,45 +605,9 @@ export function ThemeEditor({
             </div>
           </div>
 
-          <div className="flex items-center gap-1" role="tablist" aria-label={t("themeEditor.templates.label")}>
-            {LAYOUT_TEMPLATES.map((name) => (
-              <button
-                key={name}
-                type="button"
-                role="tab"
-                aria-selected={template === name}
-                className={cn(
-                  "rounded px-2 py-1 text-xs",
-                  template === name
-                    ? "bg-brand-500 text-white"
-                    : "text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800",
-                )}
-                onClick={() => {
-                  setTemplate(name);
-                  setSelectedId(null);
-                }}
-              >
-                {t(`themeEditor.templates.${name}`)}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-2">
-            {message ? <span className="text-xs text-neutral-500">{message}</span> : null}
-            {dirty ? (
-              <span className="text-xs text-amber-600">{t("themeEditor.unsaved")}</span>
-            ) : null}
-            <Button
-              size="sm"
-              variant="ghost"
-              className="px-2"
-              onClick={() => setSettingsOpen(true)}
-              aria-label={t("themeEditor.actions.settings")}
-              title={t("themeEditor.actions.settings")}
-            >
-              <Icon name="settings" size={16} />
-            </Button>
-            <div className="flex items-center">
+          {/* Centre: undo/redo · device · zoom — the studio's viewport controls. */}
+          <div className="flex items-center gap-1.5">
+            <div className="flex items-center rounded-lg border border-neutral-700 bg-neutral-950 p-0.5">
               <Button
                 size="sm"
                 variant="ghost"
@@ -606,6 +631,86 @@ export function ThemeEditor({
                 <Icon name="redo" size={16} />
               </Button>
             </div>
+
+            <div
+              className="flex items-center rounded-lg border border-neutral-700 bg-neutral-950 p-0.5"
+              role="group"
+              aria-label={t("themeEditor.studio.device")}
+            >
+              {STUDIO_DEVICES.map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  aria-pressed={device === d}
+                  aria-label={t(`themeEditor.studio.${d}`)}
+                  title={t(`themeEditor.studio.${d}`)}
+                  onClick={() => setDevice(d)}
+                  className={cn(
+                    "h-7 w-8 rounded text-sm leading-none",
+                    device === d
+                      ? "bg-brand-500/20 text-brand-300"
+                      : "text-neutral-400 hover:text-neutral-100",
+                  )}
+                >
+                  {DEVICE_GLYPH[d]}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center rounded-lg border border-neutral-700 bg-neutral-950 p-0.5">
+              <button
+                type="button"
+                className="h-7 w-7 rounded text-neutral-400 hover:text-neutral-100"
+                aria-label={t("themeEditor.studio.zoomOut")}
+                onClick={() => setZoom((z) => Math.max(ZOOM_MIN, Math.round((z - ZOOM_STEP) * 100) / 100))}
+              >
+                −
+              </button>
+              <button
+                type="button"
+                className="w-12 text-xs tabular-nums text-neutral-300"
+                aria-label={t("themeEditor.studio.zoomReset")}
+                onClick={() => setZoom(1)}
+              >
+                {Math.round(zoom * 100)}%
+              </button>
+              <button
+                type="button"
+                className="h-7 w-7 rounded text-neutral-400 hover:text-neutral-100"
+                aria-label={t("themeEditor.studio.zoomIn")}
+                onClick={() => setZoom((z) => Math.min(ZOOM_MAX, Math.round((z + ZOOM_STEP) * 100) / 100))}
+              >
+                ＋
+              </button>
+            </div>
+          </div>
+
+          {/* Right: status + preview + settings + save + build. */}
+          <div className="flex items-center gap-2">
+            {message ? (
+              <span className="max-w-[16rem] truncate text-xs text-neutral-400">{message}</span>
+            ) : null}
+            {dirty ? <span className="text-xs text-amber-400">{t("themeEditor.unsaved")}</span> : null}
+            <Button
+              size="sm"
+              variant="ghost"
+              className="gap-1 px-2"
+              disabled={tree.length === 0}
+              onClick={() => setPreviewOpen(true)}
+            >
+              <Icon name="eye" size={16} />
+              {t("themeEditor.studio.preview")}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="px-2"
+              onClick={() => setSettingsOpen(true)}
+              aria-label={t("themeEditor.actions.settings")}
+              title={t("themeEditor.actions.settings")}
+            >
+              <Icon name="settings" size={16} />
+            </Button>
             <Button size="sm" variant="ghost" disabled={disabled || !dirty} onClick={save}>
               {saving ? t("themeEditor.actions.saving") : t("themeEditor.actions.save")}
             </Button>
@@ -622,44 +727,132 @@ export function ThemeEditor({
         </header>
 
         <div className="flex min-h-0 flex-1">
-          <aside className="w-52 shrink-0 border-r border-neutral-200 dark:border-neutral-800">
-            <Palette onAdd={addWidget} disabled={disabled} />
+          <aside className="dark flex w-60 shrink-0 flex-col border-r border-neutral-800 bg-neutral-900 text-neutral-200">
+            <div
+              className="flex gap-1 border-b border-neutral-800 px-2 pt-2"
+              role="tablist"
+              aria-label={t("themeEditor.studio.leftPanel")}
+            >
+              {(["blocks", "layers", "templates"] as const).map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  role="tab"
+                  aria-selected={leftTab === name}
+                  onClick={() => setLeftTab(name)}
+                  className={cn(
+                    "flex-1 rounded-t px-2 py-1.5 text-xs font-medium",
+                    leftTab === name
+                      ? "border-b-2 border-brand-500 text-brand-300"
+                      : "text-neutral-400 hover:text-neutral-100",
+                  )}
+                >
+                  {t(`themeEditor.studio.${name}`)}
+                </button>
+              ))}
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              {leftTab === "blocks" ? (
+                <Palette onAdd={addWidget} disabled={disabled} />
+              ) : leftTab === "layers" ? (
+                <div className="p-2">
+                  <Layers
+                    tree={tree}
+                    selectedId={selectedId}
+                    onSelect={setSelectedId}
+                    onMoveWithin={moveWithin}
+                    disabled={disabled}
+                  />
+                </div>
+              ) : (
+                <TemplateGallery
+                  disabled={disabled}
+                  onInsert={(nodes) => {
+                    mutate([...tree, ...nodes]);
+                    if (nodes[0]) setSelectedId(nodes[0].id);
+                  }}
+                />
+              )}
+            </div>
           </aside>
 
-          <main className="min-w-0 flex-1 overflow-y-auto bg-neutral-100 dark:bg-neutral-900">
-            {/* The template a person never drew has no tree — `page` is the only
-                required one, and the rest fall back to it at render time. Saying so
-                beats an empty canvas that looks broken. */}
-            <Canvas
-              tree={tree}
-              ctx={ctx}
-              selectedId={selectedId}
-              onSelect={setSelectedId}
-              onAddSection={() => mutate([...tree, createSection()])}
-              onAddRow={(sectionId) => {
-                const section = locate(tree, sectionId);
-                mutate(insertNode(tree, sectionId, section?.node.children?.length ?? 0, createRow()));
+          <main className="flex min-w-0 flex-1 flex-col">
+            {/* Template strip: which of the four trees is on the canvas. */}
+            <div
+              className="dark flex items-center gap-1 border-b border-neutral-800 bg-neutral-900 px-3 py-1.5"
+              role="tablist"
+              aria-label={t("themeEditor.templates.label")}
+            >
+              {LAYOUT_TEMPLATES.map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  role="tab"
+                  aria-selected={template === name}
+                  className={cn(
+                    "rounded px-2.5 py-1 text-xs",
+                    template === name
+                      ? "bg-brand-500 text-white"
+                      : "text-neutral-400 hover:bg-neutral-800",
+                  )}
+                  onClick={() => {
+                    setTemplate(name);
+                    setSelectedId(null);
+                  }}
+                >
+                  {t(`themeEditor.templates.${name}`)}
+                </button>
+              ))}
+            </div>
+
+            {/* The workspace: a dark, dotted surface holding the device-framed paper.
+                Width follows the device; zoom scales the paper from the top-centre. */}
+            <div
+              className="min-h-0 flex-1 overflow-auto p-6"
+              style={{
+                background:
+                  "radial-gradient(circle at 1px 1px, rgba(255,255,255,.10) 1px, transparent 0) 0 0 / 18px 18px, #1f2430",
               }}
-              onAddColumn={(rowId) => {
-                const row = locate(tree, rowId);
-                mutate(insertNode(tree, rowId, row?.node.children?.length ?? 0, createColumn(6)));
-              }}
-              onMoveWithin={moveWithin}
-              onDuplicate={(id) => mutate(duplicateNode(tree, id))}
-              // Deleting the block the inspector was showing leaves it pointing at
-              // nothing; deleteNode falls back to the theme's own tokens.
-              onDelete={deleteNode}
-              disabled={disabled}
-            />
+            >
+              <div
+                className="mx-auto bg-white shadow-2xl transition-[width]"
+                style={{
+                  width: DEVICE_WIDTH[device] ?? "100%",
+                  maxWidth: "100%",
+                  transform: zoom === 1 ? undefined : `scale(${zoom})`,
+                  transformOrigin: "top center",
+                }}
+              >
+                {/* The template a person never drew has no tree — `page` is the only
+                    required one, and the rest fall back to it at render time. */}
+                <Canvas
+                  tree={tree}
+                  ctx={ctx}
+                  selectedId={selectedId}
+                  onSelect={setSelectedId}
+                  onAddSection={() => mutate([...tree, createSection()])}
+                  onAddRow={(sectionId) => {
+                    const section = locate(tree, sectionId);
+                    mutate(insertNode(tree, sectionId, section?.node.children?.length ?? 0, createRow()));
+                  }}
+                  onAddColumn={(rowId) => {
+                    const row = locate(tree, rowId);
+                    mutate(insertNode(tree, rowId, row?.node.children?.length ?? 0, createColumn(6)));
+                  }}
+                  onMoveWithin={moveWithin}
+                  onDuplicate={(id) => mutate(duplicateNode(tree, id))}
+                  // Deleting the block the inspector was showing leaves it pointing at
+                  // nothing; deleteNode falls back to the theme's own tokens.
+                  onDelete={deleteNode}
+                  disabled={disabled}
+                />
+              </div>
+            </div>
           </main>
 
-          {/* One scroll column, sized to its content. The Inspector no longer fills
-              a fixed region — an empty selection is a short hint, not a tall box —
-              and Release notes + Publish flow directly below it, the whole aside
-              scrolling as one when a long selection or the forms need the room.
-              (Theme tokens moved to the settings drawer, so the Inspector is short
-              far more often now.) */}
-          <aside className="flex w-80 shrink-0 flex-col overflow-y-auto border-l border-neutral-200 dark:border-neutral-800">
+          {/* One scroll column beside the design: Inspector, then Release notes and
+              the Publish flow — the last steps of the same job. */}
+          <aside className="dark flex w-80 shrink-0 flex-col overflow-y-auto border-l border-neutral-800 bg-neutral-900 text-neutral-200">
             <Inspector
               doc={doc}
               node={selected}
@@ -667,12 +860,10 @@ export function ThemeEditor({
               disabled={disabled}
               onProps={(props) => selectedId && mutate(setProps(tree, selectedId, props))}
               onBinding={(binding) => selectedId && mutate(setBinding(tree, selectedId, binding))}
+              onStyle={(style) => selectedId && mutate(setStyle(tree, selectedId, style))}
               onDelete={() => selectedId && deleteNode(selectedId)}
               onDuplicate={() => selectedId && mutate(duplicateNode(tree, selectedId))}
             />
-            {/* Release notes then signing, both beside the design rather than on a
-                settings page: they are the last steps of the same job, and the notes
-                the author writes here are packed into the build the checksum covers. */}
             <ChangelogEditor draftId={draft.id} changelog={draft.changelog} />
             <PublishPanel
               draftId={draft.id}
@@ -697,6 +888,19 @@ export function ThemeEditor({
       >
         <ThemeTokensFields tokens={doc.tokens} onChange={applyTokens} disabled={disabled} />
       </Drawer>
+
+      {/* Preview: the drawn template rendered chrome-less, at the chosen device
+          width, from the same context the canvas uses. Sample data for now — M3
+          swaps in the site's real rows. */}
+      {previewOpen ? (
+        <PreviewOverlay
+          nodes={tree}
+          tokens={doc.tokens}
+          ctx={ctx}
+          device={device}
+          onClose={() => setPreviewOpen(false)}
+        />
+      ) : null}
 
       {/* The thing you are dragging, following the cursor. A plain labelled chip
           rather than a clone of the widget: the drop TARGET is what needs to read

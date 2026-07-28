@@ -177,3 +177,24 @@ export function normaliseCollectionSort(sort: unknown): CollectionSort {
     ? (sort as CollectionSort)
     : "newest";
 }
+
+/** The validated wire form of a {@link CollectionQuery}. */
+export const CollectionQuerySchema = z.object({
+  contentType: z.string().trim().min(1),
+  limit: z.number().int().min(1).max(COLLECTION_MAX_LIMIT).optional(),
+  sort: z.enum(COLLECTION_SORTS).optional(),
+});
+
+/**
+ * The Theme Editor's request for REAL rows to draw the canvas with.
+ *
+ * The editor sends the same queries its bindings declare; the server resolves them
+ * through the one render resolver — same tenant scope, same PUBLISHED filter, same
+ * cap — so the canvas shows what the live site would. Bounded to a small batch: this
+ * is a design surface, not a reporting endpoint.
+ */
+export const PreviewCollectionsRequestSchema = z.object({
+  locale: z.string().trim().min(1).max(35),
+  queries: z.array(CollectionQuerySchema).max(COLLECTION_MAX_LIMIT),
+});
+export type PreviewCollectionsRequest = z.infer<typeof PreviewCollectionsRequestSchema>;

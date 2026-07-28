@@ -122,6 +122,23 @@ export function setBinding(
   });
 }
 
+export function setStyle(
+  tree: LayoutNode[],
+  id: string,
+  style: LayoutNode["style"],
+): LayoutNode[] {
+  return updateNode(tree, id, (node) => {
+    // An empty style object is no style: drop the key so the in-memory tree equals
+    // what the server stores, keeping the "unsaved changes" check honest — the same
+    // reason setBinding removes an absent binding rather than setting it undefined.
+    if (!style || Object.keys(style).length === 0) {
+      const { style: _drop, ...rest } = node;
+      return rest;
+    }
+    return { ...node, style };
+  });
+}
+
 export function removeNode(tree: LayoutNode[], id: string): LayoutNode[] {
   return tree
     .filter((node) => node.id !== id)

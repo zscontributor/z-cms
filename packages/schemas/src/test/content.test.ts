@@ -9,6 +9,8 @@ import {
   SlugSchema,
   UpdateContentSchema,
   buildContentDataSchema,
+  resolveLocalizedLabel,
+  stripPrivateData,
   type ContentTypeField,
 } from "../content";
 
@@ -552,5 +554,55 @@ describe("buildContentDataSchema", () => {
     const schema = buildContentDataSchema([]);
 
     expect(schema.safeParse({}).success).toBe(true);
+  });
+});
+
+describe("ContentTypeField private + localized labels", () => {
+  it("accepts a plain-string label and defaults private to false", () => {
+    const parsed = ContentTypeFieldSchema.parse({ key: "price", type: "number", label: "Price" });
+    expect(parsed.private).toBe(false);
+    expect(parsed.label).toBe("Price");
+  });
+
+  it("accepts a localized-object label that carries a non-empty en", () => {
+    const parsed = ContentTypeFieldSchema.parse({
+      key: "cost",
+      type: "number",
+      label: { en: "Cost", vi: "Giá nhập", ja: "仕入れ値" },
+      private: true,
+    });
+    expect(parsed.private).toBe(true);
+    expect(resolveLocalizedLabel(parsed.label, "vi")).toBe("Giá nhập");
+    expect(resolveLocalizedLabel(parsed.label, "fr")).toBe("Cost"); // falls back to en
+  });
+
+  it("rejects a localized-object label with no en", () => {
+    const result = ContentTypeFieldSchema.safeParse({
+      key: "cost",
+      type: "number",
+      label: { vi: "Giá nhập" },
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("stripPrivateData", () => {
+  const fields = [
+    { key: "price", private: false },
+    { key: "cost", private: true },
+  ];
+
+  it("removes only the keys a current field marks private, and copies the rest", () => {
+    const data = { price: 100, cost: 40, badge: "New" };
+    const out = stripPrivateData(data, fields);
+    expect(out).toEqual({ price: 100, badge: "New" });
+    expect(data).toHaveProperty("cost"); // the input is not mutated
+  });
+
+  it("returns a copy unchanged when no field is private", () => {
+    const data = { price: 100 };
+    const out = stripPrivateData(data, [{ key: "price", private: false }]);
+    expect(out).toEqual({ price: 100 });
+    expect(out).not.toBe(data);
   });
 });

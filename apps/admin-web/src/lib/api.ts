@@ -355,6 +355,20 @@ export async function listContents(query: ContentListQuery): Promise<Paginated<C
   return apiFetch<Paginated<ContentDto>>("/contents", { query: { ...query } });
 }
 
+/**
+ * Resolve the Theme Editor's collection bindings into REAL rows for the current
+ * site, so the canvas draws with the site's own content instead of placeholders.
+ * Keyed by the deterministic collection name the editor derives from each binding.
+ */
+export async function previewCollections(
+  body: import("@zcmsorg/schemas").PreviewCollectionsRequest,
+): Promise<Record<string, ContentDto[]>> {
+  return apiFetch<Record<string, ContentDto[]>>("/render/preview-collections", {
+    method: "POST",
+    body,
+  });
+}
+
 export async function getContent(id: string): Promise<ContentDto> {
   return apiFetch<ContentDto>(`/contents/${id}`);
 }
@@ -611,8 +625,19 @@ export interface PluginResourceColumn {
 export interface PluginResourceField {
   column: string;
   label: string;
-  input?: "text" | "textarea" | "number" | "boolean" | "select" | "date";
-  options?: string[];
+  input?:
+    | "text"
+    | "textarea"
+    | "richtext"
+    | "number"
+    | "boolean"
+    | "select"
+    | "date"
+    | "media"
+    | "reference";
+  /** Server-normalized: `value` is stored, `label` is display-only. */
+  options?: Array<{ value: string; label: string }>;
+  refTable?: string;
   readonly?: boolean;
 }
 

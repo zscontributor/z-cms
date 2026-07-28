@@ -42,13 +42,56 @@ export const FieldTypeSchema = z.enum([
 ]);
 export type FieldType = z.infer<typeof FieldTypeSchema>;
 
+/**
+ * A label a content type may ship in one language or many. A plain string is a
+ * label that does not translate (the common case, and every existing content type
+ * keeps working); a `{ en, vi, … }` map — which must carry a non-empty `en` — is
+ * resolved per reader by {@link resolveLocalizedLabel}, mirroring how a plugin
+ * manifest and a theme's editorBlocks already localize their labels.
+ */
+export const LocalizedStringSchema = z.union([
+  z.string().min(1),
+  z
+    .record(z.string(), z.string())
+    .refine((o) => typeof o.en === "string" && o.en.trim().length > 0, {
+      message: 'A localized label must include a non-empty "en".',
+    }),
+]);
+export type LocalizedString = z.infer<typeof LocalizedStringSchema>;
+
+/** "vi-VN" -> "vi": a region-less label still serves a regional reader. */
+function baseLocale(locale: string): string {
+  return locale.split("-")[0] ?? locale;
+}
+
+/**
+ * The label to show a reader in `locale`: their exact locale, then its region-less
+ * base, then English, then whatever the map carries. A plain string passes through.
+ */
+export function resolveLocalizedLabel(value: LocalizedString, locale: string): string {
+  if (typeof value === "string") return value;
+  return (
+    value[locale] ??
+    value[baseLocale(locale)] ??
+    value.en ??
+    Object.values(value)[0] ??
+    ""
+  );
+}
+
 export const ContentTypeFieldSchema = z.object({
   key: z
     .string()
     .regex(/^[a-zA-Z][a-zA-Z0-9_]*$/, "Field key must be a valid identifier."),
   type: FieldTypeSchema,
-  label: z.string().min(1),
+  label: LocalizedStringSchema,
   required: z.boolean().default(false),
+  /**
+   * A field the public site must never see. Its value is stored and editable in
+   * the admin, but {@link stripPrivateData} removes it from the payload the render
+   * path hands a theme — for a cost price, an internal note, anything back-office.
+   */
+  private: z.boolean().default(false),
   description: z.string().optional(),
   // For "select".
   options: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
@@ -57,6 +100,28 @@ export const ContentTypeFieldSchema = z.object({
   defaultValue: z.unknown().optional(),
 });
 export type ContentTypeField = z.infer<typeof ContentTypeFieldSchema>;
+
+/**
+ * Return a COPY of a content row's `data` with every private field removed.
+ *
+ * This is the seam that keeps a back-office value — a cost price, a margin, an
+ * internal note — off the public site. The render path runs it before handing
+ * `data` to a theme; server-internal readers (commerce pricing a cart) read the
+ * row directly and still see everything. A field the type no longer declares is
+ * left as-is: only keys a CURRENT field marks `private` are stripped.
+ */
+export function stripPrivateData(
+  data: Record<string, unknown>,
+  fields: ReadonlyArray<{ key: string; private?: boolean }>,
+): Record<string, unknown> {
+  const secret = new Set(fields.filter((f) => f.private).map((f) => f.key));
+  if (secret.size === 0) return { ...data };
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (!secret.has(key)) out[key] = value;
+  }
+  return out;
+}
 
 export const ContentStatusSchema = z.enum([
   "DRAFT",

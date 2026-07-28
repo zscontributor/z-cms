@@ -1,3 +1,4 @@
+import { isValidLocalizedLabel, resolveLocalized, type LocalizedString } from "./localized";
 import { RESERVED_COLUMNS, type PluginTableSchema } from "./table-schema";
 
 /**
@@ -21,8 +22,8 @@ import { RESERVED_COLUMNS, type PluginTableSchema } from "./table-schema";
 
 /** A sidebar entry. Visible only to a user whose role holds `permission`. */
 export interface PluginNavItem {
-  /** Sidebar label. */
-  label: string;
+  /** Sidebar label. A plain string, or a `{en,vi,…}` map resolved per reader. */
+  label: LocalizedString;
   /** Icon key from the admin's own set; falls back to a default when unknown. */
   icon?: string;
   /** The `key` of the resource this entry opens. */
@@ -39,24 +40,37 @@ export interface PluginNavItem {
 export type PluginFieldInput =
   | "text"
   | "textarea"
+  | "richtext"
   | "number"
   | "boolean"
   | "select"
-  | "date";
+  | "date"
+  | "media"
+  | "reference";
+
+/**
+ * One choice for a `select` input. `value` is what is stored in the row and is
+ * NEVER localized — orders and rows keep one stable value across languages.
+ * `label` is display-only and may be a `{en,vi,…}` map. A bare `string` is
+ * shorthand for value === label.
+ */
+export type PluginFieldOption = string | { value: string; label: LocalizedString };
 
 export interface PluginResourceColumn {
   /** A column of the backing table (a declared one, or a reserved core column). */
   column: string;
-  label: string;
+  label: LocalizedString;
 }
 
 export interface PluginResourceField {
   column: string;
-  label: string;
+  label: LocalizedString;
   /** Overrides the input inferred from the column's type. */
   input?: PluginFieldInput;
   /** Choices for a `select` input. */
-  options?: string[];
+  options?: PluginFieldOption[];
+  /** For `reference`: the plugin table a chosen id points at (display hint). */
+  refTable?: string;
   /** Shown but not editable — an `id`, a `created_at`, a computed status. */
   readonly?: boolean;
 }
@@ -65,7 +79,7 @@ export interface PluginAdminResource {
   /** Stable slug, unique within the plugin; forms the screen's URL. */
   key: string;
   /** Singular/plural-agnostic label for the screen heading. */
-  label: string;
+  label: LocalizedString;
   /** The declared plugin table this screen reads and writes. */
   table: string;
   list: {
@@ -87,6 +101,33 @@ export interface PluginAdminContribution {
   resources?: PluginAdminResource[];
 }
 
+/**
+ * The same shapes as above, but every label already resolved to a plain string
+ * for one reader and every option normalized to `{value,label}`. This is what the
+ * server hands the admin — resolution happens once, server-side, so the admin
+ * components render strings and never learn about locale maps.
+ */
+export interface ResolvedPluginFieldOption {
+  value: string;
+  label: string;
+}
+export type ResolvedPluginResourceField = Omit<PluginResourceField, "label" | "options"> & {
+  label: string;
+  options?: ResolvedPluginFieldOption[];
+};
+export type ResolvedPluginResourceColumn = { column: string; label: string };
+export type ResolvedPluginAdminResource = Omit<
+  PluginAdminResource,
+  "label" | "list" | "form"
+> & {
+  label: string;
+  list: {
+    columns: ResolvedPluginResourceColumn[];
+    orderBy?: { column: string; direction?: "asc" | "desc" };
+  };
+  form?: { fields: ResolvedPluginResourceField[] };
+};
+
 const SLUG_RE = /^[a-z][a-z0-9-]*$/;
 
 export interface PluginAdminViolation {
@@ -97,6 +138,8 @@ export interface PluginAdminViolation {
     | "unknown-table"
     | "unknown-column"
     | "missing-read-permission"
+    | "invalid-label"
+    | "invalid-option"
     | "nav-unknown-resource"
     | "nav-missing-permission";
   detail?: string;
@@ -157,6 +200,28 @@ export function validateAdminContribution(
       violations.push({ where: at, reason: "missing-read-permission" });
     }
 
+    if (!isValidLocalizedLabel(resource.label)) {
+      violations.push({ where: at, reason: "invalid-label", detail: "resource" });
+    }
+    for (const column of resource.list.columns) {
+      if (!isValidLocalizedLabel(column.label)) {
+        violations.push({ where: at, reason: "invalid-label", detail: `column:${column.column}` });
+      }
+    }
+    for (const field of resource.form?.fields ?? []) {
+      if (!isValidLocalizedLabel(field.label)) {
+        violations.push({ where: at, reason: "invalid-label", detail: `field:${field.column}` });
+      }
+      for (const option of field.options ?? []) {
+        const value = typeof option === "string" ? option : option.value;
+        if (!value || !value.trim()) {
+          violations.push({ where: at, reason: "invalid-option", detail: field.column });
+        } else if (typeof option !== "string" && !isValidLocalizedLabel(option.label)) {
+          violations.push({ where: at, reason: "invalid-option", detail: `${field.column}:${value}` });
+        }
+      }
+    }
+
     const named = [
       ...resource.list.columns.map((c) => c.column),
       ...resource.list.orderBy ? [resource.list.orderBy.column] : [],
@@ -177,9 +242,56 @@ export function validateAdminContribution(
     if (!item.permission) {
       violations.push({ where: at, reason: "nav-missing-permission" });
     }
+    if (!isValidLocalizedLabel(item.label)) {
+      violations.push({ where: at, reason: "invalid-label", detail: "nav" });
+    }
   }
 
   return violations;
+}
+
+/** Normalize one field's choices to `{value,label}` for a reader, or undefined. */
+export function resolvePluginFieldOptions(
+  options: PluginFieldOption[] | undefined,
+  locale: string,
+): ResolvedPluginFieldOption[] | undefined {
+  if (!options) return undefined;
+  return options.map((option) =>
+    typeof option === "string"
+      ? { value: option, label: option }
+      : { value: option.value, label: resolveLocalized(option.label, locale) },
+  );
+}
+
+/**
+ * Resolve every label on a resource for one reader and normalize its options.
+ * The server calls this before handing a resource to the admin, so the client
+ * only ever sees plain strings — see {@link ResolvedPluginAdminResource}.
+ */
+export function resolvePluginAdminResource(
+  resource: PluginAdminResource,
+  locale: string,
+): ResolvedPluginAdminResource {
+  return {
+    ...resource,
+    label: resolveLocalized(resource.label, locale),
+    list: {
+      ...resource.list,
+      columns: resource.list.columns.map((column) => ({
+        column: column.column,
+        label: resolveLocalized(column.label, locale),
+      })),
+    },
+    form: resource.form
+      ? {
+          fields: resource.form.fields.map((field) => ({
+            ...field,
+            label: resolveLocalized(field.label, locale),
+            options: resolvePluginFieldOptions(field.options, locale),
+          })),
+        }
+      : undefined,
+  };
 }
 
 /** The input a form field uses when it does not override one, inferred from type. */

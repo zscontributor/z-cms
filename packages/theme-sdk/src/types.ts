@@ -617,6 +617,23 @@ export interface ThemeContext<S = Record<string, unknown>> {
    * the one object a block receives; a theme MAY read it to check a form exists.
    */
   forms: Record<string, PublicFormDef>;
+  /**
+   * The listing being viewed — the paginated slice of a content type's archive
+   * (e.g. `/blog`), and where it sits. Null on every non-listing template. This is
+   * the ONLY way a widget reaches the archive: `content` is null on an archive and
+   * `collections` are the theme's OWN capped queries, not the paged items. A widget
+   * reads `archive.items` to draw the list and `archive.{page,totalPages,basePath}`
+   * to draw a pager — building each link through `url()` so it keeps the locale.
+   */
+  archive: {
+    contentTypeKey: string;
+    /** The archive's own path, e.g. "/blog" — pass through `url()` for the locale. */
+    basePath: string;
+    /** This page's slice of items (the page size is the runtime's, not the theme's). */
+    items: ContentDto[];
+    page: number;
+    totalPages: number;
+  } | null;
 }
 
 export interface PageTemplateProps<S = Record<string, unknown>> {

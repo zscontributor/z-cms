@@ -83,6 +83,7 @@ export function renderThemeToHtml(
     asset: (path: string) => resolveAssetUrl(assetBase, path),
     alternates: payload.alternates,
     collections: payload.collections ?? {},
+    archive: payload.archive ?? null,
     colorMode: resolveColorModes(theme.manifest as never, settings as Record<string, unknown>),
   };
 

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { colorModeIconCss, colorModeScript } from "@/lib/color-mode";
 import { contactEnhanceScript } from "@/lib/contact-enhance";
 import { revealOnTargetScript } from "@/lib/reveal-on-target";
+import { sliderScript } from "@/lib/slider";
 import { resolveDocumentColorMode } from "@/lib/color-mode-server";
 import { resolveDocumentLocale } from "@/lib/render-client";
 import "./globals.css";
@@ -82,6 +83,15 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           nonce={nonce}
           suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: contactEnhanceScript() }}
+        />
+        {/* Enhances every `data-zw-slider` (drawn-theme sliders): autoplay,
+            active-dot sync, pause-on-hover, arrows relative to the current slide.
+            The slider swipes and its anchors scroll with no JS; this only adds what
+            CSS cannot. Bounded to marked elements, honours reduced-motion. */}
+        <script
+          nonce={nonce}
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: sliderScript() }}
         />
       </body>
     </html>

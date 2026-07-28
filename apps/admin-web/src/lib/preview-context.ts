@@ -72,6 +72,15 @@ export function buildPreviewContext(input: PreviewContextInput): ThemeContext {
     },
     // Filled per-render by the canvas from the document's own bindings.
     collections: {},
+    // A sample archive so the Archive-list and Pagination widgets have something to
+    // draw while designing — on a live site this is null off the archive template.
+    archive: {
+      contentTypeKey: "post",
+      basePath: "/blog",
+      items: sampleRows(6, "Post"),
+      page: 1,
+      totalPages: 3,
+    },
   };
 
   return ctx as unknown as ThemeContext;

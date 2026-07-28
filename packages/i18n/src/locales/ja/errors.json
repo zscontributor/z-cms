@@ -81,12 +81,23 @@
     "invalidAdmin": "プラグインの管理画面は自身のテーブルとリソースのみを参照できます。拒否されました: {detail}。",
     "resourceNotFound": "そのようなプラグインリソースはありません: 「{resource}」。",
     "resourceReadOnly": "このリソースは読み取り専用です。",
+    "fieldRequired": "「{column}」は必須です。",
+    "fieldInvalid": "「{column}」の値の型が正しくありません。",
+    "invalidFieldValues": "一部のフィールドが無効です: {detail}",
     "invalidHosts": "プラグインが宣言できるのは、実際に接続する正当なホスト名だけです。拒否されました: {hosts}。ワイルドカード単独、IP アドレス、ポート、スキームは使用できません。",
     "noNetworkHosts": "プラグイン「{plugin}」にはネットワーク権限が付与されていますが、マニフェストにホストの宣言がないため、接続先がありません。",
     "secretNotConfigured": "プラグインはシークレット「{secret}」を使用しましたが、設定「{setting}」が空です。プラグインの設定画面で入力してください。",
     "egressFailed": "プラグインのリクエストを完了できませんでした: {reason}",
     "egressQuotaExceeded": "このサイトは 1 時間に {limit} 件を超えるプラグインリクエストを行いました。{retryAfterSec} 秒後に再試行してください。",
     "egressQuotaUnavailable": "現在プラグインのリクエストを計数できないため、拒否されました。しばらくしてから再試行してください。"
+  },
+  "commerce": {
+    "notAcceptingOrders": "この店舗は現在注文を受け付けていません。",
+    "codUnavailable": "代金引換はご利用いただけません。",
+    "cartUnavailable": "カート内の商品は現在購入できません。更新して再度お試しください。",
+    "orderNotFound": "注文が見つかりません。",
+    "siteNotFound": "サイトが見つかりません。",
+    "orderNumberExhausted": "注文番号を割り当てできませんでした。もう一度お試しください。"
   },
   "packages": {
     "tooLarge": "パッケージが {limit} 制限を超えています。",

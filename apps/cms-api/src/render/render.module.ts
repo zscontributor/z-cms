@@ -1,9 +1,15 @@
-import { BadRequestException, Controller, Get, Module, Query } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, Module, Post, Query } from "@nestjs/common";
 import { ApiOperation, ApiQuery, ApiTags } from "@nestjs/swagger";
-import type { RenderPayload } from "@zcmsorg/schemas";
-import { Internal } from "../auth/decorators";
+import {
+  PreviewCollectionsRequestSchema,
+  type ContentDto,
+  type PreviewCollectionsRequest,
+  type RenderPayload,
+} from "@zcmsorg/schemas";
+import { Internal, RequirePermissions, SiteId, SiteScoped } from "../auth/decorators";
 import { t } from "../common/i18n";
-import { ApiInternal, ApiZodResponse } from "../openapi/decorators";
+import { ZodValidationPipe } from "../common/zod-validation.pipe";
+import { ApiAuthed, ApiInternal, ApiSiteScoped, ApiZodResponse } from "../openapi/decorators";
 import { RenderService } from "./render.service";
 
 @ApiTags("Render")
@@ -65,8 +71,43 @@ class RenderController {
   }
 }
 
+/**
+ * The Theme Editor's window onto real content.
+ *
+ * Separate from RenderController because the trust model is the opposite: this is a
+ * user session, site-scoped, gated on `theme:author` — not the internal token. It
+ * exposes exactly one thing (resolve these bindings into rows for THIS site) so the
+ * admin canvas can draw with the site's own posts instead of placeholders, without
+ * ever being able to name a hostname or reach another tenant's content.
+ */
+@ApiTags("Render")
+@ApiSiteScoped()
+@Controller("render")
+@SiteScoped()
+class RenderPreviewController {
+  constructor(private readonly render: RenderService) {}
+
+  @Post("preview-collections")
+  @ApiOperation({
+    summary: "Resolve collection bindings into real rows for the current site",
+    description:
+      "The Theme Editor sends the queries its bindings declare; the response is the " +
+      "same rows the live site would show (published, locale-scoped, capped), keyed " +
+      "by the deterministic collection name. Session-authenticated and site-scoped — " +
+      "there is no hostname and no way to reach another tenant.",
+  })
+  @ApiAuthed("theme:author")
+  @RequirePermissions("theme:author")
+  previewCollections(
+    @SiteId() siteId: string,
+    @Body(new ZodValidationPipe(PreviewCollectionsRequestSchema)) body: PreviewCollectionsRequest,
+  ): Promise<Record<string, ContentDto[]>> {
+    return this.render.previewCollections(siteId, body.locale, body.queries);
+  }
+}
+
 @Module({
-  controllers: [RenderController],
+  controllers: [RenderController, RenderPreviewController],
   providers: [RenderService],
 })
 export class RenderModule {}

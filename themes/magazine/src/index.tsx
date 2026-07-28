@@ -794,7 +794,7 @@ function ArchiveTemplate({ ctx, archive }: ArchiveTemplateProps<MagazineThemeSet
         {archive.totalPages > 1 ? (
           <nav className="zmag__pagination" aria-label={ctx.t("archive.pagination")}>
             {archive.page > 1 ? (
-              <a href={`${archive.basePath}?page=${archive.page - 1}`}>
+              <a href={ctx.url(`${archive.basePath}?page=${archive.page - 1}`)}>
                 ← {ctx.t("archive.previous")}
               </a>
             ) : (
@@ -807,7 +807,7 @@ function ArchiveTemplate({ ctx, archive }: ArchiveTemplateProps<MagazineThemeSet
               })}
             </span>
             {archive.page < archive.totalPages ? (
-              <a href={`${archive.basePath}?page=${archive.page + 1}`}>
+              <a href={ctx.url(`${archive.basePath}?page=${archive.page + 1}`)}>
                 {ctx.t("archive.next")} →
               </a>
             ) : (

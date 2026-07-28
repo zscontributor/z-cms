@@ -121,6 +121,33 @@ function formatPrice(value: number, locale: string, currency: string): string {
   }
 }
 
+/**
+ * The price to show and the price to strike through. A live sale — a `salePrice`
+ * below `price`, inside its optional `saleStart`/`saleEnd` window — shows the sale
+ * and strikes the list price; otherwise the list price shows and a `oldPrice`
+ * above it (a compare-at) strikes. This mirrors the server's `readEffectivePrice`
+ * for display only; the server is what actually charges, so a stale cache can
+ * never mis-sell. `cost` is deliberately untouched — it is stripped before a
+ * theme ever sees `data`, and a theme must never surface it.
+ */
+function effectivePricing(
+  data: Record<string, unknown>,
+): { shown: number; strike: number | null } | null {
+  const price = num(data.price);
+  if (price === null) return null;
+  const sale = num(data.salePrice);
+  if (sale !== null && sale < price) {
+    const start = str(data.saleStart);
+    const end = str(data.saleEnd);
+    const now = Date.now();
+    const startOk = !start || now >= new Date(start).getTime();
+    const endOk = !end || now <= new Date(end).getTime();
+    if (startOk && endOk) return { shown: sale, strike: price };
+  }
+  const oldPrice = num(data.oldPrice);
+  return { shown: price, strike: oldPrice !== null && oldPrice > price ? oldPrice : null };
+}
+
 /** Absolute URLs go to another site untouched; site-relative ones get the locale prefix. */
 function itemHref(ctx: Ctx, item: MenuItemDto): string {
   return /^[a-z]+:\/\//i.test(item.url) || item.url.startsWith("#")
@@ -874,8 +901,7 @@ function ProductView({ ctx, content }: PageTemplateProps<MarketThemeSettings>) {
   const { locale, settings } = ctx;
   const data = content.data as Record<string, unknown>;
 
-  const price = num(data.price);
-  const oldPrice = num(data.oldPrice);
+  const pricing = effectivePricing(data);
   const badge = str(data.badge);
   const volume = str(data.volume);
   const currency = settings.currency || "USD";
@@ -897,13 +923,13 @@ function ProductView({ ctx, content }: PageTemplateProps<MarketThemeSettings>) {
             <h1 className="zmarket__product-title">{content.title}</h1>
             {volume ? <p className="zmarket__volume">{volume}</p> : null}
 
-            {price !== null ? (
+            {pricing ? (
               <p className="zmarket__price zmarket__price--lg">
-                <strong>{formatPrice(price, locale, currency)}</strong>
-                {oldPrice !== null && oldPrice > price ? (
+                <strong>{formatPrice(pricing.shown, locale, currency)}</strong>
+                {pricing.strike !== null ? (
                   <s>
                     <span className="zmarket__skip">{ctx.t("product.oldPriceLabel")}</span>
-                    {formatPrice(oldPrice, locale, currency)}
+                    {formatPrice(pricing.strike, locale, currency)}
                   </s>
                 ) : null}
               </p>
@@ -918,7 +944,7 @@ function ProductView({ ctx, content }: PageTemplateProps<MarketThemeSettings>) {
               id={content.id}
               title={content.title}
               slug={content.slug}
-              price={price}
+              price={pricing?.shown ?? null}
               currency={currency}
               className="zmarket__btn zmarket__btn--rose zmarket__btn--block"
               label={ctx.t("product.addToCart")}
@@ -1010,7 +1036,7 @@ function ArchiveTemplate({ ctx, archive }: ArchiveTemplateProps<MarketThemeSetti
         {archive.totalPages > 1 ? (
           <div className="zmarket__pagination">
             {archive.page > 1 ? (
-              <a href={`${archive.basePath}?page=${archive.page - 1}`}>
+              <a href={ctx.url(`${archive.basePath}?page=${archive.page - 1}`)}>
                 ← {ctx.t("archive.previous")}
               </a>
             ) : (
@@ -1023,7 +1049,7 @@ function ArchiveTemplate({ ctx, archive }: ArchiveTemplateProps<MarketThemeSetti
               })}
             </span>
             {archive.page < archive.totalPages ? (
-              <a href={`${archive.basePath}?page=${archive.page + 1}`}>
+              <a href={ctx.url(`${archive.basePath}?page=${archive.page + 1}`)}>
                 {ctx.t("archive.next")} →
               </a>
             ) : (
@@ -1058,8 +1084,7 @@ function ProductCard({
   index: number;
 }) {
   const data = (item.data ?? {}) as Record<string, unknown>;
-  const price = num(data.price);
-  const oldPrice = num(data.oldPrice);
+  const pricing = effectivePricing(data);
   const badge = str(data.badge);
   const volume = str(data.volume);
   const href = ctx.url(item.path || "/");
@@ -1078,13 +1103,13 @@ function ProductCard({
           <a href={href}>{item.title}</a>
         </h3>
         {volume ? <p className="zmarket__volume">{volume}</p> : null}
-        {price !== null ? (
+        {pricing ? (
           <p className="zmarket__price">
-            <strong>{formatPrice(price, ctx.locale, currency)}</strong>
-            {oldPrice !== null && oldPrice > price ? (
+            <strong>{formatPrice(pricing.shown, ctx.locale, currency)}</strong>
+            {pricing.strike !== null ? (
               <s>
                 <span className="zmarket__skip">{ctx.t("product.oldPriceLabel")}</span>
-                {formatPrice(oldPrice, ctx.locale, currency)}
+                {formatPrice(pricing.strike, ctx.locale, currency)}
               </s>
             ) : null}
           </p>
@@ -1097,7 +1122,7 @@ function ProductCard({
           id={item.id}
           title={item.title}
           slug={item.slug}
-          price={price}
+          price={pricing?.shown ?? null}
           currency={currency}
           className="zmarket__btn zmarket__card-add"
           label={ctx.t("product.addToCart")}

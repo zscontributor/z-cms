@@ -121,6 +121,43 @@ describe("CommerceService.quote", () => {
     expect(quote.valid).toBe(true);
   });
 
+  it("charges a live salePrice and reports the discount off the list price", async () => {
+    holder.db = makeDb([product("a", 100, { data: { price: 100, salePrice: 80 } })]);
+    const service = new CommerceService({ registerCapabilityProjector() {} } as never);
+
+    const quote = await service.quote(HOST, { items: [{ productId: "a", quantity: 2 }] });
+
+    expect(quote.items[0]?.unitPrice).toBe(80);
+    expect(quote.subtotal).toBe(160); // 80 * 2, the sale price
+    expect(quote.discountTotal).toBe(40); // (100 - 80) * 2
+    expect(quote.total).toBe(160);
+  });
+
+  it("ignores a salePrice whose window has already closed", async () => {
+    holder.db = makeDb([
+      product("a", 100, {
+        data: { price: 100, salePrice: 80, saleEnd: "2020-01-01T00:00:00.000Z" },
+      }),
+    ]);
+    const service = new CommerceService({ registerCapabilityProjector() {} } as never);
+
+    const quote = await service.quote(HOST, { items: [{ productId: "a", quantity: 1 }] });
+
+    expect(quote.items[0]?.unitPrice).toBe(100);
+    expect(quote.subtotal).toBe(100);
+    expect(quote.discountTotal).toBe(0);
+  });
+
+  it("ignores a salePrice that is not below the list price", async () => {
+    holder.db = makeDb([product("a", 50, { data: { price: 50, salePrice: 60 } })]);
+    const service = new CommerceService({ registerCapabilityProjector() {} } as never);
+
+    const quote = await service.quote(HOST, { items: [{ productId: "a", quantity: 1 }] });
+
+    expect(quote.items[0]?.unitPrice).toBe(50);
+    expect(quote.discountTotal).toBe(0);
+  });
+
   it("applies the flat shipping fee, then waives it above the free-shipping threshold", async () => {
     holder.db = makeDb([product("a", 20)], {
       enabled: true,

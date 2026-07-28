@@ -5,3 +5,4 @@ export * from "./define";
 export * from "./database";
 export * from "./table-schema";
 export * from "./admin";
+export * from "./localized";

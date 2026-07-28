@@ -5,6 +5,7 @@ import { Checkbox, Field, Input, Select, Textarea } from "@/components/ui/field"
 import { useT } from "@/lib/i18n-provider";
 import { MediaPickerField } from "@/components/editor/media-picker";
 import { RichTextEditor } from "@/components/editor/rich-text-editor";
+import { ImageListField } from "./image-list-field";
 
 /**
  * One control per declared prop, switched on `kind`.
@@ -140,6 +141,17 @@ function PropControl({
               onChange={(e) => onChange(e.target.value)}
             />
           </div>
+        </Field>
+      );
+
+    case "imageList":
+      return (
+        <Field label={label} hint={hint}>
+          <ImageListField
+            value={Array.isArray(value) ? (value.filter((v) => typeof v === "string") as string[]) : []}
+            disabled={disabled}
+            onChange={onChange}
+          />
         </Field>
       );
 

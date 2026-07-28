@@ -81,12 +81,23 @@
     "invalidAdmin": "A plugin's admin screens must reference its own tables and resources. Refused: {detail}.",
     "resourceNotFound": "No such plugin resource: \"{resource}\".",
     "resourceReadOnly": "This resource is read-only.",
+    "fieldRequired": "\"{column}\" is required.",
+    "fieldInvalid": "\"{column}\" has a value of the wrong type.",
+    "invalidFieldValues": "Some fields are not valid: {detail}",
     "invalidHosts": "A plugin may only declare real hostnames it will reach. Refused: {hosts}. Wildcards on their own, IP addresses, ports and schemes are not allowed.",
     "noNetworkHosts": "The plugin \"{plugin}\" was granted network access but its manifest declares no hosts, so there is nowhere it may go.",
     "secretNotConfigured": "The plugin used the secret \"{secret}\", but its \"{setting}\" setting is empty. Fill it in under the plugin's settings.",
     "egressFailed": "The plugin's request could not be completed: {reason}",
     "egressQuotaExceeded": "This site has made more than {limit} plugin requests this hour. Try again in {retryAfterSec} seconds.",
     "egressQuotaUnavailable": "Plugin requests cannot be counted right now, so they are refused. Try again shortly."
+  },
+  "commerce": {
+    "notAcceptingOrders": "This shop is not accepting orders right now.",
+    "codUnavailable": "Cash on delivery is not available.",
+    "cartUnavailable": "None of the items in your cart are available. Refresh and try again.",
+    "orderNotFound": "Order not found.",
+    "siteNotFound": "Site not found.",
+    "orderNumberExhausted": "Could not allocate an order number. Please try again."
   },
   "packages": {
     "tooLarge": "The package is larger than the {limit} limit.",

@@ -4,6 +4,7 @@ import {
   buildPluginInsert,
   buildPluginSelect,
   buildPluginUpdate,
+  coercePluginRow,
   generatePluginTableDdl,
   generatePluginTableDropDdl,
   validatePluginTableSchemas,
@@ -252,5 +253,73 @@ describe("query builders", () => {
     const q = buildPluginSelect(leads, scope, { where: { note: null } });
     expect(q.text).toContain(`"note" IS NULL`);
     expect(q.values).toEqual(["t1", "s1"]);
+  });
+});
+
+describe("coercePluginRow", () => {
+  const table: PluginTableSchema = {
+    name: "p_vn_zsoft_plugin_crm__customers",
+    columns: [
+      { name: "name", type: "text" },
+      { name: "email", type: "text", nullable: true },
+      { name: "stage", type: "text", default: "lead" },
+      { name: "deal_value", type: "numeric", nullable: true },
+      { name: "count", type: "integer", nullable: true },
+      { name: "active", type: "boolean", nullable: true },
+      { name: "last_contacted", type: "timestamptz", nullable: true },
+      { name: "owner_id", type: "uuid", nullable: true },
+    ],
+  };
+
+  it("coerces form strings to the declared column types", () => {
+    const { row, errors } = coercePluginRow(table, {
+      name: "Ann",
+      deal_value: "199.5",
+      count: "3",
+      active: "true",
+      last_contacted: "2026-07-20T02:00:00.000Z",
+    });
+    expect(errors).toEqual([]);
+    expect(row).toMatchObject({
+      name: "Ann",
+      deal_value: 199.5,
+      count: 3,
+      active: true,
+      last_contacted: "2026-07-20T02:00:00.000Z",
+    });
+  });
+
+  it("reports a required error for a non-nullable column with no default on insert", () => {
+    const { errors } = coercePluginRow(table, { email: "a@b.co" });
+    expect(errors).toContainEqual({ column: "name", reason: "required" });
+  });
+
+  it("lets a non-nullable column with a default be omitted (the default applies)", () => {
+    const { row, errors } = coercePluginRow(table, { name: "Ann" });
+    expect(errors).toEqual([]);
+    expect("stage" in row).toBe(false); // dropped so Postgres uses `default: "lead"`
+  });
+
+  it("does not demand required columns on a partial update", () => {
+    const { errors } = coercePluginRow(table, { email: "a@b.co" }, { partial: true });
+    expect(errors).toEqual([]);
+  });
+
+  it("flags a type error for a non-numeric number and a bad date", () => {
+    const bad = coercePluginRow(table, { name: "Ann", deal_value: "abc" });
+    expect(bad.errors).toContainEqual({ column: "deal_value", reason: "type" });
+    const badDate = coercePluginRow(table, { name: "Ann", last_contacted: "not-a-date" });
+    expect(badDate.errors).toContainEqual({ column: "last_contacted", reason: "type" });
+  });
+
+  it("rejects a non-uuid value for a uuid column", () => {
+    const { errors } = coercePluginRow(table, { name: "Ann", owner_id: "not-a-uuid" });
+    expect(errors).toContainEqual({ column: "owner_id", reason: "type" });
+  });
+
+  it("treats a blank string on a nullable column as NULL, not a type error", () => {
+    const { row, errors } = coercePluginRow(table, { name: "Ann", email: "" });
+    expect(errors).toEqual([]);
+    expect(row.email).toBeNull();
   });
 });

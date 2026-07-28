@@ -1,8 +1,9 @@
 "use client";
 
 import type { ContentTypeField } from "@zcmsorg/schemas";
+import { resolveLocalizedLabel } from "@zcmsorg/schemas";
 import { Checkbox, Field, Input, Select, Textarea } from "@/components/ui/field";
-import { useT } from "@/lib/i18n-provider";
+import { useLocale, useT } from "@/lib/i18n-provider";
 import { MediaPickerField } from "./media-picker";
 import { RichTextEditor } from "./rich-text-editor";
 
@@ -45,12 +46,13 @@ function DynamicField({
   value: unknown;
   onChange: (value: unknown) => void;
 }) {
+  const locale = useLocale();
   const id = `field-${field.key}`;
   const wide = field.type === "textarea" || field.type === "richtext" || field.type === "json";
 
   return (
     <Field
-      label={field.label}
+      label={resolveLocalizedLabel(field.label, locale)}
       hint={field.description}
       htmlFor={id}
       required={field.required}

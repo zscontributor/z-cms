@@ -79,6 +79,20 @@ export function buildThemeContext<S = Record<string, unknown>>(
     // payload cached before forms existed must not crash the `core/form` block.
     forms: payload.forms ?? {},
 
+    // The paginated archive, on a listing page only. Off `payload` (where it lives
+    // as a separate field) and onto `ctx` so a drawn theme's widgets — which only
+    // ever receive `ctx` — can draw the list and a locale-safe pager. Null on every
+    // non-listing template, exactly as the payload has it.
+    archive: payload.archive
+      ? {
+          contentTypeKey: payload.archive.contentTypeKey,
+          basePath: payload.archive.basePath,
+          items: payload.archive.items,
+          page: payload.archive.page,
+          totalPages: payload.archive.totalPages,
+        }
+      : null,
+
     // Resolved by the SAME function the document shell used to build the bootstrap
     // script (lib/color-mode-server.ts). Deriving it twice from one rule is what
     // stops a theme from drawing a toggle the runtime has decided to ignore — a

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   inferFieldInput,
+  resolvePluginAdminResource,
   validateAdminContribution,
   type PluginAdminContribution,
 } from "../admin";
@@ -148,5 +149,96 @@ describe("inferFieldInput", () => {
   it("falls back to text for anything else", () => {
     expect(inferFieldInput("text")).toBe("text");
     expect(inferFieldInput("jsonb")).toBe("text");
+  });
+});
+
+describe("localized labels", () => {
+  const table: PluginTableSchema = {
+    name: "p_vn_zsoft_plugin_crm__customers",
+    columns: [
+      { name: "name", type: "text" },
+      { name: "stage", type: "text" },
+    ],
+  };
+
+  const localized: PluginAdminContribution = {
+    nav: [{ label: { en: "Customers", vi: "Khách hàng" }, resource: "customers", permission: "crm:read" }],
+    resources: [
+      {
+        key: "customers",
+        label: { en: "Customers", vi: "Khách hàng" },
+        table: table.name,
+        list: { columns: [{ column: "name", label: { en: "Name", vi: "Tên" } }] },
+        form: {
+          fields: [
+            { column: "name", label: { en: "Name", vi: "Tên" } },
+            {
+              column: "stage",
+              label: { en: "Stage", vi: "Giai đoạn" },
+              input: "select",
+              options: [{ value: "lead", label: { en: "Lead", vi: "Tiềm năng" } }],
+            },
+          ],
+        },
+        permissions: { read: "crm:read", write: "crm:manage" },
+      },
+    ],
+  };
+
+  it("accepts localized-object labels and labelled options", () => {
+    expect(validateAdminContribution(localized, [table])).toEqual([]);
+  });
+
+  it("flags a label object with no en, and an option with no value", () => {
+    const bad: PluginAdminContribution = {
+      resources: [
+        {
+          key: "customers",
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          label: { vi: "Khách hàng" } as any,
+          table: table.name,
+          list: { columns: [{ column: "name", label: "Name" }] },
+          form: {
+            fields: [
+              {
+                column: "stage",
+                label: "Stage",
+                input: "select",
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                options: [{ value: "", label: "Blank" } as any],
+              },
+            ],
+          },
+          permissions: { read: "crm:read" },
+        },
+      ],
+    };
+    const v = validateAdminContribution(bad, [table]);
+    expect(v).toContainEqual({ where: "resource:customers", reason: "invalid-label", detail: "resource" });
+    expect(v.some((x) => x.reason === "invalid-option")).toBe(true);
+  });
+
+  it("resolves a resource to plain strings and labelled options for one reader", () => {
+    const resolved = resolvePluginAdminResource(localized.resources![0]!, "vi");
+    expect(resolved.label).toBe("Khách hàng");
+    expect(resolved.list.columns[0]?.label).toBe("Tên");
+    const stage = resolved.form!.fields.find((f) => f.column === "stage")!;
+    expect(stage.options).toEqual([{ value: "lead", label: "Tiềm năng" }]);
+  });
+
+  it("passes a plain-string label through unchanged (back-compat)", () => {
+    const plain: PluginAdminContribution = {
+      resources: [
+        {
+          key: "x",
+          label: "Plain",
+          table: table.name,
+          list: { columns: [{ column: "name", label: "Name" }] },
+          permissions: { read: "crm:read" },
+        },
+      ],
+    };
+    expect(validateAdminContribution(plain, [table])).toEqual([]);
+    expect(resolvePluginAdminResource(plain.resources![0]!, "vi").label).toBe("Plain");
   });
 });

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import type { BlockDocument, ContentStatus, ContentTypeDto } from "@zcmsorg/schemas";
-import { ContentStatusSchema } from "@zcmsorg/schemas";
+import { ContentStatusSchema, resolveLocalizedLabel } from "@zcmsorg/schemas";
 import {
   deleteContentAction,
   publishContentAction,
@@ -184,7 +184,9 @@ export function ContentEditor({
       if (!field.required) continue;
       const value = data[field.key];
       if (value === undefined || value === null || value === "") {
-        return t("content.editor.fieldRequired", { label: field.label });
+        return t("content.editor.fieldRequired", {
+          label: resolveLocalizedLabel(field.label, uiLocale),
+        });
       }
     }
     return null;

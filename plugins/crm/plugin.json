@@ -1,0 +1,89 @@
+{
+  "id": "vn.zsoft.plugin.crm",
+  "name": "Customers (CRM)",
+  "version": "0.1.0",
+  "description": "A worked example of a data-owning plugin for developers: its own table, its own menu, its own CRUD screens — and every label localized (en/vi/ja) through the manifest. Manage a simple customer pipeline; adapt the shape for HR, assets, tickets, anything.",
+  "author": {
+    "name": "Z-SOFT Co., Ltd",
+    "url": "https://z-soft.com.vn"
+  },
+  "engine": ">=0.1.0",
+  "entry": "dist/index.js",
+  "scope": "site",
+  "permissions": ["data:own"],
+  "capabilities": ["crm.management"],
+  "permissionsProvided": [
+    { "key": "crm:read", "description": "See the customer list and details.", "defaultRoles": ["EDITOR", "ADMIN", "OWNER"] },
+    { "key": "crm:manage", "description": "Add, edit and remove customers.", "defaultRoles": ["ADMIN", "OWNER"] }
+  ],
+  "database": {
+    "tables": [
+      {
+        "name": "p_vn_zsoft_plugin_crm__customers",
+        "columns": [
+          { "name": "name", "type": "text" },
+          { "name": "email", "type": "text", "nullable": true },
+          { "name": "stage", "type": "text", "default": "lead" },
+          { "name": "deal_value", "type": "numeric", "nullable": true },
+          { "name": "notes", "type": "text", "nullable": true },
+          { "name": "last_contacted", "type": "timestamptz", "nullable": true },
+          { "name": "owner_id", "type": "uuid", "nullable": true },
+          { "name": "avatar", "type": "uuid", "nullable": true }
+        ],
+        "indexes": [
+          { "columns": ["email"], "unique": true },
+          { "columns": ["stage"] }
+        ]
+      }
+    ]
+  },
+  "admin": {
+    "nav": [
+      {
+        "label": { "en": "Customers", "vi": "Khách hàng", "ja": "顧客" },
+        "icon": "users",
+        "resource": "customers",
+        "permission": "crm:read"
+      }
+    ],
+    "resources": [
+      {
+        "key": "customers",
+        "label": { "en": "Customers", "vi": "Khách hàng", "ja": "顧客" },
+        "table": "p_vn_zsoft_plugin_crm__customers",
+        "list": {
+          "columns": [
+            { "column": "name", "label": { "en": "Name", "vi": "Tên", "ja": "名前" } },
+            { "column": "email", "label": { "en": "Email", "vi": "Email", "ja": "メール" } },
+            { "column": "stage", "label": { "en": "Stage", "vi": "Giai đoạn", "ja": "ステージ" } },
+            { "column": "deal_value", "label": { "en": "Deal value", "vi": "Giá trị", "ja": "商談額" } },
+            { "column": "last_contacted", "label": { "en": "Last contacted", "vi": "Liên hệ gần nhất", "ja": "最終連絡" } }
+          ],
+          "orderBy": { "column": "name", "direction": "asc" }
+        },
+        "form": {
+          "fields": [
+            { "column": "name", "label": { "en": "Name", "vi": "Tên", "ja": "名前" } },
+            { "column": "email", "label": { "en": "Email", "vi": "Email", "ja": "メール" } },
+            {
+              "column": "stage",
+              "label": { "en": "Stage", "vi": "Giai đoạn", "ja": "ステージ" },
+              "input": "select",
+              "options": [
+                { "value": "lead", "label": { "en": "Lead", "vi": "Tiềm năng", "ja": "リード" } },
+                { "value": "qualified", "label": { "en": "Qualified", "vi": "Đủ điều kiện", "ja": "見込み" } },
+                { "value": "customer", "label": { "en": "Customer", "vi": "Khách hàng", "ja": "顧客" } },
+                { "value": "lost", "label": { "en": "Lost", "vi": "Đã mất", "ja": "失注" } }
+              ]
+            },
+            { "column": "deal_value", "label": { "en": "Deal value", "vi": "Giá trị hợp đồng", "ja": "商談額" }, "input": "number" },
+            { "column": "last_contacted", "label": { "en": "Last contacted", "vi": "Liên hệ gần nhất", "ja": "最終連絡日" }, "input": "date" },
+            { "column": "notes", "label": { "en": "Notes", "vi": "Ghi chú", "ja": "メモ" }, "input": "textarea" },
+            { "column": "avatar", "label": { "en": "Avatar", "vi": "Ảnh đại diện", "ja": "アバター" }, "input": "media" }
+          ]
+        },
+        "permissions": { "read": "crm:read", "write": "crm:manage" }
+      }
+    ]
+  }
+}

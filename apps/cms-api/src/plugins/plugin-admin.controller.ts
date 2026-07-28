@@ -18,7 +18,8 @@ import {
   buildPluginInsert,
   buildPluginSelect,
   buildPluginUpdate,
-  type PluginAdminResource,
+  coercePluginRow,
+  type ResolvedPluginAdminResource,
   type PluginTableSchema,
 } from "@zcmsorg/plugin-sdk";
 import { Actor, SiteId, SiteScoped } from "../auth/decorators";
@@ -73,7 +74,7 @@ export class PluginAdminController {
     @Param("resource") resourceKey: string,
     @Query("page") page?: string,
     @Query("perPage") perPage?: string,
-  ): Promise<{ resource: PluginAdminResource; rows: Record<string, unknown>[] }> {
+  ): Promise<{ resource: ResolvedPluginAdminResource; rows: Record<string, unknown>[] }> {
     const { resource, table } = await this.resolve(actor, siteId, pluginKey, resourceKey);
     this.require(actor, resource.permissions.read);
 
@@ -102,8 +103,9 @@ export class PluginAdminController {
     const { resource, table } = await this.resolve(actor, siteId, pluginKey, resourceKey);
     this.requireWrite(actor, resource);
 
+    const row = this.coerce(table, body, true);
     const rows = await this.run(table, () =>
-      buildPluginInsert(table, { tenantId: actor.tenantId, siteId }, body ?? {}),
+      buildPluginInsert(table, { tenantId: actor.tenantId, siteId }, row),
     );
     return { row: rows[0] ?? null };
   }
@@ -121,8 +123,9 @@ export class PluginAdminController {
     const { resource, table } = await this.resolve(actor, siteId, pluginKey, resourceKey);
     this.requireWrite(actor, resource);
 
+    const row = this.coerce(table, body, false);
     const rows = await this.run(table, () =>
-      buildPluginUpdate(table, { tenantId: actor.tenantId, siteId }, body ?? {}, { id }),
+      buildPluginUpdate(table, { tenantId: actor.tenantId, siteId }, row, { id }),
     );
     return { rows };
   }
@@ -149,12 +152,37 @@ export class PluginAdminController {
     siteId: string,
     pluginKey: string,
     resourceKey: string,
-  ): Promise<{ resource: PluginAdminResource; table: PluginTableSchema }> {
+  ): Promise<{ resource: ResolvedPluginAdminResource; table: PluginTableSchema }> {
     const found = await this.plugins.adminResourceFor(actor.tenantId, siteId, pluginKey, resourceKey);
     if (!found) {
       throw new NotFoundException(t()("errors.plugins.resourceNotFound", { resource: resourceKey }));
     }
     return found;
+  }
+
+  /**
+   * Coerce a form-posted body to the table's declared column types, turning a
+   * blank number or a bad date into a localized 400 rather than a raw Postgres
+   * 500. `partial` is true for an update, where an absent column means "leave it".
+   */
+  private coerce(
+    table: PluginTableSchema,
+    body: Record<string, unknown> | undefined,
+    required: boolean,
+  ): Record<string, unknown> {
+    const { row, errors } = coercePluginRow(table, body ?? {}, { partial: !required });
+    if (errors.length) {
+      const tr = t();
+      const detail = errors
+        .map((e) =>
+          e.reason === "required"
+            ? tr("errors.plugins.fieldRequired", { column: e.column })
+            : tr("errors.plugins.fieldInvalid", { column: e.column }),
+        )
+        .join(" ");
+      throw new BadRequestException(tr("errors.plugins.invalidFieldValues", { detail }));
+    }
+    return row;
   }
 
   private require(actor: RequestActor, permission: string): void {
@@ -166,7 +194,7 @@ export class PluginAdminController {
   }
 
   /** A resource with no `write` permission is read-only for everyone. */
-  private requireWrite(actor: RequestActor, resource: PluginAdminResource): void {
+  private requireWrite(actor: RequestActor, resource: ResolvedPluginAdminResource): void {
     if (!resource.permissions.write) {
       throw new ForbiddenException(t()("errors.plugins.resourceReadOnly"));
     }

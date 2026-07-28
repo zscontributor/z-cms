@@ -81,12 +81,23 @@
     "invalidAdmin": "Màn hình admin của plugin chỉ được tham chiếu tới bảng và resource của chính nó. Bị từ chối: {detail}.",
     "resourceNotFound": "Không có resource plugin: \"{resource}\".",
     "resourceReadOnly": "Resource này chỉ đọc.",
+    "fieldRequired": "\"{column}\" là bắt buộc.",
+    "fieldInvalid": "\"{column}\" có giá trị sai kiểu.",
+    "invalidFieldValues": "Một số trường không hợp lệ: {detail}",
     "invalidHosts": "Plugin chỉ được khai báo hostname có thật mà nó sẽ gọi tới. Bị từ chối: {hosts}. Không chấp nhận ký tự đại diện đứng một mình, địa chỉ IP, cổng hay scheme.",
     "noNetworkHosts": "Plugin \"{plugin}\" được cấp quyền gọi mạng nhưng manifest không khai báo host nào, nên nó không có nơi nào để gọi tới.",
     "secretNotConfigured": "Plugin dùng secret \"{secret}\", nhưng cài đặt \"{setting}\" của nó đang trống. Hãy điền giá trị trong phần cài đặt của plugin.",
     "egressFailed": "Không thực hiện được request của plugin: {reason}",
     "egressQuotaExceeded": "Site này đã thực hiện quá {limit} request từ plugin trong một giờ. Thử lại sau {retryAfterSec} giây.",
     "egressQuotaUnavailable": "Hiện không đếm được số request của plugin, nên chúng bị từ chối. Vui lòng thử lại sau ít phút."
+  },
+  "commerce": {
+    "notAcceptingOrders": "Cửa hàng hiện không nhận đơn hàng.",
+    "codUnavailable": "Thanh toán khi nhận hàng (COD) không khả dụng.",
+    "cartUnavailable": "Không sản phẩm nào trong giỏ còn khả dụng. Hãy tải lại và thử lại.",
+    "orderNotFound": "Không tìm thấy đơn hàng.",
+    "siteNotFound": "Không tìm thấy site.",
+    "orderNumberExhausted": "Không cấp được mã đơn hàng. Vui lòng thử lại."
   },
   "packages": {
     "tooLarge": "Package vượt quá giới hạn {limit}.",

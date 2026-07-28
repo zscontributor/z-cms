@@ -35,6 +35,7 @@ export type WidgetPropKind =
   | "html"
   | "url"
   | "image"
+  | "imageList"
   | "boolean"
   | "select"
   | "number"
@@ -175,6 +176,53 @@ export const WIDGET_CATALOG: WidgetSpec[] = [
     ],
   },
   {
+    type: "media/gallery",
+    labelKey: "themeEditor.widgets.gallery.label",
+    descriptionKey: "themeEditor.widgets.gallery.description",
+    icon: "▦",
+    category: "media",
+    // Hand-picked, not a query: the images are chosen from the Media library and
+    // travel as URLs in props, exactly like a single media/image's src. A dynamic
+    // "newest N in folder X" gallery would be a bind kind, which needs a media
+    // channel on the render payload — deliberately not this widget.
+    bind: { kind: "none" },
+    props: [
+      { key: "images", labelKey: "themeEditor.props.images", kind: "imageList", default: [] },
+      {
+        key: "layout",
+        labelKey: "themeEditor.props.galleryLayout",
+        kind: "select",
+        options: [
+          { value: "grid", labelKey: "themeEditor.props.galleryGrid" },
+          { value: "masonry", labelKey: "themeEditor.props.galleryMasonry" },
+          { value: "carousel", labelKey: "themeEditor.props.galleryCarousel" },
+        ],
+        default: "grid",
+      },
+      { key: "columns", labelKey: "themeEditor.props.columns", kind: "number", min: 1, max: 6, default: 3 },
+      { key: "gap", labelKey: "themeEditor.props.gap", kind: "number", min: 0, max: 64, default: 12 },
+    ],
+  },
+  {
+    type: "media/slider",
+    labelKey: "themeEditor.widgets.slider.label",
+    descriptionKey: "themeEditor.widgets.slider.description",
+    icon: "▭",
+    category: "media",
+    // Hand-picked image slides, same as gallery — the URLs travel in props. The
+    // autoplay/arrows/dots are enhanced by ONE reviewed runtime script keyed off a
+    // data-attribute; the theme itself ships no JS.
+    bind: { kind: "none" },
+    props: [
+      { key: "images", labelKey: "themeEditor.props.images", kind: "imageList", default: [] },
+      { key: "height", labelKey: "themeEditor.props.height", kind: "number", min: 120, max: 800, default: 420 },
+      { key: "autoplay", labelKey: "themeEditor.props.autoplay", kind: "boolean", default: true },
+      { key: "interval", labelKey: "themeEditor.props.interval", kind: "number", min: 2000, max: 15000, default: 5000 },
+      { key: "arrows", labelKey: "themeEditor.props.arrows", kind: "boolean", default: true },
+      { key: "dots", labelKey: "themeEditor.props.dots", kind: "boolean", default: true },
+    ],
+  },
+  {
     type: "media/logo",
     labelKey: "themeEditor.widgets.logo.label",
     descriptionKey: "themeEditor.widgets.logo.description",
@@ -285,6 +333,61 @@ export const WIDGET_CATALOG: WidgetSpec[] = [
         default: "list",
       },
       { key: "showExcerpt", labelKey: "themeEditor.props.showExcerpt", kind: "boolean", default: true },
+    ],
+  },
+  {
+    type: "dynamic/content-slider",
+    labelKey: "themeEditor.widgets.contentSlider.label",
+    descriptionKey: "themeEditor.widgets.contentSlider.description",
+    icon: "▭",
+    category: "dynamic",
+    // A slider whose slides ARE content: same collection binding as post-list, one
+    // slide per item (cover image + title + excerpt). Autoplay/arrows/dots are the
+    // runtime script's job, exactly as the image slider.
+    bind: { kind: "collection" },
+    props: [
+      { key: "heading", labelKey: "themeEditor.props.heading", kind: "text", default: "" },
+      { key: "showExcerpt", labelKey: "themeEditor.props.showExcerpt", kind: "boolean", default: true },
+      { key: "autoplay", labelKey: "themeEditor.props.autoplay", kind: "boolean", default: true },
+      { key: "interval", labelKey: "themeEditor.props.interval", kind: "number", min: 2000, max: 15000, default: 5000 },
+      { key: "arrows", labelKey: "themeEditor.props.arrows", kind: "boolean", default: true },
+      { key: "dots", labelKey: "themeEditor.props.dots", kind: "boolean", default: true },
+    ],
+  },
+  {
+    type: "dynamic/archive-list",
+    labelKey: "themeEditor.widgets.archiveList.label",
+    descriptionKey: "themeEditor.widgets.archiveList.description",
+    icon: "≣",
+    category: "dynamic",
+    // Reads the paginated archive off ctx — it has no binding of its own. On any
+    // non-archive template it draws nothing, so it belongs on the `archive` tab.
+    bind: { kind: "none" },
+    props: [
+      {
+        key: "layout",
+        labelKey: "themeEditor.props.layout",
+        kind: "select",
+        options: [
+          { value: "list", labelKey: "themeEditor.props.layoutList" },
+          { value: "grid", labelKey: "themeEditor.props.layoutGrid" },
+        ],
+        default: "list",
+      },
+      { key: "showExcerpt", labelKey: "themeEditor.props.showExcerpt", kind: "boolean", default: true },
+    ],
+  },
+  {
+    type: "dynamic/pagination",
+    labelKey: "themeEditor.widgets.pagination.label",
+    descriptionKey: "themeEditor.widgets.pagination.description",
+    icon: "»",
+    category: "dynamic",
+    // Draws prev / numbers / next for the archive, each link locale-safe. Reads the
+    // archive off ctx; renders nothing on a single-page or non-archive view.
+    bind: { kind: "none" },
+    props: [
+      { key: "showNumbers", labelKey: "themeEditor.props.showNumbers", kind: "boolean", default: true },
     ],
   },
 ];

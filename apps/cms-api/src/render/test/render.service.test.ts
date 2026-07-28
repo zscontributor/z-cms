@@ -289,6 +289,36 @@ describe("RenderService", () => {
       expect(out.content).not.toHaveProperty("demoThemeKey");
     });
 
+    it("strips a content type's private fields from the public payload", async () => {
+      // `cost` is a back-office field (a private one on the type). A PUBLISHED
+      // product goes out with its price but never its cost — this is the wall that
+      // keeps a margin off the public page, the content-list block and search.
+      cacheReturns({ host: publishedSite, render: null });
+      holder.db.content.findMany
+        .mockResolvedValueOnce([
+          publishedRow({
+            data: { price: 100, cost: 40 },
+            contentType: {
+              id: "ct1",
+              key: "product",
+              name: "Product",
+              routePrefix: "shop",
+              fields: [
+                { key: "price", type: "number", label: "Price" },
+                { key: "cost", type: "number", label: "Cost", private: true },
+              ],
+            },
+          }),
+        ])
+        .mockResolvedValueOnce([]); // alternatesFor
+
+      const out = await makeService().resolve("example.com", "/shop/hello");
+
+      expect(out.content).not.toBeNull();
+      expect((out.content!.data as Record<string, unknown>).price).toBe(100);
+      expect(out.content!.data).not.toHaveProperty("cost");
+    });
+
     it("scopes the content lookup to the resolved site", async () => {
       cacheReturns({ host: publishedSite, render: null });
 
@@ -1065,5 +1095,51 @@ describe("RenderService", () => {
 
       expect(storedBlocks[0].props).not.toHaveProperty("items");
     });
+  });
+});
+
+describe("previewCollections (Theme Editor real data)", () => {
+  beforeEach(() => {
+    holder.db = makeDb();
+  });
+
+  it("resolves bindings to published rows keyed by the collection name", async () => {
+    holder.db.content.findMany.mockResolvedValue([publishedRow()]);
+
+    const out = await makeService().previewCollections("s1", "en", [
+      { contentType: "post", limit: 6, sort: "newest" },
+    ]);
+
+    expect(Object.keys(out)).toEqual(["post_6_newest"]);
+    expect(out.post_6_newest).toHaveLength(1);
+    // The internal columns must not ride along — it is the public DTO shape.
+    expect(out.post_6_newest[0]).not.toHaveProperty("tenantId");
+    expect(out.post_6_newest[0]).not.toHaveProperty("authorId");
+  });
+
+  it("applies the same tenant/locale/published fence as the live render", async () => {
+    holder.db.content.findMany.mockResolvedValue([]);
+
+    await makeService().previewCollections("s1", "vi", [{ contentType: "post" }]);
+
+    const where = holder.db.content.findMany.mock.calls[0]![0]!.where;
+    expect(where.siteId).toBe("s1");
+    expect(where.locale).toBe("vi");
+    expect(where.status).toBe("PUBLISHED");
+    expect(where.contentType).toEqual({ key: "post" });
+  });
+
+  it("dedupes identical queries and still answers with no active theme", async () => {
+    holder.db.siteTheme.findFirst.mockResolvedValue(null);
+    holder.db.content.findMany.mockResolvedValue([publishedRow()]);
+
+    const out = await makeService().previewCollections("s1", "en", [
+      { contentType: "post", limit: 6, sort: "newest" },
+      { contentType: "post", limit: 6, sort: "newest" },
+    ]);
+
+    expect(Object.keys(out)).toEqual(["post_6_newest"]);
+    // Deduplicated: two identical bindings are one database round trip.
+    expect(holder.db.content.findMany).toHaveBeenCalledTimes(1);
   });
 });

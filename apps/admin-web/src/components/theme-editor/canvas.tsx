@@ -3,7 +3,7 @@
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { createContext, useContext, useState } from "react";
 import type { LayoutNode } from "@zcmsorg/schemas";
-import { WIDGET_COMPONENTS } from "@zcmsorg/theme-widgets";
+import { WIDGET_COMPONENTS, styleForNode } from "@zcmsorg/theme-widgets";
 import type { ThemeContext } from "@zcmsorg/theme-sdk";
 import { Icon } from "@/components/shell/icon";
 import { cn } from "@/lib/cn";
@@ -307,15 +307,19 @@ function SectionView(props: NodeViewProps) {
         className="p-3"
         handleProps={{ ...attributes, ...listeners }}
       >
-        {(node.children ?? []).map((child, i) => (
-          <NodeView
-            {...props}
-            key={child.id}
-            node={child}
-            index={i}
-            siblings={node.children?.length ?? 0}
-          />
-        ))}
+        {/* Style rides on a wrapper around the content, not the chrome: the outline
+            and toolbar are the editor's, not part of the drawing. */}
+        <div style={styleForNode(node.style)}>
+          {(node.children ?? []).map((child, i) => (
+            <NodeView
+              {...props}
+              key={child.id}
+              node={child}
+              index={i}
+              siblings={node.children?.length ?? 0}
+            />
+          ))}
+        </div>
         <button
           type="button"
           className="mt-2 w-full rounded border border-dashed border-neutral-300 py-1.5 text-xs text-neutral-500 hover:border-brand-500 dark:border-neutral-700"
@@ -350,7 +354,7 @@ function RowView(props: NodeViewProps) {
         className="p-2"
         handleProps={{ ...attributes, ...listeners }}
       >
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2" style={styleForNode(node.style)}>
           {(node.children ?? []).map((child, i) => (
             <NodeView
               {...props}
@@ -396,6 +400,7 @@ function ColumnView(props: NodeViewProps) {
       >
         <div
           ref={setNodeRef}
+          style={styleForNode(node.style)}
           className={cn(
             "min-h-[3rem] rounded p-2 transition-colors",
             // The drop target, loud on purpose: a filled tint plus a solid ring, so
@@ -467,8 +472,9 @@ function WidgetView(props: NodeViewProps) {
         {Widget ? (
           // `pointer-events-none`: the preview is a picture. A real <a> inside the
           // canvas would swallow the click that selects the widget and navigate the
-          // admin away from the editor.
-          <div className="pointer-events-none">
+          // admin away from the editor. The node's own style is applied here so the
+          // canvas is WYSIWYG — the same styleForNode the runtime interpreter uses.
+          <div className="pointer-events-none" style={styleForNode(node.style)}>
             <Widget node={node} ctx={ctx} content={null} />
           </div>
         ) : (

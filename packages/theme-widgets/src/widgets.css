@@ -64,9 +64,20 @@
  * basis; `min-width: 0` is the standard fix for a flex child refusing to shrink
  * below its content (a long unbroken word would otherwise blow the row wider than
  * the page).
+ *
+ * The gap term is load-bearing. Flexbox breaks lines on flex-BASIS (before shrink),
+ * so N columns whose spans sum to 12 with a row `gap` would be `100% + (N-1)*gap`
+ * wide and the last column would wrap. Subtracting each column's share of the gaps —
+ * `gap * (12 - span) / 12`, which sums to exactly `(N-1)*gap` across a full row —
+ * makes a 12-span row fit on one line for any mix of spans. `--zw-row-gap` is set by
+ * the row (see LayoutRenderer); it defaults to 0 so a lone column is still 100%.
  */
 .zw-column {
-  flex: 0 1 calc((var(--zw-span, 12) / 12) * 100%);
+  flex: 0 1
+    calc(
+      (var(--zw-span, 12) / 12) * 100% -
+        var(--zw-row-gap, 0px) * (12 - var(--zw-span, 12)) / 12
+    );
   max-width: calc((var(--zw-span, 12) / 12) * 100%);
   min-width: 0;
   box-sizing: border-box;
@@ -84,6 +95,36 @@
   .zw-column {
     flex-basis: 100%;
     max-width: 100%;
+  }
+}
+
+/*
+ * The wrapper a widget's per-node style rides on (LayoutRenderer only emits it when
+ * the node has style). box-sizing so a padding/border set in the Style drawer grows
+ * inward, and min-width:0 so a styled widget still shrinks inside a flex column.
+ */
+.zw-widget {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+/*
+ * Hover effect. A node with a hover style carries `data-zw-hover` (set by
+ * LayoutRenderer) and an inline `--zw-hover-transform` custom property (set by
+ * styleForNode). The transition sits inline too; this reviewed rule is the only
+ * thing that reads the custom property on :hover — the author writes magnitudes,
+ * never a selector. Reduced-motion turns the movement off entirely.
+ */
+[data-zw-hover]:hover {
+  transform: var(--zw-hover-transform, none) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-zw-hover] {
+    transition: none !important;
+  }
+  [data-zw-hover]:hover {
+    transform: none !important;
   }
 }
 
@@ -296,6 +337,263 @@
 .zw-post-list-empty {
   opacity: 0.6;
   font-style: italic;
+}
+
+/* --- Gallery ------------------------------------------------------------- */
+
+.zw-gallery-item {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--zw-radius, 8px);
+}
+
+/* Grid: an even N-column grid; below the breakpoint it relaxes to auto-fit so a
+   6-column desktop gallery is not six slivers on a phone. */
+.zw-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--zw-gallery-cols, 3), 1fr);
+}
+
+@media (max-width: 767px) {
+  .zw-gallery-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+}
+
+/* Masonry: CSS multi-column, so images of different heights pack without JS. */
+.zw-gallery-masonry {
+  column-count: var(--zw-gallery-cols, 3);
+}
+
+.zw-gallery-masonry .zw-gallery-item {
+  height: auto;
+  margin-bottom: var(--zw-gallery-gap, 12px);
+  break-inside: avoid;
+}
+
+@media (max-width: 767px) {
+  .zw-gallery-masonry {
+    column-count: 2;
+  }
+}
+
+/* Carousel: a horizontal scroll-snap strip — swipeable, keyboard-scrollable, and
+   entirely no-JS, which is the whole constraint on a server-rendered theme. */
+.zw-gallery-carousel {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+}
+
+.zw-gallery-carousel .zw-gallery-item {
+  flex: 0 0
+    calc(
+      (100% - (var(--zw-gallery-cols, 3) - 1) * var(--zw-gallery-gap, 12px)) /
+        var(--zw-gallery-cols, 3)
+    );
+  height: auto;
+  scroll-snap-align: start;
+}
+
+/* --- Slider --------------------------------------------------------------- */
+
+.zw-slider {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--zw-radius, 8px);
+}
+
+/* The track is the scroller: a scroll-snap strip that swipes and keyboard-scrolls
+   with no JS. The runtime script enhances it (autoplay, dots) but never owns it. */
+.zw-slider-track {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+}
+
+.zw-slider-track::-webkit-scrollbar {
+  display: none;
+}
+
+.zw-slide {
+  flex: 0 0 100%;
+  min-width: 0;
+  scroll-snap-align: start;
+}
+
+.zw-slide-image {
+  display: block;
+  width: 100%;
+  height: var(--zw-slider-h, 420px);
+  object-fit: cover;
+}
+
+.zw-slider-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  text-decoration: none;
+}
+
+/* The chevron is a rotated square of two borders — its geometric centre is the box
+   centre, so flex-centring lands it dead-centre of the circle. A tiny nudge toward
+   the tip corrects the optical weight of the "L" shape. */
+.zw-slider-arrow::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+}
+
+.zw-slider-prev::before {
+  transform: rotate(135deg);
+  margin-left: 3px;
+}
+
+.zw-slider-next::before {
+  transform: rotate(-45deg);
+  margin-right: 3px;
+}
+
+.zw-slider-prev {
+  left: 12px;
+}
+.zw-slider-next {
+  right: 12px;
+}
+
+.zw-slider-dots {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 12px;
+  z-index: 2;
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.zw-slider-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+
+.zw-slider-dot.is-active,
+.zw-slider-dot[aria-current="true"] {
+  background: var(--zw-color-primary, #fa5600);
+}
+
+/* Content slide: image over a title/excerpt card. */
+.zw-content-slide {
+  display: block;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+
+.zw-content-slide .zw-slide-image {
+  height: var(--zw-slider-h, 320px);
+}
+
+/* Horizontal padding clears the arrows (40px wide at 12px inset ≈ 52px), so a
+   slide's title/excerpt never sits under an arrow — including image-less slides
+   where the arrows overlap the text region rather than the picture. */
+.zw-content-slide-body {
+  padding: 16px 60px;
+}
+
+.zw-content-slide-title {
+  font-family: var(--zw-font-heading, var(--zw-font-body, system-ui, sans-serif));
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.zw-content-slide-excerpt {
+  margin: 0.35em 0 0;
+  opacity: 0.75;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zw-slider-track {
+    scroll-behavior: auto;
+  }
+}
+
+/* --- Pagination ---------------------------------------------------------- */
+
+.zw-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 2rem;
+  flex-wrap: wrap;
+}
+
+.zw-pagination-pages {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.zw-pagination-page,
+.zw-pagination-prev,
+.zw-pagination-next {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  height: 38px;
+  padding: 0 10px;
+  border-radius: var(--zw-radius, 8px);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  color: inherit;
+  text-decoration: none;
+  line-height: 1;
+}
+
+.zw-pagination-page:hover,
+.zw-pagination-prev:hover,
+.zw-pagination-next:hover {
+  border-color: var(--zw-color-primary, #fa5600);
+  color: var(--zw-color-primary, #fa5600);
+}
+
+.zw-pagination-active {
+  background: var(--zw-color-primary, #fa5600);
+  border-color: var(--zw-color-primary, #fa5600);
+  color: #fff;
+}
+
+.zw-pagination-disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.zw-pagination-ellipsis {
+  padding: 0 4px;
+  opacity: 0.6;
+}
+
+.zw-pagination-status {
+  opacity: 0.8;
 }
 
 /* --- Misc ---------------------------------------------------------------- */

@@ -5,14 +5,16 @@ import {
   buildPluginDelete,
   generatePluginTableDdl,
   generatePluginTableDropDdl,
+  resolveLocalized,
+  resolvePluginAdminResource,
   validatePluginTableSchemas,
   type PluginAdminContribution,
-  type PluginAdminResource,
   type PluginTableSchema,
+  type ResolvedPluginAdminResource,
 } from "@zcmsorg/plugin-sdk";
 import type { FormDefinition, ProvidedPermission, Permission, PublicFormDef, RenderIntegration } from "@zcmsorg/schemas";
 import { toPublicForm } from "@zcmsorg/schemas";
-import { t } from "../common/i18n";
+import { currentLocale, t } from "../common/i18n";
 import { PluginTokenService } from "./plugin-token.service";
 
 type SettingsSchema = {
@@ -303,9 +305,10 @@ export class PluginsService {
     tenantId: string,
     siteId: string,
     permissions: readonly string[],
+    locale: string = currentLocale(),
   ): Promise<{
     nav: Array<{ pluginKey: string; label: string; icon?: string; resource: string; permission: string }>;
-    resources: Array<{ pluginKey: string; resource: PluginAdminResource }>;
+    resources: Array<{ pluginKey: string; resource: ResolvedPluginAdminResource }>;
   }> {
     const held = new Set(permissions);
     const db = getSystemDb();
@@ -319,7 +322,7 @@ export class PluginsService {
     ]);
 
     const nav: Array<{ pluginKey: string; label: string; icon?: string; resource: string; permission: string }> = [];
-    const resources: Array<{ pluginKey: string; resource: PluginAdminResource }> = [];
+    const resources: Array<{ pluginKey: string; resource: ResolvedPluginAdminResource }> = [];
 
     for (const row of [...siteRows, ...orgRows]) {
       const admin = (row.version.manifest as { admin?: PluginAdminContribution } | null)?.admin;
@@ -330,12 +333,18 @@ export class PluginsService {
         // The gate that answers the original question — a plugin's menu appears
         // only for a user whose role the plugin's permission reaches.
         if (held.has(item.permission)) {
-          nav.push({ pluginKey, label: item.label, icon: item.icon, resource: item.resource, permission: item.permission });
+          nav.push({
+            pluginKey,
+            label: resolveLocalized(item.label, locale),
+            icon: item.icon,
+            resource: item.resource,
+            permission: item.permission,
+          });
         }
       }
       for (const resource of admin.resources ?? []) {
         if (held.has(resource.permissions.read)) {
-          resources.push({ pluginKey, resource });
+          resources.push({ pluginKey, resource: resolvePluginAdminResource(resource, locale) });
         }
       }
     }
@@ -357,7 +366,8 @@ export class PluginsService {
     siteId: string,
     pluginKey: string,
     resourceKey: string,
-  ): Promise<{ resource: PluginAdminResource; table: PluginTableSchema } | null> {
+    locale: string = currentLocale(),
+  ): Promise<{ resource: ResolvedPluginAdminResource; table: PluginTableSchema } | null> {
     const db = getSystemDb();
     const include = {
       plugin: { select: { isCore: true } },
@@ -385,7 +395,7 @@ export class PluginsService {
     const table = manifest?.database?.tables?.find((t) => t.name === resource.table);
     if (!table) return null;
 
-    return { resource, table };
+    return { resource: resolvePluginAdminResource(resource, locale), table };
   }
 
   /** Capabilities contributed by the site's ACTIVE plugins — themes read these. */

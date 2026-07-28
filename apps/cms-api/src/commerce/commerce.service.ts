@@ -21,6 +21,7 @@ import type {
   QuoteRequest,
   QuoteResultDto,
 } from "@zcmsorg/schemas";
+import { t } from "../common/i18n";
 import { PluginsService } from "../plugins/plugins.service";
 import { COMMERCE_PLUGIN_KEY } from "./commerce-plugin";
 
@@ -71,6 +72,41 @@ function readImage(data: unknown): string | null {
   if (!data || typeof data !== "object") return null;
   const raw = (data as Record<string, unknown>).image;
   return typeof raw === "string" && raw ? raw : null;
+}
+
+function readSalePrice(data: unknown): number | null {
+  if (!data || typeof data !== "object") return null;
+  const raw = (data as Record<string, unknown>).salePrice;
+  const parsed = typeof raw === "string" ? Number(raw) : raw;
+  return typeof parsed === "number" && Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
+function readDate(value: unknown): Date | null {
+  if (typeof value !== "string" || !value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/**
+ * The price a line actually charges right now, and the list price it is measured
+ * against. A product may carry a `salePrice` and an optional window
+ * (`saleStart`/`saleEnd`): when the sale is cheaper than the list price and `now`
+ * falls inside the window, the sale is the price; otherwise the list price stands.
+ * Both come back so the caller can report the discount. Computed here, server-side,
+ * from the product's own data — a client can no more forge a sale than a price.
+ */
+function readEffectivePrice(
+  data: unknown,
+  now: Date,
+): { unit: number; base: number } | null {
+  const base = readPrice(data);
+  if (base === null) return null;
+  const sale = readSalePrice(data);
+  if (sale === null || sale >= base) return { unit: base, base };
+  const start = readDate((data as Record<string, unknown>).saleStart);
+  const end = readDate((data as Record<string, unknown>).saleEnd);
+  const live = (!start || now >= start) && (!end || now <= end);
+  return { unit: live ? sale : base, base };
 }
 
 @Injectable()
@@ -135,7 +171,7 @@ export class CommerceService implements OnModuleInit {
       include: { site: true },
     });
     if (!domain || domain.site.status !== "PUBLISHED") {
-      throw new NotFoundException("Site not found.");
+      throw new NotFoundException(t()("errors.commerce.siteNotFound"));
     }
     return {
       tenantId: domain.site.tenantId,
@@ -173,11 +209,16 @@ export class CommerceService implements OnModuleInit {
     });
     const byId = new Map(rows.map((row) => [row.id, row]));
 
+    // One clock for the whole cart, so every line judges its sale window against
+    // the same instant — and against the server's, never the browser's.
+    const now = new Date();
+    let discountTotal = 0;
+
     const lines: QuoteLineDto[] = [];
     for (const [productId, quantity] of wanted) {
       const row = byId.get(productId);
-      const price = row ? readPrice(row.data) : null;
-      if (!row || price === null) {
+      const priced = row ? readEffectivePrice(row.data, now) : null;
+      if (!row || priced === null) {
         lines.push({
           productId,
           slug: row?.slug ?? "",
@@ -190,14 +231,15 @@ export class CommerceService implements OnModuleInit {
         });
         continue;
       }
+      discountTotal += (priced.base - priced.unit) * quantity;
       lines.push({
         productId,
         slug: row.slug,
         title: row.title,
         image: readImage(row.data),
-        unitPrice: money(price),
+        unitPrice: money(priced.unit),
         quantity,
-        lineTotal: money(price * quantity),
+        lineTotal: money(priced.unit * quantity),
         available: true,
       });
     }
@@ -214,7 +256,7 @@ export class CommerceService implements OnModuleInit {
       items: lines,
       subtotal,
       shippingFee,
-      discountTotal: 0,
+      discountTotal: money(Math.max(0, discountTotal)),
       total,
       freeShippingThreshold: settings.freeShippingThreshold,
       codEnabled: settings.codEnabled,
@@ -229,18 +271,16 @@ export class CommerceService implements OnModuleInit {
     return withTenant(site.tenantId, async () => {
       const settings = await this.readSettings(site.siteId);
       if (!settings.enabled) {
-        throw new BadRequestException("This shop is not accepting orders right now.");
+        throw new BadRequestException(t()("errors.commerce.notAcceptingOrders"));
       }
       if (request.paymentMethod === "COD" && !settings.codEnabled) {
-        throw new BadRequestException("Cash on delivery is not available.");
+        throw new BadRequestException(t()("errors.commerce.codUnavailable"));
       }
 
       const quote = await this.computeQuote(site.siteId, request.items);
       const available = quote.items.filter((line) => line.available);
       if (!quote.valid || available.length === 0) {
-        throw new BadRequestException(
-          "None of the items in your cart are available. Refresh and try again.",
-        );
+        throw new BadRequestException(t()("errors.commerce.cartUnavailable"));
       }
 
       const locale = request.locale ?? site.locale;
@@ -318,7 +358,7 @@ export class CommerceService implements OnModuleInit {
         throw error;
       }
     }
-    throw new ConflictException("Could not allocate an order number. Please try again.");
+    throw new ConflictException(t()("errors.commerce.orderNumberExhausted"));
   }
 
   /** The confirmation page's read: one order, by the token minted at checkout. */
@@ -329,7 +369,7 @@ export class CommerceService implements OnModuleInit {
         where: { siteId: site.siteId, accessToken },
         include: { items: true },
       });
-      if (!order) throw new NotFoundException("Order not found.");
+      if (!order) throw new NotFoundException(t()("errors.commerce.orderNotFound"));
       return toOrderDto(order);
     });
   }
@@ -392,7 +432,7 @@ export class CommerceService implements OnModuleInit {
       where: { id, siteId },
       include: { items: true },
     });
-    if (!order) throw new NotFoundException("Order not found.");
+    if (!order) throw new NotFoundException(t()("errors.commerce.orderNotFound"));
     return toOrderDto(order);
   }
 
@@ -403,7 +443,7 @@ export class CommerceService implements OnModuleInit {
    */
   async updateStatus(siteId: string, id: string, status: OrderStatus): Promise<OrderDto> {
     const order = await db().order.findFirst({ where: { id, siteId } });
-    if (!order) throw new NotFoundException("Order not found.");
+    if (!order) throw new NotFoundException(t()("errors.commerce.orderNotFound"));
 
     const paymentStatus =
       status === "FULFILLED"

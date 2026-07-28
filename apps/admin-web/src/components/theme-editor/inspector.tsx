@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   COLLECTION_MAX_LIMIT,
   COLLECTION_SORTS,
@@ -12,9 +13,11 @@ import {
 import type { ContentTypeOption } from "@/lib/block-registry";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
+import { cn } from "@/lib/cn";
 import { useT } from "@/lib/i18n-provider";
 import { bindingNeedsNewSlot, collectionBudget, specFor } from "@/lib/layout-doc";
 import { WidgetPropsForm } from "./widget-props-form";
+import { StyleForm } from "./style-form";
 
 /**
  * The right-hand panel: what the selected thing is, and every knob it has.
@@ -24,12 +27,15 @@ import { WidgetPropsForm } from "./widget-props-form";
  * a node that does not declare it: the catalogue is the description, and a control
  * the widget library does not read would be a knob that does nothing.
  */
+type InspectorTab = "content" | "style";
+
 export function Inspector({
   doc,
   node,
   contentTypes,
   onProps,
   onBinding,
+  onStyle,
   onDelete,
   onDuplicate,
   disabled,
@@ -44,11 +50,14 @@ export function Inspector({
   contentTypes: ContentTypeOption[];
   onProps: (props: Record<string, unknown>) => void;
   onBinding: (binding: LayoutNode["binding"]) => void;
+  /** Writes the node's bounded per-node style (the Style tab). */
+  onStyle: (style: NonNullable<LayoutNode["style"]>) => void;
   onDelete: () => void;
   onDuplicate: () => void;
   disabled?: boolean;
 }) {
   const t = useT();
+  const [tab, setTab] = useState<InspectorTab>("content");
 
   if (!node) {
     return (
@@ -86,30 +95,67 @@ export function Inspector({
         </div>
       </header>
 
-      <div className="space-y-5 p-4">
-        <WidgetPropsForm
-          specs={propSpecs}
-          props={node.props}
-          onChange={onProps}
-          disabled={disabled}
-        />
+      {/* Content is what the block shows; Style is how it looks. Two tabs so the
+          design drawer does not bury the props (or the data binding) it sits beside,
+          and every node kind — even a section with no props — still has a Style tab. */}
+      <div
+        className="flex gap-1 border-b border-neutral-200 px-2 pt-2 dark:border-neutral-800"
+        role="tablist"
+        aria-label={t("themeEditor.inspector.tabsLabel")}
+      >
+        {(["content", "style"] as const).map((name) => (
+          <button
+            key={name}
+            type="button"
+            role="tab"
+            aria-selected={tab === name}
+            className={cn(
+              "rounded-t px-3 py-1.5 text-xs font-medium",
+              tab === name
+                ? "border-b-2 border-brand-500 text-brand-700 dark:text-brand-300"
+                : "text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200",
+            )}
+            onClick={() => setTab(name)}
+          >
+            {t(`themeEditor.inspector.tab.${name}`)}
+          </button>
+        ))}
+      </div>
 
-        {spec?.bind.kind === "collection" ? (
-          <CollectionBinding
-            doc={doc}
-            node={node}
-            contentTypes={contentTypes}
-            onChange={onBinding}
+      {tab === "content" ? (
+        <div className="space-y-5 p-4">
+          {propSpecs.length === 0 && spec?.bind.kind !== "collection" && spec?.bind.kind !== "current" ? (
+            <p className="text-xs z-muted">{t("themeEditor.inspector.noContentProps")}</p>
+          ) : null}
+
+          <WidgetPropsForm
+            specs={propSpecs}
+            props={node.props}
+            onChange={onProps}
             disabled={disabled}
           />
-        ) : null}
 
-        {spec?.bind.kind === "current" ? (
-          <p className="rounded border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-600 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-400">
-            {t("themeEditor.inspector.currentBinding")}
-          </p>
-        ) : null}
-      </div>
+          {spec?.bind.kind === "collection" ? (
+            <CollectionBinding
+              doc={doc}
+              node={node}
+              contentTypes={contentTypes}
+              onChange={onBinding}
+              disabled={disabled}
+            />
+          ) : null}
+
+          {spec?.bind.kind === "current" ? (
+            <p className="rounded border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-600 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-400">
+              {t("themeEditor.inspector.currentBinding")}
+            </p>
+          ) : null}
+        </div>
+      ) : (
+        <div className="p-4">
+          <StyleForm style={node.style} onChange={onStyle} disabled={disabled} />
+        </div>
+      )}
     </div>
   );
 }
