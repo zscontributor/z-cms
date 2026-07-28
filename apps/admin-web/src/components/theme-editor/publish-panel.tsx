@@ -219,8 +219,9 @@ export function PublishPanel({
             <summary className="cursor-pointer z-muted">{t("themeEditor.publish.manage")}</summary>
             <p className="mt-2 z-muted">{t("themeEditor.publish.forgetHint")}</p>
             <Button
-              variant="ghost"
+              variant="danger"
               size="sm"
+              className="mt-2"
               disabled={pending}
               onClick={() =>
                 start(async () => {
@@ -355,7 +356,7 @@ function MarketplaceToken({
         onChange={(e) => setToken(e.target.value)}
       />
       <Button
-        variant="ghost"
+        variant="primary"
         size="sm"
         className="mt-2"
         disabled={pending || !token}

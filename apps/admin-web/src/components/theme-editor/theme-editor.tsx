@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   DndContext,
   DragOverlay,
@@ -46,10 +47,15 @@ import {
   withTemplate,
 } from "@/lib/layout-doc";
 import { buildPreviewContext, sampleRows } from "@/lib/preview-context";
-import { saveThemeDraftAction } from "@/app/actions/theme-draft";
+import {
+  buildThemeDraftAction,
+  getThemeDraftStatusAction,
+  saveThemeDraftAction,
+} from "@/app/actions/theme-draft";
 import type { ThemeDraftDto } from "@/lib/api";
+import { Drawer } from "@/components/ui/drawer";
 import { Canvas } from "./canvas";
-import { Inspector } from "./inspector";
+import { Inspector, ThemeTokensFields } from "./inspector";
 import { Palette } from "./palette";
 import { ChangelogEditor } from "./changelog-editor";
 import { PublishPanel } from "./publish-panel";
@@ -116,6 +122,7 @@ export function ThemeEditor({
   siteName,
   locale,
   canEdit,
+  canBuild,
   canPublish,
 }: {
   draft: ThemeDraftDto;
@@ -124,10 +131,13 @@ export function ThemeEditor({
   siteName: string;
   locale: string;
   canEdit: boolean;
+  /** `theme:sideload` — may install unreviewed theme code by building the design. */
+  canBuild: boolean;
   /** `theme:publish` — may put this company's name on a public package. */
   canPublish: boolean;
 }) {
   const t = useT();
+  const router = useRouter();
   const [history, dispatch] = useReducer(historyReducer, undefined, () => ({
     past: [],
     present: draft.document,
@@ -138,6 +148,10 @@ export function ThemeEditor({
   const canRedo = history.future.length > 0;
   const [template, setTemplate] = useState<LayoutTemplateName>("page");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // The Theme settings drawer (colours, fonts, spacing) — opened by the gear in the
+  // header. The tokens used to live in the Inspector's empty state, which meant
+  // deselecting everything to reach them; a drawer makes them a deliberate place.
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [version, setVersion] = useState(draft.version);
   // The last version the server acknowledged. The `version` state is what the field
@@ -146,6 +160,13 @@ export function ThemeEditor({
   const savedVersionRef = useRef(draft.version);
   const [message, setMessage] = useState<string | null>(null);
   const [saving, startSave] = useTransition();
+  // The build's own progress, separate from the save transition: `starting` covers
+  // the save-then-enqueue click, and `buildStatus` tracks the background job the
+  // editor then polls — "building" until the worker writes BUILT or FAILED.
+  const [starting, startBuild] = useTransition();
+  const [buildStatus, setBuildStatus] = useState<"idle" | "building" | "built" | "failed">(
+    draft.status === "BUILDING" ? "building" : "idle",
+  );
   // The label of whatever is mid-drag, drawn in a DragOverlay so a floating chip
   // tracks the cursor. Without it dnd-kit only fades the item in place, and a drag
   // with no thing following the pointer reads as broken.
@@ -153,7 +174,10 @@ export function ThemeEditor({
 
   const tree = templateTree(doc, template);
   const selected = selectedId ? (locate(tree, selectedId)?.node ?? null) : null;
-  const disabled = !canEdit || saving;
+  // No editing while a build is in flight either: the worker reads the row it is
+  // building, and cms-api refuses a save against a BUILDING draft anyway.
+  const building = buildStatus === "building";
+  const disabled = !canEdit || saving || starting || building;
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -190,6 +214,17 @@ export function ThemeEditor({
       setMessage(null);
     },
     [doc, template],
+  );
+
+  const applyTokens = useCallback(
+    (tokens: LayoutTokens) => {
+      // A token change is an edit like any other, so it joins the undo stack rather
+      // than mutating the document behind Undo's back.
+      dispatch({ type: "commit", doc: { ...doc, tokens } });
+      setDirty(true);
+      setMessage(null);
+    },
+    [doc],
   );
 
   /** The current column: where a click-to-add widget lands. */
@@ -400,6 +435,77 @@ export function ThemeEditor({
     });
   }
 
+  /**
+   * Saves the drawing, then builds it — the whole "install what I drew" step in one
+   * press, so an author never leaves the canvas to reach the Appearance list.
+   *
+   * Save FIRST, and only build if it lands: the worker builds the row, not the
+   * unsaved edits in this browser, so building a dirty draft would install the
+   * PREVIOUS drawing. The server advances the version when the current one is already
+   * installed — so a rebuild lands on a fresh number instead of the immutable-version
+   * refusal — and hands back the number it will build, which the header then shows.
+   */
+  function build() {
+    startBuild(async () => {
+      if (dirty) {
+        const saved = await saveThemeDraftAction(draft.id, { document: doc });
+        if (!saved.ok) {
+          setMessage(saved.error);
+          return;
+        }
+        setDirty(false);
+        savedVersionRef.current = saved.data.version;
+        setVersion(saved.data.version);
+      }
+
+      const started = await buildThemeDraftAction(draft.id);
+      if (!started.ok) {
+        setMessage(started.error);
+        return;
+      }
+      savedVersionRef.current = started.data.version;
+      setVersion(started.data.version);
+      setBuildStatus("building");
+      setMessage(t("themeEditor.build.started", { version: started.data.version }));
+    });
+  }
+
+  // While a build runs, poll for its outcome — nothing pushes a background job's
+  // result to the browser. On BUILT, refresh so the freshly staged checksum reaches
+  // the Publish panel (Sign turns on); on FAILED, show the reason, already a friendly
+  // sentence. The interval tears down the moment the status settles.
+  useEffect(() => {
+    if (buildStatus !== "building") return;
+    let cancelled = false;
+    async function poll() {
+      const res = await getThemeDraftStatusAction(draft.id);
+      if (cancelled || !res.ok) return;
+      if (res.data.status === "BUILT") {
+        setBuildStatus("built");
+        setMessage(t("themeEditor.build.done", { version: res.data.version }));
+        router.refresh();
+      } else if (res.data.status === "FAILED") {
+        setBuildStatus("failed");
+        setMessage(res.data.buildError ?? t("themeEditor.build.failed"));
+      }
+    }
+    const id = setInterval(poll, 3000);
+    poll();
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [buildStatus, draft.id, router, t]);
+
+  // Any edit invalidates a finished build: the staged package no longer matches the
+  // drawing, so drop the BUILT/FAILED note (the same reason PublishPanel hides Sign
+  // while dirty). Guarded so it does not fire mid-build.
+  useEffect(() => {
+    if (dirty && (buildStatus === "built" || buildStatus === "failed")) {
+      setBuildStatus("idle");
+    }
+  }, [dirty, buildStatus]);
+
   return (
     <DndContext
       sensors={sensors}
@@ -466,6 +572,16 @@ export function ThemeEditor({
             {dirty ? (
               <span className="text-xs text-amber-600">{t("themeEditor.unsaved")}</span>
             ) : null}
+            <Button
+              size="sm"
+              variant="ghost"
+              className="px-2"
+              onClick={() => setSettingsOpen(true)}
+              aria-label={t("themeEditor.actions.settings")}
+              title={t("themeEditor.actions.settings")}
+            >
+              <Icon name="settings" size={16} />
+            </Button>
             <div className="flex items-center">
               <Button
                 size="sm"
@@ -490,9 +606,18 @@ export function ThemeEditor({
                 <Icon name="redo" size={16} />
               </Button>
             </div>
-            <Button size="sm" disabled={disabled || !dirty} onClick={save}>
+            <Button size="sm" variant="ghost" disabled={disabled || !dirty} onClick={save}>
               {saving ? t("themeEditor.actions.saving") : t("themeEditor.actions.save")}
             </Button>
+            {canBuild ? (
+              // Save-and-build in one press. Disabled only while a build is actually
+              // running — a dirty draft is fine, `build()` saves it first.
+              <Button size="sm" disabled={!canEdit || saving || starting || building} onClick={build}>
+                {starting || building
+                  ? t("themeEditor.actions.building")
+                  : t("themeEditor.actions.build")}
+              </Button>
+            ) : null}
           </div>
         </header>
 
@@ -528,47 +653,50 @@ export function ThemeEditor({
             />
           </main>
 
-          {/* A flex column, not a plain block: the Inspector is `h-full` and would
-              otherwise eat the whole aside and shove Publish off the bottom edge.
-              Here the Inspector takes the space that is left and scrolls inside it,
-              and Publish keeps its own bounded, always-reachable region below. */}
-          <aside className="flex w-80 shrink-0 flex-col border-l border-neutral-200 dark:border-neutral-800">
-            <div className="min-h-0 flex-1 overflow-y-auto">
-              <Inspector
-                doc={doc}
-                node={selected}
-                contentTypes={contentTypes}
-                disabled={disabled}
-                onProps={(props) => selectedId && mutate(setProps(tree, selectedId, props))}
-                onBinding={(binding) => selectedId && mutate(setBinding(tree, selectedId, binding))}
-                onTokens={(tokens: LayoutTokens) => {
-                  // A token change is an edit like any other, so it joins the undo
-                  // stack rather than mutating the document behind Undo's back.
-                  dispatch({ type: "commit", doc: { ...doc, tokens } });
-                  setDirty(true);
-                  setMessage(null);
-                }}
-                onDelete={() => selectedId && deleteNode(selectedId)}
-                onDuplicate={() => selectedId && mutate(duplicateNode(tree, selectedId))}
-              />
-            </div>
+          {/* One scroll column, sized to its content. The Inspector no longer fills
+              a fixed region — an empty selection is a short hint, not a tall box —
+              and Release notes + Publish flow directly below it, the whole aside
+              scrolling as one when a long selection or the forms need the room.
+              (Theme tokens moved to the settings drawer, so the Inspector is short
+              far more often now.) */}
+          <aside className="flex w-80 shrink-0 flex-col overflow-y-auto border-l border-neutral-200 dark:border-neutral-800">
+            <Inspector
+              doc={doc}
+              node={selected}
+              contentTypes={contentTypes}
+              disabled={disabled}
+              onProps={(props) => selectedId && mutate(setProps(tree, selectedId, props))}
+              onBinding={(binding) => selectedId && mutate(setBinding(tree, selectedId, binding))}
+              onDelete={() => selectedId && deleteNode(selectedId)}
+              onDuplicate={() => selectedId && mutate(duplicateNode(tree, selectedId))}
+            />
             {/* Release notes then signing, both beside the design rather than on a
                 settings page: they are the last steps of the same job, and the notes
-                the author writes here are packed into the build the checksum covers.
-                Capped so these tall forms scroll themselves instead of crowding out
-                the Inspector. */}
-            <div className="max-h-[45%] shrink-0 overflow-y-auto">
-              <ChangelogEditor draftId={draft.id} changelog={draft.changelog} />
-              <PublishPanel
-                draftId={draft.id}
-                draftKey={draft.key}
-                payloadChecksum={dirty ? null : draft.payloadChecksum}
-                canPublish={canPublish}
-              />
-            </div>
+                the author writes here are packed into the build the checksum covers. */}
+            <ChangelogEditor draftId={draft.id} changelog={draft.changelog} />
+            <PublishPanel
+              draftId={draft.id}
+              draftKey={draft.key}
+              payloadChecksum={dirty ? null : draft.payloadChecksum}
+              canPublish={canPublish}
+            />
           </aside>
         </div>
       </div>
+
+      {/* Theme settings, one gear-click away. The tokens are the theme's own
+          settingsSchema, so editing them IS editing the document — every change goes
+          through applyTokens onto the undo stack, and the drawer needs no Save of its
+          own. Disabled with the rest of the canvas while a build is in flight. */}
+      <Drawer
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        title={t("themeEditor.inspector.themeTitle")}
+        description={t("themeEditor.inspector.themeHint")}
+        width="sm"
+      >
+        <ThemeTokensFields tokens={doc.tokens} onChange={applyTokens} disabled={disabled} />
+      </Drawer>
 
       {/* The thing you are dragging, following the cursor. A plain labelled chip
           rather than a clone of the widget: the drop TARGET is what needs to read

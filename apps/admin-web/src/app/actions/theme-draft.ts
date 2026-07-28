@@ -91,7 +91,9 @@ export async function saveThemeDraftAction(
  * server. Drawing is not building, and the person allowed to move a widget is not
  * automatically the person allowed to install one.
  */
-export async function buildThemeDraftAction(id: string): Promise<DraftActionResult> {
+export async function buildThemeDraftAction(
+  id: string,
+): Promise<DraftActionResult<{ version: string }>> {
   const t = await getT();
   const user = await getSession();
   if (!user) return { ok: false, error: t("auth.session.expired") };
@@ -100,9 +102,52 @@ export async function buildThemeDraftAction(id: string): Promise<DraftActionResu
   }
 
   try {
-    await apiFetch<unknown>(`/theme-drafts/${encodeURIComponent(id)}/build`, { method: "POST" });
+    // The server may advance the version when the current one is already installed —
+    // the caller shows the number it will actually build.
+    const res = await apiFetch<{ status: string; version: string }>(
+      `/theme-drafts/${encodeURIComponent(id)}/build`,
+      { method: "POST" },
+    );
     revalidatePath("/appearance");
-    return { ok: true, data: undefined };
+    return { ok: true, data: { version: res.version } };
+  } catch (error) {
+    return { ok: false, error: toMessage(error, t("themeEditor.errors.buildFailed")) };
+  }
+}
+
+/**
+ * A build's outcome, for the editor to poll after it presses Build.
+ *
+ * The build runs in a background worker; nothing pushes its result to the browser.
+ * The editor asks for it on a timer until the status settles, then reflects BUILT
+ * (Sign becomes possible) or FAILED (the reason, already a friendly sentence).
+ */
+export async function getThemeDraftStatusAction(id: string): Promise<
+  DraftActionResult<{
+    status: ThemeDraftDto["status"];
+    buildError: string | null;
+    version: string;
+    payloadChecksum: string | null;
+  }>
+> {
+  const t = await getT();
+  const user = await getSession();
+  if (!user) return { ok: false, error: t("auth.session.expired") };
+  if (!can(user, "theme:author")) return { ok: false, error: t("themeEditor.errors.denied") };
+
+  try {
+    const draft = await apiFetch<ThemeDraftDto>(`/theme-drafts/${encodeURIComponent(id)}`, {
+      method: "GET",
+    });
+    return {
+      ok: true,
+      data: {
+        status: draft.status,
+        buildError: draft.buildError,
+        version: draft.version,
+        payloadChecksum: draft.payloadChecksum,
+      },
+    };
   } catch (error) {
     return { ok: false, error: toMessage(error, t("themeEditor.errors.buildFailed")) };
   }

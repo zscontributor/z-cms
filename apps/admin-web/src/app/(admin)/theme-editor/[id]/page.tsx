@@ -57,6 +57,10 @@ export default async function ThemeEditorPage({
       siteName={site?.name ?? ""}
       locale={locale}
       canEdit
+      // theme:sideload, like the Appearance panel's Build — installing unreviewed
+      // code, not merely drawing. A theme:author without it edits and signs but
+      // cannot build here.
+      canBuild={can(user, "theme:sideload")}
       canPublish={can(user, "theme:publish")}
     />
   );

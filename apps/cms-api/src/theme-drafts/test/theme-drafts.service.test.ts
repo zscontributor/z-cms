@@ -6,7 +6,7 @@ import {
   type LayoutDocument,
   type LayoutNode,
 } from "@zcmsorg/schemas";
-import { ThemeDraftsService } from "../theme-drafts.module";
+import { ThemeDraftsService, firstFreeVersion } from "../theme-drafts.module";
 
 /**
  * `assertRenderable` catches the two ways a document can be schema-valid and still
@@ -129,5 +129,31 @@ describe("assertRenderable — widget vocabulary", () => {
       },
     });
     expect(() => service.assertRenderable(doc)).toThrow(BadRequestException);
+  });
+});
+
+/**
+ * The "bump only when needed" rule behind the editor's Build button: an installed
+ * version is immutable, so a build lands on the current number when it is free and
+ * walks forward past every taken one otherwise.
+ */
+describe("firstFreeVersion", () => {
+  it("keeps the current version when nobody has installed it", () => {
+    // A first build, or a rebuild after a failure that installed nothing.
+    expect(firstFreeVersion("0.1.0", new Set())).toBe("0.1.0");
+    expect(firstFreeVersion("0.1.0", new Set(["0.2.0", "1.0.0"]))).toBe("0.1.0");
+  });
+
+  it("advances to the next free patch when the current one is taken", () => {
+    expect(firstFreeVersion("0.1.0", new Set(["0.1.0"]))).toBe("0.1.1");
+  });
+
+  it("walks past a contiguous run of installed patches", () => {
+    // Build → 0.1.0, edit → 0.1.1, edit → 0.1.2: the next build must clear all three.
+    expect(firstFreeVersion("0.1.0", new Set(["0.1.0", "0.1.1", "0.1.2"]))).toBe("0.1.3");
+  });
+
+  it("only bumps the patch, never the minor or major", () => {
+    expect(firstFreeVersion("2.5.9", new Set(["2.5.9"]))).toBe("2.5.10");
   });
 });

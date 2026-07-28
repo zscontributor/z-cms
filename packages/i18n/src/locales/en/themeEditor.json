@@ -21,7 +21,14 @@
     "addColumn": "Add column",
     "create": "New design",
     "open": "Open",
-    "build": "Build"
+    "build": "Build",
+    "building": "Building…",
+    "settings": "Theme settings"
+  },
+  "build": {
+    "started": "Building v{version}…",
+    "done": "Built v{version}. Sign it below to publish.",
+    "failed": "Build failed."
   },
   "templates": {
     "label": "Template",
@@ -49,6 +56,7 @@
   "inspector": {
     "themeTitle": "Theme",
     "themeHint": "Colours, type and spacing for the whole theme. A site owner can change these after installing it.",
+    "noSelection": "Select a block to edit it. For colours, fonts and spacing, open Theme settings — the gear in the toolbar.",
     "unknownWidget": "This build does not know \"{type}\". It is kept as-is.",
     "currentBinding": "This widget shows the page being viewed. On Home and Archive there is no single page, so it renders nothing.",
     "dataSource": "Data",

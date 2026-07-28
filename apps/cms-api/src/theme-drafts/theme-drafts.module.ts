@@ -262,6 +262,23 @@ function nextPatchVersion(version: string): string {
 }
 
 /**
+ * The first version at or after `current` that nobody has installed.
+ *
+ * `current` itself when it is free — a first build, or a rebuild after a failure that
+ * installed nothing, keeps the number the author chose. Otherwise the next patch, and
+ * the next, until one is untaken: an installed version is immutable, so a rebuilt
+ * design has to land on a number of its own rather than be refused at the gate.
+ *
+ * Pure and exported so the walk is tested without a database; the caller supplies the
+ * set of taken versions.
+ */
+export function firstFreeVersion(current: string, taken: ReadonlySet<string>): string {
+  let version = current;
+  while (taken.has(version)) version = nextPatchVersion(version);
+  return version;
+}
+
+/**
  * Reads the payload the build job staged.
  *
  * A separate object rather than a method on ThemeDraftsService because it is the
@@ -532,7 +549,7 @@ class ThemeDraftsController {
     @Actor() actor: RequestActor,
     @SiteId() siteId: string,
     @Param("id") id: string,
-  ): Promise<{ status: "BUILDING" }> {
+  ): Promise<{ status: "BUILDING"; version: string }> {
     const existing = await loadDraft(id, siteId);
     if (!existing) throw new NotFoundException("Draft not found.");
     if (existing.status === "BUILDING") {
@@ -552,12 +569,29 @@ class ThemeDraftsController {
     // than finding a FAILED badge later and having to guess.
     this.service.assertRenderable(LayoutDocumentSchema.parse(existing.document));
 
+    // Advance the version, but only when it would collide.
+    //
+    // A built version is immutable: once this theme's `0.1.0` is installed, building
+    // the edited design onto `0.1.0` again is refused by the sideload gate, and the
+    // author is stranded on an error until they hand-bump the number. So bump it for
+    // them — to the next patch nobody has installed yet — exactly when the current
+    // one is taken. A version nobody has built (a first build, or a rebuild after a
+    // failure that installed nothing) is left as typed: bumping unconditionally would
+    // burn a number on every failed attempt and litter the installed list.
+    const version = await this.nextBuildableVersion(existing.key, existing.version);
+
     // BUILDING is claimed here, not by the worker: the flag is what refuses a
     // second Build press, and a flag the worker sets is a flag that is not set yet
-    // while somebody is pressing the button again.
+    // while somebody is pressing the button again. The bumped version is written in
+    // the same update, so the worker (which reads the row) builds the new number and
+    // the editor's next read shows it.
     await db().themeDraft.update({
       where: { id: existing.id },
-      data: { status: "BUILDING", buildError: null },
+      data: {
+        status: "BUILDING",
+        buildError: null,
+        ...(version !== existing.version ? { version } : {}),
+      },
     });
 
     // `jobId` keyed on the draft: BullMQ refuses a duplicate while one is queued,
@@ -607,7 +641,32 @@ class ThemeDraftsController {
       throw error;
     }
 
-    return { status: "BUILDING" };
+    return { status: "BUILDING", version };
+  }
+
+  /**
+   * The version this build should install: the draft's own, unless a theme version
+   * with that number is already installed, in which case the next free patch.
+   *
+   * "Installed" is a row in themeVersion — written only on a SUCCESSFUL sideload, so
+   * a failed build leaves no version behind and does not push the number forward.
+   * The theme row is keyed by `key`; if none exists yet, nothing is installed, so the
+   * typed version stands.
+   */
+  private async nextBuildableVersion(key: string, current: string): Promise<string> {
+    const theme = await db().theme.findUnique({ where: { key }, select: { id: true } });
+    if (!theme) return current;
+
+    const taken = new Set(
+      (
+        await db().themeVersion.findMany({
+          where: { themeId: theme.id },
+          select: { version: true },
+        })
+      ).map((row) => row.version),
+    );
+
+    return firstFreeVersion(current, taken);
   }
 
   /**

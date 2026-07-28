@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, Logger } from "@nestjs/common";
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { db } from "@zcmsorg/database";
 import { decryptSecret, encryptSecret, readKey } from "../common/secret-box";
@@ -38,10 +43,23 @@ export class MarketplaceSubmissionService {
   }
 
   private key(): Buffer {
-    return readKey(
-      this.config.get<string>("MARKETPLACE_TOKEN_ENCRYPTION_KEY"),
-      "MARKETPLACE_TOKEN_ENCRYPTION_KEY",
-    );
+    try {
+      return readKey(
+        this.config.get<string>("MARKETPLACE_TOKEN_ENCRYPTION_KEY"),
+        "MARKETPLACE_TOKEN_ENCRYPTION_KEY",
+      );
+    } catch (error) {
+      // A missing or wrong-length key is the operator's misconfiguration, not the
+      // caller's mistake — but as a raw Error it reaches the browser as a bare
+      // "Internal server error" that names nothing. This endpoint is admin-only
+      // (theme:publish), so surfacing the switch that is off is safe, and it is the
+      // difference between the operator setting one env var and filing a ticket.
+      this.logger.error(`Marketplace token encryption key unusable: ${(error as Error).message}`);
+      throw new ServiceUnavailableException(
+        "Publishing is not configured on this server: MARKETPLACE_TOKEN_ENCRYPTION_KEY is unset or invalid. " +
+          "Set it to 32 bytes (base64 or hex) and try again.",
+      );
+    }
   }
 
   /** True when this person has connected a marketplace account to this instance. */

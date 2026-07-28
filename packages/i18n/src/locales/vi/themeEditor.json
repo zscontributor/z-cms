@@ -21,7 +21,14 @@
     "addColumn": "Thêm cột",
     "create": "Thiết kế mới",
     "open": "Mở",
-    "build": "Build"
+    "build": "Build",
+    "building": "Đang build…",
+    "settings": "Cài đặt theme"
+  },
+  "build": {
+    "started": "Đang build v{version}…",
+    "done": "Đã build v{version}. Ký ở bên dưới để phát hành.",
+    "failed": "Build thất bại."
   },
   "templates": {
     "label": "Mẫu trang",
@@ -49,6 +56,7 @@
   "inspector": {
     "themeTitle": "Theme",
     "themeHint": "Màu, phông chữ và khoảng cách cho cả theme. Chủ site có thể đổi lại sau khi cài.",
+    "noSelection": "Chọn một block để chỉnh sửa. Đổi màu, phông chữ và khoảng cách ở Cài đặt theme — icon bánh răng trên thanh công cụ.",
     "unknownWidget": "Bản dựng này không biết \"{type}\". Nó được giữ nguyên.",
     "currentBinding": "Widget này hiển thị trang đang xem. Ở Trang chủ và Danh sách không có trang cụ thể nào, nên nó không hiển thị gì.",
     "dataSource": "Dữ liệu",
@@ -211,14 +219,14 @@
     "importKey": "Nhập key",
     "keySaved": "Đã lưu key. Đăng ký public key ở marketplace để trở thành publisher.",
     "publicKey": "Public key",
-    "publicKeyHint": "Đăng ký cái này ở marketplace.z-cms.org. Chia sẻ thoải mái.",
+    "publicKeyHint": "Đăng ký khóa này tại marketplace.z-cms.org. An toàn khi chia sẻ.",
     "buildFirst": "Build bản thiết kế trước đã — chữ ký ký lên đúng thứ đã build.",
     "sign": "Ký & tải về",
     "signed": "Đã ký. Tải file .zcms lên developer portal của marketplace.",
     "submitHint": "Gói đã ký được tải lên ở developer portal của marketplace, nơi có người duyệt đọc trước khi phát hành.",
     "manage": "Quản lý key",
     "forget": "Quên key này",
-    "forgetHint": "Xoá cục ciphertext đã lưu. Theme bạn đã phát hành vẫn chạy — người dùng verify chữ ký của marketplace, không phải của bạn. Nhưng không có key thì không phát hành bản cập nhật được.",
+    "forgetHint": "Xoá khóa đã mã hoá đang lưu. Các theme bạn đã phát hành vẫn chạy bình thường — người xem xác minh chữ ký của marketplace, không phải chữ ký của bạn. Nhưng nếu không còn key, bạn sẽ không phát hành được bản cập nhật.",
     "unsupported": "Trình duyệt này không ký được Ed25519. Hãy dùng Chrome/Safari/Firefox bản mới — hoặc ký bằng `zcms pack`.",
     "keyLoadFailed": "Không tải được publisher key.",
     "keySaveFailed": "Không lưu được publisher key.",

@@ -30,25 +30,33 @@ export function Inspector({
   contentTypes,
   onProps,
   onBinding,
-  onTokens,
   onDelete,
   onDuplicate,
   disabled,
 }: {
   doc: LayoutDocument;
-  /** Null when nothing is selected — the panel then edits the theme's tokens. */
+  /**
+   * Null when nothing is selected. The theme-wide tokens used to live here on that
+   * empty state; they moved to the Theme settings drawer (the gear in the header),
+   * so this now just says what to do.
+   */
   node: LayoutNode | null;
   contentTypes: ContentTypeOption[];
   onProps: (props: Record<string, unknown>) => void;
   onBinding: (binding: LayoutNode["binding"]) => void;
-  onTokens: (tokens: LayoutTokens) => void;
   onDelete: () => void;
   onDuplicate: () => void;
   disabled?: boolean;
 }) {
   const t = useT();
 
-  if (!node) return <TokensPanel tokens={doc.tokens} onChange={onTokens} disabled={disabled} />;
+  if (!node) {
+    return (
+      <div className="p-4">
+        <p className="text-xs z-muted">{t("themeEditor.inspector.noSelection")}</p>
+      </div>
+    );
+  }
 
   const spec = specFor(node);
   const containerSpec = node.kind !== "widget" ? CONTAINER_SPECS[node.kind] : undefined;
@@ -56,7 +64,7 @@ export function Inspector({
   const title = spec ? t(spec.labelKey) : containerSpec ? t(containerSpec.labelKey) : node.kind;
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex flex-col">
       <header className="flex items-center justify-between border-b border-neutral-200 px-4 py-3 dark:border-neutral-800">
         <div className="min-w-0">
           <h2 className="truncate text-sm font-semibold">{title}</h2>
@@ -78,7 +86,7 @@ export function Inspector({
         </div>
       </header>
 
-      <div className="flex-1 space-y-5 overflow-y-auto p-4">
+      <div className="space-y-5 p-4">
         <WidgetPropsForm
           specs={propSpecs}
           props={node.props}
@@ -211,8 +219,14 @@ function CollectionBinding({
   );
 }
 
-/** The theme-wide knobs. They become the generated theme's settingsSchema. */
-function TokensPanel({
+/**
+ * The theme-wide knobs. They become the generated theme's settingsSchema.
+ *
+ * Fields only — no heading, no scroll container of its own: it is rendered inside
+ * the Theme settings Drawer, which supplies the title, the padding and the scroll.
+ * Exported so the editor can mount it there.
+ */
+export function ThemeTokensFields({
   tokens,
   onChange,
   disabled,
@@ -225,72 +239,66 @@ function TokensPanel({
   const set = (patch: Partial<LayoutTokens>) => onChange({ ...tokens, ...patch });
 
   return (
-    <div className="flex h-full flex-col">
-      <header className="border-b border-neutral-200 px-4 py-3 dark:border-neutral-800">
-        <h2 className="text-sm font-semibold">{t("themeEditor.inspector.themeTitle")}</h2>
-        <p className="text-xs text-neutral-500">{t("themeEditor.inspector.themeHint")}</p>
-      </header>
-      <div className="flex-1 space-y-3 overflow-y-auto p-4">
-        <ColorToken
-          label={t("themeEditor.tokens.colorPrimary")}
-          value={tokens.colorPrimary}
+    <div className="space-y-3">
+      <ColorToken
+        label={t("themeEditor.tokens.colorPrimary")}
+        value={tokens.colorPrimary}
+        disabled={disabled}
+        onChange={(v) => set({ colorPrimary: v })}
+      />
+      <ColorToken
+        label={t("themeEditor.tokens.colorText")}
+        value={tokens.colorText}
+        disabled={disabled}
+        onChange={(v) => set({ colorText: v })}
+      />
+      <ColorToken
+        label={t("themeEditor.tokens.colorBackground")}
+        value={tokens.colorBackground}
+        disabled={disabled}
+        onChange={(v) => set({ colorBackground: v })}
+      />
+      <Field label={t("themeEditor.tokens.fontHeading")}>
+        <Input
+          value={tokens.fontHeading ?? ""}
+          placeholder="Georgia, serif"
           disabled={disabled}
-          onChange={(v) => set({ colorPrimary: v })}
+          onChange={(e) => set({ fontHeading: e.target.value || undefined })}
         />
-        <ColorToken
-          label={t("themeEditor.tokens.colorText")}
-          value={tokens.colorText}
+      </Field>
+      <Field label={t("themeEditor.tokens.fontBody")}>
+        <Input
+          value={tokens.fontBody ?? ""}
+          placeholder="system-ui, sans-serif"
           disabled={disabled}
-          onChange={(v) => set({ colorText: v })}
+          onChange={(e) => set({ fontBody: e.target.value || undefined })}
         />
-        <ColorToken
-          label={t("themeEditor.tokens.colorBackground")}
-          value={tokens.colorBackground}
-          disabled={disabled}
-          onChange={(v) => set({ colorBackground: v })}
-        />
-        <Field label={t("themeEditor.tokens.fontHeading")}>
+      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label={t("themeEditor.tokens.radius")}>
           <Input
-            value={tokens.fontHeading ?? ""}
-            placeholder="Georgia, serif"
+            type="number"
+            min={0}
+            max={64}
+            value={tokens.radius ?? ""}
             disabled={disabled}
-            onChange={(e) => set({ fontHeading: e.target.value || undefined })}
+            onChange={(e) =>
+              set({ radius: e.target.value === "" ? undefined : Number(e.target.value) })
+            }
           />
         </Field>
-        <Field label={t("themeEditor.tokens.fontBody")}>
+        <Field label={t("themeEditor.tokens.maxWidth")}>
           <Input
-            value={tokens.fontBody ?? ""}
-            placeholder="system-ui, sans-serif"
+            type="number"
+            min={320}
+            max={2560}
+            value={tokens.maxWidth ?? ""}
             disabled={disabled}
-            onChange={(e) => set({ fontBody: e.target.value || undefined })}
+            onChange={(e) =>
+              set({ maxWidth: e.target.value === "" ? undefined : Number(e.target.value) })
+            }
           />
         </Field>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label={t("themeEditor.tokens.radius")}>
-            <Input
-              type="number"
-              min={0}
-              max={64}
-              value={tokens.radius ?? ""}
-              disabled={disabled}
-              onChange={(e) =>
-                set({ radius: e.target.value === "" ? undefined : Number(e.target.value) })
-              }
-            />
-          </Field>
-          <Field label={t("themeEditor.tokens.maxWidth")}>
-            <Input
-              type="number"
-              min={320}
-              max={2560}
-              value={tokens.maxWidth ?? ""}
-              disabled={disabled}
-              onChange={(e) =>
-                set({ maxWidth: e.target.value === "" ? undefined : Number(e.target.value) })
-              }
-            />
-          </Field>
-        </div>
       </div>
     </div>
   );

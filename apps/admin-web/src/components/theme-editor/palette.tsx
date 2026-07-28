@@ -81,7 +81,11 @@ function PaletteItem({
       {...listeners}
     >
       <span className="text-base leading-none">{spec.icon}</span>
-      <span className="truncate">{t(spec.labelKey)}</span>
+      {/* Wraps within the tile instead of truncating: a long label like "Danh sách
+          nội dung" reads in full over two lines rather than spilling past the edge.
+          `w-full` gives normal wrapping a width to break against; `break-words`
+          catches a single unbroken word too. */}
+      <span className="w-full break-words leading-tight">{t(spec.labelKey)}</span>
     </button>
   );
 }
