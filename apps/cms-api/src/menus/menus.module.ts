@@ -20,6 +20,22 @@ import { CacheService } from "../redis/cache.service";
 
 type MenuItemInput = z.infer<typeof PutMenuSchema>["items"][number];
 
+/**
+ * Keep only non-empty per-locale labels. Returns `undefined` (stored as NULL) when
+ * nothing survives, so an item with no real overrides falls back to the render-time
+ * default rather than carrying an empty object around.
+ */
+function cleanLabels(
+  labels: Record<string, string> | undefined,
+): Record<string, string> | undefined {
+  if (!labels) return undefined;
+  const out: Record<string, string> = {};
+  for (const [locale, label] of Object.entries(labels)) {
+    if (typeof label === "string" && label.trim()) out[locale] = label.trim();
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
 @ApiTags("Menus")
 @ApiSiteScoped()
 @Controller("menus")
@@ -106,6 +122,9 @@ class MenusController {
             menuId: menu.id,
             parentId,
             label: item.label,
+            // Drop blank overrides so the column is null rather than {} when the
+            // admin left every translation empty — keeps the render-time fallback.
+            labels: cleanLabels(item.labels),
             url: item.url,
             target: item.target ?? "_self",
             order: index,

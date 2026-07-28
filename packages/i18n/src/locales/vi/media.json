@@ -79,6 +79,21 @@
     "deleteDescription": "“{name}” sẽ bị gỡ khỏi thư viện.",
     "deleteWarning": "Thư viện không theo dõi trang nào đang dùng tệp. Nếu một trang đã xuất bản có nhúng tệp này, ảnh ở đó sẽ mất."
   },
+  "preview": {
+    "title": "Xem trước",
+    "openAria": "Xem trước {name}",
+    "openOriginal": "Mở bản gốc",
+    "previous": "Trước",
+    "next": "Sau",
+    "position": "{index}/{total}",
+    "noPreview": "Loại tệp này không thể xem trước tại đây. Hãy mở bản gốc để xem.",
+    "type": "Loại",
+    "size": "Dung lượng",
+    "dimensions": "Kích thước",
+    "folder": "Thư mục",
+    "uploaded": "Tải lên",
+    "alt": "Alt text"
+  },
   "bulk": {
     "selectAll": "Chọn tất cả",
     "selectNone": "Bỏ chọn",

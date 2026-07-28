@@ -80,7 +80,7 @@ export function InstalledGrid({
   return (
     <div className="flex flex-col gap-4">
       {items.length > SEARCH_THRESHOLD ? (
-        <div className="flex justify-end">
+        <div className="flex justify-start">
           <SearchField
             value={query}
             onChange={setQuery}

@@ -53,6 +53,7 @@
   "sideload": {
     "heading": "Cài từ file",
     "hint": "Tải lên một file .zcms đã được người vận hành ký. File được xác minh bằng khóa người vận hành, quét bảo mật, và giữ chờ duyệt trước khi được chạy.",
+    "installedHeading": "Theme cài từ file",
     "upload": "Tải lên .zcms",
     "uploading": "Đang tải…",
     "noFile": "Hãy chọn một file .zcms trước.",

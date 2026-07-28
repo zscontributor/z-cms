@@ -32,6 +32,9 @@ function post(body: unknown, token: string | null = TOKEN) {
 beforeEach(() => {
   revalidateTag.mockClear();
   vi.stubEnv("CMS_INTERNAL_TOKEN", TOKEN);
+  // Default the split render token off so each test opts into it explicitly and
+  // a value in the ambient .env cannot leak into the auth-gate assertions.
+  vi.stubEnv("SITE_RUNTIME_INTERNAL_TOKEN", "");
 });
 
 describe("POST", () => {
@@ -51,14 +54,37 @@ describe("POST", () => {
   });
 
   it("refuses every request when no internal token is configured, rather than allowing all", async () => {
-    // An empty CMS_INTERNAL_TOKEN must fail closed: it must not become a shared
-    // "" that any caller sending no token would match.
+    // Both tokens empty must fail closed: an empty accept-list must not become a
+    // shared "" that any caller sending no token would match.
     vi.stubEnv("CMS_INTERNAL_TOKEN", "");
+    vi.stubEnv("SITE_RUNTIME_INTERNAL_TOKEN", "");
 
     const res = await post({ hostname: "site.test" }, "");
 
     expect(res.status).toBe(401);
     expect(revalidateTag).not.toHaveBeenCalled();
+  });
+
+  it("accepts the split render token (SITE_RUNTIME_INTERNAL_TOKEN) cms-api pings with", async () => {
+    // A split-token deploy: cms-api authenticates the purge with its render
+    // token, not the privileged one. The route must honour it, or activating a
+    // theme would 401 the purge and leave the old theme cached.
+    const RENDER_TOKEN = "render-scoped-token";
+    vi.stubEnv("SITE_RUNTIME_INTERNAL_TOKEN", RENDER_TOKEN);
+
+    const res = await post({ hostname: "site.test" }, RENDER_TOKEN);
+
+    expect(res.status).toBe(200);
+    expect(revalidateTag).toHaveBeenCalledWith(siteTag("site.test"), { expire: 0 });
+  });
+
+  it("still accepts the privileged token when the render token is also configured", async () => {
+    vi.stubEnv("SITE_RUNTIME_INTERNAL_TOKEN", "render-scoped-token");
+
+    const res = await post({ hostname: "site.test" }, TOKEN);
+
+    expect(res.status).toBe(200);
+    expect(revalidateTag).toHaveBeenCalledWith(siteTag("site.test"), { expire: 0 });
   });
 
   it("purges the whole-site tag when a hostname is given with no paths", async () => {

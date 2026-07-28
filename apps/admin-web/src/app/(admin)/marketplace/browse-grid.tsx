@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/shell/icon";
 import { MediaGallery } from "@/components/ui/media-gallery";
+import { SearchField } from "@/components/ui/search-field";
 import type { BrowsePackageDto } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { formatDateTime } from "@/lib/format";
@@ -153,41 +154,34 @@ export function BrowseGrid({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-1" role="tablist" aria-label={t("admin.marketplace.browse.tabsLabel")}>
-          {(["plugin", "theme"] as const).map((option) => (
-            <button
-              key={option}
-              type="button"
-              role="tab"
-              aria-selected={tab === option}
-              onClick={() => selectTab(option)}
-              className={cn(
-                "rounded-md px-3 py-1.5 text-xs font-medium transition",
-                tab === option
-                  ? "bg-[var(--surface-raised)] text-[var(--text)] shadow-sm ring-1 ring-[var(--border-strong)]"
-                  : "text-[var(--text-muted)] hover:bg-[var(--surface-sunken)] hover:text-[var(--text)]",
-              )}
-            >
-              {t(`admin.marketplace.browse.tabs.${option}`)}
-              <span className="ml-1.5 text-[10px] z-muted">{tabCounts[option]}</span>
-            </button>
-          ))}
-        </div>
+      <div className="flex gap-1" role="tablist" aria-label={t("admin.marketplace.browse.tabsLabel")}>
+        {(["plugin", "theme"] as const).map((option) => (
+          <button
+            key={option}
+            type="button"
+            role="tab"
+            aria-selected={tab === option}
+            onClick={() => selectTab(option)}
+            className={cn(
+              "rounded-md px-3 py-1.5 text-xs font-medium transition",
+              tab === option
+                ? "bg-[var(--surface-raised)] text-[var(--text)] shadow-sm ring-1 ring-[var(--border-strong)]"
+                : "text-[var(--text-muted)] hover:bg-[var(--surface-sunken)] hover:text-[var(--text)]",
+            )}
+          >
+            {t(`admin.marketplace.browse.tabs.${option}`)}
+            <span className="ml-1.5 text-[10px] z-muted">{tabCounts[option]}</span>
+          </button>
+        ))}
+      </div>
 
-        <div className="relative min-w-56 flex-1">
-          <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
-            <Icon name="search" className="h-4 w-4" />
-          </span>
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t("admin.marketplace.browse.searchPlaceholder")}
-            className="z-input w-full pl-8"
-            aria-label={t("admin.marketplace.browse.searchPlaceholder")}
-          />
-        </div>
+      <div className="flex justify-start">
+        <SearchField
+          value={query}
+          onChange={setQuery}
+          placeholder={t("admin.marketplace.browse.searchPlaceholder")}
+          className="w-full sm:max-w-xs"
+        />
       </div>
 
       <div className="flex flex-wrap gap-1.5" aria-label={t("admin.marketplace.browse.categoriesLabel")}>

@@ -173,6 +173,22 @@ describe("toMenuDto", () => {
     expect(dto.items.map((i) => i.label)).toEqual(["A", "B"]);
     expect(dto.items[0]!.children.map((i) => i.label)).toEqual(["A1"]);
   });
+
+  it("carries per-locale labels through, dropping blank ones, and omits an empty map", () => {
+    const dto = toMenuDto({
+      key: "main",
+      name: "Main",
+      items: [
+        { id: "a", label: "About", labels: { vi: "Giới thiệu", ja: "  " }, url: "/a", target: "_self", order: 1, parentId: null },
+        { id: "b", label: "Blog", labels: {}, url: "/b", target: "_self", order: 2, parentId: null },
+        { id: "c", label: "Contact", url: "/c", target: "_self", order: 3, parentId: null },
+      ],
+    });
+
+    expect(dto.items[0]!.labels).toEqual({ vi: "Giới thiệu" });
+    expect(dto.items[1]!.labels).toBeUndefined();
+    expect(dto.items[2]!.labels).toBeUndefined();
+  });
 });
 
 describe("toMediaDto", () => {

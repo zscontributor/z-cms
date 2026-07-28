@@ -21,8 +21,10 @@ import { CSS } from "@dnd-kit/utilities";
 import type { MenuDto, MenuItemDto } from "@zcmsorg/schemas";
 import { saveMenuAction, type MenuItemInput } from "@/app/actions/menu";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import { Drawer } from "@/components/ui/drawer";
 import { Field, Input, Select } from "@/components/ui/field";
+import { Flag } from "@/components/shell/flag";
 import { Icon } from "@/components/shell/icon";
 import { useT } from "@/lib/i18n-provider";
 
@@ -35,6 +37,8 @@ export interface PageOption {
 interface EditItem {
   id: string;
   label: string;
+  /** Per-locale label overrides, keyed by locale. Blank entries are dropped on save. */
+  labels: Record<string, string>;
   url: string;
   target: string;
   children: EditItem[];
@@ -47,32 +51,57 @@ function toEdit(item: MenuItemDto): EditItem {
   return {
     id: uid(),
     label: item.label,
+    labels: { ...(item.labels ?? {}) },
     url: item.url,
     target: item.target || "_self",
     children: (item.children ?? []).map(toEdit),
   };
 }
 
+/** Only the locale labels the admin actually filled in reach the server. */
+function cleanLabels(labels: Record<string, string>): Record<string, string> | undefined {
+  const out: Record<string, string> = {};
+  for (const [locale, value] of Object.entries(labels)) {
+    if (value.trim()) out[locale] = value.trim();
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
 function toInput(item: EditItem): MenuItemInput {
+  const labels = cleanLabels(item.labels);
   return {
     label: item.label,
+    ...(labels ? { labels } : {}),
     url: item.url,
     target: item.target,
     ...(item.children.length ? { children: item.children.map(toInput) } : {}),
   };
 }
 
-const emptyItem = (): EditItem => ({ id: uid(), label: "", url: "", target: "_self", children: [] });
+const emptyItem = (): EditItem => ({
+  id: uid(),
+  label: "",
+  labels: {},
+  url: "",
+  target: "_self",
+  children: [],
+});
 
 const URL_LIST_ID = "zsoft-menu-urls";
+
+/** Preferred column order for the well-known theme locations; others follow, sorted. */
+const MENU_ORDER = ["primary", "footer"];
 
 export function MenusManager({
   menus,
   pages,
+  localeOptions,
   canManage,
 }: {
   menus: MenuDto[];
   pages: PageOption[];
+  /** Non-default locales the site publishes in; each gets a per-item label input. */
+  localeOptions: string[];
   canManage: boolean;
 }) {
   const t = useT();
@@ -82,7 +111,16 @@ export function MenusManager({
   const [newName, setNewName] = useState("");
 
   const existingKeys = new Set(menus.map((m) => m.key));
-  const all = [...menus, ...extra.filter((m) => !existingKeys.has(m.key))];
+  // Primary reads first (left column), footer next (right column), then any custom
+  // location alphabetically. The API lists menus by key, which alone would put
+  // "footer" before "primary".
+  const rank = (key: string) => {
+    const i = MENU_ORDER.indexOf(key);
+    return i === -1 ? MENU_ORDER.length : i;
+  };
+  const all = [...menus, ...extra.filter((m) => !existingKeys.has(m.key))].sort(
+    (a, b) => rank(a.key) - rank(b.key) || a.key.localeCompare(b.key),
+  );
 
   const normalizedKey = newKey.trim().toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "");
   const keyTaken = !!normalizedKey && (existingKeys.has(normalizedKey) || extra.some((m) => m.key === normalizedKey));
@@ -124,7 +162,14 @@ export function MenusManager({
           {t("admin.menus.empty")}
         </p>
       ) : (
-        all.map((menu) => <MenuCard key={menu.key} menu={menu} canManage={canManage} />)
+        // Two columns from lg up (primary left, footer right), one column below it.
+        // `items-start` keeps each card its own height rather than stretching the
+        // shorter one to match its neighbour.
+        <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
+          {all.map((menu) => (
+            <MenuCard key={menu.key} menu={menu} localeOptions={localeOptions} canManage={canManage} />
+          ))}
+        </div>
       )}
 
       {canManage ? (
@@ -156,7 +201,7 @@ export function MenusManager({
               hint={keyTaken ? t("admin.menus.keyTaken") : t("admin.menus.newLocationHint")}
             >
               <Input
-                autoFocus
+                data-autofocus
                 value={newKey}
                 onChange={(e) => setNewKey(e.target.value)}
                 placeholder="primary"
@@ -219,12 +264,87 @@ function SortableRow({
   );
 }
 
-function MenuCard({ menu, canManage }: { menu: MenuDto; canManage: boolean }) {
+/**
+ * The per-locale label overrides for one item, behind a disclosure so a single-
+ * language site (localeOptions empty) sees nothing, and a multilingual one keeps
+ * the row uncluttered until the admin opens it. An override is optional: left
+ * blank, cms-api falls back to the translated page title (internal links) or the
+ * base label (everything else).
+ */
+function ItemTranslations({
+  item,
+  locales,
+  onLabel,
+  canManage,
+}: {
+  item: EditItem;
+  locales: string[];
+  onLabel: (locale: string, value: string) => void;
+  canManage: boolean;
+}) {
+  const t = useT();
+  const filled = locales.filter((l) => item.labels[l]?.trim()).length;
+  const [open, setOpen] = useState(filled > 0);
+
+  if (locales.length === 0) return null;
+
+  return (
+    <div className="w-full">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="inline-flex items-center gap-1 text-xs z-muted hover:text-[var(--text)]"
+        aria-expanded={open}
+      >
+        <Icon name="language" className="h-3.5 w-3.5" />
+        {t("admin.menus.translations")}
+        {filled > 0 ? ` (${filled})` : ""}
+      </button>
+      {open ? (
+        <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1.5 rounded-md bg-[var(--surface-sunken)] p-2">
+          {locales.map((loc) => (
+            <label key={loc} className="flex items-center gap-1.5">
+              {/* Flag as the visual anchor, code as the name beside it — a flag
+                  alone never identifies a language (see shell/flag.tsx). */}
+              <span className="flex w-11 shrink-0 items-center gap-1">
+                <Flag locale={loc} />
+                <span className="font-mono text-[10px] uppercase z-muted">{loc}</span>
+              </span>
+              <Input
+                aria-label={`${t("admin.menus.label")} (${loc})`}
+                value={item.labels[loc] ?? ""}
+                onChange={(e) => onLabel(loc, e.target.value)}
+                placeholder={item.label || t("admin.menus.label")}
+                disabled={!canManage}
+                className="w-44"
+              />
+            </label>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function MenuCard({
+  menu,
+  localeOptions,
+  canManage,
+}: {
+  menu: MenuDto;
+  localeOptions: string[];
+  canManage: boolean;
+}) {
   const t = useT();
   const [name, setName] = useState(menu.name);
   const [items, setItems] = useState<EditItem[]>(menu.items.map(toEdit));
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
+  // The menu item queued for removal, awaiting confirmation. `j` present means a
+  // sub-item under top item `i`; absent means the top item itself.
+  const [removeTarget, setRemoveTarget] = useState<{ i: number; j?: number; label: string } | null>(
+    null,
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -244,6 +364,14 @@ function MenuCard({ menu, canManage }: { menu: MenuDto; canManage: boolean }) {
       ),
     );
 
+  // Per-locale label edits merge into the item's `labels` map, leaving the base
+  // label and everything else untouched.
+  const setTopLabel = (i: number, locale: string, value: string) =>
+    setTop(i, { labels: { ...items[i]!.labels, [locale]: value } });
+
+  const setChildLabel = (i: number, j: number, locale: string, value: string) =>
+    setChild(i, j, { labels: { ...items[i]!.children[j]!.labels, [locale]: value } });
+
   const addTop = () => setItems((prev) => [...prev, emptyItem()]);
   const removeTop = (i: number) => setItems((prev) => prev.filter((_, idx) => idx !== i));
   const addChild = (i: number) =>
@@ -256,6 +384,17 @@ function MenuCard({ menu, canManage }: { menu: MenuDto; canManage: boolean }) {
         idx === i ? { ...it, children: it.children.filter((_, cj) => cj !== j) } : it,
       ),
     );
+
+  // Remove is confirmed through a modal so a mis-click doesn't silently drop a
+  // link (and its whole submenu). The target carries its own indices so the
+  // handler stays correct even if the list re-renders behind the dialog.
+  const confirmRemove = () => {
+    if (!removeTarget) return;
+    const { i, j } = removeTarget;
+    if (j === undefined) removeTop(i);
+    else removeChild(i, j);
+    setRemoveTarget(null);
+  };
 
   // Drag reorder: within the top list, or within one parent's children. Cross-list
   // drags are ignored — moving in/out of a submenu is what Add sub-item / Remove do.
@@ -358,11 +497,23 @@ function MenuCard({ menu, canManage }: { menu: MenuDto; canManage: boolean }) {
               <Button size="sm" variant="ghost" onClick={() => addChild(i)}>
                 {t("admin.menus.addChild")}
               </Button>
-              <Button size="sm" variant="danger" onClick={() => removeTop(i)} aria-label={t("admin.menus.remove")}>
+              <Button
+                size="sm"
+                variant="danger"
+                onClick={() => setRemoveTarget({ i, label: it.label })}
+                aria-label={t("admin.menus.remove")}
+              >
                 ✕
               </Button>
             </div>
           </div>
+
+          <ItemTranslations
+            item={it}
+            locales={localeOptions}
+            canManage={canManage}
+            onLabel={(loc, v) => setTopLabel(i, loc, v)}
+          />
 
           {it.children.length > 0 ? (
             <SortableContext items={it.children.map((c) => c.id)} strategy={verticalListSortingStrategy}>
@@ -373,17 +524,32 @@ function MenuCard({ menu, canManage }: { menu: MenuDto; canManage: boolean }) {
                     id={c.id}
                     disabled={!canManage}
                     handleLabel={t("admin.menus.label")}
-                    className="flex flex-wrap items-center gap-2"
+                    className="flex items-start gap-2"
                   >
-                    {fields(
-                      c,
-                      (v) => setChild(i, j, { label: v }),
-                      (v) => setChild(i, j, { url: v }),
-                      (v) => setChild(i, j, { target: v }),
-                    )}
-                    <Button size="sm" variant="danger" onClick={() => removeChild(i, j)} aria-label={t("admin.menus.remove")}>
-                      ✕
-                    </Button>
+                    <div className="flex flex-1 flex-col gap-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {fields(
+                          c,
+                          (v) => setChild(i, j, { label: v }),
+                          (v) => setChild(i, j, { url: v }),
+                          (v) => setChild(i, j, { target: v }),
+                        )}
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          onClick={() => setRemoveTarget({ i, j, label: c.label })}
+                          aria-label={t("admin.menus.remove")}
+                        >
+                          ✕
+                        </Button>
+                      </div>
+                      <ItemTranslations
+                        item={c}
+                        locales={localeOptions}
+                        canManage={canManage}
+                        onLabel={(loc, v) => setChildLabel(i, j, loc, v)}
+                      />
+                    </div>
                   </SortableRow>
                 ))}
               </ul>
@@ -438,6 +604,31 @@ function MenuCard({ menu, canManage }: { menu: MenuDto; canManage: boolean }) {
           {message.text}
         </p>
       ) : null}
+
+      <Dialog
+        open={removeTarget !== null}
+        onClose={() => setRemoveTarget(null)}
+        title={t("admin.menus.removeConfirmTitle")}
+        description={
+          removeTarget?.label.trim()
+            ? t("admin.menus.removeConfirmBody", { label: removeTarget.label.trim() })
+            : t("admin.menus.removeConfirmBodyUnnamed")
+        }
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setRemoveTarget(null)}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="primary"
+              className="bg-red-600 hover:bg-red-700 active:bg-red-800"
+              onClick={confirmRemove}
+            >
+              {t("admin.menus.remove")}
+            </Button>
+          </>
+        }
+      />
     </section>
   );
 }

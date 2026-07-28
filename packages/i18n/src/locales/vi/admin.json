@@ -57,6 +57,8 @@
     "noSiteTitle": "Chưa có site nào",
     "noSiteDescription": "Tài khoản của bạn chưa được gán vào site nào. Liên hệ quản trị viên để được cấp quyền.",
     "typeCounts": "{published} đã xuất bản · {drafts} chưa xuất bản",
+    "users": "Người dùng",
+    "usersHint": "Số người có quyền truy cập site này",
     "noTypes": "Site này chưa khai báo loại nội dung nào.",
     "recent": "Cập nhật gần đây",
     "recentEmpty": "Chưa có nội dung nào.",
@@ -474,8 +476,9 @@
     "subtitle": "Tất cả site trong tenant của bạn. Site chưa xuất bản thì chưa phục vụ ai.",
     "created": "Đã tạo site. Site đang ở bản nháp — xuất bản khi sẵn sàng.",
     "saved": "Đã lưu site.",
-    "empty": "Chưa có site nào. Tạo site đầu tiên bên dưới.",
+    "empty": "Chưa có site nào. Dùng “Site mới” để tạo site đầu tiên.",
     "new": "Site mới",
+    "createHint": "Đặt tên site, thêm tên miền và chọn có xuất bản ngay hay không.",
     "create": "Tạo site",
     "creating": "Đang tạo…",
     "save": "Lưu",
@@ -537,6 +540,9 @@
     "addItem": "Thêm mục",
     "addChild": "Thêm mục con",
     "remove": "Xóa",
+    "removeConfirmTitle": "Xóa mục menu",
+    "removeConfirmBody": "Xóa “{label}” khỏi menu này? Các mục con bên dưới cũng sẽ bị xóa. Thay đổi có hiệu lực khi bạn lưu.",
+    "removeConfirmBodyUnnamed": "Xóa mục này khỏi menu? Các mục con bên dưới cũng sẽ bị xóa. Thay đổi có hiệu lực khi bạn lưu.",
     "up": "Lên",
     "down": "Xuống",
     "save": "Lưu menu",
@@ -551,6 +557,7 @@
     "createHint": "Nhập khóa vị trí và tên cho menu. Bạn có thể thêm liên kết sau khi tạo.",
     "keyTaken": "Khóa vị trí này đã được sử dụng.",
     "itemsEmpty": "Chưa có mục nào. Thêm mục để tạo menu.",
-    "fromTheme": "Từ menu demo của theme — lưu lại để biến thành menu của bạn."
+    "fromTheme": "Từ menu demo của theme — lưu lại để biến thành menu của bạn.",
+    "translations": "Bản dịch"
   }
 }

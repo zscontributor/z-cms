@@ -9,7 +9,13 @@ import { useT } from "@/lib/i18n-provider";
 import { PluginInfo } from "./plugin-info";
 import { usePluginLifecycle, type PluginTier } from "./use-plugin-lifecycle";
 
-export function PluginCard({
+/**
+ * The full detail of one plugin, rendered inside the browser's drawer. It carries
+ * the same install / activate / configure lifecycle as {@link PluginCard} — they
+ * share `usePluginLifecycle` — but has room to lay everything out top-to-bottom
+ * instead of squeezing it into a grid cell.
+ */
+export function PluginDetail({
   plugin,
   canInstall,
   canActivate,
@@ -20,52 +26,27 @@ export function PluginCard({
   canInstall: boolean;
   canActivate: boolean;
   canConfigure: boolean;
-  /** Which lifecycle the card drives — the per-site screen or the organization screen. */
   tier?: PluginTier;
 }) {
   const t = useT();
   const life = usePluginLifecycle(plugin, tier, canConfigure);
 
   return (
-    <article
-      className={
-        life.isActive
-          ? "z-card relative flex flex-col border-brand-500 p-4 ring-1 ring-brand-500/30"
-          : "z-card relative flex flex-col p-4"
-      }
-    >
-      {canConfigure && plugin.installed && plugin.settingsSchema ? (
-        <Button
-          size="sm"
-          variant="ghost"
-          className="absolute right-2 top-2 h-8 w-8 px-0"
-          onClick={life.openSettings}
-          aria-label={t("plugins.card.configure")}
-        >
-          <Icon name="settings" className="h-4 w-4" />
-        </Button>
-      ) : null}
+    <div className="flex flex-col">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <Badge tone={life.status.tone}>{life.status.label}</Badge>
+        {plugin.tier === "PLATFORM" ? (
+          <Badge tone="info">{t("plugins.card.tier.platform")}</Badge>
+        ) : plugin.tier === "ORG" ? (
+          <Badge tone="neutral">{t("plugins.card.tier.org")}</Badge>
+        ) : null}
+      </div>
 
-      <header className="flex items-start justify-between gap-2">
-        <div className="min-w-0 pr-8">
-          <h2 className="flex items-center gap-1.5 text-sm font-semibold">
-            <span className="truncate">{plugin.name}</span>
-            {plugin.tier === "PLATFORM" ? (
-              <Badge tone="info">{t("plugins.card.tier.platform")}</Badge>
-            ) : plugin.tier === "ORG" ? (
-              <Badge tone="neutral">{t("plugins.card.tier.org")}</Badge>
-            ) : null}
-          </h2>
-          <p className="mt-0.5 text-[11px] z-muted">
-            <code>{plugin.key}</code> · v{plugin.latestVersion ?? "—"} · {plugin.publisher}
-          </p>
-        </div>
-        <Badge tone={life.status.tone} className="mr-8">
-          {life.status.label}
-        </Badge>
-      </header>
+      <p className="mt-2 text-[11px] z-muted">
+        <code>{plugin.key}</code> · v{plugin.latestVersion ?? "—"} · {plugin.publisher}
+      </p>
 
-      <PluginInfo plugin={plugin} granted={life.granted} descriptionClamp />
+      <PluginInfo plugin={plugin} granted={life.granted} />
 
       {life.isFailed && !life.runtimeError ? (
         <p
@@ -101,7 +82,7 @@ export function PluginCard({
           {t("plugins.card.managedOrgWide")}
         </p>
       ) : (
-        <div className="mt-4 flex flex-wrap items-center gap-2 pt-1">
+        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[var(--border)] pt-4">
           {!plugin.installed ? (
             <Button
               size="sm"
@@ -128,6 +109,13 @@ export function PluginCard({
                 </Button>
               ) : null}
 
+              {canConfigure && plugin.settingsSchema ? (
+                <Button size="sm" variant="ghost" disabled={life.pending} onClick={life.openSettings}>
+                  <Icon name="settings" className="mr-1 h-4 w-4" />
+                  {t("plugins.card.configure")}
+                </Button>
+              ) : null}
+
               {life.isActive && plugin.key === "vn.zsoft.plugin.zai" ? (
                 <Link
                   href="/zai"
@@ -138,13 +126,23 @@ export function PluginCard({
               ) : null}
 
               {canInstall ? (
+                <Button size="sm" variant="ghost" disabled={life.pending} onClick={life.openConsent}>
+                  {t("plugins.card.changePermissions")}
+                </Button>
+              ) : null}
+
+              {/* Destructive and irreversible — kept to the right, away from the
+                  reversible switches, and behind a confirmation. */}
+              {canInstall ? (
                 <Button
                   size="sm"
-                  variant="ghost"
+                  variant="danger"
+                  className="ml-auto"
                   disabled={life.pending}
-                  onClick={life.openConsent}
+                  onClick={life.openUninstall}
                 >
-                  {t("plugins.card.changePermissions")}
+                  <Icon name="trash" className="mr-1 h-4 w-4" />
+                  {t("plugins.card.uninstall")}
                 </Button>
               ) : null}
             </>
@@ -157,6 +155,6 @@ export function PluginCard({
       ) : null}
 
       {life.dialogs}
-    </article>
+    </div>
   );
 }

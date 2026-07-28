@@ -7,6 +7,7 @@ import {
   getSession,
   listContentTypes,
   listContents,
+  listUsers,
 } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/button";
@@ -73,6 +74,15 @@ export default async function DashboardPage() {
   const totalContent = stats.reduce((sum, stat) => sum + stat.total, 0);
   const totalPublished = stats.reduce((sum, stat) => sum + stat.published, 0);
 
+  // How many people can reach this site: anyone with a role scoped to it, plus
+  // everyone holding a tenant-wide role (siteId === null), who reach every site.
+  const canReadUsers = can(user, "user:read");
+  const siteUserCount = canReadUsers
+    ? (await listUsers().catch(() => [])).filter((u) =>
+        u.memberships.some((m) => m.siteId === site.id || m.siteId === null),
+      ).length
+    : 0;
+
   return (
     <>
       <PageHeader
@@ -96,6 +106,27 @@ export default async function DashboardPage() {
       />
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {canReadUsers ? (
+          <Link
+            href="/users"
+            className="z-card group p-4 transition-colors hover:border-brand-300 dark:hover:border-brand-500/50"
+          >
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-2 text-xs font-medium z-muted">
+                <Icon name="users" size={18} />
+                {t("admin.dashboard.users")}
+              </span>
+              <Icon
+                name="external"
+                size={16}
+                className="opacity-0 transition-opacity group-hover:opacity-60"
+              />
+            </div>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">{siteUserCount}</p>
+            <p className="mt-1 text-[11px] z-muted">{t("admin.dashboard.usersHint")}</p>
+          </Link>
+        ) : null}
+
         {stats.map((stat) => (
           <Link
             key={stat.key}

@@ -57,6 +57,8 @@
     "noSiteTitle": "No site yet",
     "noSiteDescription": "Your account is not assigned to a site. Ask an administrator for access.",
     "typeCounts": "{published} published · {drafts} unpublished",
+    "users": "Users",
+    "usersHint": "People with access to this site",
     "noTypes": "This site has not declared any content types yet.",
     "recent": "Recently updated",
     "recentEmpty": "No content yet.",
@@ -474,8 +476,9 @@
     "subtitle": "Every site in your tenant. A site serves nothing until it is published.",
     "created": "Site created. It is a draft — publish it when it is ready.",
     "saved": "Site saved.",
-    "empty": "No sites yet. Create the first one below.",
+    "empty": "No sites yet. Use “New site” to create the first one.",
     "new": "New site",
+    "createHint": "Name the site, give it a domain, and choose whether to publish it now.",
     "create": "Create site",
     "creating": "Creating…",
     "save": "Save",
@@ -537,6 +540,9 @@
     "addItem": "Add item",
     "addChild": "Add sub-item",
     "remove": "Remove",
+    "removeConfirmTitle": "Remove menu item",
+    "removeConfirmBody": "Remove “{label}” from this menu? Any sub-items under it go too. This takes effect when you save.",
+    "removeConfirmBodyUnnamed": "Remove this item from the menu? Any sub-items under it go too. This takes effect when you save.",
     "up": "Move up",
     "down": "Move down",
     "save": "Save menu",
@@ -551,6 +557,7 @@
     "createHint": "Give the menu a location key and a name. Add its links after it's created.",
     "keyTaken": "That location key is already in use.",
     "itemsEmpty": "No items yet. Add one to build the menu.",
-    "fromTheme": "From the theme's demo — saving makes it your own."
+    "fromTheme": "From the theme's demo — saving makes it your own.",
+    "translations": "Translations"
   }
 }

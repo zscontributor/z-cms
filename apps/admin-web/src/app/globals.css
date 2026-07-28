@@ -270,3 +270,66 @@
 .z-richtext-content .ProseMirror-selectednode:has(img) {
   outline: none;
 }
+
+/*
+ * Right-side Drawer (components/ui/drawer.tsx). The native <dialog> animates both
+ * ways without JS: @starting-style supplies the entry from-state, and
+ * `transition-behavior: allow-discrete` on `display`/`overlay` keeps the panel in
+ * the top layer while it slides back out — so closing doesn't flick to empty.
+ * The panel's content stays mounted for the same reason.
+ */
+.z-drawer {
+  transform: translateX(100%);
+  opacity: 0;
+  transition:
+    transform 260ms cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 200ms ease,
+    overlay 260ms allow-discrete,
+    display 260ms allow-discrete;
+}
+
+.z-drawer[open] {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+@starting-style {
+  .z-drawer[open] {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+.z-drawer::backdrop {
+  background-color: rgb(0 0 0 / 0);
+  transition:
+    background-color 260ms ease,
+    overlay 260ms allow-discrete,
+    display 260ms allow-discrete;
+}
+
+.z-drawer[open]::backdrop {
+  background-color: rgb(0 0 0 / 0.5);
+}
+
+@starting-style {
+  .z-drawer[open]::backdrop {
+    background-color: rgb(0 0 0 / 0);
+  }
+}
+
+/* Respect users who ask the OS to minimise motion: cross-fade, no slide. */
+@media (prefers-reduced-motion: reduce) {
+  .z-drawer {
+    transform: none;
+    transition:
+      opacity 200ms ease,
+      overlay 200ms allow-discrete,
+      display 200ms allow-discrete;
+  }
+  @starting-style {
+    .z-drawer[open] {
+      transform: none;
+    }
+  }
+}

@@ -424,4 +424,51 @@ describe("PluginsService", () => {
       );
     });
   });
+
+  describe("runTeardown", () => {
+    it("returns — never raises — when the runtime answers a non-2xx", async () => {
+      // Deactivation is best-effort by contract: the controller flips the plugin to
+      // INACTIVE from a returned failure and does NOT wrap this in a try/catch. A
+      // runtime that is down or returns an HTTP error must therefore come back as
+      // { ok: false }, not throw — otherwise the deactivate 500s and the plugin is
+      // stranded ACTIVE, unable to be turned off.
+      holder.systemDb.sitePlugin.findFirst.mockResolvedValue(activeRow());
+      (fetch as any).mockResolvedValue({
+        ok: false,
+        status: 503,
+        headers: new Headers({ "content-type": "application/json" }),
+        json: async () => ({ message: "runtime unavailable" }),
+      });
+
+      const res = await makeService().runTeardown("t1", "s1", "zsoft-seo");
+
+      expect(res.ok).toBe(false);
+      expect(res.error).toContain("plugin-runtime HTTP 503");
+    });
+
+    it("returns — never raises — when the fetch itself rejects", async () => {
+      holder.systemDb.sitePlugin.findFirst.mockResolvedValue(activeRow());
+      (fetch as any).mockRejectedValue(new Error("network down"));
+
+      const res = await makeService().runTeardown("t1", "s1", "zsoft-seo");
+
+      expect(res.ok).toBe(false);
+      expect(res.error).toContain("network down");
+    });
+
+    it("passes a plugin's own teardown() failure straight through", async () => {
+      // The runtime answered 200 but the handler threw — surfaced for the audit log.
+      holder.systemDb.sitePlugin.findFirst.mockResolvedValue(activeRow());
+      (fetch as any).mockResolvedValue({
+        ok: true,
+        status: 200,
+        headers: new Headers({ "content-type": "application/json" }),
+        json: async () => ({ ok: false, error: "teardown threw" }),
+      });
+
+      const res = await makeService().runTeardown("t1", "s1", "zsoft-seo");
+
+      expect(res).toEqual({ ok: false, error: "teardown threw" });
+    });
+  });
 });

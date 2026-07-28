@@ -130,6 +130,36 @@ export async function deactivatePluginAction(
   }
 }
 
+/**
+ * Uninstalls a plugin from THIS site — the endpoint winds it down first if it
+ * was active, then removes the install and this site's plugin data (its
+ * key-value store and its rows in any tables the plugin owns). Unlike
+ * deactivate this is not reversible, which is why the UI gates it behind a
+ * confirmation. It carries the same `plugin:install` right the API requires.
+ */
+export async function uninstallPluginAction(
+  key: string,
+  tier: PluginTier = "site",
+): Promise<PluginActionResult> {
+  const t = await getT();
+
+  const user = await getSession();
+  if (!user) return { ok: false, error: t("auth.session.expired") };
+  if (!can(user, "plugin:install")) {
+    return { ok: false, error: t("plugins.actions.uninstallDenied") };
+  }
+
+  try {
+    await apiFetch<{ ok: true }>(`${basePath(tier)}/${encodeURIComponent(key)}/uninstall`, {
+      method: "POST",
+    });
+    revalidatePath(pageToRevalidate(tier));
+    return { ok: true, message: t("plugins.actions.uninstalled") };
+  } catch (error) {
+    return { ok: false, error: toMessage(error, t("plugins.actions.uninstallFailed")) };
+  }
+}
+
 /** Opaque JSON, exactly like theme settings: the shape belongs to the plugin. */
 export async function savePluginSettingsAction(
   key: string,

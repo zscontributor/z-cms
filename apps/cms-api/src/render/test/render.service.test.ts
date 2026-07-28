@@ -497,6 +497,97 @@ describe("RenderService", () => {
   });
 
   /**
+   * Menus are stored once per site and localised at render time. `labels` lets an
+   * item carry its own label per locale; where it does not, an internal link falls
+   * back to the translated page title and everything else to the base label. The
+   * per-locale map is admin-only and must never reach the public payload.
+   */
+  describe("per-locale menu labels", () => {
+    const bilingual = { ...publishedSite, locales: ["en", "vi"] };
+
+    const primaryMenu = {
+      key: "primary",
+      name: "Primary",
+      demoThemeKey: null,
+      items: [
+        // Internal link WITH a vi override -> override wins over the page title.
+        { id: "1", label: "About", labels: { vi: "Giới thiệu" }, url: "/about", target: "_self", order: 0, parentId: null },
+        // Internal link WITHOUT an override -> borrows the translated page title.
+        { id: "2", label: "Contact", labels: null, url: "/contact", target: "_self", order: 1, parentId: null },
+        // External link WITH a vi override -> URL untouched, label relabelled.
+        { id: "3", label: "GitHub", labels: { vi: "Kho mã" }, url: "https://github.com/z", target: "_self", order: 2, parentId: null },
+      ],
+    };
+
+    /** Answer every content.findMany by the shape of its `where`, order-independently. */
+    function menuAwareContent() {
+      holder.db.content.findMany.mockImplementation((args: any) => {
+        const w = args.where ?? {};
+        // localiseMenus, pass 1: default-locale rows for the menu paths.
+        if (w.path && typeof w.path === "object" && Array.isArray(w.path.in)) {
+          return Promise.resolve(
+            [
+              { path: "/about", demoThemeKey: null, translationGroupId: "gA" },
+              { path: "/contact", demoThemeKey: null, translationGroupId: "gC" },
+            ].filter((r) => w.path.in.includes(r.path)),
+          );
+        }
+        // localiseMenus, pass 2: the same pages in the rendered locale.
+        if (w.translationGroupId?.in && w.locale === "vi") {
+          return Promise.resolve(
+            [
+              { path: "/ve-chung-toi", title: "Về chúng tôi", demoThemeKey: null, translationGroupId: "gA" },
+              { path: "/lien-he", title: "Liên hệ", demoThemeKey: null, translationGroupId: "gC" },
+            ].filter((r) => w.translationGroupId.in.includes(r.translationGroupId)),
+          );
+        }
+        // alternatesFor: one group, all locales.
+        if (typeof w.translationGroupId === "string") return Promise.resolve([]);
+        // findContent: the requested page itself.
+        if (typeof w.path === "string") {
+          return Promise.resolve([publishedRow({ locale: w.locale, path: w.path })]);
+        }
+        return Promise.resolve([]);
+      });
+    }
+
+    it("resolves each menu label by override, then translated title, then base", async () => {
+      cacheReturns({ host: bilingual, render: null });
+      holder.db.menu.findMany.mockResolvedValue([primaryMenu]);
+      menuAwareContent();
+
+      const payload = await makeService().resolve("example.com", "/vi/blog/hello");
+
+      expect(payload.menus.primary!.items).toEqual([
+        expect.objectContaining({ label: "Giới thiệu", url: "/ve-chung-toi" }),
+        expect.objectContaining({ label: "Liên hệ", url: "/lien-he" }),
+        expect.objectContaining({ label: "Kho mã", url: "https://github.com/z" }),
+      ]);
+      // The admin-only overrides must not ride along in the public payload.
+      for (const item of payload.menus.primary!.items) {
+        expect(item).not.toHaveProperty("labels");
+      }
+    });
+
+    it("keeps base labels and strips overrides on the default locale", async () => {
+      cacheReturns({ host: bilingual, render: null });
+      holder.db.menu.findMany.mockResolvedValue([primaryMenu]);
+      menuAwareContent();
+
+      const payload = await makeService().resolve("example.com", "/blog/hello");
+
+      expect(payload.menus.primary!.items).toEqual([
+        expect.objectContaining({ label: "About", url: "/about" }),
+        expect.objectContaining({ label: "Contact", url: "/contact" }),
+        expect.objectContaining({ label: "GitHub", url: "https://github.com/z" }),
+      ]);
+      for (const item of payload.menus.primary!.items) {
+        expect(item).not.toHaveProperty("labels");
+      }
+    });
+  });
+
+  /**
    * The flag has to be *sent*, not derived by the theme.
    *
    * A site's locales are rows in its database, written after any given theme

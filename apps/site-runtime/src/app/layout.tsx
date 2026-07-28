@@ -47,8 +47,15 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     // That is the design, not a hydration bug — hence the suppression.
     <html lang={lang} dir={dir} suppressHydrationWarning>
       <head>
+        {/* The browser blanks a script's `nonce` attribute after applying the CSP
+            (a spec anti-exfiltration measure), so the DOM the client hydrates
+            reads nonce="" while the server sent the real one. `suppressHydration-
+            Warning` on <html> does not reach these nested scripts, so each one
+            has to opt out itself — otherwise this benign, unavoidable mismatch
+            drowns out real hydration warnings (and bails out the subtree). */}
         <script
           nonce={nonce}
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: colorModeScript(colorMode) }}
         />
         {/* Keyed off the SDK's attributes, not any theme's classes, so every
@@ -62,12 +69,20 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             activating `:target` after an HTTP redirect. A generic platform
             primitive for no-JS themes (see lib/reveal-on-target.ts), not tied to
             any one feature. Nonce'd like the color-mode script above. */}
-        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: revealOnTargetScript() }} />
+        <script
+          nonce={nonce}
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: revealOnTargetScript() }}
+        />
         {/* Progressive enhancement for the contact form: stricter email
             validation, and submit-over-fetch so a failed send keeps what the
             visitor typed (only a real success clears the form). Falls back to the
             plain POST + redirect above when this does not run. */}
-        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: contactEnhanceScript() }} />
+        <script
+          nonce={nonce}
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: contactEnhanceScript() }}
+        />
       </body>
     </html>
   );

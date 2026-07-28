@@ -4,12 +4,80 @@ import { useActionState, useState } from "react";
 import { ROLES, type SiteDto } from "@zcmsorg/schemas";
 import { createUserAction, type CreateUserState } from "@/app/actions/user";
 import { Button } from "@/components/ui/button";
+import { Drawer } from "@/components/ui/drawer";
 import { Field, Input, Select } from "@/components/ui/field";
-import { SubmitButton } from "@/components/ui/submit-button";
 import { Icon } from "@/components/shell/icon";
 import { useT } from "@/lib/i18n-provider";
 
 const INITIAL: CreateUserState = {};
+const FORM_ID = "invite-user-form";
+
+/**
+ * The header trigger: a "+" button that opens the create-user drawer. Keeping the
+ * form off the list screen until it is wanted mirrors the Sites and Menus screens.
+ */
+export function InviteForm({ sites }: { sites: SiteDto[] }) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  const [state, formAction, pending] = useActionState(
+    createUserAction,
+    INITIAL,
+  );
+
+  const created = state.created;
+
+  // A successful create leaves a new row the table has not loaded yet, so closing
+  // the drawer after one refreshes the page rather than just dismissing it.
+  const close = () => {
+    if (created) window.location.reload();
+    else setOpen(false);
+  };
+
+  return (
+    <>
+      <Button variant="primary" onClick={() => setOpen(true)}>
+        <Icon name="plus" className="h-4 w-4" />
+        {t("admin.users.invite.heading")}
+      </Button>
+
+      <Drawer
+        open={open}
+        onClose={() => (pending ? undefined : close())}
+        title={t("admin.users.invite.heading")}
+        description={t("admin.users.invite.description")}
+        footer={
+          created ? undefined : (
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => setOpen(false)}
+                disabled={pending}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button
+                type="submit"
+                form={FORM_ID}
+                variant="primary"
+                disabled={pending}
+              >
+                {pending
+                  ? t("admin.users.invite.submitting")
+                  : t("admin.users.invite.submit")}
+              </Button>
+            </>
+          )
+        }
+      >
+        {created ? (
+          <CreatedAccount created={created} />
+        ) : (
+          <InviteFields sites={sites} action={formAction} error={state.error} />
+        )}
+      </Drawer>
+    </>
+  );
+}
 
 /**
  * Creates a usable account immediately.
@@ -19,17 +87,23 @@ const INITIAL: CreateUserState = {};
  * shown once as a fallback for the ordinary reason mail fails: SMTP settings are
  * not always ready on day one.
  */
-export function InviteForm({ sites }: { sites: SiteDto[] }) {
+function InviteFields({
+  sites,
+  action,
+  error,
+}: {
+  sites: SiteDto[];
+  action: (formData: FormData) => void;
+  error?: string;
+}) {
   const t = useT();
-  const [state, formAction] = useActionState(createUserAction, INITIAL);
-
-  if (state.created) {
-    return <CreatedAccount created={state.created} />;
-  }
-
   return (
-    <form action={formAction} className="z-card flex flex-col gap-4 p-4">
-      <Field label={t("admin.users.invite.name")} htmlFor="invite-name" required>
+    <form id={FORM_ID} action={action} className="flex flex-col gap-4">
+      <Field
+        label={t("admin.users.invite.name")}
+        htmlFor="invite-name"
+        required
+      >
         <Input
           id="invite-name"
           name="name"
@@ -40,7 +114,11 @@ export function InviteForm({ sites }: { sites: SiteDto[] }) {
         />
       </Field>
 
-      <Field label={t("admin.users.invite.email")} htmlFor="invite-email" required>
+      <Field
+        label={t("admin.users.invite.email")}
+        htmlFor="invite-email"
+        required
+      >
         <Input
           id="invite-email"
           name="email"
@@ -92,28 +170,24 @@ export function InviteForm({ sites }: { sites: SiteDto[] }) {
         </Select>
       </Field>
 
-      {state.error ? (
+      {error ? (
         <p
           role="alert"
           className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs leading-5 text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"
         >
-          {state.error}
+          {error}
         </p>
       ) : null}
-
-      <SubmitButton
-        variant="primary"
-        className="self-start"
-        pendingLabel={t("admin.users.invite.submitting")}
-      >
-        {t("admin.users.invite.submit")}
-      </SubmitButton>
     </form>
   );
 }
 
 /** The one-time view of the generated login details. */
-function CreatedAccount({ created }: { created: NonNullable<CreateUserState["created"]> }) {
+function CreatedAccount({
+  created,
+}: {
+  created: NonNullable<CreateUserState["created"]>;
+}) {
   const t = useT();
   const [copied, setCopied] = useState(false);
 
@@ -131,7 +205,7 @@ function CreatedAccount({ created }: { created: NonNullable<CreateUserState["cre
   }
 
   return (
-    <div className="z-card flex flex-col gap-3 p-4">
+    <div className="flex flex-col gap-3">
       <div>
         <h3 className="flex items-center gap-1.5 text-sm font-semibold">
           <Icon name="key" size={16} />
@@ -160,7 +234,9 @@ function CreatedAccount({ created }: { created: NonNullable<CreateUserState["cre
       <div className="flex gap-2">
         <Button variant="primary" size="sm" onClick={copy}>
           <Icon name={copied ? "check" : "copy"} size={15} />
-          {copied ? t("admin.users.invite.copied") : t("admin.users.invite.copyDetails")}
+          {copied
+            ? t("admin.users.invite.copied")
+            : t("admin.users.invite.copyDetails")}
         </Button>
         {/* A reload drops the temporary password from memory; the account itself
             already exists and can sign in. */}

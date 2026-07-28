@@ -79,6 +79,21 @@
     "deleteDescription": "「{name}」はライブラリから削除されます。",
     "deleteWarning": "ライブラリは、どのページがファイルを使用しているかを追跡しません。公開されたページにこれが埋め込まれている場合、その画像は失われます。"
   },
+  "preview": {
+    "title": "プレビュー",
+    "openAria": "{name} をプレビュー",
+    "openOriginal": "元ファイルを開く",
+    "previous": "前へ",
+    "next": "次へ",
+    "position": "{total} 件中 {index} 件目",
+    "noPreview": "このファイル形式はここではプレビューできません。元ファイルを開いて表示してください。",
+    "type": "種類",
+    "size": "サイズ",
+    "dimensions": "寸法",
+    "folder": "フォルダ",
+    "uploaded": "アップロード日",
+    "alt": "代替テキスト"
+  },
   "bulk": {
     "selectAll": "すべて選択",
     "selectNone": "選択をクリア",

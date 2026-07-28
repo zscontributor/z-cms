@@ -637,6 +637,12 @@ export interface MenuDto {
 export interface MenuItemDto {
   id: string;
   label: string;
+  /**
+   * Per-locale label overrides, keyed by locale (e.g. `{ en: "About", vi: "Giới thiệu" }`).
+   * Present only on the admin-facing menu; cms-api resolves it away before the
+   * public render payload, so a theme only ever sees the already-localised `label`.
+   */
+  labels?: Record<string, string>;
   url: string;
   target: string;
   children: MenuItemDto[];

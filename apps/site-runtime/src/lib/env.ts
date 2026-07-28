@@ -10,6 +10,17 @@ export const CMS_API_URL = (): string =>
 export const CMS_INTERNAL_TOKEN = (): string => process.env.CMS_INTERNAL_TOKEN ?? "";
 
 /**
+ * The render-scoped token this runtime holds, distinct from the privileged
+ * CMS_INTERNAL_TOKEN. cms-api authenticates its cache-purge ping (POST
+ * /api/revalidate) with this when it is configured — see cms-api's
+ * CacheService.revalidateSiteRuntime — so the revalidate route must accept it.
+ * Unset means the deploy never split the tokens, and auth collapses to
+ * CMS_INTERNAL_TOKEN alone.
+ */
+export const SITE_RUNTIME_INTERNAL_TOKEN = (): string =>
+  process.env.SITE_RUNTIME_INTERNAL_TOKEN ?? "";
+
+/**
  * How long a rendered page may be served from cache without checking back.
  * Publishing does not wait for this: cms-api POSTs /api/revalidate to purge the
  * exact tags immediately. The TTL is only the safety net for a missed webhook.

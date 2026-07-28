@@ -1,6 +1,6 @@
 import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
-import { CMS_INTERNAL_TOKEN } from "@/lib/env";
+import { CMS_INTERNAL_TOKEN, SITE_RUNTIME_INTERNAL_TOKEN } from "@/lib/env";
 import { pageTag, siteTag } from "@/lib/cache-tags";
 
 /**
@@ -30,14 +30,22 @@ interface RevalidateBody {
 }
 
 export async function POST(request: Request) {
-  const token = CMS_INTERNAL_TOKEN();
   const provided =
     request.headers.get("x-internal-token") ??
-    request.headers.get("X-Internal-Token");
+    request.headers.get("X-Internal-Token") ??
+    "";
+
+  // cms-api authenticates this ping with its render token when the deploy split
+  // them (SITE_RUNTIME_INTERNAL_TOKEN), else the shared privileged token — see
+  // cms-api CacheService.revalidateSiteRuntime. Accept BOTH, mirroring cms-api's
+  // own auth guard, or a split-token deploy would 401 every purge and leave the
+  // site serving the old theme until the TTL lapsed.
+  const accepted = [SITE_RUNTIME_INTERNAL_TOKEN(), CMS_INTERNAL_TOKEN()].filter(Boolean);
 
   // No token configured means no one may purge: an open cache-purge endpoint is
-  // a denial-of-service lever against the origin.
-  if (!token || provided !== token) {
+  // a denial-of-service lever against the origin. An empty `provided` never
+  // matches, since empties were filtered out above — the gate fails closed.
+  if (accepted.length === 0 || !accepted.includes(provided)) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 

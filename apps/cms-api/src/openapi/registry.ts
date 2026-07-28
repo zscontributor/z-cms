@@ -116,6 +116,7 @@ export const RefreshTokenSchema = z.object({ refreshToken: z.string().min(1) });
 /** Mirrors the recursive menu item accepted by PUT /menus/{key}. */
 interface MenuItemInput {
   label: string;
+  labels?: Record<string, string>;
   url: string;
   target?: string;
   children?: MenuItemInput[];
@@ -123,6 +124,8 @@ interface MenuItemInput {
 const MenuItemInputSchema: z.ZodType<MenuItemInput> = z.lazy(() =>
   z.object({
     label: z.string().min(1),
+    // Per-locale label overrides. Keyed by locale; the default locale uses `label`.
+    labels: z.record(z.string(), z.string()).optional(),
     url: z.string().min(1),
     target: z.enum(["_self", "_blank"]).default("_self"),
     children: z.array(MenuItemInputSchema).optional(),

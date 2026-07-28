@@ -28,11 +28,18 @@
     "install": "Cài đặt",
     "activate": "Kích hoạt",
     "deactivate": "Tắt",
+    "uninstall": "Gỡ cài đặt",
     "configure": "Cấu hình",
     "changePermissions": "Thay đổi quyền",
     "installDenied": "Bạn không có quyền cài đặt plugin.",
     "settingsGenerated": "Biểu mẫu này được sinh tự động từ settingsSchema của plugin.",
     "changelog": "Có gì mới ở v{version}"
+  },
+  "confirmUninstall": {
+    "title": "Gỡ cài đặt {name}?",
+    "body": "Thao tác này gỡ plugin khỏi site này và xoá dữ liệu của plugin trên site — các thiết lập đã lưu và mọi bản ghi mà nó giữ trong các bảng riêng của nó. Nếu đang chạy, plugin sẽ được dừng trước.",
+    "irreversible": "Khác với việc tắt, thao tác này không thể hoàn tác. Nếu chỉ tắt plugin, dữ liệu vẫn được giữ và bạn có thể bật lại sau.",
+    "confirm": "Gỡ cài đặt"
   },
   "settings": {
     "empty": "Plugin này không có tuỳ chọn cấu hình.",
@@ -78,6 +85,9 @@
     "setupFailed": "Hàm setup() của plugin đã lỗi khi khởi động.",
     "deactivated": "Đã tắt plugin.",
     "deactivateFailed": "Không tắt được plugin.",
+    "uninstalled": "Đã gỡ plugin khỏi site này.",
+    "uninstallFailed": "Không gỡ được plugin.",
+    "uninstallDenied": "Bạn không có quyền gỡ cài đặt plugin.",
     "settingsSaved": "Đã lưu cấu hình plugin.",
     "settingsSaveFailed": "Không lưu được cấu hình.",
     "configureDenied": "Bạn không có quyền cấu hình plugin."
@@ -257,6 +267,7 @@
     }
   },
   "sideloadHint": "Các plugin bạn cài từ file. Sau khi duyệt, chúng chạy trong sandbox như mọi plugin khác.",
+  "sideloadedHeading": "Plugin cài từ file",
   "sideloadApprovedHint": "Đã duyệt. Cài nó lên site từ danh mục ở trên để cấp quyền cho nó.",
   "org": {
     "metaTitle": "Plugin tổ chức",

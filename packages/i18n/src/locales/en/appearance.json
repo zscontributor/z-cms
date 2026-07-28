@@ -53,6 +53,7 @@
   "sideload": {
     "heading": "Install from file",
     "hint": "Upload a signed .zcms your operator produced. It is verified against the operator key, scanned, and held for approval before it can run.",
+    "installedHeading": "Sideloaded themes",
     "upload": "Upload .zcms",
     "uploading": "Uploading…",
     "noFile": "Choose a .zcms file first.",

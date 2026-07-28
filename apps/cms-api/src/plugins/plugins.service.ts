@@ -792,10 +792,21 @@ export class PluginsService {
     // state change and dropping its permission grant.
     if (isCoreRuntimePlugin(row.version.manifest)) return { ok: true };
 
-    const res = await this.execute(tenantId, siteId, this.toTarget(row), {
-      kind: "teardown",
-    });
-    return { ok: res.ok, error: res.error };
+    // execute() RAISES on any HTTP-level failure — plugin-runtime unreachable, a
+    // non-2xx response, a network error or the teardown timeout — as opposed to a
+    // handler that merely threw (which comes back as { ok: false }). Both must be
+    // caught here: deactivation is best-effort by contract, and the controller
+    // relies on that, flipping the plugin to INACTIVE from a returned failure. Left
+    // uncaught, a runtime that is down or slow would 500 the deactivate and strand
+    // the plugin ACTIVE — the admin could no longer turn it off.
+    try {
+      const res = await this.execute(tenantId, siteId, this.toTarget(row), {
+        kind: "teardown",
+      });
+      return { ok: res.ok, error: res.error };
+    } catch (err) {
+      return { ok: false, error: (err as Error).message };
+    }
   }
 
   /**

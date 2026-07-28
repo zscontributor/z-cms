@@ -59,7 +59,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>
       <head>
-        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
+        {/* The browser blanks a script's `nonce` attribute after applying the CSP
+            (a spec anti-exfiltration measure), so the DOM the client hydrates
+            reads nonce="" while the server sent the real one. That is a benign,
+            unavoidable mismatch on this node — suppress it so it does not drown
+            out real hydration warnings. */}
+        <script
+          nonce={nonce}
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }}
+        />
       </head>
       <body className="min-h-screen antialiased">
         <LocaleProvider locale={locale} messages={messages}>

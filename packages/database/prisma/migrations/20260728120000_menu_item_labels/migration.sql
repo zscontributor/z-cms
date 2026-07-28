@@ -1,0 +1,13 @@
+-- Per-locale menu labels.
+--
+-- Menus are stored once per site (not once per locale) and localised at render
+-- time: an internal link is rewritten to its translated sibling, borrowing that
+-- page's title as the label. That leaves no way to give a menu item its own label
+-- in another language — and no label at all for external links or archive routes.
+--
+-- This column holds optional per-locale overrides, keyed by locale, e.g.
+--   { "en": "About", "ja": "会社概要" }
+-- The default locale always uses `label`, so the map only ever holds non-default
+-- locales. Absent locale -> unchanged render-time fallback. Nullable, no backfill:
+-- every existing item keeps its single `label`.
+ALTER TABLE "menu_items" ADD COLUMN "labels" JSONB;

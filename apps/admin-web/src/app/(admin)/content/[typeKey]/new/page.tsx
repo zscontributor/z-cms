@@ -11,6 +11,7 @@ import {
   listContentTypes,
 } from "@/lib/api";
 import { ContentEditor, type EditorInitial } from "@/components/editor/content-editor";
+import { Flag } from "@/components/shell/flag";
 import { PageHeader } from "@/components/page-header";
 import { getT } from "@/lib/locale";
 import { loadParentOptions } from "@/lib/parent-options";
@@ -160,10 +161,11 @@ export default async function NewContentPage({ params, searchParams }: PageProps
                 aria-selected={active}
                 className={
                   active
-                    ? "inline-flex h-7 items-center rounded bg-[var(--surface-raised)] px-2.5 text-xs font-medium shadow-sm"
-                    : "inline-flex h-7 items-center rounded px-2.5 text-xs font-medium z-muted hover:text-[var(--foreground)]"
+                    ? "inline-flex h-7 items-center gap-1.5 rounded bg-[var(--surface-raised)] px-2.5 text-xs font-medium shadow-sm"
+                    : "inline-flex h-7 items-center gap-1.5 rounded px-2.5 text-xs font-medium z-muted hover:text-[var(--foreground)]"
                 }
               >
+                <Flag locale={value} />
                 {name}
               </Link>
             );

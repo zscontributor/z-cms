@@ -19,9 +19,14 @@ export default async function SitesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-lg font-semibold">{t("admin.sites.title")}</h1>
-        <p className="mt-0.5 text-sm z-muted">{t("admin.sites.subtitle")}</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-lg font-semibold">{t("admin.sites.title")}</h1>
+          <p className="mt-0.5 text-sm z-muted">{t("admin.sites.subtitle")}</p>
+        </div>
+        {/* Creating a site claims a hostname across the whole platform, which is why
+            it is an OWNER's act and not an ADMIN's — see `site:create`. */}
+        {canCreate ? <SiteCreateForm locales={SWITCHER_LOCALES} /> : null}
       </div>
 
       {sites.length === 0 ? (
@@ -91,10 +96,6 @@ export default async function SitesPage() {
           </table>
         </div>
       )}
-
-      {/* Creating a site claims a hostname across the whole platform, which is why
-          it is an OWNER's act and not an ADMIN's — see `site:create`. */}
-      {canCreate ? <SiteCreateForm locales={SWITCHER_LOCALES} /> : null}
     </div>
   );
 }

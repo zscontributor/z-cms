@@ -66,7 +66,7 @@ export function ThemeBrowser({
   return (
     <>
       {hasAnyTheme ? (
-        <div className="mb-4 flex justify-end">
+        <div className="mb-4 flex justify-start">
           <SearchField
             value={query}
             onChange={setQuery}
@@ -76,32 +76,31 @@ export function ThemeBrowser({
         </div>
       ) : null}
 
-      {canSideload || sideloaded.length > 0 ? (
-        <section className="mb-5">
-          <div className="mb-2">
-            <div>
-              <h2 className="text-sm font-semibold">{t("appearance.sideload.heading")}</h2>
-              <p className="mt-0.5 text-[11px] z-muted">{t("appearance.sideload.hint")}</p>
-            </div>
-            {canSideload ? (
-              <div className="mt-2 flex justify-start">
-                <SideloadUpload kind="theme" />
-              </div>
-            ) : null}
+      {canSideload ? (
+        <section className="z-card mb-5 p-4">
+          <h2 className="text-sm font-semibold">{t("appearance.sideload.heading")}</h2>
+          <p className="mt-0.5 text-[11px] z-muted">{t("appearance.sideload.hint")}</p>
+          <div className="mt-3 flex justify-start">
+            <SideloadUpload kind="theme" />
           </div>
+        </section>
+      ) : null}
 
-          {filteredSideloaded.length > 0 ? (
-            <ThemeGrid
-              themes={filteredSideloaded}
-              activeKey={activeKey}
-              canActivate={canActivate}
-              canConfigure={canConfigure}
-              canSideload={canSideload}
-              canEdit={canAuthor}
-              draftIdByKey={draftIdByKey}
-              sideloaded
-            />
-          ) : null}
+      {filteredSideloaded.length > 0 ? (
+        <section className="mb-5">
+          <h2 className="mb-2 text-sm font-semibold">
+            {t("appearance.sideload.installedHeading")}
+          </h2>
+          <ThemeGrid
+            themes={filteredSideloaded}
+            activeKey={activeKey}
+            canActivate={canActivate}
+            canConfigure={canConfigure}
+            canSideload={canSideload}
+            canEdit={canAuthor}
+            draftIdByKey={draftIdByKey}
+            sideloaded
+          />
         </section>
       ) : null}
 

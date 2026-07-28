@@ -8,6 +8,8 @@ import { getT } from "@/lib/locale";
 /** One item as the PUT endpoint accepts it — no server-assigned id, nested children. */
 export interface MenuItemInput {
   label: string;
+  /** Per-locale label overrides, keyed by locale. Empty values are dropped server-side. */
+  labels?: Record<string, string>;
   url: string;
   target?: string;
   children?: MenuItemInput[];

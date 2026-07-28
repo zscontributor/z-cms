@@ -79,6 +79,21 @@
     "deleteDescription": "“{name}” will be removed from the library.",
     "deleteWarning": "The library does not track which pages use a file. If a published page embeds this one, its image will go missing."
   },
+  "preview": {
+    "title": "Preview",
+    "openAria": "Preview {name}",
+    "openOriginal": "Open original",
+    "previous": "Previous",
+    "next": "Next",
+    "position": "{index} of {total}",
+    "noPreview": "This file type cannot be previewed here. Open the original to view it.",
+    "type": "Type",
+    "size": "Size",
+    "dimensions": "Dimensions",
+    "folder": "Folder",
+    "uploaded": "Uploaded",
+    "alt": "Alt text"
+  },
   "bulk": {
     "selectAll": "Select all",
     "selectNone": "Clear selection",

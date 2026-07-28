@@ -147,11 +147,22 @@ export function toSiteDto(row: {
 type MenuItemRow = {
   id: string;
   label: string;
+  labels?: unknown;
   url: string;
   target: string;
   order: number;
   parentId: string | null;
 };
+
+/** A stored `labels` JSON blob, narrowed to the string-map the app writes. */
+function toLabelMap(value: unknown): Record<string, string> | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const out: Record<string, string> = {};
+  for (const [locale, label] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof label === "string" && label.trim()) out[locale] = label;
+  }
+  return Object.keys(out).length ? out : undefined;
+}
 
 /** Flat rows -> nested tree, ordered. */
 export function toMenuDto(
@@ -170,6 +181,7 @@ export function toMenuDto(
       .map((item) => ({
         id: item.id,
         label: item.label,
+        ...(toLabelMap(item.labels) ? { labels: toLabelMap(item.labels) } : {}),
         url: item.url,
         target: item.target,
         children: build(item.id),

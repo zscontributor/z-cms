@@ -329,7 +329,18 @@ export function MediaPickerDialog({
   );
 }
 
-export function MediaThumb({ media }: { media: MediaDto }) {
+export function MediaThumb({
+  media,
+  fit = "cover",
+}: {
+  media: MediaDto;
+  /**
+   * "cover" crops to fill the tile (tidy grids like the picker); "contain" shows
+   * the whole image letterboxed against the tile — what the library wants, so
+   * nothing is hidden behind a crop.
+   */
+  fit?: "cover" | "contain";
+}) {
   if (media.mimeType.startsWith("image/")) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
@@ -337,7 +348,10 @@ export function MediaThumb({ media }: { media: MediaDto }) {
         src={media.url}
         alt={media.alt ?? media.filename}
         loading="lazy"
-        className="aspect-4/3 w-full bg-[var(--surface-sunken)] object-cover"
+        className={cn(
+          "aspect-4/3 w-full bg-[var(--surface-sunken)]",
+          fit === "contain" ? "object-contain" : "object-cover",
+        )}
       />
     );
   }

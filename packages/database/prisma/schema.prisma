@@ -830,6 +830,11 @@ model MenuItem {
   menuId   String  @map("menu_id") @db.Uuid
   parentId String? @map("parent_id") @db.Uuid
   label    String
+  // Per-locale label overrides, keyed by locale: { "en": "About", "vi": "Giới thiệu" }.
+  // Null/absent locale falls back to render-time behaviour (translated page title
+  // for internal links, or `label` for everything else). The default locale always
+  // uses `label`, so this only ever holds non-default locales.
+  labels   Json?   @map("labels")
   url      String
   target   String  @default("_self")
   order    Int     @default(0)

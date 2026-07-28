@@ -65,7 +65,6 @@ export async function TranslationsPanel({
                   name={name}
                   locale={locale}
                   isCurrent={isCurrent}
-                  title={content.title || t("content.editor.untitled")}
                   badge={
                     <Badge tone={STATUS_TONES[content.status]}>
                       {t(statusKey(content.status))}
@@ -78,8 +77,6 @@ export async function TranslationsPanel({
                   name={name}
                   locale={locale}
                   isCurrent={false}
-                  title={t("content.editor.translations.missing")}
-                  muted
                   badge={
                     <span className="flex items-center gap-1 text-[11px] font-medium text-brand-600 dark:text-brand-300">
                       <Icon name="plus" size={14} />
@@ -100,21 +97,19 @@ function TranslationRow({
   href,
   name,
   locale,
-  title,
   badge,
   isCurrent,
-  muted = false,
 }: {
   href: string;
   name: string;
   locale: string;
-  title: string;
   badge: React.ReactNode;
   isCurrent: boolean;
-  muted?: boolean;
 }) {
   // A self-sizing chip, not a full-width row: the list wraps these horizontally,
-  // so each one is only as wide as the language it names plus its badge.
+  // so each one is only as wide as the language it names plus its badge. We show
+  // the language name and status only — not the page title, which would stretch
+  // every chip to the width of its longest heading and wreck the wrap.
   const className =
     "flex items-center gap-2.5 rounded-md border px-2.5 py-1.5 text-xs transition-colors " +
     (isCurrent
@@ -124,12 +119,7 @@ function TranslationRow({
   const body = (
     <>
       <Flag locale={locale} />
-      <span className="min-w-0 max-w-[12rem]">
-        <span className="block truncate">{name}</span>
-        <span className={"block truncate text-[11px] z-muted" + (muted ? " italic" : "")}>
-          {title}
-        </span>
-      </span>
+      <span className="truncate">{name}</span>
       <span className="shrink-0">{badge}</span>
     </>
   );

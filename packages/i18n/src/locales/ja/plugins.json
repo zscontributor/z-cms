@@ -28,11 +28,18 @@
     "install": "インストール",
     "activate": "活性化",
     "deactivate": "消す",
+    "uninstall": "アンインストール",
     "configure": "設定する",
     "changePermissions": "権限の変更",
     "installDenied": "プラグインをインストールする権限がありません。",
     "settingsGenerated": "このフォームはプラグインの settingsSchema から生成されます。",
     "changelog": "v{version} の変更点"
+  },
+  "confirmUninstall": {
+    "title": "{name} をアンインストールしますか？",
+    "body": "この操作はプラグインをこのサイトから削除し、このサイトのプラグインデータ（保存された設定と、プラグイン専用テーブルに保持していたレコード）を消去します。稼働中の場合は先に停止します。",
+    "irreversible": "オフにする場合と異なり、これは元に戻せません。プラグインをオフにするだけならデータは残り、後で再びオンにできます。",
+    "confirm": "アンインストール"
   },
   "settings": {
     "empty": "このプラグインには設定がありません。",
@@ -78,6 +85,9 @@
     "setupFailed": "プラグインの setup() が起動中にスローされました。",
     "deactivated": "プラグインがオフになりました。",
     "deactivateFailed": "プラグインをオフにできませんでした。",
+    "uninstalled": "プラグインをこのサイトからアンインストールしました。",
+    "uninstallFailed": "プラグインをアンインストールできませんでした。",
+    "uninstallDenied": "プラグインをアンインストールする権限がありません。",
     "settingsSaved": "プラグイン設定が保存されました。",
     "settingsSaveFailed": "設定を保存できませんでした。",
     "configureDenied": "プラグインを構成する権限がありません。"
@@ -257,6 +267,7 @@
     }
   },
   "sideloadHint": "ファイルからインストールしたプラグイン。承認後は他と同様にサンドボックスで実行されます。",
+  "sideloadedHeading": "サイドロードしたプラグイン",
   "sideloadApprovedHint": "承認済み。上のカタログからサイトにインストールして権限を付与してください。",
   "org": {
     "metaTitle": "組織のプラグイン",

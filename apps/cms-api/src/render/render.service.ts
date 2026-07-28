@@ -113,6 +113,18 @@ function flattenMenu(items: MenuDto["items"]): MenuDto["items"] {
 }
 
 /**
+ * Drop the admin-only per-locale `labels` from a menu tree. Used on the paths that
+ * do no rewriting (the default locale, or a locale with nothing to resolve) so the
+ * public payload never carries another language's labels.
+ */
+function stripLabels(items: MenuDto["items"]): MenuDto["items"] {
+  return items.map(({ labels, ...rest }) => ({
+    ...rest,
+    children: stripLabels(rest.children),
+  }));
+}
+
+/**
  * Turns "hostname + path" into everything a theme needs to render, in one call.
  *
  * The public site is the hot path of the whole platform, so the shape of this
@@ -717,10 +729,14 @@ export class RenderService {
    *     that matches nothing) -> left exactly as it was. Archives exist in every
    *     locale; they are routes, not rows.
    *
-   * The label is taken from the translation's own title, because a menu label has
-   * no translation of its own to take. That is a real limitation, not a design:
-   * per-locale menu labels need a schema of their own, and until they exist, the
-   * translated title is a better answer than an English word in a Vietnamese menu.
+   * The label comes from, in order: an explicit per-locale override the admin set
+   * on the item (`labels[locale]`), then — for an internal link — the translation's
+   * own title, then the stored `label`. The override is why external links and
+   * archive routes can now read correctly in every language too, and why an admin
+   * can say "Giới thiệu" where the page title is "Về chúng tôi".
+   *
+   * `labels` is an admin-only concern: it is resolved away here and never rides
+   * along in the public payload, on either the default locale or a translated one.
    *
    * Costs two queries, only on a non-default locale, and only on a cache miss.
    */
@@ -730,7 +746,12 @@ export class RenderService {
     locale: string,
     activeThemeKey: string,
   ): Promise<void> {
-    if (locale === site.defaultLocale) return;
+    // The default locale renders `label` verbatim; there is nothing to resolve, but
+    // the per-locale overrides must still be stripped before the payload ships.
+    if (locale === site.defaultLocale) {
+      for (const menu of Object.values(menus)) menu.items = stripLabels(menu.items);
+      return;
+    }
 
     const items = Object.values(menus).flatMap((menu) => flattenMenu(menu.items));
     const paths = new Set<string>();
@@ -739,60 +760,70 @@ export class RenderService {
       const internal = this.internalPathOf(item.url);
       if (internal) paths.add(internal);
     }
-    if (paths.size === 0) return;
 
-    // What each menu path points at, in the site's own language. The stored URL is
-    // the page's materialized `path`, so this is a direct match — no route-prefix
-    // guessing, and a nested page ("/product/zpets") resolves like any other.
-    const originals = await db().content.findMany({
-      where: {
-        siteId: site.id,
-        locale: site.defaultLocale,
-        status: "PUBLISHED",
-        path: { in: [...paths] },
-        contentType: { isRoutable: true },
-        OR: [{ demoThemeKey: null }, { demoThemeKey: activeThemeKey }],
-      },
-      select: {
-        path: true,
-        demoThemeKey: true,
-        translationGroupId: true,
-      },
-    });
-
-    if (originals.length === 0) return;
-
-    const groupByPath = new Map<string, string>();
-    for (const row of this.preferThemeDemo(originals, activeThemeKey)) {
-      groupByPath.set(row.path, row.translationGroupId);
+    // An explicit override on any item is, on its own, a reason to walk the tree —
+    // an external link or archive route resolves no path but can still be relabelled.
+    const hasOverride = items.some(
+      (item) => typeof item.labels?.[locale] === "string" && item.labels[locale]!.trim(),
+    );
+    if (paths.size === 0 && !hasOverride) {
+      for (const menu of Object.values(menus)) menu.items = stripLabels(menu.items);
+      return;
     }
 
-    // Those same pages, in the language being rendered.
-    const translations = await db().content.findMany({
-      where: {
-        siteId: site.id,
-        locale,
-        status: "PUBLISHED",
-        translationGroupId: { in: [...new Set(groupByPath.values())] },
-        OR: [{ demoThemeKey: null }, { demoThemeKey: activeThemeKey }],
-      },
-      select: {
-        path: true,
-        title: true,
-        demoThemeKey: true,
-        translationGroupId: true,
-      },
-    });
+    const groupByPath = new Map<string, string>();
+    const byGroup = new Map<string, { path: string; title: string }>();
 
-    const byGroup = new Map(
-      this.preferThemeDemo(translations, activeThemeKey).map((row) => [
-        row.translationGroupId,
-        row,
-      ]),
-    );
+    if (paths.size > 0) {
+      // What each menu path points at, in the site's own language. The stored URL is
+      // the page's materialized `path`, so this is a direct match — no route-prefix
+      // guessing, and a nested page ("/product/zpets") resolves like any other.
+      const originals = await db().content.findMany({
+        where: {
+          siteId: site.id,
+          locale: site.defaultLocale,
+          status: "PUBLISHED",
+          path: { in: [...paths] },
+          contentType: { isRoutable: true },
+          OR: [{ demoThemeKey: null }, { demoThemeKey: activeThemeKey }],
+        },
+        select: {
+          path: true,
+          demoThemeKey: true,
+          translationGroupId: true,
+        },
+      });
+
+      for (const row of this.preferThemeDemo(originals, activeThemeKey)) {
+        groupByPath.set(row.path, row.translationGroupId);
+      }
+
+      if (groupByPath.size > 0) {
+        // Those same pages, in the language being rendered.
+        const translations = await db().content.findMany({
+          where: {
+            siteId: site.id,
+            locale,
+            status: "PUBLISHED",
+            translationGroupId: { in: [...new Set(groupByPath.values())] },
+            OR: [{ demoThemeKey: null }, { demoThemeKey: activeThemeKey }],
+          },
+          select: {
+            path: true,
+            title: true,
+            demoThemeKey: true,
+            translationGroupId: true,
+          },
+        });
+
+        for (const row of this.preferThemeDemo(translations, activeThemeKey)) {
+          byGroup.set(row.translationGroupId, row);
+        }
+      }
+    }
 
     for (const menu of Object.values(menus)) {
-      menu.items = this.rewriteItems(menu.items, groupByPath, byGroup);
+      menu.items = this.rewriteItems(menu.items, groupByPath, byGroup, locale);
     }
   }
 
@@ -800,17 +831,21 @@ export class RenderService {
     items: MenuDto["items"],
     groupByPath: Map<string, string>,
     byGroup: Map<string, { path: string; title: string }>,
+    locale: string,
   ): MenuDto["items"] {
     const out: MenuDto["items"] = [];
 
     for (const item of items) {
-      const children = this.rewriteItems(item.children, groupByPath, byGroup);
+      const children = this.rewriteItems(item.children, groupByPath, byGroup, locale);
+      // `labels` is resolved into `label` here and dropped from what ships.
+      const { labels, ...rest } = item;
+      const override = labels?.[locale]?.trim() || undefined;
       const group = groupByPath.get(this.internalPathOf(item.url) ?? item.url);
 
-      // Not content: an archive, an external link, or a path matching nothing.
-      // Those are locale-independent and stay exactly as the admin wrote them.
+      // Not content: an archive, an external link, or a path matching nothing. The
+      // URL is locale-independent, but an explicit override still relabels it.
       if (!group) {
-        out.push({ ...item, children });
+        out.push({ ...rest, label: override ?? rest.label, children });
         continue;
       }
 
@@ -820,8 +855,9 @@ export class RenderService {
       if (!translated) continue;
 
       out.push({
-        ...item,
-        label: translated.title,
+        ...rest,
+        // An explicit override wins; otherwise borrow the translated page title.
+        label: override ?? translated.title,
         url: translated.path,
         children,
       });

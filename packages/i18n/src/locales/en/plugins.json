@@ -28,11 +28,18 @@
     "install": "Install",
     "activate": "Activate",
     "deactivate": "Turn off",
+    "uninstall": "Uninstall",
     "configure": "Configure",
     "changePermissions": "Change permissions",
     "installDenied": "You do not have permission to install plugins.",
     "settingsGenerated": "This form is generated from the plugin's settingsSchema.",
     "changelog": "What's new in v{version}"
+  },
+  "confirmUninstall": {
+    "title": "Uninstall {name}?",
+    "body": "This removes the plugin from this site and deletes this site's plugin data — its stored settings and any records it kept in its own tables. If it is running, it is shut down first.",
+    "irreversible": "Unlike turning it off, this cannot be undone. Turning the plugin off instead keeps its data and lets you switch it back on later.",
+    "confirm": "Uninstall"
   },
   "settings": {
     "empty": "This plugin has no settings.",
@@ -78,6 +85,9 @@
     "setupFailed": "The plugin's setup() threw while starting up.",
     "deactivated": "Plugin turned off.",
     "deactivateFailed": "Could not turn the plugin off.",
+    "uninstalled": "Plugin uninstalled from this site.",
+    "uninstallFailed": "Could not uninstall the plugin.",
+    "uninstallDenied": "You do not have permission to uninstall plugins.",
     "settingsSaved": "Plugin settings saved.",
     "settingsSaveFailed": "Could not save the settings.",
     "configureDenied": "You do not have permission to configure plugins."
@@ -257,6 +267,7 @@
     }
   },
   "sideloadHint": "Plugins you installed from a file. They run in the sandbox like any other, once approved.",
+  "sideloadedHeading": "Sideloaded plugins",
   "sideloadApprovedHint": "Approved. Install it onto a site from the catalogue above to grant it permissions.",
   "org": {
     "metaTitle": "Organization plugins",

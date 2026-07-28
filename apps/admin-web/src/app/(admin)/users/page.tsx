@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import type { InvitationDto, SiteDto, UserDto } from "@zcmsorg/schemas";
-import { can, getSession, listInvitations, listSites, listUsers } from "@/lib/api";
+import {
+  can,
+  getSession,
+  listInvitations,
+  listSites,
+  listUsers,
+} from "@/lib/api";
 import { getLocale, getT } from "@/lib/locale";
 import { PageHeader } from "@/components/page-header";
 import { InviteForm } from "./invite-form";
@@ -40,13 +46,19 @@ export default async function UsersPage() {
 
   const [users, invitations, sites] = await Promise.all([
     safe<UserDto[]>(listUsers, []),
-    mayInvite ? safe<InvitationDto[]>(listInvitations, []) : Promise.resolve<InvitationDto[]>([]),
+    mayInvite
+      ? safe<InvitationDto[]>(listInvitations, [])
+      : Promise.resolve<InvitationDto[]>([]),
     safe<SiteDto[]>(listSites, []),
   ]);
 
   return (
     <>
-      <PageHeader title={t("admin.users.title")} description={t("admin.users.description")} />
+      <PageHeader
+        title={t("admin.users.title")}
+        description={t("admin.users.description")}
+        actions={mayInvite ? <InviteForm sites={sites} /> : null}
+      />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="min-w-0">
@@ -62,14 +74,12 @@ export default async function UsersPage() {
         {mayInvite ? (
           <div className="flex flex-col gap-6">
             <section>
-              <h2 className="text-sm font-semibold">{t("admin.users.invite.heading")}</h2>
-              <p className="mt-0.5 mb-3 text-xs z-muted">{t("admin.users.invite.description")}</p>
-              <InviteForm sites={sites} />
-            </section>
-
-            <section>
-              <h2 className="text-sm font-semibold">{t("admin.users.pending.heading")}</h2>
-              <p className="mt-0.5 mb-3 text-xs z-muted">{t("admin.users.pending.description")}</p>
+              <h2 className="text-sm font-semibold">
+                {t("admin.users.pending.heading")}
+              </h2>
+              <p className="mt-0.5 mb-3 text-xs z-muted">
+                {t("admin.users.pending.description")}
+              </p>
               <PendingInvitations invitations={invitations} locale={locale} />
             </section>
           </div>

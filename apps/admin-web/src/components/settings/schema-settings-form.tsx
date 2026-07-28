@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Checkbox, Field, Input, Select, Textarea } from "@/components/ui/field";
 import { MediaPickerField } from "@/components/editor/media-picker";
@@ -26,6 +27,7 @@ export function SchemaSettingsForm({
   onSave,
   emptyText,
   deniedText,
+  actionsSlot,
 }: {
   /** Namespaces the input ids so two forms on one page cannot collide. */
   idPrefix: string;
@@ -36,6 +38,13 @@ export function SchemaSettingsForm({
   emptyText: string;
   /** Shown when `disabled` because the user lacks the configure permission. */
   deniedText?: string;
+  /**
+   * When given, the Save / Restore action bar is portalled into this element
+   * (a Dialog's sticky footer) instead of sitting at the foot of the scrolling
+   * body. The submit button stays associated with the form via `form=`, so it
+   * still submits from outside the form's DOM subtree.
+   */
+  actionsSlot?: HTMLElement | null;
 }) {
   const t = useT();
   const controls = normalizeThemeSchema(schema);
@@ -63,57 +72,68 @@ export function SchemaSettingsForm({
     });
   }
 
-  return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        submit();
-      }}
-      className="flex flex-col gap-4"
-    >
-      <div className="grid gap-4 sm:grid-cols-2">
-        {controls.map((control) => (
-          <Control
-            key={control.key}
-            idPrefix={idPrefix}
-            control={control}
-            value={values[control.key]}
-            disabled={disabled || pending}
-            onChange={(value) => set(control.key, value)}
-          />
-        ))}
-      </div>
+  const formId = `${idPrefix}-form`;
 
-      <div className="flex items-center gap-3">
-        <Button type="submit" variant="primary" disabled={disabled || pending}>
-          {pending ? t("common.saving") : t("common.saveSettings")}
-        </Button>
-        <Button
-          type="button"
-          disabled={disabled || pending}
-          onClick={() => {
-            setValues(resolveThemeValues(controls, {}));
-            setMessage(null);
-          }}
+  const actions = (
+    <div className="flex flex-1 items-center gap-3">
+      <Button type="submit" form={formId} variant="primary" disabled={disabled || pending}>
+        {pending ? t("common.saving") : t("common.saveSettings")}
+      </Button>
+      <Button
+        type="button"
+        disabled={disabled || pending}
+        onClick={() => {
+          setValues(resolveThemeValues(controls, {}));
+          setMessage(null);
+        }}
+      >
+        {t("common.restoreDefaults")}
+      </Button>
+      {message ? (
+        <span
+          role="status"
+          className={
+            message.ok
+              ? "text-[11px] text-emerald-600 dark:text-emerald-400"
+              : "text-[11px] text-red-600 dark:text-red-400"
+          }
         >
-          {t("common.restoreDefaults")}
-        </Button>
-        {message ? (
-          <span
-            role="status"
-            className={
-              message.ok
-                ? "text-[11px] text-emerald-600 dark:text-emerald-400"
-                : "text-[11px] text-red-600 dark:text-red-400"
-            }
-          >
-            {message.text}
-          </span>
-        ) : null}
-      </div>
+          {message.text}
+        </span>
+      ) : null}
+    </div>
+  );
 
-      {disabled && deniedText ? <p className="text-[11px] z-muted">{deniedText}</p> : null}
-    </form>
+  return (
+    <>
+      <form
+        id={formId}
+        onSubmit={(event) => {
+          event.preventDefault();
+          submit();
+        }}
+        className="flex flex-col gap-4"
+      >
+        <div className="grid gap-4 sm:grid-cols-2">
+          {controls.map((control) => (
+            <Control
+              key={control.key}
+              idPrefix={idPrefix}
+              control={control}
+              value={values[control.key]}
+              disabled={disabled || pending}
+              onChange={(value) => set(control.key, value)}
+            />
+          ))}
+        </div>
+
+        {actionsSlot ? null : actions}
+
+        {disabled && deniedText ? <p className="text-[11px] z-muted">{deniedText}</p> : null}
+      </form>
+
+      {actionsSlot ? createPortal(actions, actionsSlot) : null}
+    </>
   );
 }
 

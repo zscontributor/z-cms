@@ -76,6 +76,10 @@ function ThemeCard({
 }) {
   const t = useT();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // Portal target for the settings form's Save / Restore bar, so it lands in the
+  // Dialog's sticky footer (like the plugin permissions dialog) instead of at the
+  // foot of the scrolling body.
+  const [footerActions, setFooterActions] = useState<HTMLDivElement | null>(null);
 
   const isActive = theme.key === activeKey;
   const approved = theme.reviewStatus === "APPROVED";
@@ -108,11 +112,11 @@ function ThemeCard({
         <Button
           size="sm"
           variant="ghost"
-          className="absolute right-2 top-2 z-10 h-8 w-8 px-0"
+          className="absolute right-2 top-2 z-10 h-9 w-9 px-0 bg-background/70 backdrop-blur-sm hover:bg-background/90"
           onClick={() => setSettingsOpen(true)}
           aria-label={t("appearance.settings.heading", { name: theme.name })}
         >
-          <Icon name="settings" className="h-4 w-4" />
+          <Icon name="settings" className="h-6 w-6" />
         </Button>
       ) : null}
 
@@ -179,9 +183,12 @@ function ThemeCard({
         }
         className="z-[90] w-[min(44rem,calc(100vw-2rem))]"
         footer={
-          isActive && theme.demoAvailable && canConfigure ? (
-            <SeedDemoButton seeded={theme.demoSeeded} />
-          ) : null
+          <div className="flex flex-1 items-center gap-3">
+            <div ref={setFooterActions} className="flex flex-1 items-center gap-3" />
+            {isActive && theme.demoAvailable && canConfigure ? (
+              <SeedDemoButton seeded={theme.demoSeeded} />
+            ) : null}
+          </div>
         }
       >
         <ThemeSettingsForm
@@ -189,6 +196,7 @@ function ThemeCard({
           schema={theme.settingsSchema}
           settings={theme.settings ?? {}}
           disabled={!canConfigure}
+          actionsSlot={footerActions}
         />
       </Dialog>
     </article>

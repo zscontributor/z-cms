@@ -15,6 +15,7 @@ import { useT } from "@/lib/i18n-provider";
 import { CopyUrlButton } from "./copy-url-button";
 import { FileActions } from "./file-actions";
 import { folderOptions } from "./folder-tree";
+import { PreviewDrawer } from "./preview-drawer";
 
 /**
  * The library grid, with a selection.
@@ -39,6 +40,7 @@ export function FileGrid({
 }) {
   const t = useT();
   const [selected, setSelected] = useState<string[]>([]);
+  const [preview, setPreview] = useState<MediaDto | null>(null);
 
   const selectable = canUpdate || canDelete;
 
@@ -47,6 +49,11 @@ export function FileGrid({
   // exist, so the selection is pruned to what is actually on screen.
   useEffect(() => {
     setSelected((current) => current.filter((id) => items.some((item) => item.id === id)));
+    // Keep the open preview in step with a refresh: pick up an edit (a rename, new
+    // alt text) and close itself if the file it was showing has been deleted.
+    setPreview((current) =>
+      current ? items.find((item) => item.id === current.id) ?? null : null,
+    );
   }, [items]);
 
   function toggle(id: string) {
@@ -92,7 +99,14 @@ export function FileGrid({
                 </label>
               ) : null}
 
-              <MediaThumb media={media} />
+              <button
+                type="button"
+                onClick={() => setPreview(media)}
+                aria-label={t("media.preview.openAria", { name: media.filename })}
+                className="block w-full cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50"
+              >
+                <MediaThumb media={media} fit="contain" />
+              </button>
 
               <figcaption className="p-2">
                 <p className="truncate text-[11px] font-medium" title={media.filename}>
@@ -119,6 +133,17 @@ export function FileGrid({
           );
         })}
       </div>
+
+      <PreviewDrawer
+        media={preview}
+        items={items}
+        folders={folders}
+        locale={locale}
+        canUpdate={canUpdate}
+        canDelete={canDelete}
+        onNavigate={setPreview}
+        onClose={() => setPreview(null)}
+      />
     </>
   );
 }
@@ -149,7 +174,13 @@ function SelectionBar({
   return (
     <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface-sunken)] px-2.5 py-1.5">
       <Button size="sm" variant="ghost" onClick={onSelectAll}>
-        <Icon name={allSelected ? "check" : "grid"} size={16} />
+        <Checkbox
+          checked={allSelected}
+          readOnly
+          tabIndex={-1}
+          aria-hidden
+          className="pointer-events-none"
+        />
         {allSelected ? t("media.bulk.selectNone") : t("media.bulk.selectAll")}
       </Button>
 

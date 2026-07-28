@@ -19,14 +19,18 @@ export default async function MenusPage() {
   const t = await getT();
   const menus = await listMenus();
 
+  // The site's locales drive the per-locale label inputs; the default one is edited
+  // through the base label field, so only the others get an override input.
+  const site = await getCurrentSite();
+  const defaultLocale = site?.defaultLocale ?? "en";
+  const localeOptions = (site?.locales ?? []).filter((l) => l !== defaultLocale);
+
   // Suggestions for the URL field: this site's published pages, in the DEFAULT
   // locale (menu URLs are the default-locale path; cms-api localises the rest).
   // Never let a failed suggestion query take the page down.
   let pages: PageOption[] = [];
   try {
-    const site = await getCurrentSite();
-    const locale = site?.defaultLocale;
-    const res = await listContents({ status: "PUBLISHED", locale, perPage: 100 });
+    const res = await listContents({ status: "PUBLISHED", locale: defaultLocale, perPage: 100 });
     const seen = new Set<string>();
     pages = res.items
       .filter((c) => typeof c.path === "string" && !seen.has(c.path) && (seen.add(c.path), true))
@@ -41,7 +45,12 @@ export default async function MenusPage() {
   return (
     <>
       <PageHeader title={t("admin.menus.title")} description={t("admin.menus.description")} />
-      <MenusManager menus={menus} pages={pages} canManage={canManage} />
+      <MenusManager
+        menus={menus}
+        pages={pages}
+        localeOptions={localeOptions}
+        canManage={canManage}
+      />
     </>
   );
 }

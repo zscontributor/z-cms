@@ -16,11 +16,14 @@ export function ThemeSettingsForm({
   schema,
   settings,
   disabled,
+  actionsSlot,
 }: {
   themeKey: string;
   schema: ThemeSettingsSchema | null;
   settings: Record<string, unknown>;
   disabled?: boolean;
+  /** Sticky-footer target for the Save / Restore bar — see SchemaSettingsForm. */
+  actionsSlot?: HTMLElement | null;
 }) {
   const t = useT();
 
@@ -33,6 +36,7 @@ export function ThemeSettingsForm({
       onSave={(values) => saveThemeSettingsAction(themeKey, values)}
       emptyText={t("appearance.settings.empty")}
       deniedText={t("appearance.settings.denied")}
+      actionsSlot={actionsSlot}
     />
   );
 }
