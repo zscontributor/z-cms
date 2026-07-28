@@ -242,6 +242,22 @@
     "tokenDisconnect": "Ngắt kết nối",
     "tokenConnect": "Kết nối",
     "tokenHint": "Tạo API token ở mục Tokens trong developer portal của marketplace rồi dán vào đây. Token được lưu mã hoá và không hiện lại lần nào nữa. Nó chỉ gửi được gói, không làm gì khác.",
-    "tokenSaveFailed": "Không lưu được token marketplace."
+    "tokenSaveFailed": "Không lưu được token marketplace.",
+    "help": {
+      "open": "Cách gửi lên Marketplace",
+      "title": "Gửi theme lên Marketplace",
+      "intro": "Có hai cách để đưa theme lên Marketplace của Z-CMS.",
+      "way1Title": "Cách 1 — Theo hướng dẫn đầy đủ (CLI)",
+      "way1Body": "Tạo publisher key, rồi đóng gói và ký theme bằng zcms CLI và tải file .zcms lên Developer Portal. Phù hợp khi bạn build theme bằng code.",
+      "way1Link": "Xem hướng dẫn phát hành",
+      "way2Title": "Cách 2 — Gửi nhanh ngay tại đây",
+      "way2Body": "Ký và gửi thẳng từ trình chỉnh sửa này, không cần terminal. Bạn cần hai thứ:",
+      "publicKeyTitle": "Public key",
+      "publicKeyBody": "Danh tính công khai của bạn. Marketplace dùng nó để xác minh gói đúng là do bạn ký. Đăng ký một lần ở Developer Portal — an toàn khi chia sẻ. Private key được tạo và giữ trong trình duyệt, không bao giờ gửi đi.",
+      "tokenTitle": "API Token",
+      "tokenBody": "Cho phép trình chỉnh sửa gửi gói thay bạn — chỉ gửi được gói, không ký thay. Tạo ở Developer Portal → Tokens, rồi dán vào ô \"Kết nối tài khoản marketplace\".",
+      "tokenLink": "Cách tạo API Token",
+      "way2Outro": "Có đủ hai thứ, bấm \"Ký & gửi duyệt\"."
+    }
   }
 }

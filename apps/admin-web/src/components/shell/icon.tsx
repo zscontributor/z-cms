@@ -26,6 +26,7 @@ import {
   Gear,
   Globe,
   Image as ImageIcon,
+  Info,
   Key,
   Link as LinkIcon,
   ListBullets,
@@ -97,6 +98,7 @@ const REGISTRY: Record<string, PhosphorIcon> = {
   plug: Plug,
   settings: Gear,
   gear: Gear,
+  info: Info,
   language: Globe,
   globe: Globe,
 

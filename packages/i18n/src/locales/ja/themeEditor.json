@@ -242,6 +242,22 @@
     "tokenDisconnect": "接続を解除",
     "tokenConnect": "接続",
     "tokenHint": "マーケットプレイスの開発者ポータルの「Tokens」で API トークンを作成し、ここに貼り付けてください。暗号化して保存され、二度と表示されません。パッケージの申請以外には使えません。",
-    "tokenSaveFailed": "マーケットプレイストークンを保存できませんでした。"
+    "tokenSaveFailed": "マーケットプレイストークンを保存できませんでした。",
+    "help": {
+      "open": "Marketplace への提出方法",
+      "title": "テーマを Marketplace に提出する",
+      "intro": "Z-CMS の Marketplace にテーマを提出する方法は 2 つあります。",
+      "way1Title": "方法1 — 完全ガイド（CLI）",
+      "way1Body": "publisher key を作成し、zcms CLI でテーマをパッケージ化・署名して、Developer Portal で .zcms ファイルをアップロードします。コードでテーマをビルドする場合に最適です。",
+      "way1Link": "公開ガイドを見る",
+      "way2Title": "方法2 — ここから手早く提出",
+      "way2Body": "ターミナルなしで、このエディターから直接署名・提出できます。必要なものは 2 つ：",
+      "publicKeyTitle": "Public key",
+      "publicKeyBody": "あなたの公開された識別情報です。Marketplace はこれでパッケージがあなたの署名であることを検証します。Developer Portal で一度登録してください。共有しても安全です。秘密鍵はブラウザー内で生成・保持され、送信されません。",
+      "tokenTitle": "API トークン",
+      "tokenBody": "このエディターがあなたに代わってパッケージを送信できるようにします。提出のみ可能で、署名はできません。Developer Portal → Tokens で作成し、「マーケットプレイスアカウントを接続」に貼り付けます。",
+      "tokenLink": "API トークンの作成方法",
+      "way2Outro": "両方そろったら「署名して提出」を押します。"
+    }
   }
 }

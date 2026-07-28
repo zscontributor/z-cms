@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState, useTransition, type ReactNode } from "react";
 import {
   assessPassphrase,
   createPublisherKey,
@@ -21,8 +21,10 @@ import {
   type WrappedKeyDto,
 } from "@/app/actions/publisher-key";
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import { Field, Input, Textarea } from "@/components/ui/field";
-import { useT } from "@/lib/i18n-provider";
+import { Icon } from "@/components/shell/icon";
+import { useLocale, useT } from "@/lib/i18n-provider";
 
 /**
  * Publishing, without a terminal.
@@ -55,6 +57,8 @@ export function PublishPanel({
   payloadChecksum: string | null;
 }) {
   const t = useT();
+  const locale = useLocale();
+  const [helpOpen, setHelpOpen] = useState(false);
   const [vault, setVault] = useState<WrappedKeyDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [supported, setSupported] = useState<boolean | null>(null);
@@ -141,10 +145,24 @@ export function PublishPanel({
   }
 
   return (
+    <>
     <section className="space-y-3 border-t border-neutral-200 p-4 dark:border-neutral-800">
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-        {t("themeEditor.publish.heading")}
-      </h3>
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+          {t("themeEditor.publish.heading")}
+        </h3>
+        {/* How does publishing work? Two ways to submit, and what Public key and the
+            API token are — explained in a modal so the panel stays lean. */}
+        <button
+          type="button"
+          onClick={() => setHelpOpen(true)}
+          aria-label={t("themeEditor.publish.help.open")}
+          title={t("themeEditor.publish.help.open")}
+          className="shrink-0 rounded p-0.5 text-neutral-400 transition-colors hover:text-neutral-700 dark:hover:text-neutral-200"
+        >
+          <Icon name="info" className="h-4 w-4" />
+        </button>
+      </div>
 
       {error ? <p className="text-xs text-red-600">{error}</p> : null}
       {message ? <p className="text-xs text-green-600">{message}</p> : null}
@@ -239,6 +257,83 @@ export function PublishPanel({
 
       <p className="text-[11px] z-muted">{t("themeEditor.publish.submitHint", { key: draftKey })}</p>
     </section>
+
+    <Dialog
+      open={helpOpen}
+      onClose={() => setHelpOpen(false)}
+      title={t("themeEditor.publish.help.title")}
+      description={t("themeEditor.publish.help.intro")}
+      footer={
+        <Button type="button" variant="primary" onClick={() => setHelpOpen(false)}>
+          {t("common.close")}
+        </Button>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <section className="rounded-md border border-[var(--border)] bg-[var(--surface-sunken)] p-3">
+          <h3 className="text-xs font-semibold">{t("themeEditor.publish.help.way1Title")}</h3>
+          <p className="mt-0.5 text-[11px] leading-4 z-muted">
+            {t("themeEditor.publish.help.way1Body")}
+          </p>
+          <DocLink locale={locale} path="marketplace/publishing">
+            {t("themeEditor.publish.help.way1Link")}
+          </DocLink>
+        </section>
+
+        <section className="rounded-md border border-[var(--border)] bg-[var(--surface-sunken)] p-3">
+          <h3 className="text-xs font-semibold">{t("themeEditor.publish.help.way2Title")}</h3>
+          <p className="mt-0.5 text-[11px] leading-4 z-muted">
+            {t("themeEditor.publish.help.way2Body")}
+          </p>
+          <dl className="mt-2.5 flex flex-col gap-2.5">
+            <div>
+              <dt className="text-xs font-medium">{t("themeEditor.publish.help.publicKeyTitle")}</dt>
+              <dd className="mt-0.5 text-[11px] leading-4 z-muted">
+                {t("themeEditor.publish.help.publicKeyBody")}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs font-medium">{t("themeEditor.publish.help.tokenTitle")}</dt>
+              <dd className="mt-0.5 text-[11px] leading-4 z-muted">
+                {t("themeEditor.publish.help.tokenBody")}
+              </dd>
+              <DocLink locale={locale} path="marketplace/api-tokens">
+                {t("themeEditor.publish.help.tokenLink")}
+              </DocLink>
+            </div>
+          </dl>
+          <p className="mt-2.5 text-[11px] leading-4 z-muted">
+            {t("themeEditor.publish.help.way2Outro")}
+          </p>
+        </section>
+      </div>
+    </Dialog>
+    </>
+  );
+}
+
+const DOCS_ORIGIN = "https://docs.z-cms.org";
+const DOCS_LOCALES = ["en", "vi", "ja"] as const;
+
+/**
+ * A link into z-cms-docs, in the reader's language.
+ *
+ * Every docs locale is path-prefixed (even the default), so the URL carries the
+ * code — falling back to the docs' own default when the admin runs in a language
+ * the docs do not have, rather than linking to a 404.
+ */
+function DocLink({ locale, path, children }: { locale: string; path: string; children: ReactNode }) {
+  const code = (DOCS_LOCALES as readonly string[]).includes(locale) ? locale : "vi";
+  return (
+    <a
+      href={`${DOCS_ORIGIN}/${code}/${path}/`}
+      target="_blank"
+      rel="noreferrer"
+      className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium text-brand-600 hover:underline dark:text-brand-400"
+    >
+      {children}
+      <Icon name="external" className="h-3 w-3" />
+    </a>
   );
 }
 

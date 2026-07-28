@@ -242,6 +242,22 @@
     "tokenDisconnect": "Disconnect",
     "tokenConnect": "Connect",
     "tokenHint": "Create an API token under Tokens in the marketplace developer portal, then paste it here. It is stored encrypted and never shown again. It can submit packages and nothing else.",
-    "tokenSaveFailed": "Could not save the marketplace token."
+    "tokenSaveFailed": "Could not save the marketplace token.",
+    "help": {
+      "open": "How to submit to the Marketplace",
+      "title": "Submit your theme to the Marketplace",
+      "intro": "There are two ways to send a theme to the Z-CMS Marketplace.",
+      "way1Title": "1 — Full guide (CLI)",
+      "way1Body": "Create a publisher key, then pack and sign the theme with the zcms CLI and upload the .zcms file at the Developer Portal. Best when you build the theme from code.",
+      "way1Link": "Read the publishing guide",
+      "way2Title": "2 — Quick submit, right here",
+      "way2Body": "Sign and submit straight from this editor — no terminal. You need two things:",
+      "publicKeyTitle": "Public key",
+      "publicKeyBody": "Your public identity. The Marketplace uses it to verify a package was signed by you. Register it once at the Developer Portal — it is safe to share. Your private key is created and kept in this browser and is never sent.",
+      "tokenTitle": "API token",
+      "tokenBody": "Lets this editor send the package on your behalf — it can submit and nothing else, it cannot sign. Create one at Developer Portal → Tokens, then paste it into \"Connect a marketplace account\".",
+      "tokenLink": "How to create an API token",
+      "way2Outro": "With both in place, press \"Sign & submit\"."
+    }
   }
 }
