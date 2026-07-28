@@ -29,7 +29,11 @@
           { "name": "product", "type": "text" },
           { "name": "stock", "type": "integer", "default": 0 },
           { "name": "warehouse", "type": "text", "nullable": true },
-          { "name": "reorder_level", "type": "integer", "default": 0 }
+          { "name": "reorder_level", "type": "integer", "default": 0 },
+          { "name": "cost", "type": "numeric", "nullable": true },
+          { "name": "price", "type": "numeric", "nullable": true },
+          { "name": "sale_price", "type": "numeric", "nullable": true },
+          { "name": "discount_percent", "type": "numeric", "nullable": true }
         ],
         "indexes": [{ "columns": ["sku"], "unique": true }]
       },
@@ -81,7 +85,11 @@
             { "column": "product", "label": "Product" },
             { "column": "stock", "label": "In stock", "input": "number" },
             { "column": "warehouse", "label": "Warehouse" },
-            { "column": "reorder_level", "label": "Reorder at", "input": "number" }
+            { "column": "reorder_level", "label": "Reorder at", "input": "number" },
+            { "column": "cost", "label": { "en": "Cost price", "vi": "Giá nhập", "ja": "仕入れ値" }, "input": "number" },
+            { "column": "price", "label": { "en": "Sale price", "vi": "Giá bán", "ja": "販売価格" }, "input": "number" },
+            { "column": "sale_price", "label": { "en": "Promo price", "vi": "Giá khuyến mãi", "ja": "セール価格" }, "input": "number" },
+            { "column": "discount_percent", "label": { "en": "Discount %", "vi": "Giảm giá %", "ja": "割引率 %" }, "input": "number" }
           ]
         },
         "permissions": { "read": "inventory:read", "write": "inventory:manage" }

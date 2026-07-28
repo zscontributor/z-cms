@@ -332,6 +332,13 @@ services:
       NODE_ENV: production
       PLUGIN_RUNTIME_PORT: "4200"
       PLUGIN_DIR: /plugins
+      # The marketplace key a downloaded plugin is verified against, pinned in the
+      # process that runs it — the same value site-runtime and cms-api pin. Without it
+      # loadSignedPlugin refuses to install any marketplace plugin. Optional (`:-`),
+      # not `:?`: an air-gapped instance runs no marketplace, so it may have no key to
+      # pin; when empty, marketplace plugins simply do not load while built-ins and
+      # operator sideloads still work.
+      MARKETPLACE_PUBLIC_KEY: ${MARKETPLACE_PUBLIC_KEY:-}
       # The key the built-in plugins are verified against, pinned in the process
       # that runs them. The volume below is read-only, but read-only is not the
       # same as trustworthy: a bad image layer or a compromised build still puts

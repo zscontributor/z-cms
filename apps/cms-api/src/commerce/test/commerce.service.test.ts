@@ -133,6 +133,18 @@ describe("CommerceService.quote", () => {
     expect(quote.total).toBe(160);
   });
 
+  it("applies a percentage discount, and prefers it over an absolute salePrice", async () => {
+    holder.db = makeDb([
+      product("a", 100, { data: { price: 100, salePrice: 90, discountPercent: 25 } }),
+    ]);
+    const service = new CommerceService({ registerCapabilityProjector() {} } as never);
+
+    const quote = await service.quote(HOST, { items: [{ productId: "a", quantity: 1 }] });
+
+    expect(quote.items[0]?.unitPrice).toBe(75); // 100 * (1 - 25/100), not the salePrice 90
+    expect(quote.discountTotal).toBe(25);
+  });
+
   it("ignores a salePrice whose window has already closed", async () => {
     holder.db = makeDb([
       product("a", 100, {

@@ -30,10 +30,6 @@ export default async function LoginPage({
         <div className="z-card p-6 shadow-sm">
           <LoginForm next={next ?? "/"} />
         </div>
-
-        <p className="mt-6 text-center text-[11px] z-muted">
-          {t("auth.login.copyright", { year: new Date().getFullYear() })}
-        </p>
       </div>
     </main>
   );

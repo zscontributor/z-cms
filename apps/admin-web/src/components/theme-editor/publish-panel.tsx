@@ -147,18 +147,19 @@ export function PublishPanel({
   return (
     <>
     <section className="space-y-3 border-t border-neutral-200 p-4 dark:border-neutral-800">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center gap-1.5">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
           {t("themeEditor.publish.heading")}
         </h3>
         {/* How does publishing work? Two ways to submit, and what Public key and the
-            API token are — explained in a modal so the panel stays lean. */}
+            API token are — explained in a modal so the panel stays lean. Coloured and
+            sat right beside the label so a first-time publisher notices the help. */}
         <button
           type="button"
           onClick={() => setHelpOpen(true)}
           aria-label={t("themeEditor.publish.help.open")}
           title={t("themeEditor.publish.help.open")}
-          className="shrink-0 rounded p-0.5 text-neutral-400 transition-colors hover:text-neutral-700 dark:hover:text-neutral-200"
+          className="shrink-0 rounded-full p-0.5 text-brand-500 transition-colors hover:bg-brand-500/10 hover:text-brand-600 dark:text-brand-400 dark:hover:text-brand-300"
         >
           <Icon name="info" className="h-4 w-4" />
         </button>

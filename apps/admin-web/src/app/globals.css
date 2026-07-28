@@ -166,6 +166,23 @@
     color: var(--text-muted);
   }
 
+  /*
+   * The Theme Studio workspace behind the device-framed paper: a dotted surface
+   * that follows the admin's light/dark mode. Light is a sunken warm grey with
+   * faint dark dots; dark is the near-black studio field with faint white dots.
+   */
+  .studio-workspace {
+    background:
+      radial-gradient(circle at 1px 1px, rgba(28, 25, 23, 0.07) 1px, transparent 0) 0 0 / 18px 18px,
+      var(--surface-sunken);
+  }
+
+  .dark .studio-workspace {
+    background:
+      radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.1) 1px, transparent 0) 0 0 / 18px 18px,
+      #1f2430;
+  }
+
   .z-scroll-thin {
     scrollbar-width: thin;
   }
@@ -332,4 +349,30 @@
       transform: none;
     }
   }
+}
+
+/*
+ * Theme-editor canvas placeholder.
+ *
+ * A widget with nothing to show (an image with no src, an empty gallery, a menu on a
+ * site that has none) renders NOTHING on the live site — the honest empty state. On
+ * the design canvas that looks like a block that failed to appear, so when the
+ * widget wrapper ends up `:empty`, this EDITOR-ONLY rule draws a labelled dashed
+ * placeholder (the label rides in `data-ph`). It never ships to a theme: it lives in
+ * the admin stylesheet, not in @zcmsorg/theme-widgets.
+ */
+.zw-ph:empty::after {
+  content: attr(data-ph);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px;
+  padding: 12px 16px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #8a8f98;
+  background: repeating-linear-gradient(45deg, #f7f8fa, #f7f8fa 10px, #f1f2f4 10px, #f1f2f4 20px);
+  border: 1px dashed #cdd2da;
+  border-radius: 8px;
 }

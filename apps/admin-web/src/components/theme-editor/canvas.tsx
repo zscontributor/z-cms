@@ -1,7 +1,7 @@
 "use client";
 
-import { useDraggable, useDroppable } from "@dnd-kit/core";
-import { createContext, useContext, useState } from "react";
+import { useDndContext, useDraggable, useDroppable } from "@dnd-kit/core";
+import { createContext, Fragment, useContext, useState } from "react";
 import type { LayoutNode } from "@zcmsorg/schemas";
 import { WIDGET_COMPONENTS, styleForNode } from "@zcmsorg/theme-widgets";
 import type { ThemeContext } from "@zcmsorg/theme-sdk";
@@ -90,27 +90,35 @@ export function Canvas({
       onMouseLeave={() => setHoveredId(null)}
     >
       {tree.length === 0 ? (
-        <p className="rounded border border-dashed border-neutral-300 p-8 text-center text-sm text-neutral-500 dark:border-neutral-700">
-          {t("themeEditor.canvas.emptyTemplate")}
-        </p>
+        // Even an empty template is a drop target, so a starter pattern dragged from
+        // the Templates tab lands on it.
+        <SectionSlot index={0} emptyHint />
       ) : (
-        tree.map((node, index) => (
-          <NodeView
-            key={node.id}
-            node={node}
-            index={index}
-            siblings={tree.length}
-            ctx={ctx}
-            selectedId={selectedId}
-            onSelect={onSelect}
-            onAddRow={onAddRow}
-            onAddColumn={onAddColumn}
-            onMoveWithin={onMoveWithin}
-            onDuplicate={onDuplicate}
-            onDelete={onDelete}
-            disabled={disabled}
-          />
-        ))
+        <>
+          {/* A drop slot before the first section and after every section, so a
+              dragged pattern (or a section being reordered) lands at an exact
+              position instead of only at the end. */}
+          <SectionSlot index={0} />
+          {tree.map((node, index) => (
+            <Fragment key={node.id}>
+              <NodeView
+                node={node}
+                index={index}
+                siblings={tree.length}
+                ctx={ctx}
+                selectedId={selectedId}
+                onSelect={onSelect}
+                onAddRow={onAddRow}
+                onAddColumn={onAddColumn}
+                onMoveWithin={onMoveWithin}
+                onDuplicate={onDuplicate}
+                onDelete={onDelete}
+                disabled={disabled}
+              />
+              <SectionSlot index={index + 1} />
+            </Fragment>
+          ))}
+        </>
       )}
 
       <button
@@ -126,6 +134,52 @@ export function Canvas({
       </button>
     </div>
     </HoverContext.Provider>
+  );
+}
+
+/**
+ * An insertion slot at the template root — between/around sections.
+ *
+ * It is a drop target for a starter pattern dragged from the Templates tab and for a
+ * section being reordered, both of which act on the top level (a pattern is a
+ * section, not a widget). It stays a thin, invisible gap until a relevant drag is in
+ * flight, then it opens up and shows an insertion line under the pointer — so the
+ * slots never clutter the canvas when nobody is dragging a section-level thing.
+ */
+function SectionSlot({ index, emptyHint }: { index: number; emptyHint?: boolean }) {
+  const t = useT();
+  const { active } = useDndContext();
+  const activeKind = (active?.data.current as { kind?: string } | undefined)?.kind;
+  const relevant = activeKind === "template" || activeKind === "section";
+  const { setNodeRef, isOver } = useDroppable({
+    id: `slot-${index}`,
+    data: { kind: "section-slot", index },
+  });
+
+  if (emptyHint) {
+    return (
+      <div
+        ref={setNodeRef}
+        className={cn(
+          "rounded border border-dashed p-8 text-center text-sm transition-colors",
+          isOver
+            ? "border-brand-500 bg-brand-50 text-brand-600 dark:bg-brand-950/30"
+            : "border-neutral-300 text-neutral-500 dark:border-neutral-700",
+        )}
+      >
+        {t("themeEditor.canvas.emptyTemplate")}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn("transition-all", isOver && relevant ? "h-10" : "h-2")}
+      aria-hidden
+    >
+      {relevant && isOver ? <div className="mt-4 h-1 rounded-full bg-brand-500" /> : null}
+    </div>
   );
 }
 
@@ -447,6 +501,28 @@ function ColumnView(props: NodeViewProps) {
   );
 }
 
+/** A picture widget (image/gallery/slider) with no image chosen yet. */
+function isEmptyMediaWidget(node: LayoutNode): boolean {
+  if (node.widgetType === "media/image") {
+    return !(typeof node.props.src === "string" && node.props.src.length > 0);
+  }
+  if (node.widgetType === "media/gallery" || node.widgetType === "media/slider") {
+    const images = node.props.images;
+    return !(Array.isArray(images) && images.some((x) => typeof x === "string" && x.length > 0));
+  }
+  return false;
+}
+
+/** Editor-only "an image goes here" placeholder for an unset picture widget. */
+function MediaPlaceholder({ label }: { label: string }) {
+  return (
+    <div className="flex min-h-[128px] flex-col items-center justify-center gap-2 rounded border border-dashed border-neutral-300 bg-neutral-50 p-6 text-neutral-400">
+      <Icon name="image" size={32} />
+      <span className="text-xs">{label}</span>
+    </div>
+  );
+}
+
 function WidgetView(props: NodeViewProps) {
   const t = useT();
   const { node, ctx, selectedId, disabled } = props;
@@ -459,14 +535,19 @@ function WidgetView(props: NodeViewProps) {
   });
 
   const label = spec ? t(spec.labelKey) : (node.widgetType ?? "widget");
+  const mediaEmpty = isEmptyMediaWidget(node);
 
   return (
-    <div ref={setNodeRef} className={cn("mb-2", isDragging && "opacity-40")}>
+    // No editor gap or padding around a widget: the canvas must show a widget's
+    // OWN spacing (its style margins) so what is designed matches the preview and the
+    // live page. An added `mb-2` + `p-2` used to inflate every block by ~16px, which
+    // read as margins that were not really there. Selection still shows via the
+    // Chrome border/ring, which needs no space of its own.
+    <div ref={setNodeRef} className={cn(isDragging && "opacity-40")}>
       <Chrome
         {...props}
         selected={selectedId === node.id}
         label={label}
-        className="p-2"
         handleProps={{ ...attributes, ...listeners }}
       >
         {Widget ? (
@@ -475,7 +556,19 @@ function WidgetView(props: NodeViewProps) {
           // admin away from the editor. The node's own style is applied here so the
           // canvas is WYSIWYG — the same styleForNode the runtime interpreter uses.
           <div className="pointer-events-none" style={styleForNode(node.style)}>
-            <Widget node={node} ctx={ctx} content={null} />
+            {mediaEmpty ? (
+              // A picture widget with no image yet renders nothing on the live site;
+              // on the canvas that reads as a missing block, so show a picture-icon
+              // placeholder (editor-only) that is obviously "an image goes here".
+              <MediaPlaceholder label={label} />
+            ) : (
+              // `zw-ph` + `data-ph`: any other widget that renders NOTHING (an unbound
+              // list, a menu with no location) leaves this wrapper `:empty`, and an
+              // editor-only CSS rule (globals.css) draws a labelled placeholder.
+              <div className="zw-ph" data-ph={t("themeEditor.canvas.placeholder", { label })}>
+                <Widget node={node} ctx={ctx} content={null} />
+              </div>
+            )}
           </div>
         ) : (
           <p className="rounded bg-amber-50 p-2 text-xs text-amber-700 dark:bg-amber-950/40">

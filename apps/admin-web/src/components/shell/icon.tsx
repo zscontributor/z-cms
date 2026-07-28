@@ -13,6 +13,9 @@ import {
   Code,
   CodeBlock,
   Copy,
+  Desktop,
+  DeviceMobile,
+  DeviceTablet,
   DownloadSimple,
   Play,
   Envelope,
@@ -149,6 +152,11 @@ const REGISTRY: Record<string, PhosphorIcon> = {
   // Theme switch
   sun: Sun,
   moon: Moon,
+
+  // Studio device preview
+  desktop: Desktop,
+  tablet: DeviceTablet,
+  mobile: DeviceMobile,
 
   // Rich-text toolbar
   bold: TextB,

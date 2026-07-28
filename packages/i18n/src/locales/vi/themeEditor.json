@@ -23,7 +23,8 @@
     "open": "Mở",
     "build": "Build",
     "building": "Đang build…",
-    "settings": "Cài đặt theme"
+    "settings": "Cài đặt theme",
+    "exit": "Đóng trình chỉnh sửa"
   },
   "build": {
     "started": "Đang build v{version}…",
@@ -51,14 +52,15 @@
   "canvas": {
     "emptyTemplate": "Chưa có gì. Thêm một section để bắt đầu.",
     "dropHere": "Thả widget vào đây",
-    "unknownWidget": "Widget lạ: {type}"
+    "unknownWidget": "Widget lạ: {type}",
+    "placeholder": "{label} — thiết lập ở bảng bên phải"
   },
   "inspector": {
     "themeTitle": "Theme",
     "themeHint": "Màu, phông chữ và khoảng cách cho cả theme. Chủ site có thể đổi lại sau khi cài.",
     "noSelection": "Chọn một block để chỉnh sửa. Đổi màu, phông chữ và khoảng cách ở Cài đặt theme — icon bánh răng trên thanh công cụ.",
     "unknownWidget": "Bản dựng này không biết \"{type}\". Nó được giữ nguyên.",
-    "currentBinding": "Widget này hiển thị trang đang xem. Ở Trang chủ và Danh sách không có trang cụ thể nào, nên nó không hiển thị gì.",
+    "currentBinding": "Widget động: tự đổ nội dung của bài/trang đang xem. Hãy đặt trên mẫu Bài viết hoặc Trang — mỗi bài sẽ hiển thị nội dung riêng. (Trên Trang chủ/Danh sách sẽ trống vì không gắn với một trang cụ thể.)",
     "dataSource": "Dữ liệu",
     "budget": "Đã dùng {used}/{max} danh sách nội dung.",
     "budgetFull": "Đã dùng hết {max} danh sách nội dung. Hãy dùng lại một câu hỏi đã có — cùng loại, cùng số lượng, cùng thứ tự — hoặc bỏ bớt một cái.",
@@ -89,7 +91,7 @@
     "hint": "Nhấn để thả một section dựng sẵn vào canvas.",
     "hero": {
       "label": "Hero",
-      "description": "Tiêu đề lớn, một dòng mô tả và nút kêu gọi."
+      "description": "Banner cao: tiêu đề, mô tả và nút bên trái, ảnh của bạn bên phải."
     },
     "features": {
       "label": "Tính năng (3 cột)",
@@ -110,7 +112,25 @@
     "cta": {
       "label": "Kêu gọi hành động",
       "description": "Lời mời căn giữa với một nút."
+    },
+    "pricing": {
+      "label": "Bảng giá",
+      "description": "Ba thẻ gói giá cạnh nhau, gói giữa được làm nổi bật."
+    },
+    "contact": {
+      "label": "Liên hệ",
+      "description": "Đoạn giới thiệu bên cạnh một biểu mẫu liên hệ hoạt động."
+    },
+    "footer": {
+      "label": "Chân trang",
+      "description": "Chân trang nền tối với thương hiệu, menu, thông tin liên hệ và dòng bản quyền."
     }
+  },
+  "preview": {
+    "sampleTitle": "Tiêu đề trang mẫu",
+    "sampleExcerpt": "Đoạn tóm tắt ngắn của trang, hiển thị ở nơi theme cần tóm tắt.",
+    "sampleBody1": "Đây là nơi nội dung của chính trang hiển thị. Trên site thật, mỗi bài sẽ hiển thị thân bài của riêng nó ở đây.",
+    "sampleBody2": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
   },
   "a11y": {
     "drag": "Kéo {label}",
@@ -132,6 +152,12 @@
     "text": "Nội dung",
     "html": "Nội dung",
     "label": "Nhãn",
+    "nameLabel": "Nhãn ô Tên",
+    "emailLabel": "Nhãn ô Email",
+    "messageLabel": "Nhãn ô Nội dung",
+    "submitLabel": "Nhãn nút gửi",
+    "successText": "Thông báo thành công",
+    "errorText": "Thông báo lỗi",
     "href": "Liên kết",
     "heading": "Tiêu đề",
     "align": "Canh lề",
@@ -183,6 +209,14 @@
     "arrows": "Mũi tên",
     "dots": "Chấm",
     "showNumbers": "Hiện số trang",
+    "pagerShape": "Hình dạng",
+    "pagerRounded": "Bo góc",
+    "pagerSquare": "Vuông",
+    "pagerCircle": "Tròn",
+    "pageBackground": "Nền nút trang",
+    "pageColor": "Màu chữ trang",
+    "activeBackground": "Nền trang hiện tại",
+    "activeColor": "Màu chữ trang hiện tại",
     "galleryLayout": "Bố cục",
     "galleryGrid": "Lưới",
     "galleryMasonry": "Gạch xây",
@@ -193,11 +227,50 @@
     "sort": "Thứ tự",
     "sortNewest": "Mới nhất trước",
     "sortOldest": "Cũ nhất trước",
-    "sortTitle": "Theo tiêu đề"
+    "sortTitle": "Theo tiêu đề",
+    "title": "Tiêu đề",
+    "body": "Nội dung",
+    "buttonLabel": "Nhãn nút",
+    "avatarName": "Tên (để lấy chữ cái đầu)",
+    "size": "Kích thước",
+    "shape": "Hình dạng",
+    "shapeCircle": "Tròn",
+    "shapeRounded": "Bo góc",
+    "shapeSquare": "Vuông",
+    "variantNeutral": "Trung tính",
+    "variantSuccess": "Thành công",
+    "variantWarning": "Cảnh báo",
+    "variantDanger": "Nguy hiểm",
+    "variantInfo": "Thông tin",
+    "value": "Giá trị",
+    "max": "Trên tổng",
+    "showValue": "Hiện giá trị",
+    "barColor": "Màu thanh",
+    "openFirst": "Mở mục đầu tiên",
+    "accordion": {
+      "q1": "Mục 1 — tiêu đề",
+      "a1": "Mục 1 — nội dung",
+      "q2": "Mục 2 — tiêu đề",
+      "a2": "Mục 2 — nội dung",
+      "q3": "Mục 3 — tiêu đề",
+      "a3": "Mục 3 — nội dung",
+      "q4": "Mục 4 — tiêu đề",
+      "a4": "Mục 4 — nội dung"
+    },
+    "timelineHtml": "Các mốc",
+    "tableHtml": "Bảng",
+    "showHome": "Hiện Trang chủ",
+    "homeLabel": "Nhãn Trang chủ",
+    "separator": "Dấu phân cách",
+    "separatorChevron": "Mũi tên ›",
+    "separatorSlash": "Gạch chéo /",
+    "separatorDot": "Chấm ·"
   },
   "hints": {
     "contentType": "Một loại site này thực sự có. Theme cài ở site khác sẽ ra danh sách rỗng nếu site đó không có loại này.",
-    "limit": "Tối đa {max}."
+    "limit": "Tối đa {max}.",
+    "timelineHtml": "Mỗi mốc là một mục trong danh sách. Đường kẻ và chấm được vẽ sẵn cho bạn.",
+    "tableHtml": "Viết bảng có hàng tiêu đề. Bảng sẽ cuộn ngang trên màn hình hẹp."
   },
   "tokens": {
     "colorPrimary": "Màu chính",
@@ -213,6 +286,7 @@
   "style": {
     "unset": "Mặc định",
     "group": {
+      "size": "Kích thước",
       "colors": "Màu sắc",
       "spacing": "Khoảng cách",
       "border": "Viền",
@@ -248,10 +322,38 @@
     "textColor": "Màu chữ",
     "background": "Màu nền",
     "backgroundGradient": "Chuyển sắc",
+    "backgroundImage": "Ảnh nền",
+    "backgroundImageHint": "Hiển thị phía sau khối này. Nên đặt thêm màu nền để dự phòng.",
+    "backgroundSize": "Cỡ ảnh",
+    "backgroundPosition": "Vị trí ảnh",
+    "backgroundOverlay": "Lớp phủ ảnh",
+    "backgroundVideo": "Video nền",
+    "backgroundVideoHint": "Phát tắt tiếng và lặp lại phía sau khối này. Bị ẩn khi người dùng bật giảm chuyển động — hãy đặt màu nền hoặc ảnh nền dự phòng.",
+    "bgSize": {
+      "cover": "Phủ đầy",
+      "contain": "Vừa khung",
+      "auto": "Kích thước gốc"
+    },
+    "bgPosition": {
+      "center": "Giữa",
+      "top": "Trên",
+      "bottom": "Dưới",
+      "left": "Trái",
+      "right": "Phải"
+    },
     "paddingX": "Đệm — hai bên",
     "paddingY": "Đệm — trên & dưới",
     "marginX": "Lề — hai bên",
     "marginY": "Lề — trên & dưới",
+    "width": "Chiều rộng",
+    "widthUnit": "Đơn vị rộng",
+    "height": "Chiều cao",
+    "heightUnit": "Đơn vị cao",
+    "unit": {
+      "px": "px",
+      "percent": "%",
+      "vh": "vh"
+    },
     "minHeight": "Chiều cao tối thiểu",
     "borderRadius": "Bo góc",
     "borderWidth": "Độ dày viền",
@@ -349,6 +451,10 @@
       "label": "Khoảng trống",
       "description": "Khoảng trống dọc."
     },
+    "contactForm": {
+      "label": "Biểu mẫu liên hệ",
+      "description": "Biểu mẫu liên hệ hoạt động (tên, email, nội dung) gửi email cho chủ site."
+    },
     "postTitle": {
       "label": "Tiêu đề trang",
       "description": "Tiêu đề của trang đang xem."
@@ -360,6 +466,50 @@
     "postList": {
       "label": "Danh sách nội dung",
       "description": "Trang hoặc bài viết thật từ site — ví dụ 6 bài mới nhất."
+    },
+    "card": {
+      "label": "Thẻ (Card)",
+      "description": "Một khối có ảnh, tiêu đề, mô tả và nút tùy chọn — xếp vài thẻ thành hàng."
+    },
+    "avatar": {
+      "label": "Ảnh đại diện",
+      "description": "Ảnh đại diện tròn, hoặc chữ cái đầu của tên khi không có ảnh."
+    },
+    "badge": {
+      "label": "Nhãn (Badge)",
+      "description": "Nhãn nhỏ có màu cho trạng thái hoặc số đếm."
+    },
+    "tag": {
+      "label": "Thẻ tag",
+      "description": "Nhãn dạng viên thuốc, có thể là liên kết — như thẻ chuyên mục."
+    },
+    "alert": {
+      "label": "Thông báo (Alert)",
+      "description": "Khối chú thích có màu cho ghi chú, mẹo hoặc cảnh báo."
+    },
+    "progress": {
+      "label": "Thanh tiến trình",
+      "description": "Thanh ngang lấp đầy theo phần trăm."
+    },
+    "rating": {
+      "label": "Đánh giá sao",
+      "description": "Một hàng sao lấp đầy theo điểm số."
+    },
+    "accordion": {
+      "label": "Accordion",
+      "description": "Các hàng hỏi–đáp thu gọn được. Mở/đóng không cần mã."
+    },
+    "timeline": {
+      "label": "Dòng thời gian",
+      "description": "Danh sách các mốc theo chiều dọc, nối bằng một đường kẻ."
+    },
+    "table": {
+      "label": "Bảng",
+      "description": "Bảng dữ liệu đơn giản, cuộn được trên màn hình nhỏ."
+    },
+    "breadcrumb": {
+      "label": "Đường dẫn (Breadcrumb)",
+      "description": "Đường dẫn tới trang đang xem. Đặt trên mẫu Bài viết hoặc Trang."
     }
   },
   "changelog": {

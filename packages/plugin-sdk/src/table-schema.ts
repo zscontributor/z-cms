@@ -252,21 +252,23 @@ export function generatePluginTableDdl(
   }
   const tbl = ident(table.name);
 
-  const columnLines = table.columns.map((column) => {
-    // The type is never emitted raw — only its mapped SQL spelling, so a crafted
-    // type string cannot inject. But an unknown type would map to `undefined` and
-    // produce broken DDL; refuse it loudly instead, so a manifest that slipped past
-    // validation fails here rather than emitting a malformed statement.
+  // The column body `<type> [NOT NULL] [DEFAULT …]`, shared by CREATE and the
+  // reconciling ALTERs. The type is never emitted raw — only its mapped SQL
+  // spelling, so a crafted type string cannot inject. An unknown type would map to
+  // `undefined` and produce broken DDL; refuse it loudly instead.
+  const columnBody = (column: PluginColumn): string => {
     const sqlType = COLUMN_SQL_TYPE[column.type];
     if (!sqlType) {
       throw new Error(`Refusing DDL for unknown column type: ${JSON.stringify(column.type)}`);
     }
-    const parts = [ident(column.name), sqlType];
+    const parts = [sqlType];
     if (column.nullable !== true) parts.push("NOT NULL");
     const def = defaultLiteral(column);
     if (def !== undefined) parts.push(`DEFAULT ${def}`);
-    return "  " + parts.join(" ");
-  });
+    return parts.join(" ");
+  };
+
+  const columnLines = table.columns.map((column) => `  ${ident(column.name)} ${columnBody(column)}`);
 
   const createTable =
     `CREATE TABLE IF NOT EXISTS ${tbl} (\n` +
@@ -281,6 +283,20 @@ export function generatePluginTableDdl(
     `\n)`;
 
   const statements: string[] = [createTable];
+
+  // Reconcile a table that predates a column: when a plugin ships a new version that
+  // ADDS a column, `CREATE TABLE IF NOT EXISTS` is a no-op on the existing table and
+  // would leave it missing the column — every insert naming it then fails. So each
+  // declared column is also added with `ADD COLUMN IF NOT EXISTS`, idempotent (a
+  // no-op on a table the CREATE just made, and on a column already present). A new
+  // NOT NULL column with no default cannot be added to a populated table — that is
+  // an unsafe migration Postgres refuses, and it fails loudly here rather than at the
+  // next insert; ship such a column as nullable or with a default.
+  for (const column of table.columns) {
+    statements.push(
+      `ALTER TABLE ${tbl} ADD COLUMN IF NOT EXISTS ${ident(column.name)} ${columnBody(column)}`,
+    );
+  }
 
   // Every query a plugin runs is scoped to one site, so this index is not
   // optional decoration — it is the access path for every read.
@@ -350,8 +366,38 @@ export interface SqlQuery {
   values: unknown[];
 }
 
-/** A row filter. Only equality, only on validated columns — no operators, no OR. */
-export type PluginWhere = Record<string, unknown>;
+/**
+ * The comparisons a `where` may express, beyond bare equality. Still AND-only and
+ * still on validated columns — every value is a bound parameter, never SQL.
+ */
+export const PLUGIN_WHERE_OPERATORS = [
+  "eq",
+  "neq",
+  "lt",
+  "lte",
+  "gt",
+  "gte",
+  "contains",
+  "startsWith",
+  "in",
+] as const;
+export type PluginWhereOperator = (typeof PLUGIN_WHERE_OPERATORS)[number];
+
+/** The long form of a filter: `{ op, value }`. `contains`/`startsWith` are case- */
+/** insensitive substring/prefix; `in` takes an array; the rest are scalar. */
+export interface PluginWhereClause {
+  op: PluginWhereOperator;
+  value: unknown;
+}
+
+/**
+ * A row filter, AND-ed across columns. Each value is either a **bare value**
+ * (equality, or `IS NULL` for `null` — the back-compatible form) or a
+ * {@link PluginWhereClause} `{ op, value }` for a range, substring or `in` test.
+ * There is still no `OR` and no raw SQL; a column is always validated and a value
+ * is always a bound parameter.
+ */
+export type PluginWhere = Record<string, unknown | PluginWhereClause>;
 
 export interface PluginSelectOptions {
   where?: PluginWhere;
@@ -375,10 +421,34 @@ function assertColumn(known: Set<string>, column: string): void {
   }
 }
 
+/** Escape a value's LIKE metacharacters so a substring test matches them literally. */
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
+
+/**
+ * Read the `{ op, value }` long form, or null for the bare-value (equality) form.
+ * A value carrying an `op` that is not a known operator is refused loudly rather
+ * than silently treated as an equality against an object.
+ */
+function asWhereClause(raw: unknown): PluginWhereClause | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw) || !("op" in raw)) return null;
+  const record = raw as Record<string, unknown>;
+  const op = record.op;
+  if (typeof op !== "string" || !PLUGIN_WHERE_OPERATORS.includes(op as PluginWhereOperator)) {
+    throw new Error(`Unknown filter operator: ${JSON.stringify(op)}`);
+  }
+  return { op: op as PluginWhereOperator, value: record.value };
+}
+
 /**
  * Builds a WHERE fragment plus the always-on `tenant_id`/`site_id` scoping the
  * gateway supplies from the token. Placeholders start at `start`; the caller
  * threads the running index so INSERT/UPDATE can put values before the WHERE.
+ *
+ * Each column's condition is a bare value (equality / `IS NULL`) or a
+ * {@link PluginWhereClause}. Every value is a bound parameter; the operator only
+ * selects the SQL comparison, so nothing a plugin passes becomes SQL.
  */
 function buildWhere(
   known: Set<string>,
@@ -389,15 +459,54 @@ function buildWhere(
   const conds = [`"tenant_id" = $${start}`, `"site_id" = $${start + 1}`];
   const values: unknown[] = [scope.tenantId, scope.siteId];
   let i = start + 2;
+  const bind = (v: unknown): string => {
+    values.push(v);
+    return `$${i++}`;
+  };
 
-  for (const [column, value] of Object.entries(where ?? {})) {
+  for (const [column, raw] of Object.entries(where ?? {})) {
     assertColumn(known, column);
-    if (value === null) {
-      conds.push(`${ident(column)} IS NULL`);
-    } else {
-      conds.push(`${ident(column)} = $${i}`);
-      values.push(value);
-      i += 1;
+    const col = ident(column);
+    const clause = asWhereClause(raw);
+
+    if (!clause) {
+      // Bare value: equality, or IS NULL for an explicit null.
+      conds.push(raw === null ? `${col} IS NULL` : `${col} = ${bind(raw)}`);
+      continue;
+    }
+
+    const { op, value } = clause;
+    switch (op) {
+      case "eq":
+        conds.push(value === null ? `${col} IS NULL` : `${col} = ${bind(value)}`);
+        break;
+      case "neq":
+        conds.push(value === null ? `${col} IS NOT NULL` : `${col} <> ${bind(value)}`);
+        break;
+      case "lt":
+        conds.push(`${col} < ${bind(value)}`);
+        break;
+      case "lte":
+        conds.push(`${col} <= ${bind(value)}`);
+        break;
+      case "gt":
+        conds.push(`${col} > ${bind(value)}`);
+        break;
+      case "gte":
+        conds.push(`${col} >= ${bind(value)}`);
+        break;
+      case "contains":
+        conds.push(`${col} ILIKE ${bind(`%${escapeLike(String(value))}%`)}`);
+        break;
+      case "startsWith":
+        conds.push(`${col} ILIKE ${bind(`${escapeLike(String(value))}%`)}`);
+        break;
+      case "in":
+        if (!Array.isArray(value)) {
+          throw new Error(`The "in" filter on ${JSON.stringify(column)} needs an array.`);
+        }
+        conds.push(`${col} = ANY(${bind(value)})`);
+        break;
     }
   }
 

@@ -352,6 +352,13 @@
             "required": false
           },
           {
+            "key": "discountPercent",
+            "type": "number",
+            "label": { "en": "Discount %", "vi": "Giảm giá %", "ja": "割引率 %" },
+            "required": false,
+            "description": "0–100. Takes priority over the sale price when both are set."
+          },
+          {
             "key": "saleStart",
             "type": "date",
             "label": { "en": "Sale starts", "vi": "Bắt đầu khuyến mãi", "ja": "セール開始" },

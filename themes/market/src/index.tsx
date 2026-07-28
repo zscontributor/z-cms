@@ -135,15 +135,25 @@ function effectivePricing(
 ): { shown: number; strike: number | null } | null {
   const price = num(data.price);
   if (price === null) return null;
+
+  const pct = num(data.discountPercent);
   const sale = num(data.salePrice);
-  if (sale !== null && sale < price) {
+  const hasPct = pct !== null && pct > 0 && pct <= 100;
+  const hasSale = sale !== null && sale < price;
+
+  if (hasPct || hasSale) {
     const start = str(data.saleStart);
     const end = str(data.saleEnd);
     const now = Date.now();
     const startOk = !start || now >= new Date(start).getTime();
     const endOk = !end || now <= new Date(end).getTime();
-    if (startOk && endOk) return { shown: sale, strike: price };
+    if (startOk && endOk) {
+      // Percentage wins when both are set; else the absolute sale price.
+      const shown = hasPct ? Math.round(price * (1 - pct! / 100) * 100) / 100 : sale!;
+      return { shown, strike: price };
+    }
   }
+
   const oldPrice = num(data.oldPrice);
   return { shown: price, strike: oldPrice !== null && oldPrice > price ? oldPrice : null };
 }

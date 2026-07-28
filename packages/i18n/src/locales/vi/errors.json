@@ -193,5 +193,10 @@
     "siteNotFound": "Không có website nào đã xuất bản tại địa chỉ này.",
     "notFound": "Biểu mẫu này không có trên website.",
     "invalidSubmission": "Dữ liệu gửi không hợp lệ: {detail}"
+  },
+  "query": {
+    "hostnameRequired": "Không xác định được website.",
+    "siteNotFound": "Không có website nào đã xuất bản tại địa chỉ này.",
+    "invalidCapability": "Truy vấn không hợp lệ."
   }
 }

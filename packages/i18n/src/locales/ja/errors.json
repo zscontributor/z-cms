@@ -193,5 +193,10 @@
     "siteNotFound": "このアドレスで公開されているサイトはありません。",
     "notFound": "このフォームはこのサイトでは利用できません。",
     "invalidSubmission": "送信内容が不正です: {detail}"
+  },
+  "query": {
+    "hostnameRequired": "サイトを特定できませんでした。",
+    "siteNotFound": "このアドレスで公開されているサイトはありません。",
+    "invalidCapability": "有効なクエリではありません。"
   }
 }

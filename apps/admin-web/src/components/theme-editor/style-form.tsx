@@ -6,7 +6,10 @@ import {
   type NodeStyleFieldSpec,
   type NodeStyleGroup,
 } from "@zcmsorg/schemas";
+import { useState } from "react";
 import { Field, Input, Select } from "@/components/ui/field";
+import { Button } from "@/components/ui/button";
+import { MediaPickerField, MediaPickerDialog } from "@/components/editor/media-picker";
 import { useT } from "@/lib/i18n-provider";
 import { ColorPicker } from "./color-picker";
 
@@ -24,6 +27,7 @@ import { ColorPicker } from "./color-picker";
  */
 
 const GROUP_ORDER: readonly NodeStyleGroup[] = [
+  "size",
   "colors",
   "spacing",
   "border",
@@ -78,8 +82,12 @@ export function StyleForm({
                   key={field.key}
                   field={field}
                   value={current[field.key]}
+                  unitValue={field.unitKey ? current[field.unitKey] : undefined}
                   disabled={disabled}
                   onChange={(value) => set(field.key, value)}
+                  onUnitChange={
+                    field.unitKey ? (unit) => set(field.unitKey as keyof NodeStyle, unit) : undefined
+                  }
                 />
               ))}
             </div>
@@ -93,12 +101,16 @@ export function StyleForm({
 function StyleControl({
   field,
   value,
+  unitValue,
   onChange,
+  onUnitChange,
   disabled,
 }: {
   field: NodeStyleFieldSpec;
   value: string | number | undefined;
+  unitValue?: string | number | undefined;
   onChange: (value: string | number | undefined) => void;
+  onUnitChange?: (unit: string) => void;
   disabled?: boolean;
 }) {
   const t = useT();
@@ -111,6 +123,33 @@ function StyleControl({
         value={typeof value === "string" ? value : undefined}
         disabled={disabled}
         onChange={onChange}
+      />
+    );
+  }
+
+  // A background image: the library's image field (mode="url"), so the URL travels
+  // in the LayoutDocument and resolves at render time like any other picked image.
+  if (field.control === "image") {
+    return (
+      <Field label={label} hint={t("themeEditor.style.backgroundImageHint")}>
+        <MediaPickerField
+          value={typeof value === "string" ? value : ""}
+          mode="url"
+          onChange={(v) => onChange(v || undefined)}
+        />
+      </Field>
+    );
+  }
+
+  // A background video: a URL field with a picker that lists non-image media too.
+  if (field.control === "video") {
+    return (
+      <VideoStyleField
+        label={label}
+        hint={t("themeEditor.style.backgroundVideoHint")}
+        value={typeof value === "string" ? value : ""}
+        disabled={disabled}
+        onChange={(v) => onChange(v || undefined)}
       />
     );
   }
@@ -135,23 +174,104 @@ function StyleControl({
     );
   }
 
-  // number
+  // number (optionally with a unit dropdown pinned inline after the input)
+  const numberInput = (
+    <Input
+      type="number"
+      min={field.min}
+      max={field.max}
+      step={field.step}
+      value={typeof value === "number" ? String(value) : ""}
+      disabled={disabled}
+      onChange={(e) => {
+        if (e.target.value === "") return onChange(undefined);
+        const next = Number(e.target.value);
+        if (!Number.isFinite(next)) return onChange(undefined);
+        const min = field.min ?? Number.NEGATIVE_INFINITY;
+        const max = field.max ?? Number.POSITIVE_INFINITY;
+        onChange(Math.min(max, Math.max(min, next)));
+      }}
+    />
+  );
+
+  if (field.unitKey && field.unitOptions) {
+    const fallbackUnit = field.unitOptions[0]?.value ?? "";
+    return (
+      <Field label={label}>
+        <div className="flex gap-2">
+          <div className="flex-1">{numberInput}</div>
+          <div className="w-24 shrink-0">
+            <Select
+              value={typeof unitValue === "string" ? unitValue : fallbackUnit}
+              disabled={disabled}
+              onChange={(e) => onUnitChange?.(e.target.value)}
+            >
+              {field.unitOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {t(option.labelKey)}
+                </option>
+              ))}
+            </Select>
+          </div>
+        </div>
+      </Field>
+    );
+  }
+
+  return <Field label={label}>{numberInput}</Field>;
+}
+
+/**
+ * The background-video control: a URL field plus a picker that lists ALL media
+ * (not images-only), so a video already in the library is one click away, and a
+ * hosted URL can be pasted directly. The value is a URL that rides in the
+ * LayoutDocument and is fenced by CssUrlSchema on save.
+ */
+function VideoStyleField({
+  label,
+  hint,
+  value,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  hint?: string;
+  value: string;
+  onChange: (value: string | undefined) => void;
+  disabled?: boolean;
+}) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
   return (
-    <Field label={label}>
-      <Input
-        type="number"
-        min={field.min}
-        max={field.max}
-        step={field.step}
-        value={typeof value === "number" ? String(value) : ""}
-        disabled={disabled}
-        onChange={(e) => {
-          if (e.target.value === "") return onChange(undefined);
-          const next = Number(e.target.value);
-          if (!Number.isFinite(next)) return onChange(undefined);
-          const min = field.min ?? Number.NEGATIVE_INFINITY;
-          const max = field.max ?? Number.POSITIVE_INFINITY;
-          onChange(Math.min(max, Math.max(min, next)));
+    <Field label={label} hint={hint}>
+      <div className="flex gap-2">
+        <Input
+          value={value}
+          disabled={disabled}
+          placeholder="https://…"
+          onChange={(e) => onChange(e.target.value || undefined)}
+        />
+        <Button type="button" disabled={disabled} onClick={() => setOpen(true)} className="shrink-0">
+          {t("common.select")}
+        </Button>
+        {value ? (
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={disabled}
+            onClick={() => onChange(undefined)}
+            className="shrink-0"
+          >
+            {t("common.clear")}
+          </Button>
+        ) : null}
+      </div>
+      <MediaPickerDialog
+        open={open}
+        onClose={() => setOpen(false)}
+        onSelect={([media]) => {
+          if (media) onChange(media.url);
+          setOpen(false);
         }}
       />
     </Field>

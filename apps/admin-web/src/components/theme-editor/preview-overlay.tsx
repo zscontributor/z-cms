@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { LayoutNode, LayoutTokens } from "@zcmsorg/schemas";
+import type { ContentDto, LayoutNode, LayoutTokens } from "@zcmsorg/schemas";
 import { LayoutRenderer } from "@zcmsorg/theme-widgets";
 import type { ThemeContext } from "@zcmsorg/theme-sdk";
 import { Button } from "@/components/ui/button";
@@ -24,12 +24,15 @@ export function PreviewOverlay({
   tokens,
   ctx,
   device,
+  content = null,
   onClose,
 }: {
   nodes: LayoutNode[];
   tokens: LayoutTokens;
   ctx: ThemeContext;
   device: StudioDevice;
+  /** The stand-in page for current-bound widgets (title/content) — null off page/post. */
+  content?: ContentDto | null;
   onClose: () => void;
 }) {
   const t = useT();
@@ -53,6 +56,15 @@ export function PreviewOverlay({
 
   const width = DEVICE_WIDTH[device];
 
+  // The preview is a single-template snapshot, not a browsable site: every widget
+  // link (an archive item, a pager, a menu entry) points at a real theme URL that
+  // does not exist under the admin origin, so a click would leave the editor and
+  // 404. Swallow anchor clicks and form submits so the preview stays put — real
+  // navigation is a live-site concern, not the editor's.
+  const swallowNavigation = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement | null)?.closest?.("a")) e.preventDefault();
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-neutral-900/95 backdrop-blur">
       <div className="flex items-center justify-between border-b border-neutral-700 px-4 py-2 text-neutral-200">
@@ -61,15 +73,20 @@ export function PreviewOverlay({
           {t("themeEditor.studio.closePreview")}
         </Button>
       </div>
-      <div ref={stageRef} className="min-h-0 flex-1 overflow-auto p-6">
+      <div
+        ref={stageRef}
+        className={cn("min-h-0 flex-1 overflow-auto", width ? "p-6" : "")}
+        onClick={swallowNavigation}
+        onSubmit={(e) => e.preventDefault()}
+      >
         <div
           className={cn(
-            "mx-auto bg-white shadow-2xl",
-            width ? "transition-[width]" : "",
+            "mx-auto bg-white",
+            width ? "shadow-2xl transition-[width]" : "min-h-full",
           )}
           style={{ width: width ?? "100%", maxWidth: "100%" }}
         >
-          <LayoutRenderer nodes={nodes} ctx={ctx} tokens={tokens} content={null} />
+          <LayoutRenderer nodes={nodes} ctx={ctx} tokens={tokens} content={content} />
         </div>
       </div>
     </div>

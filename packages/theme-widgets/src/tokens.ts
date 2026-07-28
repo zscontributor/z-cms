@@ -1,3 +1,4 @@
+import { CssColorSchema } from "@zcmsorg/schemas";
 import type {
   BackgroundGradientPreset,
   BoxShadowPreset,
@@ -164,9 +165,33 @@ export function styleForNode(style: NodeStyle | undefined): CSSProperties {
   if (!style) return out as CSSProperties;
 
   if (style.textColor) out.color = style.textColor;
-  if (style.background) out.background = style.background;
-  if (style.backgroundGradient && style.backgroundGradient !== "none") {
-    out.background = GRADIENT_VALUES[style.backgroundGradient];
+
+  // Fills compose. With a background image present, the solid colour, gradient,
+  // overlay and photo are expressed through ONE background-image list so the
+  // shorthand can never clobber the picture — overlay on top (a flat wash that keeps
+  // text legible), then any gradient, then the image; the solid colour sits beneath
+  // as backgroundColor. Without an image the original solid/gradient behaviour is
+  // left exactly as it was. The URL passed CssUrlSchema, so wrapping it in quotes is
+  // safe; the replace is belt-and-suspenders against a `"` the fence already forbids.
+  if (style.backgroundImage) {
+    const layers: string[] = [];
+    if (style.backgroundOverlay) {
+      layers.push(`linear-gradient(0deg, ${style.backgroundOverlay}, ${style.backgroundOverlay})`);
+    }
+    if (style.backgroundGradient && style.backgroundGradient !== "none") {
+      layers.push(GRADIENT_VALUES[style.backgroundGradient]);
+    }
+    layers.push(`url("${style.backgroundImage.replace(/"/g, "%22")}")`);
+    out.backgroundImage = layers.join(", ");
+    out.backgroundSize = style.backgroundSize ?? "cover";
+    out.backgroundPosition = style.backgroundPosition ?? "center";
+    out.backgroundRepeat = "no-repeat";
+    if (style.background) out.backgroundColor = style.background;
+  } else {
+    if (style.background) out.background = style.background;
+    if (style.backgroundGradient && style.backgroundGradient !== "none") {
+      out.background = GRADIENT_VALUES[style.backgroundGradient];
+    }
   }
 
   if (style.paddingX !== undefined) {
@@ -207,6 +232,12 @@ export function styleForNode(style: NodeStyle | undefined): CSSProperties {
   if (style.lineHeight !== undefined) out.lineHeight = String(style.lineHeight);
   if (style.letterSpacing !== undefined) out.letterSpacing = `${style.letterSpacing}px`;
   if (style.opacity !== undefined) out.opacity = String(style.opacity);
+  if (style.width !== undefined) {
+    out.width = `${style.width}${style.widthUnit === "percent" ? "%" : "px"}`;
+  }
+  if (style.height !== undefined) {
+    out.height = `${style.height}${style.heightUnit === "vh" ? "vh" : "px"}`;
+  }
   if (style.minHeight !== undefined) out.minHeight = `${style.minHeight}px`;
 
   // --- Effects: transform, filter, custom shadow, transition, hover ---------
@@ -280,6 +311,18 @@ export function boolProp(
 ): boolean {
   const value = props[key];
   return typeof value === "boolean" ? value : fallback;
+}
+
+/**
+ * Reads a COLOUR prop and returns it only if it passes CssColorSchema — the same
+ * fence the Style drawer applies. `props` is opaque data, so a colour typed straight
+ * into a widget prop (a pager's page background, say) has not been validated by the
+ * document schema the way `style` colours are; validating it here keeps a `url(...)`
+ * or a second declaration from ever reaching an inline style.
+ */
+export function colorProp(props: Record<string, unknown>, key: string): string | undefined {
+  const value = props[key];
+  return typeof value === "string" && CssColorSchema.safeParse(value).success ? value : undefined;
 }
 
 /**

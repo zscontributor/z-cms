@@ -23,7 +23,8 @@
     "open": "開く",
     "build": "ビルド",
     "building": "ビルド中…",
-    "settings": "テーマ設定"
+    "settings": "テーマ設定",
+    "exit": "エディターを閉じる"
   },
   "build": {
     "started": "v{version} をビルド中…",
@@ -51,14 +52,15 @@
   "canvas": {
     "emptyTemplate": "まだ何もありません。セクションを追加して始めましょう。",
     "dropHere": "ここにウィジェットをドロップ",
-    "unknownWidget": "不明なウィジェット: {type}"
+    "unknownWidget": "不明なウィジェット: {type}",
+    "placeholder": "{label} — 右のパネルで設定してください"
   },
   "inspector": {
     "themeTitle": "テーマ",
     "themeHint": "テーマ全体の色・書体・余白。インストール後にサイト所有者が変更できます。",
     "noSelection": "編集するブロックを選択してください。色・書体・余白はツールバーの歯車アイコン（テーマ設定）から変更できます。",
     "unknownWidget": "このビルドは「{type}」を認識しません。そのまま保持されます。",
-    "currentBinding": "このウィジェットは表示中のページを描画します。ホームとアーカイブには単一のページがないため、何も表示されません。",
+    "currentBinding": "動的ウィジェット：表示中の投稿・ページの内容が自動で入ります。投稿またはページのテンプレートに置いてください — 各記事が自分の内容を表示します。（ホームやアーカイブは単一のページではないため空になります。）",
     "dataSource": "データ",
     "budget": "コンテンツリスト {used}/{max} を使用中。",
     "budgetFull": "コンテンツリストを {max} 件すべて使用しています。既存の条件（同じ種類・件数・並び順）を再利用するか、1つ空けてください。",
@@ -89,7 +91,7 @@
     "hint": "クリックすると既製のセクションをキャンバスに追加します。",
     "hero": {
       "label": "ヒーロー",
-      "description": "大きな見出し、一文の説明、行動喚起ボタン。"
+      "description": "背の高いバナー：左に見出し・説明・ボタン、右に画像。"
     },
     "features": {
       "label": "特長（3カラム）",
@@ -110,7 +112,25 @@
     "cta": {
       "label": "行動喚起",
       "description": "中央寄せの案内と1つのボタン。"
+    },
+    "pricing": {
+      "label": "料金表",
+      "description": "3つのプランカードを横並び、中央を強調。"
+    },
+    "contact": {
+      "label": "お問い合わせ",
+      "description": "実働のお問い合わせフォームと紹介文。"
+    },
+    "footer": {
+      "label": "フッター",
+      "description": "ブランド・メニュー・連絡先・著作権表示を含む暗色のフッター。"
     }
+  },
+  "preview": {
+    "sampleTitle": "サンプルページタイトル",
+    "sampleExcerpt": "テーマが抜粋を求める箇所に表示される、ページの短い概要です。",
+    "sampleBody1": "ここにページ自身の内容が表示されます。実際のサイトでは各記事が自分の本文をここに表示します。",
+    "sampleBody2": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
   },
   "a11y": {
     "drag": "{label} をドラッグ",
@@ -132,6 +152,12 @@
     "text": "テキスト",
     "html": "内容",
     "label": "ラベル",
+    "nameLabel": "「名前」欄のラベル",
+    "emailLabel": "「メール」欄のラベル",
+    "messageLabel": "「本文」欄のラベル",
+    "submitLabel": "送信ボタンのラベル",
+    "successText": "成功メッセージ",
+    "errorText": "エラーメッセージ",
     "href": "リンク",
     "heading": "見出し",
     "align": "配置",
@@ -183,6 +209,14 @@
     "arrows": "矢印",
     "dots": "ドット",
     "showNumbers": "ページ番号を表示",
+    "pagerShape": "形状",
+    "pagerRounded": "角丸",
+    "pagerSquare": "四角",
+    "pagerCircle": "円形",
+    "pageBackground": "ページ背景",
+    "pageColor": "ページ文字",
+    "activeBackground": "現在ページの背景",
+    "activeColor": "現在ページの文字",
     "galleryLayout": "レイアウト",
     "galleryGrid": "グリッド",
     "galleryMasonry": "メーソンリー",
@@ -193,11 +227,50 @@
     "sort": "並び順",
     "sortNewest": "新しい順",
     "sortOldest": "古い順",
-    "sortTitle": "タイトル順"
+    "sortTitle": "タイトル順",
+    "title": "タイトル",
+    "body": "本文",
+    "buttonLabel": "ボタンのラベル",
+    "avatarName": "名前（イニシャル用）",
+    "size": "サイズ",
+    "shape": "形",
+    "shapeCircle": "円形",
+    "shapeRounded": "角丸",
+    "shapeSquare": "四角",
+    "variantNeutral": "ニュートラル",
+    "variantSuccess": "成功",
+    "variantWarning": "警告",
+    "variantDanger": "危険",
+    "variantInfo": "情報",
+    "value": "値",
+    "max": "最大値",
+    "showValue": "値を表示",
+    "barColor": "バーの色",
+    "openFirst": "最初の項目を開く",
+    "accordion": {
+      "q1": "項目1 — 見出し",
+      "a1": "項目1 — 内容",
+      "q2": "項目2 — 見出し",
+      "a2": "項目2 — 内容",
+      "q3": "項目3 — 見出し",
+      "a3": "項目3 — 内容",
+      "q4": "項目4 — 見出し",
+      "a4": "項目4 — 内容"
+    },
+    "timelineHtml": "項目",
+    "tableHtml": "表",
+    "showHome": "ホームを表示",
+    "homeLabel": "ホームのラベル",
+    "separator": "区切り",
+    "separatorChevron": "山括弧 ›",
+    "separatorSlash": "スラッシュ /",
+    "separatorDot": "ドット ·"
   },
   "hints": {
     "contentType": "このサイトに実在するタイプ。そのタイプがないサイトにインストールすると、リストは空になります。",
-    "limit": "最大 {max} 件。"
+    "limit": "最大 {max} 件。",
+    "timelineHtml": "1つの項目につきリスト1件。線とドットは自動で描画されます。",
+    "tableHtml": "見出し行を付けて表を書きます。狭い画面では横スクロールします。"
   },
   "tokens": {
     "colorPrimary": "メインカラー",
@@ -213,6 +286,7 @@
   "style": {
     "unset": "デフォルト",
     "group": {
+      "size": "サイズ",
       "colors": "色",
       "spacing": "余白",
       "border": "枠線",
@@ -248,10 +322,38 @@
     "textColor": "文字色",
     "background": "背景色",
     "backgroundGradient": "グラデーション",
+    "backgroundImage": "背景画像",
+    "backgroundImageHint": "このブロックの背景に表示します。フォールバックとして背景色も設定してください。",
+    "backgroundSize": "画像サイズ",
+    "backgroundPosition": "画像の位置",
+    "backgroundOverlay": "画像オーバーレイ",
+    "backgroundVideo": "背景動画",
+    "backgroundVideoHint": "ミュート・ループでこのブロックの背景に再生します。視差効果を減らす設定では非表示 — 背景色か背景画像をフォールバックに設定してください。",
+    "bgSize": {
+      "cover": "全体を覆う",
+      "contain": "枠に収める",
+      "auto": "元のサイズ"
+    },
+    "bgPosition": {
+      "center": "中央",
+      "top": "上",
+      "bottom": "下",
+      "left": "左",
+      "right": "右"
+    },
     "paddingX": "内側余白 — 左右",
     "paddingY": "内側余白 — 上下",
     "marginX": "外側余白 — 左右",
     "marginY": "外側余白 — 上下",
+    "width": "幅",
+    "widthUnit": "幅の単位",
+    "height": "高さ",
+    "heightUnit": "高さの単位",
+    "unit": {
+      "px": "px",
+      "percent": "%",
+      "vh": "vh"
+    },
     "minHeight": "最小の高さ",
     "borderRadius": "角の丸み",
     "borderWidth": "枠線の太さ",
@@ -349,6 +451,10 @@
       "label": "スペーサー",
       "description": "縦の空白。"
     },
+    "contactForm": {
+      "label": "お問い合わせフォーム",
+      "description": "サイト所有者にメールを送る実働のお問い合わせフォーム（名前・メール・本文）。"
+    },
     "postTitle": {
       "label": "ページタイトル",
       "description": "表示中のページのタイトル。"
@@ -360,6 +466,50 @@
     "postList": {
       "label": "コンテンツリスト",
       "description": "サイトの実際のページや投稿（例：最新6件）。"
+    },
+    "card": {
+      "label": "カード",
+      "description": "画像・タイトル・本文・任意のボタンをまとめた枠。横に並べて使えます。"
+    },
+    "avatar": {
+      "label": "アバター",
+      "description": "丸いプロフィール画像、画像がなければ名前のイニシャルを表示します。"
+    },
+    "badge": {
+      "label": "バッジ",
+      "description": "ステータスや件数を示す小さな色付きラベル。"
+    },
+    "tag": {
+      "label": "タグ",
+      "description": "ピル型のラベル。リンクも可能で、カテゴリチップのように使えます。"
+    },
+    "alert": {
+      "label": "アラート",
+      "description": "メモ・ヒント・警告のための色付きの囲み。"
+    },
+    "progress": {
+      "label": "プログレス",
+      "description": "パーセントに応じて満たされる横バー。"
+    },
+    "rating": {
+      "label": "評価（星）",
+      "description": "スコアに応じて満たされる星の列。"
+    },
+    "accordion": {
+      "label": "アコーディオン",
+      "description": "開閉できる質問と回答の行。コード不要で開閉します。"
+    },
+    "timeline": {
+      "label": "タイムライン",
+      "description": "縦に並ぶ項目を線でつないだ一覧。"
+    },
+    "table": {
+      "label": "テーブル",
+      "description": "小さな画面で横スクロールするシンプルな表。"
+    },
+    "breadcrumb": {
+      "label": "パンくずリスト",
+      "description": "表示中のページまでの経路。投稿またはページのテンプレートに配置します。"
     }
   },
   "changelog": {

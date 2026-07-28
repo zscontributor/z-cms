@@ -58,9 +58,9 @@ export default definePlugin<ShopSettings>({
     const reorder = Number(ctx.settings.lowStockThreshold) || 20;
 
     const inventory = await seedIfEmpty(ctx, INVENTORY, [
-      { sku: "LUM-SER-30", product: "Glow Serum · Vitamin C 15%", stock: 120, warehouse: "HCM-01", reorder_level: reorder },
-      { sku: "LUM-CLN-150", product: "Quiet Milk Cleanser", stock: 80, warehouse: "HCM-01", reorder_level: reorder },
-      { sku: "LUM-LIP-05", product: "Velvet Lip Balm · Rosewood", stock: 200, warehouse: "HN-02", reorder_level: reorder },
+      { sku: "LUM-SER-30", product: "Glow Serum · Vitamin C 15%", stock: 120, warehouse: "HCM-01", reorder_level: reorder, cost: 20, price: 48, discount_percent: 20 },
+      { sku: "LUM-CLN-150", product: "Quiet Milk Cleanser", stock: 80, warehouse: "HCM-01", reorder_level: reorder, cost: 11, price: 26 },
+      { sku: "LUM-LIP-05", product: "Velvet Lip Balm · Rosewood", stock: 200, warehouse: "HN-02", reorder_level: reorder, cost: 6, price: 18, sale_price: 14 },
     ]);
 
     const shipping = await seedIfEmpty(ctx, SHIPPING, [

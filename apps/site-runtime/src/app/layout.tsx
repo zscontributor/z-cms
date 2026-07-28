@@ -4,6 +4,7 @@ import { colorModeIconCss, colorModeScript } from "@/lib/color-mode";
 import { contactEnhanceScript } from "@/lib/contact-enhance";
 import { revealOnTargetScript } from "@/lib/reveal-on-target";
 import { sliderScript } from "@/lib/slider";
+import { queryScript } from "@/lib/plugin-query";
 import { resolveDocumentColorMode } from "@/lib/color-mode-server";
 import { resolveDocumentLocale } from "@/lib/render-client";
 import "./globals.css";
@@ -92,6 +93,16 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           nonce={nonce}
           suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: sliderScript() }}
+        />
+        {/* Enhances every `data-zc-query` filter form: fetch the plugin's `query`
+            capability over `/plugin-query/*` and render the returned rows into the
+            theme's row <template>, as text. A no-JS theme shows whatever it rendered
+            on the server; this adds the live, filtered list on top. Bounded to marked
+            forms, values written as text, hrefs refused unless http(s)/relative. */}
+        <script
+          nonce={nonce}
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: queryScript() }}
         />
       </body>
     </html>

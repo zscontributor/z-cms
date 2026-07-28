@@ -10,6 +10,7 @@ import {
   closestCenter,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
@@ -47,13 +48,14 @@ import {
   templateTree,
   withTemplate,
 } from "@/lib/layout-doc";
-import { buildPreviewContext, sampleRows } from "@/lib/preview-context";
+import { buildPreviewContext, sampleContent, sampleRows } from "@/lib/preview-context";
 import {
   buildThemeDraftAction,
   getThemeDraftStatusAction,
   saveThemeDraftAction,
 } from "@/app/actions/theme-draft";
 import { previewCollectionsAction } from "@/app/actions/preview";
+import { LAYOUT_PATTERNS } from "@/lib/layout-templates";
 import type { ThemeDraftDto } from "@/lib/api";
 import { Drawer } from "@/components/ui/drawer";
 import { Canvas } from "./canvas";
@@ -64,11 +66,27 @@ import { TemplateGallery } from "./template-gallery";
 import { ChangelogEditor } from "./changelog-editor";
 import { PublishPanel } from "./publish-panel";
 import { PreviewOverlay } from "./preview-overlay";
-import { DEVICE_GLYPH, DEVICE_WIDTH, STUDIO_DEVICES, type StudioDevice } from "./devices";
+import { DEVICE_ICON, DEVICE_WIDTH, STUDIO_DEVICES, type StudioDevice } from "./devices";
 
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 1.3;
 const ZOOM_STEP = 0.1;
+
+/**
+ * A version string the server's parseSemver will accept: three dotted numbers with
+ * an optional `-pre` / `+build` tail. The field validates against this so a typo is
+ * caught here, not at build time.
+ */
+const SEMVER_RE = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)*$/;
+
+/**
+ * Keep only the characters a semver can legally contain — digits, dots, and the
+ * `-`/`+`/alphanumerics of a prerelease or build tail. Applied on every keystroke so
+ * a space, a slash or a letter-in-the-wrong-place simply cannot be entered.
+ */
+function sanitizeVersion(input: string): string {
+  return input.replace(/[^0-9A-Za-z.+-]/g, "");
+}
 
 /**
  * The document plus its undo/redo stacks.
@@ -168,6 +186,10 @@ export function ThemeEditor({
   // header. The tokens used to live in the Inspector's empty state, which meant
   // deselecting everything to reach them; a drawer makes them a deliberate place.
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // Release notes + signing/submitting live in a drawer, opened by "Publish" in the
+  // header — the panel is the last step of the job, not something to keep on screen
+  // the whole time the design is being drawn.
+  const [publishOpen, setPublishOpen] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [version, setVersion] = useState(draft.version);
   // The last version the server acknowledged. The `version` state is what the field
@@ -249,7 +271,12 @@ export function ThemeEditor({
    * never blank — either way it flows through exactly the path the live theme will.
    */
   const ctx = useMemo(() => {
-    const base = buildPreviewContext({ siteName, locale, menus });
+    const base = buildPreviewContext({
+      siteName,
+      locale,
+      menus,
+      sampleBody: [t("themeEditor.preview.sampleBody1"), t("themeEditor.preview.sampleBody2")],
+    });
     const collections: Record<string, ContentDto[]> = {};
     for (const [name, query] of Object.entries(collectDocumentCollections(doc))) {
       // Once a list has been fetched it wins, even when it came back EMPTY — a type
@@ -263,7 +290,7 @@ export function ThemeEditor({
       collections[name] = sampleRows(query.limit ?? 6, label);
     }
     return { ...base, collections } as typeof base;
-  }, [doc, siteName, locale, menus, contentTypes, realCollections]);
+  }, [doc, siteName, locale, menus, contentTypes, realCollections, t]);
 
   const mutate = useCallback(
     (next: LayoutNode[]) => {
@@ -312,13 +339,20 @@ export function ThemeEditor({
 
   /** A human name for what is being dragged, for the floating overlay. */
   const labelForDrag = useCallback(
-    (active: { id: string | number; data: { current?: { kind?: string; widgetType?: string } } }) => {
+    (active: {
+      id: string | number;
+      data: { current?: { kind?: string; widgetType?: string; patternKey?: string } };
+    }) => {
       const data = active.data.current;
       const widgetLabel = (type: string) => {
         const spec = WIDGET_CATALOG.find((s) => s.type === type);
         return spec ? t(spec.labelKey) : type;
       };
       if (data?.kind === "new" && data.widgetType) return widgetLabel(data.widgetType);
+      if (data?.kind === "template" && data.patternKey) {
+        const pattern = LAYOUT_PATTERNS.find((p) => p.key === data.patternKey);
+        return pattern ? t(pattern.labelKey) : "template";
+      }
       const found = locate(tree, String(active.id));
       if (!found) return null;
       const node = found.node;
@@ -327,6 +361,31 @@ export function ThemeEditor({
     },
     [t, tree],
   );
+
+  /**
+   * closestCenter over ALL droppables picks whichever center is nearest the pointer,
+   * and a section's inner column sits closer to the pointer than the thin section-slot
+   * gaps around it. So a starter pattern dragged over the middle of a section resolved
+   * to a column — a target the template branch of `onDragEnd` can't place into, so it
+   * fell through to "append at the end". A dragged thing only ever lands in one class
+   * of slot, so scope the candidates to that class before measuring distance: a pattern
+   * or a section moves between section-slots; a new widget drops into a column. Then the
+   * insertion line and the drop index agree, and the pattern lands where the pointer is.
+   */
+  const collisionDetection = useCallback<CollisionDetection>((args) => {
+    const kind = (args.active.data.current as { kind?: string } | undefined)?.kind;
+    const wants =
+      kind === "template" || kind === "section"
+        ? "section-slot"
+        : kind === "new"
+          ? "column"
+          : null;
+    if (!wants) return closestCenter(args);
+    const scoped = args.droppableContainers.filter(
+      (c) => (c.data.current as { kind?: string } | undefined)?.kind === wants,
+    );
+    return closestCenter({ ...args, droppableContainers: scoped });
+  }, []);
 
   function onDragStart(event: DragStartEvent) {
     setDragLabel(labelForDrag(event.active));
@@ -337,8 +396,26 @@ export function ThemeEditor({
     const { active, over } = event;
     if (!over) return;
 
-    const activeData = active.data.current as { kind?: string; widgetType?: string } | undefined;
+    const activeData = active.data.current as
+      | { kind?: string; widgetType?: string; patternKey?: string }
+      | undefined;
+    const overData = over.data.current as { kind?: string; index?: number } | undefined;
     const overId = String(over.id);
+
+    // A starter pattern from the Templates tab: build fresh section nodes and splice
+    // them in at the slot's index — or append if it was not dropped on a slot.
+    if (activeData?.kind === "template" && activeData.patternKey) {
+      const pattern = LAYOUT_PATTERNS.find((p) => p.key === activeData.patternKey);
+      if (!pattern) return;
+      const nodes = pattern.build();
+      const index =
+        overData?.kind === "section-slot" ? overData.index ?? tree.length : tree.length;
+      const next = [...tree];
+      next.splice(Math.max(0, Math.min(index, next.length)), 0, ...nodes);
+      mutate(next);
+      if (nodes[0]) setSelectedId(nodes[0].id);
+      return;
+    }
 
     // A palette item is not in the tree yet — dropping it is an insert, not a move.
     if (activeData?.kind === "new" && activeData.widgetType) {
@@ -351,6 +428,26 @@ export function ThemeEditor({
     }
 
     const activeId = String(active.id);
+
+    // A top-level section reordered onto a root slot: move it to that index. Only a
+    // section (a root node) can land here — a widget dropped on a slot is a no-op.
+    if (overData?.kind === "section-slot") {
+      const found = locate(tree, activeId);
+      if (!found || found.parent || found.node.kind !== "section") return;
+      const from = tree.findIndex((n) => n.id === activeId);
+      if (from === -1) return;
+      const copy = [...tree];
+      const [item] = copy.splice(from, 1);
+      if (!item) return;
+      // The removed item shifts everything after it left by one, so a move to a later
+      // slot must account for the hole it left behind.
+      let to = overData.index ?? tree.length;
+      if (from < to) to -= 1;
+      copy.splice(Math.max(0, Math.min(to, copy.length)), 0, item);
+      if (copy.some((n, i) => n.id !== tree[i]?.id)) mutate(copy);
+      return;
+    }
+
     if (activeId === overId) return;
 
     // moveNode refuses a drop the containment rule forbids and returns the tree
@@ -472,10 +569,10 @@ export function ThemeEditor({
   function commitVersion() {
     const next = version.trim();
     if (next === savedVersionRef.current) return;
-    // The same shape parseSemver accepts on the server: three dotted numbers with an
-    // optional -pre / +build tail. Caught here so a typo is a sentence now, not a
-    // build failure later.
-    if (!/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)*$/.test(next)) {
+    // The same shape parseSemver accepts on the server (SEMVER_RE). The field already
+    // blocks stray characters as they are typed; this catches a still-incomplete
+    // version (e.g. "1.2") and snaps the field back rather than sending it on.
+    if (!SEMVER_RE.test(next)) {
       setMessage(t("themeEditor.version.invalid"));
       setVersion(savedVersionRef.current);
       return;
@@ -567,17 +664,28 @@ export function ThemeEditor({
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCenter}
+      collisionDetection={collisionDetection}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onDragCancel={() => setDragLabel(null)}
     >
-      <div className="flex h-[100dvh] w-screen flex-col bg-neutral-950">
-        {/* The chrome is dark (studio look) while the canvas paper stays light and
-            readable, so `dark` is scoped to each chrome panel — header and the two
-            asides — not the whole tree. Tailwind v4 dark = a `.dark` ancestor. */}
-        <header className="dark flex items-center justify-between gap-3 border-b border-neutral-800 bg-neutral-900 px-4 py-2 text-neutral-100">
+      <div className="flex h-[100dvh] w-screen flex-col bg-neutral-100 dark:bg-neutral-950">
+        {/* The chrome follows the admin's own light/dark mode (the `.dark` class the
+            toggle puts on <html>): every panel carries a light default and a `dark:`
+            override, so the studio is dark only when the admin is. The canvas paper
+            stays its own colour (white in light, near-black in dark) regardless. */}
+        <header className="flex items-center justify-between gap-3 border-b border-neutral-200 bg-neutral-50 px-4 py-2 text-neutral-800 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-100">
           <div className="flex items-center gap-3">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="px-2"
+              onClick={() => router.push("/appearance")}
+              aria-label={t("themeEditor.actions.exit")}
+              title={t("themeEditor.actions.exit")}
+            >
+              <Icon name="close" size={16} />
+            </Button>
             <h1 className="text-sm font-semibold">{draft.name}</h1>
             <div className="flex items-center gap-1.5 text-xs text-neutral-500">
               <code>{draft.key}</code>
@@ -588,8 +696,16 @@ export function ThemeEditor({
                 </span>
                 <input
                   aria-label={t("themeEditor.version.label")}
+                  // Semver-shaped, live. onChange strips any character that cannot
+                  // appear in a version (so a space or a slash never enters), and the
+                  // border turns amber while the value is not yet a complete
+                  // `x.y.z` — a clear "not saveable yet" without waiting for blur.
                   value={version}
-                  onChange={(event) => setVersion(event.target.value)}
+                  inputMode="text"
+                  spellCheck={false}
+                  autoCorrect="off"
+                  aria-invalid={!SEMVER_RE.test(version.trim())}
+                  onChange={(event) => setVersion(sanitizeVersion(event.target.value))}
                   onBlur={commitVersion}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
@@ -599,7 +715,12 @@ export function ThemeEditor({
                   }}
                   disabled={disabled}
                   size={8}
-                  className="w-16 rounded border border-neutral-200 bg-transparent px-1 py-0.5 font-mono text-xs text-neutral-700 focus:border-brand-500 focus:outline-none disabled:opacity-60 dark:border-neutral-700 dark:text-neutral-300"
+                  className={cn(
+                    "w-16 rounded border bg-transparent px-1 py-0.5 font-mono text-xs focus:outline-none disabled:opacity-60",
+                    SEMVER_RE.test(version.trim())
+                      ? "border-neutral-200 text-neutral-700 focus:border-brand-500 dark:border-neutral-700 dark:text-neutral-300"
+                      : "border-amber-500 text-amber-600 focus:border-amber-500 dark:text-amber-400",
+                  )}
                 />
               </label>
             </div>
@@ -607,7 +728,7 @@ export function ThemeEditor({
 
           {/* Centre: undo/redo · device · zoom — the studio's viewport controls. */}
           <div className="flex items-center gap-1.5">
-            <div className="flex items-center rounded-lg border border-neutral-700 bg-neutral-950 p-0.5">
+            <div className="flex items-center rounded-lg border border-neutral-300 bg-neutral-100 p-0.5 dark:border-neutral-700 dark:bg-neutral-950">
               <Button
                 size="sm"
                 variant="ghost"
@@ -633,7 +754,7 @@ export function ThemeEditor({
             </div>
 
             <div
-              className="flex items-center rounded-lg border border-neutral-700 bg-neutral-950 p-0.5"
+              className="flex items-center rounded-lg border border-neutral-300 bg-neutral-100 p-0.5 dark:border-neutral-700 dark:bg-neutral-950"
               role="group"
               aria-label={t("themeEditor.studio.device")}
             >
@@ -646,21 +767,21 @@ export function ThemeEditor({
                   title={t(`themeEditor.studio.${d}`)}
                   onClick={() => setDevice(d)}
                   className={cn(
-                    "h-7 w-8 rounded text-sm leading-none",
+                    "flex h-7 w-8 items-center justify-center rounded",
                     device === d
-                      ? "bg-brand-500/20 text-brand-300"
-                      : "text-neutral-400 hover:text-neutral-100",
+                      ? "bg-brand-500/20 text-brand-700 dark:text-brand-300"
+                      : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100",
                   )}
                 >
-                  {DEVICE_GLYPH[d]}
+                  <Icon name={DEVICE_ICON[d]} size={16} />
                 </button>
               ))}
             </div>
 
-            <div className="flex items-center rounded-lg border border-neutral-700 bg-neutral-950 p-0.5">
+            <div className="flex items-center rounded-lg border border-neutral-300 bg-neutral-100 p-0.5 dark:border-neutral-700 dark:bg-neutral-950">
               <button
                 type="button"
-                className="h-7 w-7 rounded text-neutral-400 hover:text-neutral-100"
+                className="h-7 w-7 rounded text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
                 aria-label={t("themeEditor.studio.zoomOut")}
                 onClick={() => setZoom((z) => Math.max(ZOOM_MIN, Math.round((z - ZOOM_STEP) * 100) / 100))}
               >
@@ -668,7 +789,7 @@ export function ThemeEditor({
               </button>
               <button
                 type="button"
-                className="w-12 text-xs tabular-nums text-neutral-300"
+                className="w-12 text-xs tabular-nums text-neutral-600 dark:text-neutral-300"
                 aria-label={t("themeEditor.studio.zoomReset")}
                 onClick={() => setZoom(1)}
               >
@@ -676,7 +797,7 @@ export function ThemeEditor({
               </button>
               <button
                 type="button"
-                className="h-7 w-7 rounded text-neutral-400 hover:text-neutral-100"
+                className="h-7 w-7 rounded text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
                 aria-label={t("themeEditor.studio.zoomIn")}
                 onClick={() => setZoom((z) => Math.min(ZOOM_MAX, Math.round((z + ZOOM_STEP) * 100) / 100))}
               >
@@ -688,9 +809,9 @@ export function ThemeEditor({
           {/* Right: status + preview + settings + save + build. */}
           <div className="flex items-center gap-2">
             {message ? (
-              <span className="max-w-[16rem] truncate text-xs text-neutral-400">{message}</span>
+              <span className="max-w-[16rem] truncate text-xs text-neutral-500 dark:text-neutral-400">{message}</span>
             ) : null}
-            {dirty ? <span className="text-xs text-amber-400">{t("themeEditor.unsaved")}</span> : null}
+            {dirty ? <span className="text-xs text-amber-600 dark:text-amber-400">{t("themeEditor.unsaved")}</span> : null}
             <Button
               size="sm"
               variant="ghost"
@@ -723,13 +844,22 @@ export function ThemeEditor({
                   : t("themeEditor.actions.build")}
               </Button>
             ) : null}
+            <Button
+              size="sm"
+              variant="ghost"
+              className="gap-1 px-2"
+              onClick={() => setPublishOpen(true)}
+            >
+              <Icon name="upload" size={16} />
+              {t("themeEditor.publish.heading")}
+            </Button>
           </div>
         </header>
 
         <div className="flex min-h-0 flex-1">
-          <aside className="dark flex w-60 shrink-0 flex-col border-r border-neutral-800 bg-neutral-900 text-neutral-200">
+          <aside className="flex w-60 shrink-0 flex-col border-r border-neutral-200 bg-neutral-50 text-neutral-700 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200">
             <div
-              className="flex gap-1 border-b border-neutral-800 px-2 pt-2"
+              className="flex h-11 items-stretch gap-1 border-b border-neutral-200 px-2 dark:border-neutral-800"
               role="tablist"
               aria-label={t("themeEditor.studio.leftPanel")}
             >
@@ -741,10 +871,10 @@ export function ThemeEditor({
                   aria-selected={leftTab === name}
                   onClick={() => setLeftTab(name)}
                   className={cn(
-                    "flex-1 rounded-t px-2 py-1.5 text-xs font-medium",
+                    "flex flex-1 items-center justify-center rounded-t px-2 text-xs font-medium",
                     leftTab === name
-                      ? "border-b-2 border-brand-500 text-brand-300"
-                      : "text-neutral-400 hover:text-neutral-100",
+                      ? "border-b-2 border-brand-500 text-brand-700 dark:text-brand-300"
+                      : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100",
                   )}
                 >
                   {t(`themeEditor.studio.${name}`)}
@@ -779,7 +909,7 @@ export function ThemeEditor({
           <main className="flex min-w-0 flex-1 flex-col">
             {/* Template strip: which of the four trees is on the canvas. */}
             <div
-              className="dark flex items-center gap-1 border-b border-neutral-800 bg-neutral-900 px-3 py-1.5"
+              className="flex h-11 items-center gap-1 border-b border-neutral-200 bg-neutral-50 px-3 dark:border-neutral-800 dark:bg-neutral-900"
               role="tablist"
               aria-label={t("themeEditor.templates.label")}
             >
@@ -793,7 +923,7 @@ export function ThemeEditor({
                     "rounded px-2.5 py-1 text-xs",
                     template === name
                       ? "bg-brand-500 text-white"
-                      : "text-neutral-400 hover:bg-neutral-800",
+                      : "text-neutral-500 hover:bg-neutral-200 dark:text-neutral-400 dark:hover:bg-neutral-800",
                   )}
                   onClick={() => {
                     setTemplate(name);
@@ -805,15 +935,10 @@ export function ThemeEditor({
               ))}
             </div>
 
-            {/* The workspace: a dark, dotted surface holding the device-framed paper.
-                Width follows the device; zoom scales the paper from the top-centre. */}
-            <div
-              className="min-h-0 flex-1 overflow-auto p-6"
-              style={{
-                background:
-                  "radial-gradient(circle at 1px 1px, rgba(255,255,255,.10) 1px, transparent 0) 0 0 / 18px 18px, #1f2430",
-              }}
-            >
+            {/* The workspace: a dotted surface holding the device-framed paper. The
+                dot colour and base follow the admin's mode (see `.studio-workspace` in
+                globals.css). Width follows the device; zoom scales from the top-centre. */}
+            <div className="studio-workspace min-h-0 flex-1 overflow-auto p-6">
               <div
                 className="mx-auto bg-white shadow-2xl transition-[width]"
                 style={{
@@ -850,9 +975,10 @@ export function ThemeEditor({
             </div>
           </main>
 
-          {/* One scroll column beside the design: Inspector, then Release notes and
-              the Publish flow — the last steps of the same job. */}
-          <aside className="dark flex w-80 shrink-0 flex-col overflow-y-auto border-l border-neutral-800 bg-neutral-900 text-neutral-200">
+          {/* The right column is the Inspector alone now — the block a person is
+              editing. Release notes and the Publish flow moved into the Publish
+              drawer (header button): the last steps of the job, not permanent chrome. */}
+          <aside className="flex w-80 shrink-0 flex-col overflow-y-auto border-l border-neutral-200 bg-neutral-50 text-neutral-700 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200">
             <Inspector
               doc={doc}
               node={selected}
@@ -863,13 +989,6 @@ export function ThemeEditor({
               onStyle={(style) => selectedId && mutate(setStyle(tree, selectedId, style))}
               onDelete={() => selectedId && deleteNode(selectedId)}
               onDuplicate={() => selectedId && mutate(duplicateNode(tree, selectedId))}
-            />
-            <ChangelogEditor draftId={draft.id} changelog={draft.changelog} />
-            <PublishPanel
-              draftId={draft.id}
-              draftKey={draft.key}
-              payloadChecksum={dirty ? null : draft.payloadChecksum}
-              canPublish={canPublish}
             />
           </aside>
         </div>
@@ -889,6 +1008,29 @@ export function ThemeEditor({
         <ThemeTokensFields tokens={doc.tokens} onChange={applyTokens} disabled={disabled} />
       </Drawer>
 
+      {/* Publish: release notes, then sign/submit. Opened by "Publish" in the header
+          rather than parked in the sidebar — it is the last step, reached on purpose
+          once the design is built, not something to keep on screen while drawing. */}
+      <Drawer
+        open={publishOpen}
+        onClose={() => setPublishOpen(false)}
+        title={t("themeEditor.publish.heading")}
+        width="md"
+      >
+        {/* Each panel brings its own p-4 and a top divider; cancel the drawer body's
+            padding so they aren't doubled, and drop the first divider so it doesn't
+            double the drawer header's own border. */}
+        <div className="-m-4 [&>section:first-child]:border-t-0">
+          <ChangelogEditor draftId={draft.id} changelog={draft.changelog} />
+          <PublishPanel
+            draftId={draft.id}
+            draftKey={draft.key}
+            payloadChecksum={dirty ? null : draft.payloadChecksum}
+            canPublish={canPublish}
+          />
+        </div>
+      </Drawer>
+
       {/* Preview: the drawn template rendered chrome-less, at the chosen device
           width, from the same context the canvas uses. Sample data for now — M3
           swaps in the site's real rows. */}
@@ -898,6 +1040,16 @@ export function ThemeEditor({
           tokens={doc.tokens}
           ctx={ctx}
           device={device}
+          // A stand-in page so title/content widgets fill in — only the page/post
+          // templates have a single viewed page; home/archive keep it null.
+          content={
+            template === "post" || template === "page"
+              ? sampleContent({
+                  title: t("themeEditor.preview.sampleTitle"),
+                  excerpt: t("themeEditor.preview.sampleExcerpt"),
+                })
+              : null
+          }
           onClose={() => setPreviewOpen(false)}
         />
       ) : null}

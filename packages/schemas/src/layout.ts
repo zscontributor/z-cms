@@ -174,6 +174,39 @@ export const CssColorSchema = z
     { message: "Not a permitted CSS colour (hex, rgb(), hsl(), or a keyword)." },
   );
 
+/**
+ * A URL a drawn style may point a background at — an image or a video from the
+ * media library, or a site/absolute URL.
+ *
+ * It is fenced as tightly as `CssColorSchema`, because it reaches two places a bad
+ * value could break out of: `background-image: url("…")` in an inline style, and a
+ * `<video src="…">` attribute. So it accepts only the shapes that cannot escape
+ * either — an http(s) URL, a protocol-relative `//host`, or a root-relative `/path`
+ * — and forbids every character that could end the `url()` or the attribute (quote,
+ * paren, angle bracket, backslash, whitespace, semicolon). No `javascript:`/`data:`.
+ */
+const SAFE_URL_CHARS = /^[^\s"'()<>\\;]+$/;
+export const CssUrlSchema = z
+  .string()
+  .trim()
+  .refine(
+    (v) =>
+      SAFE_URL_CHARS.test(v) &&
+      (v.startsWith("https://") ||
+        v.startsWith("http://") ||
+        v.startsWith("//") ||
+        v.startsWith("/")),
+    { message: "Not a permitted asset URL (use https://, //host or /path)." },
+  );
+
+/** How a background image sizes to its box — a name, never a free CSS value. */
+export const BACKGROUND_SIZES = ["cover", "contain", "auto"] as const;
+export type BackgroundSize = (typeof BACKGROUND_SIZES)[number];
+
+/** Where a background image anchors. */
+export const BACKGROUND_POSITIONS = ["center", "top", "bottom", "left", "right"] as const;
+export type BackgroundPosition = (typeof BACKGROUND_POSITIONS)[number];
+
 /** Preset enums. A name here maps to a fixed declaration in the widget library. */
 export const BOX_SHADOW_PRESETS = ["none", "sm", "md", "lg", "xl"] as const;
 export type BoxShadowPreset = (typeof BOX_SHADOW_PRESETS)[number];
@@ -201,6 +234,13 @@ export type NodeTextAlign = (typeof TEXT_ALIGNS)[number];
 export const TRANSITION_EASINGS = ["ease", "ease-in-out", "linear", "smooth"] as const;
 export type TransitionEasing = (typeof TRANSITION_EASINGS)[number];
 
+/** The units a width/height may carry. A name maps to a fixed CSS unit, never a
+ *  free string, so the value can never smuggle anything past the inline style. */
+export const WIDTH_UNITS = ["px", "percent"] as const;
+export type WidthUnit = (typeof WIDTH_UNITS)[number];
+export const HEIGHT_UNITS = ["px", "vh"] as const;
+export type HeightUnit = (typeof HEIGHT_UNITS)[number];
+
 /**
  * Every knob is optional and bounded; `.strict()` rejects a key the widget library
  * does not read, so a document cannot smuggle an unknown property through `props`'
@@ -211,6 +251,16 @@ export const NodeStyleSchema = z
     textColor: CssColorSchema.optional(),
     background: CssColorSchema.optional(),
     backgroundGradient: z.enum(BACKGROUND_GRADIENT_PRESETS).optional(),
+    // A background photo (CSS) and a background video (a rendered <video>), plus the
+    // knobs that keep either legible: how the image sizes/anchors, and a translucent
+    // overlay laid over it so text on top stays readable. URLs pass CssUrlSchema; the
+    // widget library composes the image into one background-image list and renders
+    // the video behind the node's content — the author supplies a URL, never CSS.
+    backgroundImage: CssUrlSchema.optional(),
+    backgroundSize: z.enum(BACKGROUND_SIZES).optional(),
+    backgroundPosition: z.enum(BACKGROUND_POSITIONS).optional(),
+    backgroundOverlay: CssColorSchema.optional(),
+    backgroundVideo: CssUrlSchema.optional(),
     paddingX: z.number().min(0).max(256).optional(),
     paddingY: z.number().min(0).max(256).optional(),
     marginX: z.number().min(0).max(256).optional(),
@@ -226,6 +276,10 @@ export const NodeStyleSchema = z
     lineHeight: z.number().min(0.8).max(3).optional(),
     letterSpacing: z.number().min(-5).max(20).optional(),
     opacity: z.number().min(0).max(1).optional(),
+    width: z.number().min(0).max(2560).optional(),
+    widthUnit: z.enum(WIDTH_UNITS).optional(),
+    height: z.number().min(0).max(2560).optional(),
+    heightUnit: z.enum(HEIGHT_UNITS).optional(),
     minHeight: z.number().min(0).max(2000).optional(),
 
     // --- Effects: transform, filter, custom shadow, hover -------------------
@@ -260,8 +314,9 @@ export type NodeStyle = z.infer<typeof NodeStyleSchema>;
  * by catalogue key (never text) so it localises with no per-field code. The widget
  * library reads `NodeStyle` by name; this list is only how the editor draws it.
  */
-export type NodeStyleControl = "color" | "number" | "select";
+export type NodeStyleControl = "color" | "number" | "select" | "image" | "video";
 export type NodeStyleGroup =
+  | "size"
   | "colors"
   | "spacing"
   | "border"
@@ -281,6 +336,10 @@ export interface NodeStyleFieldSpec {
   max?: number;
   step?: number;
   options?: readonly { value: string; labelKey: string }[];
+  /** For a dimension (width/height): the style key holding its unit, rendered as a
+   *  small dropdown INLINE after the number input rather than as its own row. */
+  unitKey?: keyof NodeStyle;
+  unitOptions?: readonly { value: string; labelKey: string }[];
 }
 
 const enumOptions = (
@@ -290,6 +349,10 @@ const enumOptions = (
   values.map((value) => ({ value, labelKey: `${prefix}.${value}` }));
 
 export const NODE_STYLE_FIELDS: readonly NodeStyleFieldSpec[] = [
+  // Opacity leads the appearance controls — it affects the whole block and is reached
+  // often, so it sits at the top of the earliest style group rather than buried in
+  // Typography where it once lived.
+  { key: "opacity", labelKey: "themeEditor.style.opacity", control: "number", group: "colors", min: 0, max: 1, step: 0.05 },
   { key: "textColor", labelKey: "themeEditor.style.textColor", control: "color", group: "colors" },
   { key: "background", labelKey: "themeEditor.style.background", control: "color", group: "colors" },
   {
@@ -299,11 +362,48 @@ export const NODE_STYLE_FIELDS: readonly NodeStyleFieldSpec[] = [
     group: "colors",
     options: enumOptions(BACKGROUND_GRADIENT_PRESETS, "themeEditor.style.gradient"),
   },
+  { key: "backgroundImage", labelKey: "themeEditor.style.backgroundImage", control: "image", group: "colors" },
+  {
+    key: "backgroundSize",
+    labelKey: "themeEditor.style.backgroundSize",
+    control: "select",
+    group: "colors",
+    options: enumOptions(BACKGROUND_SIZES, "themeEditor.style.bgSize"),
+  },
+  {
+    key: "backgroundPosition",
+    labelKey: "themeEditor.style.backgroundPosition",
+    control: "select",
+    group: "colors",
+    options: enumOptions(BACKGROUND_POSITIONS, "themeEditor.style.bgPosition"),
+  },
+  { key: "backgroundOverlay", labelKey: "themeEditor.style.backgroundOverlay", control: "color", group: "colors" },
+  { key: "backgroundVideo", labelKey: "themeEditor.style.backgroundVideo", control: "video", group: "colors" },
   { key: "paddingX", labelKey: "themeEditor.style.paddingX", control: "number", group: "spacing", min: 0, max: 256 },
   { key: "paddingY", labelKey: "themeEditor.style.paddingY", control: "number", group: "spacing", min: 0, max: 256 },
   { key: "marginX", labelKey: "themeEditor.style.marginX", control: "number", group: "spacing", min: 0, max: 256 },
   { key: "marginY", labelKey: "themeEditor.style.marginY", control: "number", group: "spacing", min: 0, max: 256 },
-  { key: "minHeight", labelKey: "themeEditor.style.minHeight", control: "number", group: "spacing", min: 0, max: 2000 },
+  {
+    key: "width",
+    labelKey: "themeEditor.style.width",
+    control: "number",
+    group: "size",
+    min: 0,
+    max: 2560,
+    unitKey: "widthUnit",
+    unitOptions: enumOptions(WIDTH_UNITS, "themeEditor.style.unit"),
+  },
+  {
+    key: "height",
+    labelKey: "themeEditor.style.height",
+    control: "number",
+    group: "size",
+    min: 0,
+    max: 2560,
+    unitKey: "heightUnit",
+    unitOptions: enumOptions(HEIGHT_UNITS, "themeEditor.style.unit"),
+  },
+  { key: "minHeight", labelKey: "themeEditor.style.minHeight", control: "number", group: "size", min: 0, max: 2000 },
   { key: "borderRadius", labelKey: "themeEditor.style.borderRadius", control: "number", group: "border", min: 0, max: 128 },
   { key: "borderWidth", labelKey: "themeEditor.style.borderWidth", control: "number", group: "border", min: 0, max: 16 },
   {
@@ -338,7 +438,6 @@ export const NODE_STYLE_FIELDS: readonly NodeStyleFieldSpec[] = [
   },
   { key: "lineHeight", labelKey: "themeEditor.style.lineHeight", control: "number", group: "typography", min: 0.8, max: 3, step: 0.1 },
   { key: "letterSpacing", labelKey: "themeEditor.style.letterSpacing", control: "number", group: "typography", min: -5, max: 20, step: 0.5 },
-  { key: "opacity", labelKey: "themeEditor.style.opacity", control: "number", group: "typography", min: 0, max: 1, step: 0.05 },
 
   { key: "translateX", labelKey: "themeEditor.style.translateX", control: "number", group: "transform", min: -1000, max: 1000 },
   { key: "translateY", labelKey: "themeEditor.style.translateY", control: "number", group: "transform", min: -1000, max: 1000 },

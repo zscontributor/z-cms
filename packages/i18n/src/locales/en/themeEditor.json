@@ -23,7 +23,8 @@
     "open": "Open",
     "build": "Build",
     "building": "Building…",
-    "settings": "Theme settings"
+    "settings": "Theme settings",
+    "exit": "Close editor"
   },
   "build": {
     "started": "Building v{version}…",
@@ -51,14 +52,15 @@
   "canvas": {
     "emptyTemplate": "Nothing here yet. Add a section to start.",
     "dropHere": "Drop a widget here",
-    "unknownWidget": "Unknown widget: {type}"
+    "unknownWidget": "Unknown widget: {type}",
+    "placeholder": "{label} — set it up in the panel on the right"
   },
   "inspector": {
     "themeTitle": "Theme",
     "themeHint": "Colours, type and spacing for the whole theme. A site owner can change these after installing it.",
     "noSelection": "Select a block to edit it. For colours, fonts and spacing, open Theme settings — the gear in the toolbar.",
     "unknownWidget": "This build does not know \"{type}\". It is kept as-is.",
-    "currentBinding": "This widget shows the page being viewed. On Home and Archive there is no single page, so it renders nothing.",
+    "currentBinding": "A dynamic widget: it fills in from the page being viewed. Put it on the Post or Page template — each entry then shows its own content. (Empty on Home and Archive, which are not a single page.)",
     "dataSource": "Data",
     "budget": "{used} of {max} content lists used.",
     "budgetFull": "All {max} content lists are used. Reuse an existing question — same type, count and order — or free one up.",
@@ -89,7 +91,7 @@
     "hint": "Click to drop a ready-made section onto the canvas.",
     "hero": {
       "label": "Hero",
-      "description": "A bold headline, a line of copy and a call to action."
+      "description": "A tall banner: headline, copy and a button on the left, your image on the right."
     },
     "features": {
       "label": "Features (3 columns)",
@@ -110,7 +112,25 @@
     "cta": {
       "label": "Call to action",
       "description": "A centred prompt with a single button."
+    },
+    "pricing": {
+      "label": "Pricing",
+      "description": "Three plan cards side by side, the middle one highlighted."
+    },
+    "contact": {
+      "label": "Contact",
+      "description": "An intro beside a working contact form."
+    },
+    "footer": {
+      "label": "Footer",
+      "description": "A dark footer with brand, a menu, contact details and a copyright line."
     }
+  },
+  "preview": {
+    "sampleTitle": "Sample page title",
+    "sampleExcerpt": "A short summary of the page, shown where the theme asks for an excerpt.",
+    "sampleBody1": "This is where the page's own content appears. On the live site each entry shows its own body here.",
+    "sampleBody2": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
   },
   "a11y": {
     "drag": "Drag {label}",
@@ -132,6 +152,12 @@
     "text": "Text",
     "html": "Content",
     "label": "Label",
+    "nameLabel": "Name field label",
+    "emailLabel": "Email field label",
+    "messageLabel": "Message field label",
+    "submitLabel": "Submit button label",
+    "successText": "Success message",
+    "errorText": "Error message",
     "href": "Link",
     "heading": "Heading",
     "align": "Align",
@@ -183,6 +209,14 @@
     "arrows": "Arrows",
     "dots": "Dots",
     "showNumbers": "Show page numbers",
+    "pagerShape": "Shape",
+    "pagerRounded": "Rounded",
+    "pagerSquare": "Square",
+    "pagerCircle": "Circle",
+    "pageBackground": "Page background",
+    "pageColor": "Page text",
+    "activeBackground": "Active background",
+    "activeColor": "Active text",
     "galleryLayout": "Layout",
     "galleryGrid": "Grid",
     "galleryMasonry": "Masonry",
@@ -193,11 +227,50 @@
     "sort": "Order",
     "sortNewest": "Newest first",
     "sortOldest": "Oldest first",
-    "sortTitle": "By title"
+    "sortTitle": "By title",
+    "title": "Title",
+    "body": "Text",
+    "buttonLabel": "Button label",
+    "avatarName": "Name (for initials)",
+    "size": "Size",
+    "shape": "Shape",
+    "shapeCircle": "Circle",
+    "shapeRounded": "Rounded",
+    "shapeSquare": "Square",
+    "variantNeutral": "Neutral",
+    "variantSuccess": "Success",
+    "variantWarning": "Warning",
+    "variantDanger": "Danger",
+    "variantInfo": "Info",
+    "value": "Value",
+    "max": "Out of",
+    "showValue": "Show value",
+    "barColor": "Bar colour",
+    "openFirst": "Open the first item",
+    "accordion": {
+      "q1": "Item 1 — heading",
+      "a1": "Item 1 — content",
+      "q2": "Item 2 — heading",
+      "a2": "Item 2 — content",
+      "q3": "Item 3 — heading",
+      "a3": "Item 3 — content",
+      "q4": "Item 4 — heading",
+      "a4": "Item 4 — content"
+    },
+    "timelineHtml": "Entries",
+    "tableHtml": "Table",
+    "showHome": "Show Home",
+    "homeLabel": "Home label",
+    "separator": "Separator",
+    "separatorChevron": "Chevron ›",
+    "separatorSlash": "Slash /",
+    "separatorDot": "Dot ·"
   },
   "hints": {
     "contentType": "A type this site actually has. A theme installed elsewhere shows an empty list if that site has no such type.",
-    "limit": "Up to {max}."
+    "limit": "Up to {max}.",
+    "timelineHtml": "One list item per point (a bulleted list). The line and dots are drawn for you.",
+    "tableHtml": "Write the table with a header row. It scrolls on narrow screens."
   },
   "tokens": {
     "colorPrimary": "Primary colour",
@@ -213,6 +286,7 @@
   "style": {
     "unset": "Default",
     "group": {
+      "size": "Size",
       "colors": "Colours",
       "spacing": "Spacing",
       "border": "Border",
@@ -248,10 +322,38 @@
     "textColor": "Text colour",
     "background": "Background",
     "backgroundGradient": "Gradient",
+    "backgroundImage": "Background image",
+    "backgroundImageHint": "Shown behind this block. Add a background colour too as a fallback.",
+    "backgroundSize": "Image size",
+    "backgroundPosition": "Image position",
+    "backgroundOverlay": "Image overlay",
+    "backgroundVideo": "Background video",
+    "backgroundVideoHint": "Plays muted and looped behind this block. Hidden for reduced-motion — set a background colour or image as a fallback.",
+    "bgSize": {
+      "cover": "Cover",
+      "contain": "Contain",
+      "auto": "Original size"
+    },
+    "bgPosition": {
+      "center": "Centre",
+      "top": "Top",
+      "bottom": "Bottom",
+      "left": "Left",
+      "right": "Right"
+    },
     "paddingX": "Padding — sides",
     "paddingY": "Padding — top & bottom",
     "marginX": "Margin — sides",
     "marginY": "Margin — top & bottom",
+    "width": "Width",
+    "widthUnit": "Width unit",
+    "height": "Height",
+    "heightUnit": "Height unit",
+    "unit": {
+      "px": "px",
+      "percent": "%",
+      "vh": "vh"
+    },
     "minHeight": "Min height",
     "borderRadius": "Corner radius",
     "borderWidth": "Border width",
@@ -349,6 +451,10 @@
       "label": "Spacer",
       "description": "Empty vertical space."
     },
+    "contactForm": {
+      "label": "Contact form",
+      "description": "A working contact form (name, email, message) that emails the site owner."
+    },
     "postTitle": {
       "label": "Page title",
       "description": "The title of the page being viewed."
@@ -360,6 +466,50 @@
     "postList": {
       "label": "Content list",
       "description": "Real pages or posts from the site — the newest six, say."
+    },
+    "card": {
+      "label": "Card",
+      "description": "A boxed image, title, text and optional button — drop a few in a row."
+    },
+    "avatar": {
+      "label": "Avatar",
+      "description": "A round profile image, or the person's initials when there is none."
+    },
+    "badge": {
+      "label": "Badge",
+      "description": "A small coloured label for a status or count."
+    },
+    "tag": {
+      "label": "Tag",
+      "description": "A pill label, optionally a link — like a category chip."
+    },
+    "alert": {
+      "label": "Alert",
+      "description": "A coloured callout for a note, tip or warning."
+    },
+    "progress": {
+      "label": "Progress",
+      "description": "A horizontal bar filled to a percentage."
+    },
+    "rating": {
+      "label": "Rating",
+      "description": "A row of stars filled to a score."
+    },
+    "accordion": {
+      "label": "Accordion",
+      "description": "Collapsible question-and-answer rows. Opens and closes with no code."
+    },
+    "timeline": {
+      "label": "Timeline",
+      "description": "A vertical list of points, each on a connecting line."
+    },
+    "table": {
+      "label": "Table",
+      "description": "A simple data table that scrolls on small screens."
+    },
+    "breadcrumb": {
+      "label": "Breadcrumb",
+      "description": "The trail to the page being viewed. Put it on the Post or Page template."
     }
   },
   "changelog": {

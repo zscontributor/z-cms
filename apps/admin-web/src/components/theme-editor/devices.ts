@@ -15,9 +15,9 @@ export const DEVICE_WIDTH: Record<StudioDevice, number | null> = {
   mobile: 390,
 };
 
-/** A compact glyph per device for the toolbar (no dedicated icon in the set). */
-export const DEVICE_GLYPH: Record<StudioDevice, string> = {
-  desktop: "▭",
-  tablet: "▯",
-  mobile: "▪",
+/** The Icon-registry name for each device's toolbar button. */
+export const DEVICE_ICON: Record<StudioDevice, "desktop" | "tablet" | "mobile"> = {
+  desktop: "desktop",
+  tablet: "tablet",
+  mobile: "mobile",
 };

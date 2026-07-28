@@ -193,5 +193,10 @@
     "siteNotFound": "No published site answers on this address.",
     "notFound": "This form is not available on this site.",
     "invalidSubmission": "The submission is not valid: {detail}"
+  },
+  "query": {
+    "hostnameRequired": "The site could not be identified.",
+    "siteNotFound": "No published site answers on this address.",
+    "invalidCapability": "That is not a valid query."
   }
 }

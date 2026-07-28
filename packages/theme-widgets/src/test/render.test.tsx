@@ -263,6 +263,42 @@ describe("styleForNode", () => {
     // The whole security point: "md" is a NAME, and the value is ours.
     expect(styleForNode({ boxShadow: "md" }).boxShadow).toBe("0 4px 12px rgba(0, 0, 0, 0.10)");
   });
+
+  it("composes a background image with size, position and a quoted URL", () => {
+    const css = styleForNode({ backgroundImage: "/uploads/hero.jpg" });
+    expect(css.backgroundImage).toBe('url("/uploads/hero.jpg")');
+    expect(css.backgroundSize).toBe("cover");
+    expect(css.backgroundPosition).toBe("center");
+    expect(css.backgroundRepeat).toBe("no-repeat");
+  });
+
+  it("layers an overlay over the image so text stays legible", () => {
+    const css = styleForNode({
+      backgroundImage: "/uploads/hero.jpg",
+      backgroundOverlay: "rgba(0, 0, 0, 0.4)",
+      backgroundSize: "contain",
+      backgroundPosition: "top",
+    });
+    // overlay first (topmost), then the image; size/position honoured
+    expect(String(css.backgroundImage)).toBe(
+      'linear-gradient(0deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url("/uploads/hero.jpg")',
+    );
+    expect(css.backgroundSize).toBe("contain");
+    expect(css.backgroundPosition).toBe("top");
+  });
+
+  it("keeps a solid colour beneath an image as backgroundColor, not the shorthand", () => {
+    const css = styleForNode({ background: "#fff", backgroundImage: "/uploads/hero.jpg" });
+    // shorthand would clobber the image — so the solid rides on backgroundColor
+    expect(css.backgroundColor).toBe("#fff");
+    expect(String(css.backgroundImage)).toContain('url("/uploads/hero.jpg")');
+  });
+
+  it("does not emit backgroundVideo as a CSS property (it is a rendered element)", () => {
+    const css = styleForNode({ backgroundVideo: "/uploads/loop.mp4" }) as Record<string, unknown>;
+    expect(css.backgroundVideo).toBeUndefined();
+    expect(Object.keys(css)).toHaveLength(0);
+  });
 });
 
 describe("LayoutRenderer per-node style", () => {
@@ -296,6 +332,48 @@ describe("LayoutRenderer per-node style", () => {
     const html = render(nodes);
     expect(html).toContain("background:#101010");
     expect(html).toContain("min-height:400px");
+  });
+});
+
+describe("LayoutRenderer background video", () => {
+  const sectionWithVideo = (src: string): LayoutNode[] => [
+    {
+      id: "s",
+      kind: "section",
+      props: {},
+      style: { backgroundVideo: src },
+      children: [{ id: "r", kind: "row", props: {}, children: [{ id: "c", kind: "column", props: {}, children: [] }] }],
+    },
+  ];
+
+  it("renders a muted looping video behind a section that sets one", () => {
+    const html = render(sectionWithVideo("/uploads/loop.mp4"));
+    expect(html).toContain("zw-has-bg-video");
+    expect(html).toContain('class="zw-bg-video"');
+    expect(html).toContain('src="/uploads/loop.mp4"');
+    // decoration: autoplay needs muted; loop + playsInline for a seamless background
+    expect(html).toContain("muted");
+    expect(html).toContain("loop");
+  });
+
+  it("routes the video src through ctx.asset (keeps the locale/asset base)", () => {
+    const ctx = mockCtx({ asset: (p: string) => `https://cdn.test${p}` });
+    const html = render(sectionWithVideo("/uploads/loop.mp4"), ctx);
+    expect(html).toContain('src="https://cdn.test/uploads/loop.mp4"');
+  });
+
+  it("adds no video element or marker class when none is set", () => {
+    const html = render(scaffold(widget("w", "layout/heading", { props: { text: "Hi" } })));
+    expect(html).not.toContain("zw-bg-video");
+    expect(html).not.toContain("zw-has-bg-video");
+  });
+
+  it("wraps an otherwise-styleless widget when only a background video is set", () => {
+    const html = render(
+      scaffold(widget("w", "layout/heading", { props: { text: "Hi" }, style: { backgroundVideo: "/v.mp4" } })),
+    );
+    expect(html).toContain("zw-widget zw-has-bg-video");
+    expect(html).toContain('class="zw-bg-video"');
   });
 });
 
@@ -424,5 +502,165 @@ describe("ContentSlider", () => {
     const unbound = widget("cs2", "dynamic/content-slider", { props: {} });
     expect(render(scaffold(unbound))).not.toContain("zw-slider");
     expect(render(scaffold(node), mockCtx())).toContain("zw-post-list-empty");
+  });
+});
+
+describe("ArchiveList", () => {
+  it("renders nothing off the archive template (ctx.archive is null)", () => {
+    expect(render(scaffold(widget("al", "dynamic/archive-list")))).not.toContain("zw-post-list");
+  });
+
+  it("renders the archive's own paginated items", () => {
+    const ctx = mockCtx({
+      archive: {
+        contentTypeKey: "post",
+        basePath: "/blog",
+        page: 2,
+        totalPages: 5,
+        items: [
+          { id: "p1", title: "Alpha", path: "/blog/alpha", excerpt: "Hi" } as unknown as ContentDto,
+          { id: "p2", title: "Beta", path: "/blog/beta" } as unknown as ContentDto,
+        ],
+      },
+    });
+    const html = render(scaffold(widget("al", "dynamic/archive-list")), ctx);
+    expect(html).toContain("Alpha");
+    expect(html).toContain("Beta");
+    expect(html).toContain('href="/blog/alpha"');
+  });
+});
+
+describe("Pagination", () => {
+  const archive = (over: Record<string, unknown> = {}) => ({
+    contentTypeKey: "post",
+    basePath: "/blog",
+    page: 2,
+    totalPages: 5,
+    items: [],
+    ...over,
+  });
+
+  it("renders nothing when there is at most one page, or no archive", () => {
+    expect(render(scaffold(widget("pg", "dynamic/pagination")))).not.toContain("zw-pagination");
+    const one = mockCtx({ archive: archive({ totalPages: 1 }) as never });
+    expect(render(scaffold(widget("pg", "dynamic/pagination")), one)).not.toContain("zw-pagination");
+  });
+
+  it("builds every link through ctx.url so it keeps the locale", () => {
+    // ctx.url prefixes the current locale — the pager must never emit a bare path.
+    const ctx = mockCtx({ archive: archive() as never, url: (p: string) => `/vi${p}` });
+    const html = render(scaffold(widget("pg", "dynamic/pagination")), ctx);
+    // prev → page 1 is the bare (locale-prefixed) path; next → page 3 with the query.
+    expect(html).toContain('href="/vi/blog"');
+    expect(html).toContain('href="/vi/blog?page=3"');
+    expect(html).not.toContain('href="/blog?page='); // never an un-prefixed link
+  });
+
+  it("marks the current page as current, not a link", () => {
+    const ctx = mockCtx({ archive: archive() as never, url: (p: string) => `/vi${p}` });
+    const html = render(scaffold(widget("pg", "dynamic/pagination")), ctx);
+    expect(html).toContain('aria-current="page"');
+    // page 2 is current → there is no link to page 2
+    expect(html).not.toContain('href="/vi/blog?page=2"');
+  });
+});
+
+describe("Common UI components", () => {
+  it("Card renders nothing when it is entirely empty", () => {
+    expect(render(scaffold(widget("c", "content/card")))).not.toContain("zw-card");
+  });
+
+  it("Card with only a link and no button label makes the whole card a link", () => {
+    const node = widget("c", "content/card", { props: { title: "Hi", href: "/about" } });
+    const html = render(scaffold(node));
+    expect(html).toContain("zw-card-link");
+    expect(html).toContain('href="/about"');
+  });
+
+  it("Avatar falls back to initials when there is no image", () => {
+    const node = widget("a", "media/avatar", { props: { name: "Ada Lovelace" } });
+    const html = render(scaffold(node));
+    expect(html).toContain("zw-avatar-initials");
+    expect(html).toContain("AL");
+  });
+
+  it("Avatar renders nothing with neither image nor name", () => {
+    expect(render(scaffold(widget("a", "media/avatar")))).not.toContain("zw-avatar");
+  });
+
+  it("Badge draws its variant class and nothing when unlabelled", () => {
+    const html = render(scaffold(widget("b", "content/badge", { props: { label: "New", variant: "success" } })));
+    expect(html).toContain("zw-badge-success");
+    expect(html).toContain("New");
+    expect(render(scaffold(widget("b", "content/badge")))).not.toContain("zw-badge");
+  });
+
+  it("Tag with a link goes through ctx.url", () => {
+    const ctx = mockCtx({ url: (p: string) => `/vi${p}` });
+    const html = render(scaffold(widget("t", "content/tag", { props: { label: "Dogs", href: "/dogs" } })), ctx);
+    expect(html).toContain('href="/vi/dogs"');
+    expect(html).toContain("Dogs");
+  });
+
+  it("Progress clamps its value and reports it for assistive tech", () => {
+    const html = render(scaffold(widget("p", "content/progress", { props: { value: 140 } })));
+    expect(html).toContain('aria-valuenow="100"');
+    expect(html).toContain("width:100%");
+  });
+
+  it("Rating fills to the score's proportion", () => {
+    const html = render(scaffold(widget("r", "content/rating", { props: { value: 3, max: 5 } })));
+    expect(html).toContain("zw-rating-fill");
+    expect(html).toContain("width:60%");
+  });
+
+  it("Accordion skips empty slots and opens the first", () => {
+    const node = widget("ac", "content/accordion", {
+      props: { q1: "Q1", a1: "A1", q2: "", a2: "", openFirst: true },
+    });
+    const html = render(scaffold(node));
+    expect(html).toContain("<details");
+    expect(html).toContain("open");
+    expect(html).toContain("Q1");
+    // one <details>, not two — the empty second slot is dropped
+    expect(html.match(/<details/g)?.length).toBe(1);
+  });
+
+  it("Timeline and Table render their sanitised HTML", () => {
+    const tl = render(scaffold(widget("tl", "content/timeline", { props: { html: "<ul><li>Point</li></ul>" } })));
+    expect(tl).toContain("zw-timeline");
+    expect(tl).toContain("<li>Point</li>");
+    const tb = render(scaffold(widget("tb", "content/table", { props: { html: "<table><tr><td>x</td></tr></table>" } })));
+    expect(tb).toContain("zw-table");
+    expect(tb).toContain("<td>x</td>");
+  });
+});
+
+describe("Breadcrumb", () => {
+  const page = (): ContentDto =>
+    ({ id: "p1", title: "Collar", path: "/shop/dogs/collar" }) as unknown as ContentDto;
+
+  it("renders nothing without a viewed page (home/archive)", () => {
+    expect(render(scaffold(widget("bc", "dynamic/breadcrumb")), mockCtx(), null)).not.toContain("zw-breadcrumb");
+  });
+
+  it("links ancestors and uses the page title for the last crumb", () => {
+    const ctx = mockCtx({ url: (p: string) => `/vi${p}` });
+    const html = render(scaffold(widget("bc", "dynamic/breadcrumb")), ctx, page());
+    // Home + de-slugified, locale-prefixed ancestor links
+    expect(html).toContain('href="/vi/"');
+    expect(html).toContain('href="/vi/shop"');
+    expect(html).toContain('href="/vi/shop/dogs"');
+    expect(html).toContain("Dogs"); // "dogs" de-slugified
+    // current page is its real title, marked current, not a link
+    expect(html).toContain('aria-current="page"');
+    expect(html).toContain("Collar");
+    expect(html).not.toContain('href="/vi/shop/dogs/collar"');
+  });
+
+  it("can hide the Home crumb", () => {
+    const html = render(scaffold(widget("bc", "dynamic/breadcrumb", { props: { showHome: false } })), mockCtx(), page());
+    expect(html).not.toContain('href="/"');
+    expect(html).toContain("Collar");
   });
 });

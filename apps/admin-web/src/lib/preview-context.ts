@@ -1,3 +1,4 @@
+import { createElement } from "react";
 import type { ContentDto, MenuDto } from "@zcmsorg/schemas";
 import type { ThemeContext } from "@zcmsorg/theme-sdk";
 
@@ -32,6 +33,9 @@ export interface PreviewContextInput {
   menus: MenuDto[];
   /** Theme tokens are applied by LayoutRenderer, not through settings. */
   settings?: Record<string, unknown>;
+  /** Placeholder paragraphs (already localised by the caller) that stand in for a
+   *  page's block content in the Preview's page-content widget. */
+  sampleBody?: string[];
 }
 
 /** A handful of plausible rows so a post-list is not an empty box while drawing. */
@@ -42,6 +46,27 @@ export function sampleRows(count: number, label: string): ContentDto[] {
     path: "#",
     excerpt: "…",
   })) as unknown as ContentDto[];
+}
+
+/**
+ * A sample "page being viewed" for the Preview, so the current-bound widgets (page
+ * title, page content) have something to draw. A template has no real page while it
+ * is being designed, so these show nothing on the canvas — the Preview stands in a
+ * plausible article to demonstrate the layout. Only the `post`/`page` templates get
+ * this; `home`/`archive` are not a single page and keep `content` null.
+ */
+export function sampleContent(strings: { title: string; excerpt: string }): ContentDto {
+  return {
+    id: "sample-page",
+    title: strings.title,
+    excerpt: strings.excerpt,
+    path: "#",
+    // One block is enough for post-content to render; renderBlocks below turns it
+    // into placeholder paragraphs.
+    blocks: [{ id: "sb1", type: "core/richtext", props: {} }],
+    data: {},
+    seo: {},
+  } as unknown as ContentDto;
 }
 
 export function buildPreviewContext(input: PreviewContextInput): ThemeContext {
@@ -56,7 +81,19 @@ export function buildPreviewContext(input: PreviewContextInput): ThemeContext {
     // The catalogue key itself, so an untranslated widget string is visible as a
     // key rather than silently blank on the canvas.
     t: (key: string) => key,
-    renderBlocks: () => null,
+    // The real block registry is the runtime's and is not available while designing,
+    // so a page's blocks are drawn as the caller's localised placeholder paragraphs —
+    // enough for the page-content widget to show a filled body in the Preview.
+    renderBlocks: (blocks: unknown) =>
+      Array.isArray(blocks) && blocks.length > 0 && (input.sampleBody?.length ?? 0) > 0
+        ? createElement(
+            "div",
+            { className: "zw-richtext" },
+            ...(input.sampleBody ?? []).map((para, i) =>
+              createElement("p", { key: `p${i}` }, para),
+            ),
+          )
+        : null,
     hasCapability: () => false,
     getIntegration: () => undefined,
     renderSlot: () => null,

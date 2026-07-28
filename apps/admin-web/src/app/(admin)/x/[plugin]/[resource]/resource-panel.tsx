@@ -13,6 +13,7 @@ import { Checkbox, Field, Input, Select, Textarea } from "@/components/ui/field"
 import { EmptyState, TBody, TD, TH, THead, TR, Table } from "@/components/ui/table";
 import { MediaPickerField } from "@/components/editor/media-picker";
 import { RichTextEditor } from "@/components/editor/rich-text-editor";
+import { useLocale } from "@/lib/i18n-provider";
 
 interface Props {
   pluginKey: string;
@@ -32,18 +33,44 @@ interface Props {
   };
 }
 
+/**
+ * A plain number, grouped for the reader's locale: 55000 → "55,000" (en) or
+ * "55.000" (vi). Integers go through BigInt so a large id or quantity keeps full
+ * precision; a decimal keeps exactly the fraction digits it was stored with, so a
+ * price is not silently rounded. Returns null for anything that is not a bare
+ * number (a SKU, a slug, a uuid), which then passes through untouched.
+ */
+function formatNumberLike(s: string, locale: string): string | null {
+  if (/^-?\d+$/.test(s)) {
+    try {
+      return new Intl.NumberFormat(locale).format(BigInt(s));
+    } catch {
+      return null;
+    }
+  }
+  if (/^-?\d+\.\d+$/.test(s)) {
+    const decimals = Math.min(s.split(".")[1]!.length, 8);
+    return new Intl.NumberFormat(locale, {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    }).format(Number(s));
+  }
+  return null;
+}
+
 /** A cell value from Postgres, made readable without knowing its column's type. */
-function formatCell(value: unknown): string {
+function formatCell(value: unknown, locale: string): string {
   if (value === null || value === undefined) return "—";
   if (typeof value === "boolean") return value ? "✓" : "—";
   if (typeof value === "object") return JSON.stringify(value);
   const s = String(value);
-  // An ISO timestamp reads better localized; anything else passes through.
+  // An ISO timestamp reads better localized; anything else falls through.
   if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {
     const d = new Date(s);
-    if (!Number.isNaN(d.getTime())) return d.toLocaleString();
+    if (!Number.isNaN(d.getTime())) return d.toLocaleString(locale);
   }
-  return s;
+  // A bare number gets thousands separators; a SKU/slug/uuid is left alone.
+  return formatNumberLike(s, locale) ?? s;
 }
 
 export function ResourcePanel({
@@ -55,6 +82,7 @@ export function ResourcePanel({
   labels,
 }: Props) {
   const router = useRouter();
+  const locale = useLocale();
   const [pending, startTransition] = useTransition();
   const [editing, setEditing] = useState<PluginRow | "new" | null>(null);
   const [values, setValues] = useState<Record<string, unknown>>({});
@@ -128,7 +156,7 @@ export function ResourcePanel({
             return (
               <Field key={f.column} label={f.label}>
                 {f.readonly ? (
-                  <Input value={formatCell(values[f.column])} disabled readOnly />
+                  <Input value={formatCell(values[f.column], locale)} disabled readOnly />
                 ) : f.input === "textarea" ? (
                   <Textarea
                     value={String(values[f.column] ?? "")}
@@ -214,7 +242,7 @@ export function ResourcePanel({
             {rows.map((row, i) => (
               <TR key={String(row.id ?? i)}>
                 {descriptor.list.columns.map((c) => (
-                  <TD key={c.column}>{formatCell(row[c.column])}</TD>
+                  <TD key={c.column}>{formatCell(row[c.column], locale)}</TD>
                 ))}
                 {canWrite && descriptor.form && (
                   <TD className="text-right">

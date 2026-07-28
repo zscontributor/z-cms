@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   CssColorSchema,
+  CssUrlSchema,
   LAYOUT_DOCUMENT_VERSION,
   LayoutDocumentSchema,
   LayoutTreeSchema,
@@ -224,7 +225,51 @@ describe("CssColorSchema", () => {
   });
 });
 
+describe("CssUrlSchema", () => {
+  it("accepts an https, protocol-relative or root-relative asset URL", () => {
+    for (const ok of [
+      "https://cdn.example/bg.jpg",
+      "http://cdn.example/bg.mp4",
+      "//cdn.example/bg.webm",
+      "/uploads/2026/hero.jpg",
+    ]) {
+      expect(CssUrlSchema.safeParse(ok).success, ok).toBe(true);
+    }
+  });
+
+  it("refuses anything that could break out of url() or a src attribute", () => {
+    for (const bad of [
+      'https://x/a.jpg") ; background: red', // closes the url()
+      "https://x/a.jpg;color:red",
+      "javascript:alert(1)",
+      "data:image/svg+xml,<svg/>",
+      "assets/bg.jpg", // relative without a leading slash
+      "https://x/ a.jpg", // whitespace
+      "",
+    ]) {
+      expect(CssUrlSchema.safeParse(bad).success, bad).toBe(false);
+    }
+  });
+});
+
 describe("NodeStyleSchema", () => {
+  it("accepts background image and video with their knobs", () => {
+    const style = {
+      backgroundImage: "/uploads/hero.jpg",
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      backgroundOverlay: "rgba(0, 0, 0, 0.4)",
+      backgroundVideo: "https://cdn.example/loop.mp4",
+    };
+    expect(NodeStyleSchema.safeParse(style).success).toBe(true);
+  });
+
+  it("refuses a background image/video URL that fails the URL fence", () => {
+    expect(NodeStyleSchema.safeParse({ backgroundImage: "javascript:alert(1)" }).success).toBe(false);
+    expect(NodeStyleSchema.safeParse({ backgroundVideo: 'https://x") ; y' }).success).toBe(false);
+    expect(NodeStyleSchema.safeParse({ backgroundSize: "50px" }).success).toBe(false);
+  });
+
   it("accepts a fully-populated, in-range style", () => {
     const style = {
       textColor: "#111111",

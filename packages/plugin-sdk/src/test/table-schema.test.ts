@@ -126,6 +126,14 @@ describe("generatePluginTableDdl", () => {
     expect(ddl.some((s) => s.startsWith("CREATE UNIQUE INDEX IF NOT EXISTS"))).toBe(true);
   });
 
+  it("reconciles a pre-existing table by ADD COLUMN IF NOT EXISTS for every declared column", () => {
+    // A plugin that adds a column in an upgrade must get it on the next activation —
+    // CREATE TABLE IF NOT EXISTS alone would leave an existing table short a column.
+    const ddl = generatePluginTableDdl(PLUGIN, leads).join("\n");
+    expect(ddl).toContain(`ALTER TABLE "${PREFIX}leads" ADD COLUMN IF NOT EXISTS "email" text NOT NULL`);
+    expect(ddl).toContain(`ALTER TABLE "${PREFIX}leads" ADD COLUMN IF NOT EXISTS "note" text`);
+  });
+
   it("escapes a text default rather than interpolating it raw", () => {
     const table: PluginTableSchema = {
       name: `${PREFIX}x`,
@@ -321,5 +329,67 @@ describe("coercePluginRow", () => {
     const { row, errors } = coercePluginRow(table, { name: "Ann", email: "" });
     expect(errors).toEqual([]);
     expect(row.email).toBeNull();
+  });
+});
+
+describe("buildPluginSelect where operators", () => {
+  const table: PluginTableSchema = {
+    name: `${PREFIX}customers`,
+    columns: [
+      { name: "name", type: "text" },
+      { name: "stage", type: "text" },
+      { name: "deal_value", type: "numeric" },
+    ],
+  };
+
+  it("keeps the bare-value form as equality (back-compat)", () => {
+    const q = buildPluginSelect(table, scope, { where: { stage: "lead" } });
+    expect(q.text).toContain(`"stage" = $3`);
+    expect(q.values).toEqual(["t1", "s1", "lead"]);
+  });
+
+  it("emits a range comparison for gte/lte and binds the values", () => {
+    const q = buildPluginSelect(table, scope, {
+      where: { deal_value: { op: "gte", value: 100 } },
+    });
+    expect(q.text).toContain(`"deal_value" >= $3`);
+    expect(q.values).toEqual(["t1", "s1", 100]);
+  });
+
+  it("compiles contains to a bound, escaped ILIKE pattern (no injection)", () => {
+    const q = buildPluginSelect(table, scope, {
+      where: { name: { op: "contains", value: "50%_off" } },
+    });
+    expect(q.text).toContain(`"name" ILIKE $3`);
+    // The value is a bound parameter with LIKE metacharacters escaped.
+    expect(q.values[2]).toBe("%50\\%\\_off%");
+  });
+
+  it("compiles in to = ANY() with the array bound as one parameter", () => {
+    const q = buildPluginSelect(table, scope, {
+      where: { stage: { op: "in", value: ["lead", "customer"] } },
+    });
+    expect(q.text).toContain(`"stage" = ANY($3)`);
+    expect(q.values[2]).toEqual(["lead", "customer"]);
+  });
+
+  it("still refuses a column the table does not have, even in the long form", () => {
+    expect(() =>
+      buildPluginSelect(table, scope, { where: { secret: { op: "eq", value: 1 } } }),
+    ).toThrow(/Unknown column/);
+  });
+
+  it("refuses an unknown operator rather than treating it as equality", () => {
+    expect(() =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      buildPluginSelect(table, scope, { where: { stage: { op: "regex", value: "x" } as any } }),
+    ).toThrow(/Unknown filter operator/);
+  });
+
+  it("refuses an in filter whose value is not an array", () => {
+    expect(() =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      buildPluginSelect(table, scope, { where: { stage: { op: "in", value: "lead" } as any } }),
+    ).toThrow(/needs an array/);
   });
 });

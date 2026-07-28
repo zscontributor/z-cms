@@ -170,9 +170,13 @@ FROM base AS admin-web
 LABEL org.opencontainers.image.source="https://github.com/zscontributor/z-cms"
 ENV NODE_ENV=production
 WORKDIR /app
-COPY --from=build /repo/apps/admin-web/.next/standalone ./
-COPY --from=build /repo/apps/admin-web/.next/static ./apps/admin-web/.next/static
-COPY --from=build /repo/apps/admin-web/public ./apps/admin-web/public
+# Copy owned by `node`: static metadata icons (icon.png/apple-icon.png) become
+# routes whose body Next writes into .next/server/app on first request. Copied as
+# root, that write fails EACCES under `USER node` ("Failed to update prerender
+# cache for /icon.png") and the icon is re-rendered every request.
+COPY --from=build --chown=node:node /repo/apps/admin-web/.next/standalone ./
+COPY --from=build --chown=node:node /repo/apps/admin-web/.next/static ./apps/admin-web/.next/static
+COPY --from=build --chown=node:node /repo/apps/admin-web/public ./apps/admin-web/public
 USER node
 ENV PORT=3001
 ENV HOSTNAME=0.0.0.0
@@ -184,9 +188,12 @@ FROM base AS site-runtime
 LABEL org.opencontainers.image.source="https://github.com/zscontributor/z-cms"
 ENV NODE_ENV=production
 WORKDIR /app
-COPY --from=build /repo/apps/site-runtime/.next/standalone ./
-COPY --from=build /repo/apps/site-runtime/.next/static ./apps/site-runtime/.next/static
-COPY --from=build /repo/apps/site-runtime/public ./apps/site-runtime/public
+# Owned by `node` so on-demand prerender/ISR cache writes under .next/server/app
+# succeed (same EACCES class as admin-web's /icon.png). themes/ below stays
+# root-owned on purpose — the app verifies then unpacks it elsewhere.
+COPY --from=build --chown=node:node /repo/apps/site-runtime/.next/standalone ./
+COPY --from=build --chown=node:node /repo/apps/site-runtime/.next/static ./apps/site-runtime/.next/static
+COPY --from=build --chown=node:node /repo/apps/site-runtime/public ./apps/site-runtime/public
 # Pins the signed themes into THEME_DIR rather than trusting the standalone copy
 # above to keep bringing them (see the builtin-themes stage). The path is THEME_DIR's
 # default — Next's standalone server chdir()s to its own directory, so the loader's

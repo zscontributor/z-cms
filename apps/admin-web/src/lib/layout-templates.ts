@@ -72,18 +72,32 @@ export const LAYOUT_PATTERNS: readonly LayoutPattern[] = [
     build: () => [
       section(
         [
-          row([
-            column(12, [
-              widget("layout/heading", { text: "Build something remarkable", level: "1", align: "center" }),
-              widget("layout/richtext", {
-                html: "<p>A short, confident sentence about what you make and who it is for.</p>",
-              }, { textAlign: "center" }),
-              widget("layout/button", { label: "Get started", variant: "primary", align: "center" }),
-            ]),
-          ]),
+          // Two columns, vertically centred against each other: copy on the left,
+          // a picture on the right. The row gap gives the two sides breathing room;
+          // on a phone the columns stack (image under the text) on their own.
+          row(
+            [
+              column(6, [
+                widget("layout/heading", { text: "Build something remarkable", level: "1", align: "left" }),
+                widget(
+                  "layout/richtext",
+                  {
+                    html: "<p>A short, confident sentence about what you make and who it is for.</p>",
+                  },
+                  { fontSize: 18 },
+                ),
+                widget("layout/button", { label: "Get started", variant: "primary", align: "left" }),
+              ]),
+              // Empty src on purpose — the author drops their own image here; the
+              // rounded corners are already set so it looks finished the moment they do.
+              column(6, [widget("media/image", { alt: "", width: "full" }, { borderRadius: 16 })]),
+            ],
+            { gap: 48, align: "center" },
+          ),
         ],
-        { paddingY: 96 },
-        { backgroundGradient: "twilight", textColor: "#ffffff", textAlign: "center" },
+        // Taller than a normal section so the hero fills the top of the page.
+        { paddingY: 120 },
+        { backgroundGradient: "twilight", textColor: "#ffffff", minHeight: 460 },
       ),
     ],
   },
@@ -185,6 +199,157 @@ export const LAYOUT_PATTERNS: readonly LayoutPattern[] = [
         ],
         { paddingY: 80 },
         { background: "#fafafa", textAlign: "center", borderRadius: 24 },
+      ),
+    ],
+  },
+  {
+    key: "pricing",
+    labelKey: "themeEditor.patterns.pricing.label",
+    descriptionKey: "themeEditor.patterns.pricing.description",
+    build: () => {
+      // A pricing tier: name, price, a checkmark feature list and a CTA, boxed as a
+      // card. Cards force a white fill and dark text so they stay legible whatever
+      // the page sits on; the highlighted middle tier gets a heavier border, a
+      // stronger shadow, a primary button and a "Popular" badge — same widgets, a
+      // different style. Features are checkmark lines (not a <ul>) so they centre
+      // cleanly without bullets.
+      const featureList = (items: string[]) =>
+        `<p>${items.map((f) => `✓ ${f}`).join("<br/>")}</p>`;
+      const tier = (
+        name: string,
+        price: string,
+        period: string,
+        items: string[],
+        cta: string,
+        opts: { highlight?: boolean; badge?: string } = {},
+      ): LayoutNode =>
+        column(
+          4,
+          [
+            ...(opts.badge
+              ? [widget("content/badge", { label: opts.badge, variant: "primary" })]
+              : []),
+            widget("layout/heading", { text: name, level: "3", align: "center" }),
+            widget("layout/heading", { text: price, level: "2", align: "center" }),
+            widget("layout/richtext", { html: `<p>${period}</p>` }),
+            widget("layout/richtext", { html: featureList(items) }),
+            widget(
+              "layout/button",
+              {
+                label: cta,
+                variant: opts.highlight ? "primary" : "secondary",
+                align: "center",
+              },
+              // Equal breathing room above and below the CTA — marginY sets marginTop
+              // and marginBottom to the same value.
+              { marginY: 8 },
+            ),
+          ],
+          {
+            background: "#ffffff",
+            textColor: "#111827",
+            textAlign: "center",
+            borderRadius: 16,
+            borderStyle: "solid",
+            borderWidth: opts.highlight ? 2 : 1,
+            borderColor: opts.highlight ? "#111827" : "#e5e7eb",
+            boxShadow: opts.highlight ? "lg" : "sm",
+            paddingX: 28,
+            paddingY: 32,
+          },
+        );
+
+      return [
+        section([
+          row([
+            column(12, [
+              widget("layout/heading", { text: "Simple, honest pricing", level: "2", align: "center" }),
+              widget(
+                "layout/richtext",
+                { html: "<p>Pick a plan that fits. Change or cancel anytime.</p>" },
+                { textAlign: "center" },
+              ),
+            ]),
+          ]),
+          row(
+            [
+              tier("Starter", "$9", "per month", ["Up to 3 projects", "Basic analytics", "Community support"], "Choose Starter"),
+              tier(
+                "Pro",
+                "$29",
+                "per month",
+                ["Unlimited projects", "Advanced analytics", "Priority support"],
+                "Choose Pro",
+                { highlight: true, badge: "Popular" },
+              ),
+              tier("Team", "$79", "per month", ["Everything in Pro", "Team roles", "SSO and audit log"], "Choose Team"),
+            ],
+            { gap: 24, align: "stretch" },
+          ),
+        ]),
+      ];
+    },
+  },
+  {
+    key: "contact",
+    labelKey: "themeEditor.patterns.contact.label",
+    descriptionKey: "themeEditor.patterns.contact.description",
+    // A heading + intro beside a working contact form (name/email/message). The form
+    // posts to the runtime's /api/contact/submit — no binding, no per-theme wiring.
+    build: () => [
+      section([
+        row([
+          column(5, [
+            widget("layout/heading", { text: "Get in touch", level: "2", align: "left" }),
+            widget("layout/richtext", {
+              html: "<p>Tell us what you need and we'll get back to you shortly.</p>",
+            }),
+          ]),
+          column(7, [widget("layout/contact-form")]),
+        ]),
+      ]),
+    ],
+  },
+  {
+    key: "footer",
+    labelKey: "themeEditor.patterns.footer.label",
+    descriptionKey: "themeEditor.patterns.footer.description",
+    // A dark site footer: brand + blurb, a menu column, a contact column, then a
+    // copyright line. Uses the site's own logo and a menu LOCATION ("footer") the
+    // owner fills — the same widgets a hand-built footer would.
+    build: () => [
+      section(
+        [
+          row([
+            column(5, [
+              widget("media/logo", { height: 32 }),
+              widget("layout/richtext", {
+                html: "<p>A short line about your company or what your site is for.</p>",
+              }),
+            ]),
+            column(3, [
+              widget("layout/heading", { text: "Explore", level: "3", align: "left" }),
+              widget("layout/menu", { location: "footer", orientation: "vertical" }),
+            ]),
+            column(4, [
+              widget("layout/heading", { text: "Contact", level: "3", align: "left" }),
+              widget("layout/richtext", {
+                html: "<p>hello@example.com<br/>+00 000 000 000</p>",
+              }),
+            ]),
+          ]),
+          row([
+            column(12, [
+              widget(
+                "layout/richtext",
+                { html: "<p>© Your Company. All rights reserved.</p>" },
+                { textAlign: "center" },
+              ),
+            ]),
+          ]),
+        ],
+        { paddingY: 64 },
+        { background: "#17191f", textColor: "#ffffff" },
       ),
     ],
   },

@@ -59,6 +59,10 @@ export function contactEnhanceScript(): string {
   }
   function enhance(form){
     if(form.__cEnh)return; form.__cEnh=true;
+    // Each form names its own result banners (a drawn theme's per-node ids); older
+    // themes with a single global banner fall back to the fixed ids.
+    var okId=form.getAttribute("data-note-ok")||"contact-sent";
+    var errId=form.getAttribute("data-note-err")||"contact-error";
     RULES.forEach(function(rule){
       var el=form.elements[rule.name];
       if(!el||typeof el.setCustomValidity!=="function")return; // skip radio groups etc
@@ -73,7 +77,7 @@ export function contactEnhanceScript(): string {
       ev.preventDefault();
       var btn=form.querySelector('[type="submit"]');
       if(btn)btn.disabled=true;
-      hide("contact-sent"); hide("contact-error");
+      hide(okId); hide(errId);
       var body;
       try{body=new URLSearchParams(new FormData(form)).toString();}catch(e){body="";}
       fetch(form.getAttribute("action")||EP,{
@@ -84,7 +88,7 @@ export function contactEnhanceScript(): string {
         cache:"no-store"
       })
       .then(function(r){return r.json().then(function(d){return d;},function(){return {ok:r.ok};});})
-      .then(function(d){ if(d&&d.ok){ form.reset(); show("contact-sent"); } else { show("contact-error"); } })
+      .then(function(d){ if(d&&d.ok){ form.reset(); show(okId); } else { show(errId); } })
       .catch(function(){ show("contact-error"); })
       .then(function(){ if(btn)btn.disabled=false; });
     });

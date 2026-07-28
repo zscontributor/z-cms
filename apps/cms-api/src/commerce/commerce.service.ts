@@ -81,6 +81,16 @@ function readSalePrice(data: unknown): number | null {
   return typeof parsed === "number" && Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
+/** A percentage discount off the list price, 0 < pct <= 100, or null. */
+function readDiscountPercent(data: unknown): number | null {
+  if (!data || typeof data !== "object") return null;
+  const raw = (data as Record<string, unknown>).discountPercent;
+  const parsed = typeof raw === "string" ? Number(raw) : raw;
+  return typeof parsed === "number" && Number.isFinite(parsed) && parsed > 0 && parsed <= 100
+    ? parsed
+    : null;
+}
+
 function readDate(value: unknown): Date | null {
   if (typeof value !== "string" || !value) return null;
   const date = new Date(value);
@@ -89,11 +99,12 @@ function readDate(value: unknown): Date | null {
 
 /**
  * The price a line actually charges right now, and the list price it is measured
- * against. A product may carry a `salePrice` and an optional window
- * (`saleStart`/`saleEnd`): when the sale is cheaper than the list price and `now`
- * falls inside the window, the sale is the price; otherwise the list price stands.
- * Both come back so the caller can report the discount. Computed here, server-side,
- * from the product's own data — a client can no more forge a sale than a price.
+ * against. A product may carry a percentage discount (`discountPercent`) and/or an
+ * absolute `salePrice`, both gated by an optional window (`saleStart`/`saleEnd`).
+ * When `now` is inside the window the discount applies — the percentage wins if
+ * both are set — otherwise the list price stands. Both come back so the caller can
+ * report the saving. Computed here, server-side, from the product's own data — a
+ * client can no more forge a discount than a price.
  */
 function readEffectivePrice(
   data: unknown,
@@ -101,12 +112,19 @@ function readEffectivePrice(
 ): { unit: number; base: number } | null {
   const base = readPrice(data);
   if (base === null) return null;
+  const pct = readDiscountPercent(data);
   const sale = readSalePrice(data);
-  if (sale === null || sale >= base) return { unit: base, base };
+  const discounted = pct !== null || (sale !== null && sale < base);
+  if (!discounted) return { unit: base, base };
+
   const start = readDate((data as Record<string, unknown>).saleStart);
   const end = readDate((data as Record<string, unknown>).saleEnd);
   const live = (!start || now >= start) && (!end || now <= end);
-  return { unit: live ? sale : base, base };
+  if (!live) return { unit: base, base };
+
+  // Percentage wins when both are set; else the absolute sale price.
+  const unit = pct !== null ? money(base * (1 - pct / 100)) : (sale as number);
+  return { unit, base };
 }
 
 @Injectable()

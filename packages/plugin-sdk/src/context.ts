@@ -144,9 +144,12 @@ export interface PluginHttpApi {
  *     from the token on every insert and pinned on every read/update/delete. A
  *     plugin cannot phrase a query that reaches another site's rows, and Postgres
  *     RLS enforces the tenant half a second time, in the database.
- *   - **Only a filter, never an expression.** `where` is equality on the table's
- *     own columns. There are no operators, no `OR`, no raw fragments — nothing a
- *     plugin says becomes SQL except as a bound parameter.
+ *   - **A filter, never an expression.** `where` is AND-ed conditions on the
+ *     table's own columns. A bare value is equality (`{ stage: "lead" }`); the
+ *     long form `{ column: { op, value } }` adds a bounded set of comparisons —
+ *     `eq`, `neq`, `lt`, `lte`, `gt`, `gte`, `contains`, `startsWith`, `in`. There
+ *     is still no `OR` and no raw fragment; the operator only picks the SQL
+ *     comparison, and every value is a bound parameter.
  */
 export interface PluginDatabaseApi {
   insert<T = Record<string, unknown>>(
@@ -156,6 +159,10 @@ export interface PluginDatabaseApi {
   select<T = Record<string, unknown>>(
     table: string,
     options?: {
+      /**
+       * Equality by default (`{ stage: "lead" }`), or `{ column: { op, value } }`
+       * for a range / substring / `in` test. See {@link PluginWhereOperator}.
+       */
       where?: Record<string, unknown>;
       orderBy?: { column: string; direction?: "asc" | "desc" };
       limit?: number;

@@ -135,7 +135,7 @@ export const WIDGET_CATALOG: WidgetSpec[] = [
     category: "content",
     bind: { kind: "none" },
     props: [
-      { key: "label", labelKey: "themeEditor.props.label", kind: "text", default: "Learn more" },
+      { key: "label", labelKey: "themeEditor.props.label", kind: "text", default: "Button" },
       { key: "href", labelKey: "themeEditor.props.href", kind: "url", default: "" },
       {
         key: "variant",
@@ -279,6 +279,36 @@ export const WIDGET_CATALOG: WidgetSpec[] = [
     ],
   },
   {
+    type: "layout/contact-form",
+    labelKey: "themeEditor.widgets.contactForm.label",
+    descriptionKey: "themeEditor.widgets.contactForm.description",
+    icon: "✉",
+    category: "layout",
+    // A no-JS contact form posting to the runtime's /api/contact/submit. Its fields
+    // (name/email/message) are a subset of CONTACT_FORM_FIELDS — the same list cms-api
+    // validates and the runtime's enhancer upgrades — so a drawn form works end to end
+    // with zero backend wiring. bind:none: it submits, it does not read the page.
+    bind: { kind: "none" },
+    props: [
+      { key: "nameLabel", labelKey: "themeEditor.props.nameLabel", kind: "text", default: "Name" },
+      { key: "emailLabel", labelKey: "themeEditor.props.emailLabel", kind: "text", default: "Email" },
+      { key: "messageLabel", labelKey: "themeEditor.props.messageLabel", kind: "text", default: "Message" },
+      { key: "submitLabel", labelKey: "themeEditor.props.submitLabel", kind: "text", default: "Send message" },
+      {
+        key: "successText",
+        labelKey: "themeEditor.props.successText",
+        kind: "text",
+        default: "Thanks — your message has been sent.",
+      },
+      {
+        key: "errorText",
+        labelKey: "themeEditor.props.errorText",
+        kind: "text",
+        default: "Sorry, something went wrong. Please try again.",
+      },
+    ],
+  },
+  {
     type: "dynamic/post-title",
     labelKey: "themeEditor.widgets.postTitle.label",
     descriptionKey: "themeEditor.widgets.postTitle.description",
@@ -388,6 +418,262 @@ export const WIDGET_CATALOG: WidgetSpec[] = [
     bind: { kind: "none" },
     props: [
       { key: "showNumbers", labelKey: "themeEditor.props.showNumbers", kind: "boolean", default: true },
+      {
+        key: "shape",
+        labelKey: "themeEditor.props.pagerShape",
+        kind: "select",
+        options: [
+          { value: "rounded", labelKey: "themeEditor.props.pagerRounded" },
+          { value: "square", labelKey: "themeEditor.props.pagerSquare" },
+          { value: "circle", labelKey: "themeEditor.props.pagerCircle" },
+        ],
+        default: "rounded",
+      },
+      { key: "pageBackground", labelKey: "themeEditor.props.pageBackground", kind: "color", default: "" },
+      { key: "pageColor", labelKey: "themeEditor.props.pageColor", kind: "color", default: "" },
+      { key: "activeBackground", labelKey: "themeEditor.props.activeBackground", kind: "color", default: "" },
+      { key: "activeColor", labelKey: "themeEditor.props.activeColor", kind: "color", default: "" },
+    ],
+  },
+
+  // -------------------------------------------------------------------------
+  // Common UI components (server-rendered, no client JS). Each is a pure static
+  // widget the same way heading/button are: props in, reviewed markup out. The
+  // interactive-looking ones (accordion) use a native no-JS element (<details>);
+  // the multi-item ones (timeline, table) take an `html` prop the same way
+  // richtext does — sanitised on save, then styled by widgets.css.
+  // -------------------------------------------------------------------------
+  {
+    type: "content/card",
+    labelKey: "themeEditor.widgets.card.label",
+    descriptionKey: "themeEditor.widgets.card.description",
+    icon: "▢",
+    category: "content",
+    bind: { kind: "none" },
+    props: [
+      { key: "image", labelKey: "themeEditor.props.src", kind: "image", default: "" },
+      { key: "title", labelKey: "themeEditor.props.title", kind: "text", default: "Card title" },
+      { key: "text", labelKey: "themeEditor.props.body", kind: "textarea", default: "" },
+      { key: "buttonLabel", labelKey: "themeEditor.props.buttonLabel", kind: "text", default: "" },
+      { key: "href", labelKey: "themeEditor.props.href", kind: "url", default: "" },
+    ],
+  },
+  {
+    type: "media/avatar",
+    labelKey: "themeEditor.widgets.avatar.label",
+    descriptionKey: "themeEditor.widgets.avatar.description",
+    icon: "◉",
+    category: "media",
+    bind: { kind: "none" },
+    props: [
+      { key: "src", labelKey: "themeEditor.props.src", kind: "image", default: "" },
+      // The initials fallback when there is no image — an avatar with neither is
+      // a silent empty circle, so `name` gives it a letter.
+      { key: "name", labelKey: "themeEditor.props.avatarName", kind: "text", default: "" },
+      { key: "size", labelKey: "themeEditor.props.size", kind: "number", min: 24, max: 200, default: 56 },
+      {
+        key: "shape",
+        labelKey: "themeEditor.props.shape",
+        kind: "select",
+        options: [
+          { value: "circle", labelKey: "themeEditor.props.shapeCircle" },
+          { value: "rounded", labelKey: "themeEditor.props.shapeRounded" },
+          { value: "square", labelKey: "themeEditor.props.shapeSquare" },
+        ],
+        default: "circle",
+      },
+    ],
+  },
+  {
+    type: "content/badge",
+    labelKey: "themeEditor.widgets.badge.label",
+    descriptionKey: "themeEditor.widgets.badge.description",
+    icon: "●",
+    category: "content",
+    bind: { kind: "none" },
+    props: [
+      { key: "label", labelKey: "themeEditor.props.label", kind: "text", default: "New" },
+      {
+        key: "variant",
+        labelKey: "themeEditor.props.variant",
+        kind: "select",
+        options: [
+          { value: "neutral", labelKey: "themeEditor.props.variantNeutral" },
+          { value: "primary", labelKey: "themeEditor.props.variantPrimary" },
+          { value: "success", labelKey: "themeEditor.props.variantSuccess" },
+          { value: "warning", labelKey: "themeEditor.props.variantWarning" },
+          { value: "danger", labelKey: "themeEditor.props.variantDanger" },
+        ],
+        default: "primary",
+      },
+    ],
+  },
+  {
+    type: "content/tag",
+    labelKey: "themeEditor.widgets.tag.label",
+    descriptionKey: "themeEditor.widgets.tag.description",
+    icon: "#",
+    category: "content",
+    bind: { kind: "none" },
+    props: [
+      { key: "label", labelKey: "themeEditor.props.label", kind: "text", default: "Tag" },
+      // Optional: a tag with a link is a category chip; without one it is a plain
+      // pill. Either way it draws as long as it has a label.
+      { key: "href", labelKey: "themeEditor.props.href", kind: "url", default: "" },
+      {
+        key: "variant",
+        labelKey: "themeEditor.props.variant",
+        kind: "select",
+        options: [
+          { value: "neutral", labelKey: "themeEditor.props.variantNeutral" },
+          { value: "primary", labelKey: "themeEditor.props.variantPrimary" },
+          { value: "success", labelKey: "themeEditor.props.variantSuccess" },
+          { value: "warning", labelKey: "themeEditor.props.variantWarning" },
+          { value: "danger", labelKey: "themeEditor.props.variantDanger" },
+        ],
+        default: "neutral",
+      },
+    ],
+  },
+  {
+    type: "content/alert",
+    labelKey: "themeEditor.widgets.alert.label",
+    descriptionKey: "themeEditor.widgets.alert.description",
+    icon: "!",
+    category: "content",
+    bind: { kind: "none" },
+    props: [
+      { key: "title", labelKey: "themeEditor.props.title", kind: "text", default: "" },
+      { key: "text", labelKey: "themeEditor.props.body", kind: "textarea", default: "Heads up — here is something worth noting." },
+      {
+        key: "variant",
+        labelKey: "themeEditor.props.variant",
+        kind: "select",
+        options: [
+          { value: "info", labelKey: "themeEditor.props.variantInfo" },
+          { value: "success", labelKey: "themeEditor.props.variantSuccess" },
+          { value: "warning", labelKey: "themeEditor.props.variantWarning" },
+          { value: "danger", labelKey: "themeEditor.props.variantDanger" },
+        ],
+        default: "info",
+      },
+    ],
+  },
+  {
+    type: "content/progress",
+    labelKey: "themeEditor.widgets.progress.label",
+    descriptionKey: "themeEditor.widgets.progress.description",
+    icon: "▬",
+    category: "content",
+    bind: { kind: "none" },
+    props: [
+      { key: "label", labelKey: "themeEditor.props.label", kind: "text", default: "" },
+      { key: "value", labelKey: "themeEditor.props.value", kind: "number", min: 0, max: 100, default: 60 },
+      { key: "showValue", labelKey: "themeEditor.props.showValue", kind: "boolean", default: true },
+      { key: "barColor", labelKey: "themeEditor.props.barColor", kind: "color", default: "" },
+    ],
+  },
+  {
+    type: "content/rating",
+    labelKey: "themeEditor.widgets.rating.label",
+    descriptionKey: "themeEditor.widgets.rating.description",
+    icon: "★",
+    category: "content",
+    bind: { kind: "none" },
+    props: [
+      { key: "value", labelKey: "themeEditor.props.value", kind: "number", min: 0, max: 5, default: 4 },
+      { key: "max", labelKey: "themeEditor.props.max", kind: "number", min: 1, max: 10, default: 5 },
+      { key: "showValue", labelKey: "themeEditor.props.showValue", kind: "boolean", default: false },
+    ],
+  },
+  {
+    type: "content/accordion",
+    labelKey: "themeEditor.widgets.accordion.label",
+    descriptionKey: "themeEditor.widgets.accordion.description",
+    icon: "≡",
+    category: "content",
+    // Four fixed slots, empty ones skipped — a native <details>/<summary> group, so
+    // it opens and closes with zero JavaScript. Structured props rather than an
+    // `html` prop because the sanitiser drops <details>, so the widget must emit it.
+    bind: { kind: "none" },
+    props: [
+      { key: "q1", labelKey: "themeEditor.props.accordion.q1", kind: "text", default: "First question" },
+      { key: "a1", labelKey: "themeEditor.props.accordion.a1", kind: "textarea", default: "The answer to the first question." },
+      { key: "q2", labelKey: "themeEditor.props.accordion.q2", kind: "text", default: "Second question" },
+      { key: "a2", labelKey: "themeEditor.props.accordion.a2", kind: "textarea", default: "The answer to the second question." },
+      { key: "q3", labelKey: "themeEditor.props.accordion.q3", kind: "text", default: "" },
+      { key: "a3", labelKey: "themeEditor.props.accordion.a3", kind: "textarea", default: "" },
+      { key: "q4", labelKey: "themeEditor.props.accordion.q4", kind: "text", default: "" },
+      { key: "a4", labelKey: "themeEditor.props.accordion.a4", kind: "textarea", default: "" },
+      { key: "openFirst", labelKey: "themeEditor.props.openFirst", kind: "boolean", default: true },
+    ],
+  },
+  {
+    type: "content/timeline",
+    labelKey: "themeEditor.widgets.timeline.label",
+    descriptionKey: "themeEditor.widgets.timeline.description",
+    icon: "┋",
+    category: "content",
+    // The entries are a plain list the author writes (one <li> per point); the
+    // stylesheet draws the connecting line and the dots. An `html` prop, sanitised
+    // on save exactly like richtext — no per-item props, no JS.
+    bind: { kind: "none" },
+    props: [
+      {
+        key: "html",
+        labelKey: "themeEditor.props.timelineHtml",
+        kind: "html",
+        hintKey: "themeEditor.hints.timelineHtml",
+        default: "<ul><li><strong>2024</strong> — Something happened here.</li><li><strong>2025</strong> — And then this.</li></ul>",
+      },
+    ],
+  },
+  {
+    type: "content/table",
+    labelKey: "themeEditor.widgets.table.label",
+    descriptionKey: "themeEditor.widgets.table.description",
+    icon: "⊞",
+    category: "content",
+    // A table the author writes as HTML — table/thead/tbody/tr/th/td all survive the
+    // sanitiser. The widget only wraps it so it scrolls on narrow screens and picks
+    // up consistent styling.
+    bind: { kind: "none" },
+    props: [
+      {
+        key: "html",
+        labelKey: "themeEditor.props.tableHtml",
+        kind: "html",
+        hintKey: "themeEditor.hints.tableHtml",
+        default:
+          "<table><thead><tr><th>Plan</th><th>Price</th></tr></thead><tbody><tr><td>Basic</td><td>$9</td></tr><tr><td>Pro</td><td>$19</td></tr></tbody></table>",
+      },
+    ],
+  },
+  {
+    type: "dynamic/breadcrumb",
+    labelKey: "themeEditor.widgets.breadcrumb.label",
+    descriptionKey: "themeEditor.widgets.breadcrumb.description",
+    icon: "›",
+    category: "dynamic",
+    // Built from the viewed page's own path (e.g. "/shop/dogs/collar"): a link per
+    // ancestor segment, the current page's title as the last crumb. Binds to the
+    // page's title; the path always travels on the content, so no extra field.
+    // Empty on Home and Archive, where there is no single viewed page.
+    bind: { kind: "current", fields: ["title"] },
+    props: [
+      { key: "showHome", labelKey: "themeEditor.props.showHome", kind: "boolean", default: true },
+      { key: "homeLabel", labelKey: "themeEditor.props.homeLabel", kind: "text", default: "Home" },
+      {
+        key: "separator",
+        labelKey: "themeEditor.props.separator",
+        kind: "select",
+        options: [
+          { value: "chevron", labelKey: "themeEditor.props.separatorChevron" },
+          { value: "slash", labelKey: "themeEditor.props.separatorSlash" },
+          { value: "dot", labelKey: "themeEditor.props.separatorDot" },
+        ],
+        default: "chevron",
+      },
     ],
   },
 ];

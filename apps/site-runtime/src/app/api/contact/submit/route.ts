@@ -27,16 +27,21 @@ export async function POST(request: Request): Promise<Response> {
     .toLowerCase();
 
   const back = safeReturn(incoming.get("referer"), proto, hostname);
+  // Which page anchor the no-JS redirect returns to. A drawn theme's form posts its
+  // own node-scoped base (so several forms on a page reveal the right banner); an
+  // older single-form theme posts none and gets the legacy `contact` anchor.
+  let anchor = "contact";
   const done = (ok: boolean): Response =>
     wantsJson
       ? NextResponse.json({ ok }, { status: 200 })
-      : redirectWith(back, ok ? "sent" : "error");
+      : redirectWith(back, `${anchor}-${ok ? "sent" : "error"}`);
 
   if (!hostname) return done(false);
 
   let payload: Record<string, string>;
   try {
     const form = await request.formData();
+    anchor = safeAnchor(form.get("_anchor")) ?? anchor;
     payload = {
       name: field(form.get("name")),
       company: field(form.get("company")),
@@ -75,6 +80,16 @@ function field(value: FormDataEntryValue | null): string {
 }
 
 /**
+ * The posted anchor base, accepted only if it is a plain id-safe slug. A fragment
+ * cannot navigate off-page, but keeping it to `[a-zA-Z0-9_-]` means it can only ever
+ * name an element, never carry anything odd into the redirect URL.
+ */
+function safeAnchor(value: FormDataEntryValue | null): string | null {
+  if (typeof value !== "string") return null;
+  return /^[a-zA-Z0-9_-]{1,64}$/.test(value) ? value : null;
+}
+
+/**
  * Where to send the visitor after the POST — the page they submitted from, but
  * only if it is genuinely one of ours. A `referer` on another origin (or none) is
  * ignored in favour of the site root, so this route can never be turned into an
@@ -93,6 +108,6 @@ function safeReturn(referer: string | null, proto: string, hostname: string): st
 }
 
 /** 303 back to `base`, adding the fragment the theme's CSS keys its banner off. */
-function redirectWith(base: string, status: "sent" | "error"): Response {
-  return NextResponse.redirect(`${base}#contact-${status}`, 303);
+function redirectWith(base: string, fragment: string): Response {
+  return NextResponse.redirect(`${base}#${fragment}`, 303);
 }

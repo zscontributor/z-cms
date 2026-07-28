@@ -74,7 +74,9 @@ export function Inspector({
 
   return (
     <div className="flex flex-col">
-      <header className="flex items-center justify-between border-b border-neutral-200 px-4 py-3 dark:border-neutral-800">
+      {/* Matches the studio's other two column headers (left tabs, template strip)
+          at h-11 so the three line up as one band across the editor. */}
+      <header className="flex h-11 items-center justify-between border-b border-neutral-200 px-4 dark:border-neutral-800">
         <div className="min-w-0">
           <h2 className="truncate text-sm font-semibold">{title}</h2>
           {/* A widget the catalogue does not know still round-trips — the document

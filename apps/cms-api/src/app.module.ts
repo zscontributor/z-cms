@@ -19,6 +19,7 @@ import { LocaleMiddleware } from "./common/i18n";
 import { TenantInterceptor } from "./common/tenant.interceptor";
 import { ContactModule } from "./contact/contact.module";
 import { FormsModule } from "./forms/forms.module";
+import { PluginQueryModule } from "./plugin-query/plugin-query.module";
 import { ContentTypesModule } from "./content-types/content-types.module";
 import { ContentsModule } from "./contents/contents.module";
 import { JobsModule } from "./jobs/jobs.module";
@@ -92,6 +93,7 @@ class HealthController {
     // After PluginsModule: FormsService injects PluginsService (global) to resolve
     // and dispatch plugin-declared public forms.
     FormsModule,
+    PluginQueryModule,
     PackagesModule,
     MarketplaceModule,
     PublisherKeysModule,

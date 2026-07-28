@@ -2,7 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 import type { ContentDto, MenuItemDto } from "@zcmsorg/schemas";
 import { bindingToCollectionQuery, collectionNameFor } from "@zcmsorg/schemas";
 import type { WidgetComponent, WidgetProps } from "./types";
-import { boolProp, numberProp, stringArrayProp, stringProp } from "./tokens";
+import { boolProp, colorProp, numberProp, stringArrayProp, stringProp } from "./tokens";
 
 /**
  * The widgets themselves.
@@ -55,15 +55,119 @@ export const RichText: WidgetComponent = ({ node }) => {
 
 export const Button: WidgetComponent = ({ node, ctx }) => {
   const label = stringProp(node.props, "label");
+  // A button is its label — that is the content. Without one there is nothing to
+  // show, so it renders nothing; a link, though, is optional. A labelled button whose
+  // link is not set yet still draws (as a non-link), so it is visible while laid out.
+  if (!label) return null;
   const href = stringProp(node.props, "href");
-  if (!label || !href) return null;
   const variant = stringProp(node.props, "variant", "primary");
+  const className = `zw-button zw-button-${variant}`;
   return (
     <div className={`zw-button-wrap ${alignClass(node.props)}`}>
-      <a className={`zw-button zw-button-${variant}`} href={ctx.url(href)}>
-        {label}
-      </a>
+      {href ? (
+        <a className={className} href={ctx.url(href)}>
+          {label}
+        </a>
+      ) : (
+        <span className={className}>{label}</span>
+      )}
     </div>
+  );
+};
+
+/**
+ * A contact form — the one interactive widget, and interactive without shipping any
+ * theme JS.
+ *
+ * It renders a plain HTML `<form>` posting to `/api/contact/submit`, the endpoint the
+ * runtime owns. That endpoint validates against CONTACT_FORM_FIELDS, mails the site's
+ * configured recipient, and — for a browser with JS — the runtime's globally-injected
+ * enhancer intercepts the submit, validates with the SAME shared rules, and reveals
+ * the result without a navigation. With JS off, the endpoint 303s back to the form's
+ * own `#…-sent` / `#…-error` anchor and the `.zw-form-note:target` CSS in widgets.css
+ * shows the matching banner. Either way a drawn form works with no per-theme wiring.
+ *
+ * The field set (name/email/message) is a subset of CONTACT_FORM_FIELDS; the maxlengths
+ * mirror it so the browser rejects what the server would. Every id is scoped to the
+ * node (`zw-cf-<nodeId>-…`) so two forms on one page never collide: the enhancer reads
+ * each form's `data-note-ok/err`, and the no-JS redirect targets the `_anchor` this
+ * form posts. `name`/`email`/`message` (the submitted keys) stay fixed — the endpoint
+ * reads those.
+ */
+export const ContactForm: WidgetComponent = ({ node }) => {
+  const nameLabel = stringProp(node.props, "nameLabel", "Name");
+  const emailLabel = stringProp(node.props, "emailLabel", "Email");
+  const messageLabel = stringProp(node.props, "messageLabel", "Message");
+  const submitLabel = stringProp(node.props, "submitLabel", "Send message");
+  const successText = stringProp(node.props, "successText", "Thanks — your message has been sent.");
+  const errorText = stringProp(node.props, "errorText", "Sorry, something went wrong. Please try again.");
+  // A per-node id base, sanitised to what an HTML id / URL fragment may contain.
+  const base = `zw-cf-${String(node.id).replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  const sentId = `${base}-sent`;
+  const errorId = `${base}-error`;
+  return (
+    <form
+      className="zw-form"
+      action="/api/contact/submit"
+      method="post"
+      data-note-ok={sentId}
+      data-note-err={errorId}
+    >
+      {/* Which anchor the no-JS 303 returns to — makes the right banner reveal via
+          :target even with several forms on the page. Ignored by the mail payload. */}
+      <input type="hidden" name="_anchor" value={base} />
+      <div className="zw-form-field">
+        <label className="zw-form-label" htmlFor={`${base}-name`}>
+          {nameLabel}
+        </label>
+        <input
+          className="zw-form-input"
+          id={`${base}-name`}
+          name="name"
+          type="text"
+          required
+          maxLength={200}
+          autoComplete="name"
+        />
+      </div>
+      <div className="zw-form-field">
+        <label className="zw-form-label" htmlFor={`${base}-email`}>
+          {emailLabel}
+        </label>
+        <input
+          className="zw-form-input"
+          id={`${base}-email`}
+          name="email"
+          type="email"
+          required
+          maxLength={320}
+          autoComplete="email"
+        />
+      </div>
+      <div className="zw-form-field">
+        <label className="zw-form-label" htmlFor={`${base}-message`}>
+          {messageLabel}
+        </label>
+        <textarea
+          className="zw-form-input zw-form-textarea"
+          id={`${base}-message`}
+          name="message"
+          required
+          maxLength={5000}
+          rows={5}
+        />
+      </div>
+      {/* Hidden until revealed — by the enhancer (JS) or by :target (no-JS). */}
+      <div className="zw-form-note zw-form-ok" id={sentId} role="status">
+        {successText}
+      </div>
+      <div className="zw-form-note zw-form-err" id={errorId} role="alert">
+        {errorText}
+      </div>
+      <button className="zw-button zw-button-primary zw-form-submit" type="submit">
+        {submitLabel}
+      </button>
+    </form>
   );
 };
 
@@ -456,12 +560,25 @@ export const Pagination: WidgetComponent = ({ node, ctx }) => {
 
   const { page, totalPages, basePath } = archive;
   const showNumbers = boolProp(node.props, "showNumbers", true);
+  const shape = stringProp(node.props, "shape", "rounded");
   // Every link goes through ctx.url so it keeps the current locale ("/vi/blog?page=2"),
   // never resets to the default language. Page 1 is the bare path, no query.
   const href = (n: number) => (n <= 1 ? ctx.url(basePath) : ctx.url(`${basePath}?page=${n}`));
 
+  // Colours ride in props, so they are validated HERE (colorProp) before becoming CSS
+  // variables the stylesheet reads — an unset one falls back to the theme default.
+  const navStyle: Record<string, string> = {};
+  const pageBg = colorProp(node.props, "pageBackground");
+  const pageColor = colorProp(node.props, "pageColor");
+  const activeBg = colorProp(node.props, "activeBackground");
+  const activeColor = colorProp(node.props, "activeColor");
+  if (pageBg) navStyle["--zw-page-bg"] = pageBg;
+  if (pageColor) navStyle["--zw-page-color"] = pageColor;
+  if (activeBg) navStyle["--zw-page-active-bg"] = activeBg;
+  if (activeColor) navStyle["--zw-page-active-color"] = activeColor;
+
   return (
-    <nav className="zw-pagination" aria-label="Pagination">
+    <nav className={`zw-pagination zw-pagination-${shape}`} style={navStyle} aria-label="Pagination">
       {page > 1 ? (
         <a className="zw-pagination-prev" href={href(page - 1)} rel="prev" aria-label="Previous page">
           ‹
@@ -514,6 +631,269 @@ export const Pagination: WidgetComponent = ({ node, ctx }) => {
   );
 };
 
+// ---------------------------------------------------------------------------
+// Common UI components.
+//
+// The same contract as everything above: a pure function of (props, ctx), no
+// hooks, no state, no client JS. A component that has nothing to show renders
+// null. `variant` becomes a class suffix the stylesheet keys off — an unknown
+// value simply matches no rule and falls back to the base look, exactly as the
+// button's variant already does.
+// ---------------------------------------------------------------------------
+
+export const Card: WidgetComponent = ({ node, ctx }) => {
+  const image = stringProp(node.props, "image");
+  const title = stringProp(node.props, "title");
+  const text = stringProp(node.props, "text");
+  const buttonLabel = stringProp(node.props, "buttonLabel");
+  const href = stringProp(node.props, "href");
+  // A card with nothing in it is nothing — an author who dropped it but has not
+  // filled it in yet gets a collapsed slot, not an empty box.
+  if (!image && !title && !text && !buttonLabel) return null;
+
+  const body = (
+    <>
+      {image ? (
+        <img className="zw-card-image" src={ctx.asset(image)} alt={title} loading="lazy" />
+      ) : null}
+      <div className="zw-card-body">
+        {title ? <h3 className="zw-card-title">{title}</h3> : null}
+        {text ? <p className="zw-card-text">{text}</p> : null}
+        {href && buttonLabel ? (
+          <span className="zw-button zw-button-primary zw-card-button">{buttonLabel}</span>
+        ) : null}
+      </div>
+    </>
+  );
+
+  // A link with a label is a button inside the card; a link with none makes the
+  // WHOLE card clickable. Both go through ctx.url so the locale is kept.
+  return href && !buttonLabel ? (
+    <a className="zw-card zw-card-link" href={ctx.url(href)}>
+      {body}
+    </a>
+  ) : (
+    <div className="zw-card">{body}</div>
+  );
+};
+
+/** The first letter of each of the first two words — "Ada Lovelace" -> "AL". */
+function initials(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((word) => word.charAt(0).toUpperCase())
+    .join("");
+}
+
+export const Avatar: WidgetComponent = ({ node, ctx }) => {
+  const src = stringProp(node.props, "src");
+  const name = stringProp(node.props, "name");
+  const size = Math.min(200, Math.max(24, numberProp(node.props, "size", 56)));
+  const shape = stringProp(node.props, "shape", "circle");
+  const style = { width: `${size}px`, height: `${size}px` };
+  const className = `zw-avatar zw-avatar-${shape}`;
+
+  if (src) {
+    return <img className={className} src={ctx.asset(src)} alt={name} style={style} loading="lazy" />;
+  }
+  // No image is a normal state — fall back to initials so a header still shows a
+  // filled circle rather than a broken one. Font scales with the circle.
+  const text = initials(name);
+  if (!text) return null;
+  return (
+    <span
+      className={`${className} zw-avatar-initials`}
+      style={{ ...style, fontSize: `${Math.round(size * 0.4)}px` }}
+      aria-label={name}
+    >
+      {text}
+    </span>
+  );
+};
+
+export const Badge: WidgetComponent = ({ node }) => {
+  const label = stringProp(node.props, "label");
+  if (!label) return null;
+  const variant = stringProp(node.props, "variant", "primary");
+  return <span className={`zw-badge zw-badge-${variant}`}>{label}</span>;
+};
+
+export const Tag: WidgetComponent = ({ node, ctx }) => {
+  const label = stringProp(node.props, "label");
+  if (!label) return null;
+  const variant = stringProp(node.props, "variant", "neutral");
+  const href = stringProp(node.props, "href");
+  const className = `zw-tag zw-tag-${variant}`;
+  return href ? (
+    <a className={className} href={ctx.url(href)}>
+      {label}
+    </a>
+  ) : (
+    <span className={className}>{label}</span>
+  );
+};
+
+export const Alert: WidgetComponent = ({ node }) => {
+  const title = stringProp(node.props, "title");
+  const text = stringProp(node.props, "text");
+  if (!title && !text) return null;
+  const variant = stringProp(node.props, "variant", "info");
+  return (
+    <div className={`zw-alert zw-alert-${variant}`} role="note">
+      {title ? <div className="zw-alert-title">{title}</div> : null}
+      {text ? <div className="zw-alert-text">{text}</div> : null}
+    </div>
+  );
+};
+
+export const Progress: WidgetComponent = ({ node }) => {
+  const label = stringProp(node.props, "label");
+  const value = Math.min(100, Math.max(0, numberProp(node.props, "value", 60)));
+  const showValue = boolProp(node.props, "showValue", true);
+  // The fill colour rides in a prop, so it is validated (colorProp) before it can
+  // reach an inline style — an unset one falls back to the theme's primary.
+  const barColor = colorProp(node.props, "barColor");
+  const barStyle: Record<string, string> = { width: `${value}%` };
+  if (barColor) barStyle.background = barColor;
+  return (
+    <div className="zw-progress-wrap">
+      {label || showValue ? (
+        <div className="zw-progress-head">
+          {label ? <span className="zw-progress-label">{label}</span> : <span />}
+          {showValue ? <span className="zw-progress-value">{value}%</span> : null}
+        </div>
+      ) : null}
+      <div
+        className="zw-progress"
+        role="progressbar"
+        aria-valuenow={value}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
+        <div className="zw-progress-bar" style={barStyle} />
+      </div>
+    </div>
+  );
+};
+
+export const Rating: WidgetComponent = ({ node }) => {
+  const max = Math.min(10, Math.max(1, Math.trunc(numberProp(node.props, "max", 5))));
+  const value = Math.min(max, Math.max(0, numberProp(node.props, "value", 4)));
+  const showValue = boolProp(node.props, "showValue", false);
+  const stars = "★".repeat(max);
+  const pct = (value / max) * 100;
+  return (
+    <div className="zw-rating" role="img" aria-label={`${value} / ${max}`}>
+      {/* Two layers of the SAME star string: an outline track and a solid fill
+          clipped to the score's width, so a fractional rating (3.5) draws without
+          JS and without half-star glyphs. */}
+      <span className="zw-rating-stars" aria-hidden="true">
+        <span className="zw-rating-track">{stars}</span>
+        <span className="zw-rating-fill" style={{ width: `${pct}%` }}>
+          {stars}
+        </span>
+      </span>
+      {showValue ? <span className="zw-rating-value">{value}</span> : null}
+    </div>
+  );
+};
+
+export const Accordion: WidgetComponent = ({ node }) => {
+  // Four fixed slots; an item with no heading is skipped, so an author who fills
+  // in two gets two, not two plus two empty rows.
+  const items = [1, 2, 3, 4]
+    .map((i) => ({
+      q: stringProp(node.props, `q${i}`),
+      a: stringProp(node.props, `a${i}`),
+    }))
+    .filter((item) => item.q.length > 0);
+  if (items.length === 0) return null;
+  const openFirst = boolProp(node.props, "openFirst", true);
+  return (
+    <div className="zw-accordion">
+      {items.map((item, i) => (
+        // Native <details>: opens and closes with no JavaScript at all.
+        <details key={i} className="zw-accordion-item" {...(openFirst && i === 0 ? { open: true } : {})}>
+          <summary className="zw-accordion-summary">{item.q}</summary>
+          {item.a ? <div className="zw-accordion-body">{item.a}</div> : null}
+        </details>
+      ))}
+    </div>
+  );
+};
+
+export const Timeline: WidgetComponent = ({ node }) => {
+  const html = stringProp(node.props, "html");
+  if (!html) return null;
+  // The list the author wrote is sanitised on save (the same path richtext takes);
+  // the stylesheet turns each <li> into a timeline point (line + dot).
+  return <div className="zw-timeline" dangerouslySetInnerHTML={{ __html: html }} />;
+};
+
+export const Table: WidgetComponent = ({ node }) => {
+  const html = stringProp(node.props, "html");
+  if (!html) return null;
+  // Wrapped so a wide table scrolls inside its own box rather than pushing the page
+  // sideways. The HTML is sanitised on save; table tags survive the allowlist.
+  return <div className="zw-table" dangerouslySetInnerHTML={{ __html: html }} />;
+};
+
+/** "dog-food" -> "Dog food": a URL segment made into a readable crumb label. */
+function deslugify(segment: string): string {
+  const text = decodeURIComponent(segment).replace(/[-_]+/g, " ").trim();
+  return text ? text.charAt(0).toUpperCase() + text.slice(1) : segment;
+}
+
+export const Breadcrumb: WidgetComponent = ({ node, ctx, content }) => {
+  // No viewed page means no trail — home and archive get nothing, like post-title.
+  if (!content?.path) return null;
+  const segments = content.path.split("/").filter(Boolean);
+  if (segments.length === 0) return null;
+
+  const showHome = boolProp(node.props, "showHome", true);
+  const homeLabel = stringProp(node.props, "homeLabel", "Home");
+  const separator = stringProp(node.props, "separator", "chevron");
+  const sepChar = separator === "slash" ? "/" : separator === "dot" ? "·" : "›";
+
+  type Crumb = { label: string; href?: string };
+  const crumbs: Crumb[] = [];
+  if (showHome) crumbs.push({ label: homeLabel, href: "/" });
+
+  let acc = "";
+  segments.forEach((segment, i) => {
+    acc += `/${segment}`;
+    const isLast = i === segments.length - 1;
+    // The last segment IS the viewed page — use its real title, never the slug.
+    // Earlier segments are ancestors we only know by their path, so they are
+    // de-slugified and linked (every link through url() to keep the locale).
+    if (isLast) crumbs.push({ label: content.title || deslugify(segment) });
+    else crumbs.push({ label: deslugify(segment), href: acc });
+  });
+
+  return (
+    <nav className="zw-breadcrumb" aria-label="Breadcrumb">
+      <ol className="zw-breadcrumb-list">
+        {crumbs.map((crumb, i) => (
+          <li key={i} className="zw-breadcrumb-item">
+            {crumb.href ? (
+              <a href={ctx.url(crumb.href)}>{crumb.label}</a>
+            ) : (
+              <span aria-current="page">{crumb.label}</span>
+            )}
+            {i < crumbs.length - 1 ? (
+              <span className="zw-breadcrumb-sep" aria-hidden="true">
+                {sepChar}
+              </span>
+            ) : null}
+          </li>
+        ))}
+      </ol>
+    </nav>
+  );
+};
+
 /**
  * The registry the renderer walks. A widget type absent from here renders nothing
  * — the same rule the block registry holds, and the reason a document drawn on a
@@ -525,6 +905,7 @@ export const WIDGET_COMPONENTS: Record<string, WidgetComponent> = {
   "layout/button": Button,
   "layout/menu": Menu,
   "layout/spacer": Spacer,
+  "layout/contact-form": ContactForm,
   "media/image": Image,
   "media/gallery": Gallery,
   "media/slider": Slider,
@@ -535,4 +916,15 @@ export const WIDGET_COMPONENTS: Record<string, WidgetComponent> = {
   "dynamic/content-slider": ContentSlider,
   "dynamic/archive-list": ArchiveList,
   "dynamic/pagination": Pagination,
+  "content/card": Card,
+  "media/avatar": Avatar,
+  "content/badge": Badge,
+  "content/tag": Tag,
+  "content/alert": Alert,
+  "content/progress": Progress,
+  "content/rating": Rating,
+  "content/accordion": Accordion,
+  "content/timeline": Timeline,
+  "content/table": Table,
+  "dynamic/breadcrumb": Breadcrumb,
 };

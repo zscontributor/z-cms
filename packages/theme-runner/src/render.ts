@@ -214,4 +214,5 @@ interface PayloadLike {
   aiAssistant?: unknown;
   alternates?: unknown;
   collections?: unknown;
+  archive?: unknown;
 }
