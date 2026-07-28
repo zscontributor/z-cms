@@ -61,6 +61,21 @@ function die(message: string): never {
   process.exit(1);
 }
 
+/**
+ * The CLI's own version, read from the package manifest that always ships beside
+ * this file — `../package.json` both from `src/` under tsx and from `dist/` in the
+ * bundled global install. Read at runtime rather than inlined so the number never
+ * drifts from what `npm` actually installed.
+ */
+function cliVersion(): string {
+  try {
+    const manifest = path.join(__dirname, "..", "package.json");
+    return (JSON.parse(fs.readFileSync(manifest, "utf8")).version as string) || "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
 /** The first non-flag argument after the command, if there is one. */
 function positional(argv: string[]): string | undefined {
   const value = argv[1];
@@ -535,6 +550,13 @@ async function main() {
     case "-help":
     case "--help":
       console.log(usage(lang));
+      return;
+    case "version":
+    case "-v":
+    case "-V":
+    case "--version":
+      // Just the bare number, so `zcms --version` is safe to read from a script.
+      console.log(cliVersion());
       return;
     default:
       // An unknown command is a mistake worth naming, so the hint points at it

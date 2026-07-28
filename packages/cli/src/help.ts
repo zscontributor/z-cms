@@ -110,6 +110,9 @@ zcms — the packaging tool for Z-CMS themes and plugins
       --lang picks the language (en=English, ja=Japanese, vi=Vietnamese; default en).
       It is also read from ZCMS_LANG, or from your shell locale (LANG).
 
+  zcms version
+      Prints the installed zcms version. Also: zcms --version, zcms -v.
+
 Typical workflows
   Build a distributable .zcms (the file you upload or submit):
       zcms init ./my-theme --kind theme --id com.acme.theme.blog
@@ -158,6 +161,9 @@ zcms — Z-CMS のテーマとプラグインをパッケージ化するツー�
       --lang で言語を選べます（en=英語, ja=日本語, vi=ベトナム語。既定は en）。
       環境変数 ZCMS_LANG、またはシェルのロケール（LANG）からも判定します。
 
+  zcms version
+      インストールされている zcms のバージョンを表示します。zcms --version、zcms -v も同様。
+
 代表的なワークフロー
   配布用の .zcms（アップロードまたは提出するファイル）を作成する:
       zcms init ./my-theme --kind theme --id com.acme.theme.blog
@@ -205,6 +211,9 @@ zcms — công cụ đóng gói theme và plugin cho Z-CMS
       Hiển thị nội dung này. Cũng như: zcms (không có lệnh), zcms -h, zcms -help, zcms --help.
       --lang chọn ngôn ngữ (en=Anh, ja=Nhật, vi=Việt; mặc định en).
       Cũng đọc từ biến môi trường ZCMS_LANG, hoặc từ locale của shell (LANG).
+
+  zcms version
+      In ra phiên bản zcms đang cài. Cũng như: zcms --version, zcms -v.
 
 Các quy trình thường gặp
   Tạo file .zcms để phân phối (file bạn tải lên hoặc gửi đi):

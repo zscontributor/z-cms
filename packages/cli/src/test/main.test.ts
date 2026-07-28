@@ -124,6 +124,20 @@ describe("command dispatch", () => {
     expect(stdout).toContain("the packaging tool for Z-CMS");
     expect(code).toBe(0);
   });
+
+  it("prints its own version, matching package.json, on --version/-v/version", async () => {
+    // The number a user reports in a bug must be the one npm installed, so it is
+    // read from the manifest rather than hardcoded — and every spelling agrees.
+    const expected = JSON.parse(
+      fs.readFileSync(path.join(__dirname, "..", "..", "package.json"), "utf8"),
+    ).version;
+
+    for (const flag of ["--version", "-v", "-V", "version"]) {
+      const { stdout, code } = await zcms([flag]);
+      expect(stdout.trim()).toBe(expected);
+      expect(code).toBe(0);
+    }
+  });
 });
 
 describe("localized help", () => {

@@ -86,6 +86,7 @@ describe("usage", () => {
       "[--bump patch|minor|major] [--no-bump] [--set-version <semver>]",
       "zcms verify <file.zcms> [--marketplace-key <public.pem>]",
       "zcms help [--lang en|ja|vi]",
+      "zcms version",
     ];
 
     for (const lang of LANGS) {
