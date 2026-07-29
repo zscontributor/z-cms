@@ -155,27 +155,25 @@ export function hasHover(style: NodeStyle | undefined): boolean {
 }
 
 /**
- * Turns a node's bounded `style` into an inline style object. Returns an empty
- * object when there is no style, so callers can always spread it. A gradient, when
- * set, wins over a solid `background` — they target the same CSS property and the
- * editor offers them as one "fill" choice.
+ * The background FILL — solid colour, preset gradient, or photo — as its own style
+ * object, empty when the node has no fill.
+ *
+ * Fills are ONE choice, most-specific-wins, so an explicit override is always
+ * visible: a photo is the fill and beats a gradient/solid; a gradient beats a solid;
+ * a solid is the base. With a photo present it is expressed through a background-image
+ * list so the shorthand can never clobber the picture — the ONLY thing layered on top
+ * is a translucent `backgroundOverlay` wash (keeps text legible); the preset gradients
+ * are opaque standalone fills, so layering one over the photo would just hide it (the
+ * bug behind "changed the photo, nothing moved"). The solid colour sits beneath as
+ * backgroundColor, showing through a transparent PNG. The URL passed CssUrlSchema, so
+ * quoting it is safe; the replace is belt-and-suspenders against a `"` the fence forbids.
+ *
+ * Split out from styleForNode so the interpreter can paint it on a separate layer when
+ * `backgroundOpacity` fades it (see shouldFadeBackground / the .zw-bg-fill element).
  */
-export function styleForNode(style: NodeStyle | undefined): CSSProperties {
+export function backgroundFillStyle(style: NodeStyle | undefined): CSSProperties {
   const out: Record<string, string> = {};
   if (!style) return out as CSSProperties;
-
-  if (style.textColor) out.color = style.textColor;
-
-  // Fills are ONE choice, most-specific-wins, so an explicit override is always
-  // visible: a photo is the fill and beats a gradient/solid; a gradient beats a
-  // solid; a solid is the base. With a photo present it is expressed through a
-  // background-image list so the shorthand can never clobber the picture — the ONLY
-  // thing layered on top is a translucent `backgroundOverlay` wash (keeps text
-  // legible); the preset gradients are opaque standalone fills, so layering one over
-  // the photo would just hide it (the bug behind "changed the photo, nothing moved").
-  // The solid colour sits beneath as backgroundColor, showing through a transparent
-  // PNG. The URL passed CssUrlSchema, so quoting it is safe; the replace is
-  // belt-and-suspenders against a `"` the fence already forbids.
   if (style.backgroundImage) {
     const layers: string[] = [];
     if (style.backgroundOverlay) {
@@ -193,6 +191,32 @@ export function styleForNode(style: NodeStyle | undefined): CSSProperties {
       out.background = GRADIENT_VALUES[style.backgroundGradient];
     }
   }
+  return out as CSSProperties;
+}
+
+/**
+ * True when the node's fill should be faded on its own layer: an explicit
+ * backgroundOpacity below 1. At 1 (or unset) the fill paints inline, exactly as
+ * before, so the common path is untouched. The layer element itself no-ops when
+ * there is no fill to show, so this need not check for one.
+ */
+export function shouldFadeBackground(style: NodeStyle | undefined): boolean {
+  return !!style && style.backgroundOpacity !== undefined && style.backgroundOpacity < 1;
+}
+
+/**
+ * Turns a node's bounded `style` into an inline style object. Returns an empty
+ * object when there is no style, so callers can always spread it. The fill is folded
+ * in here UNLESS backgroundOpacity fades it, in which case the interpreter renders it
+ * on a separate `.zw-bg-fill` layer so the fade never touches the node's content.
+ */
+export function styleForNode(style: NodeStyle | undefined): CSSProperties {
+  const out: Record<string, string> = {};
+  if (!style) return out as CSSProperties;
+
+  if (style.textColor) out.color = style.textColor;
+
+  if (!shouldFadeBackground(style)) Object.assign(out, backgroundFillStyle(style));
 
   if (style.paddingX !== undefined) {
     out.paddingLeft = `${style.paddingX}px`;

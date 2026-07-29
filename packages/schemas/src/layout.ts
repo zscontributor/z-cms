@@ -260,6 +260,11 @@ export const NodeStyleSchema = z
     backgroundSize: z.enum(BACKGROUND_SIZES).optional(),
     backgroundPosition: z.enum(BACKGROUND_POSITIONS).optional(),
     backgroundOverlay: CssColorSchema.optional(),
+    // Fades the background FILL (colour/gradient/photo) on its own without touching
+    // the content: the interpreter paints the fill on a separate layer behind the
+    // node's text and gives that layer this opacity, so a photo can sit at 40% while
+    // the words over it stay fully solid — unlike `opacity`, which dims the whole box.
+    backgroundOpacity: z.number().min(0).max(1).optional(),
     backgroundVideo: CssUrlSchema.optional(),
     paddingX: z.number().min(0).max(256).optional(),
     paddingY: z.number().min(0).max(256).optional(),
@@ -378,6 +383,7 @@ export const NODE_STYLE_FIELDS: readonly NodeStyleFieldSpec[] = [
     options: enumOptions(BACKGROUND_POSITIONS, "themeEditor.style.bgPosition"),
   },
   { key: "backgroundOverlay", labelKey: "themeEditor.style.backgroundOverlay", control: "color", group: "colors" },
+  { key: "backgroundOpacity", labelKey: "themeEditor.style.backgroundOpacity", control: "number", group: "colors", min: 0, max: 1, step: 0.05 },
   { key: "backgroundVideo", labelKey: "themeEditor.style.backgroundVideo", control: "video", group: "colors" },
   { key: "paddingX", labelKey: "themeEditor.style.paddingX", control: "number", group: "spacing", min: 0, max: 256 },
   { key: "paddingY", labelKey: "themeEditor.style.paddingY", control: "number", group: "spacing", min: 0, max: 256 },

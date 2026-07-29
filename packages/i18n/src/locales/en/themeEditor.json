@@ -327,6 +327,7 @@
     "backgroundSize": "Image size",
     "backgroundPosition": "Image position",
     "backgroundOverlay": "Image overlay",
+    "backgroundOpacity": "Background opacity",
     "backgroundVideo": "Background video",
     "backgroundVideoHint": "Plays muted and looped behind this block. Hidden for reduced-motion — set a background colour or image as a fallback.",
     "bgSize": {

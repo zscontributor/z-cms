@@ -327,6 +327,7 @@
     "backgroundSize": "画像サイズ",
     "backgroundPosition": "画像の位置",
     "backgroundOverlay": "画像オーバーレイ",
+    "backgroundOpacity": "背景の不透明度",
     "backgroundVideo": "背景動画",
     "backgroundVideoHint": "ミュート・ループでこのブロックの背景に再生します。視差効果を減らす設定では非表示 — 背景色か背景画像をフォールバックに設定してください。",
     "bgSize": {

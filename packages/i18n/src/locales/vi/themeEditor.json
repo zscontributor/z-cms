@@ -327,6 +327,7 @@
     "backgroundSize": "Cỡ ảnh",
     "backgroundPosition": "Vị trí ảnh",
     "backgroundOverlay": "Lớp phủ ảnh",
+    "backgroundOpacity": "Độ mờ nền",
     "backgroundVideo": "Video nền",
     "backgroundVideoHint": "Phát tắt tiếng và lặp lại phía sau khối này. Bị ẩn khi người dùng bật giảm chuyển động — hãy đặt màu nền hoặc ảnh nền dự phòng.",
     "bgSize": {

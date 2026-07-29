@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { ContentDto, LayoutNode } from "@zcmsorg/schemas";
 import type { ThemeContext } from "@zcmsorg/theme-sdk";
 import { LayoutRenderer } from "../LayoutRenderer";
-import { styleForNode, tokensToStyle } from "../tokens";
+import { backgroundFillStyle, shouldFadeBackground, styleForNode, tokensToStyle } from "../tokens";
 
 /**
  * These tests pin the property the whole GUI-theme feature rests on: a
@@ -318,6 +318,75 @@ describe("styleForNode", () => {
     const css = styleForNode({ backgroundVideo: "/uploads/loop.mp4" }) as Record<string, unknown>;
     expect(css.backgroundVideo).toBeUndefined();
     expect(Object.keys(css)).toHaveLength(0);
+  });
+
+  it("keeps the fill inline at full opacity or when unset", () => {
+    expect(styleForNode({ background: "#123456" }).background).toBe("#123456");
+    expect(styleForNode({ background: "#123456", backgroundOpacity: 1 }).background).toBe("#123456");
+  });
+
+  it("lifts the fill off the element when backgroundOpacity fades it", () => {
+    // The fade lives on a separate layer, so the element's own inline style carries no
+    // fill — otherwise a full-opacity copy would sit behind the faded one.
+    const css = styleForNode({ background: "#123456", backgroundOpacity: 0.4 }) as Record<string, unknown>;
+    expect(css.background).toBeUndefined();
+    // Other style still applies; only the fill moved.
+    expect(styleForNode({ background: "#123456", backgroundOpacity: 0.4, paddingY: 10 }).paddingTop).toBe("10px");
+  });
+
+  it("backgroundFillStyle returns just the fill, and never dims content itself", () => {
+    expect(backgroundFillStyle({ background: "#abc" }).background).toBe("#abc");
+    expect(String(backgroundFillStyle({ backgroundImage: "/u/p.jpg" }).backgroundImage)).toContain("url(");
+    // It carries no opacity — the layer sets that, not the fill declaration.
+    expect((backgroundFillStyle({ background: "#abc" }) as Record<string, unknown>).opacity).toBeUndefined();
+  });
+
+  it("shouldFadeBackground is true only for an opacity below 1", () => {
+    expect(shouldFadeBackground({ background: "#abc", backgroundOpacity: 0.5 })).toBe(true);
+    expect(shouldFadeBackground({ background: "#abc", backgroundOpacity: 1 })).toBe(false);
+    expect(shouldFadeBackground({ background: "#abc" })).toBe(false);
+    expect(shouldFadeBackground(undefined)).toBe(false);
+  });
+});
+
+describe("LayoutRenderer background opacity", () => {
+  const sectionWithFade = (style: Record<string, unknown>): LayoutNode[] => [
+    {
+      id: "s",
+      kind: "section",
+      props: {},
+      style,
+      children: [{ id: "r", kind: "row", props: {}, children: [{ id: "c", kind: "column", props: {}, children: [] }] }],
+    } as LayoutNode,
+  ];
+
+  it("paints a faded photo on its own layer, not on the section", () => {
+    const html = render(sectionWithFade({ backgroundImage: "/u/hero.jpg", backgroundOpacity: 0.4 }));
+    expect(html).toContain("zw-has-bg-fill");
+    expect(html).toContain('class="zw-bg-fill"');
+    expect(html).toContain("opacity:0.4");
+    expect(html).toContain("/u/hero.jpg");
+  });
+
+  it("does not dim the section itself (content stays solid)", () => {
+    // The fade must not land on the <section> as `opacity`, which would dim the text.
+    const html = render(sectionWithFade({ background: "#222", backgroundOpacity: 0.3 }));
+    const sectionTag = html.slice(html.indexOf("<section"), html.indexOf(">", html.indexOf("<section")) + 1);
+    expect(sectionTag).not.toContain("opacity");
+  });
+
+  it("adds no fill layer when a node has opacity but no fill to fade", () => {
+    const html = render(sectionWithFade({ backgroundOpacity: 0.5 }));
+    expect(html).not.toContain("zw-bg-fill");
+    expect(html).not.toContain("zw-has-bg-fill");
+  });
+
+  it("wraps an otherwise-styleless widget when only a faded fill is set", () => {
+    const html = render(
+      scaffold(widget("w", "layout/heading", { props: { text: "Hi" }, style: { background: "#222", backgroundOpacity: 0.5 } })),
+    );
+    expect(html).toContain("zw-widget zw-has-bg-fill");
+    expect(html).toContain('class="zw-bg-fill"');
   });
 });
 

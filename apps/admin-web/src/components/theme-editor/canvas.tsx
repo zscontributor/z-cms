@@ -1,14 +1,55 @@
 "use client";
 
 import { useDndContext, useDraggable, useDroppable } from "@dnd-kit/core";
-import { createContext, Fragment, useContext, useState } from "react";
+import { createContext, type CSSProperties, Fragment, useContext, useState } from "react";
 import type { LayoutNode } from "@zcmsorg/schemas";
-import { WIDGET_COMPONENTS, styleForNode } from "@zcmsorg/theme-widgets";
+import {
+  WIDGET_COMPONENTS,
+  backgroundFillStyle,
+  shouldFadeBackground,
+  styleForNode,
+} from "@zcmsorg/theme-widgets";
 import type { ThemeContext } from "@zcmsorg/theme-sdk";
 import { Icon } from "@/components/shell/icon";
 import { cn } from "@/lib/cn";
 import { useT } from "@/lib/i18n-provider";
 import { specFor } from "@/lib/layout-doc";
+
+/**
+ * The canvas twin of the runtime's `.zw-bg-fill` layer. When a node fades its
+ * background (`backgroundOpacity`), the fill is painted here behind the content so
+ * the canvas shows the same translucency the live Preview and the site do. It sits on
+ * an absolutely-positioned layer at `z-index:-1`, so it neither joins a row's flex
+ * flow nor dims the content above it. Returns null when there is no faded fill, so an
+ * ordinary node's DOM is unchanged. The box it sits in must be `position:relative`.
+ */
+function CanvasFillLayer({ style }: { style: LayoutNode["style"] }) {
+  if (!shouldFadeBackground(style)) return null;
+  const fill = backgroundFillStyle(style);
+  if (Object.keys(fill).length === 0) return null;
+  return (
+    <div
+      aria-hidden
+      style={{
+        ...fill,
+        opacity: style!.backgroundOpacity,
+        position: "absolute",
+        inset: 0,
+        zIndex: -1,
+        borderRadius: "inherit",
+        pointerEvents: "none",
+      }}
+    />
+  );
+}
+
+/**
+ * The node box style for the canvas: the same inline style the runtime uses, made a
+ * positioning context so a faded-fill layer (CanvasFillLayer) can sit behind it.
+ */
+function canvasBoxStyle(style: LayoutNode["style"]): CSSProperties {
+  return { position: "relative", ...styleForNode(style) };
+}
 
 /**
  * Which block the pointer is actually over — the innermost one, not every
@@ -363,7 +404,8 @@ function SectionView(props: NodeViewProps) {
       >
         {/* Style rides on a wrapper around the content, not the chrome: the outline
             and toolbar are the editor's, not part of the drawing. */}
-        <div style={styleForNode(node.style)}>
+        <div style={canvasBoxStyle(node.style)}>
+          <CanvasFillLayer style={node.style} />
           {(node.children ?? []).map((child, i) => (
             <NodeView
               {...props}
@@ -408,7 +450,8 @@ function RowView(props: NodeViewProps) {
         className="p-2"
         handleProps={{ ...attributes, ...listeners }}
       >
-        <div className="flex flex-wrap gap-2" style={styleForNode(node.style)}>
+        <div className="flex flex-wrap gap-2" style={canvasBoxStyle(node.style)}>
+          <CanvasFillLayer style={node.style} />
           {(node.children ?? []).map((child, i) => (
             <NodeView
               {...props}
@@ -454,7 +497,7 @@ function ColumnView(props: NodeViewProps) {
       >
         <div
           ref={setNodeRef}
-          style={styleForNode(node.style)}
+          style={canvasBoxStyle(node.style)}
           className={cn(
             "min-h-[3rem] rounded p-2 transition-colors",
             // The drop target, loud on purpose: a filled tint plus a solid ring, so
@@ -467,6 +510,7 @@ function ColumnView(props: NodeViewProps) {
               "border border-dashed border-neutral-300 dark:border-neutral-700",
           )}
         >
+          <CanvasFillLayer style={node.style} />
           {(node.children ?? []).length === 0 ? (
             <p
               className={cn(
@@ -555,7 +599,8 @@ function WidgetView(props: NodeViewProps) {
           // canvas would swallow the click that selects the widget and navigate the
           // admin away from the editor. The node's own style is applied here so the
           // canvas is WYSIWYG — the same styleForNode the runtime interpreter uses.
-          <div className="pointer-events-none" style={styleForNode(node.style)}>
+          <div className="pointer-events-none" style={canvasBoxStyle(node.style)}>
+            <CanvasFillLayer style={node.style} />
             {mediaEmpty ? (
               // A picture widget with no image yet renders nothing on the live site;
               // on the canvas that reads as a missing block, so show a picture-icon
