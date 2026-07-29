@@ -211,7 +211,14 @@ export function styleForNode(style: NodeStyle | undefined): CSSProperties {
     out.marginBottom = `${style.marginY}px`;
   }
 
-  if (style.borderRadius !== undefined) out.borderRadius = `${style.borderRadius}px`;
+  if (style.borderRadius !== undefined) {
+    out.borderRadius = `${style.borderRadius}px`;
+    // Media widgets (image/gallery) draw their visible pixels in an <img> inside this
+    // wrapper, which has no paint and no overflow clip — so its own border-radius is
+    // invisible. Expose the value as a custom property that cascades to those children,
+    // which round themselves with it (see .zw-image img / .zw-gallery-item in widgets.css).
+    out["--zw-node-radius"] = `${style.borderRadius}px`;
+  }
   // A border needs all three or it shows nothing useful. Width drives it; style and
   // colour default to something visible so a width alone still draws a line.
   if (style.borderWidth !== undefined && style.borderWidth > 0) {
