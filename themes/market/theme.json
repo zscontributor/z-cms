@@ -5,9 +5,9 @@
   "kind": "theme",
   "description": "An elegant storefront for cosmetics and beauty brands: hero, category tiles, product grid, ingredients accordion and newsletter — plus add-to-cart, a slide-in cart and cash-on-delivery checkout. English, Japanese and Vietnamese, dark and light modes.",
   "changelog": {
-    "en": "Completed English, Japanese and Vietnamese coverage across the storefront. The shipped announcement, footer description, tagline, copyright and default SEO description now follow the page language while preserving owner-customised copy.\nDemo navigation labels and the journal reading-time field are now translated in all three languages.",
-    "ja": "ストアフロント全体の英語・日本語・ベトナム語対応を完成させました。テーマ標準のお知らせ、フッター説明、タグライン、著作権表記、SEO の既定説明がページの言語に合わせて表示され、サイト管理者が設定した文章はそのまま保持されます。\nデモナビゲーションのラベルとジャーナルの読了時間フィールドも、3 言語すべてに対応しました。",
-    "vi": "Hoàn thiện i18n tiếng Anh, tiếng Nhật và tiếng Việt trên toàn bộ storefront. Nội dung mặc định của thanh thông báo, mô tả chân trang, tagline, bản quyền và mô tả SEO nay đổi theo ngôn ngữ trang, đồng thời vẫn giữ nguyên nội dung do chủ trang tùy chỉnh.\nNhãn menu demo và trường thời gian đọc của bài viết cũng đã có đủ cả 3 ngôn ngữ."
+    "en": "Breadcrumb fix. When a breadcrumb widget is added to the storefront, it now follows the menu hierarchy: a product with a flat URL (for example /product-zpets) that sits under a menu parent shows the full trail — Home / Products / Z-Pets — instead of collapsing to Home / Z-Pets. The deepest matching menu location wins, across any menu, and the current page keeps its real title.",
+    "ja": "パンくずリストの修正。ストアフロントにパンくずウィジェットを追加した場合、メニュー階層に従うようになりました。フラットな URL の商品（例：/product-zpets）でも、メニューの親項目の下にある場合は Home / Z-Pets に省略されず、Home / Products / Z-Pets という完全な経路を表示します。すべてのメニューの中で最も深く一致する位置が採用され、現在のページは本来のタイトルを保持します。",
+    "vi": "Sửa breadcrumb. Khi thêm widget breadcrumb vào storefront, nó nay bám theo cấu trúc menu: sản phẩm có URL phẳng (ví dụ /product-zpets) nằm dưới một mục menu cha sẽ hiển thị đầy đủ đường dẫn — Home / Products / Z-Pets — thay vì rút gọn thành Home / Z-Pets. Vị trí menu khớp sâu nhất được chọn, trên mọi menu, và trang hiện tại vẫn giữ đúng tiêu đề thật."
   },
   "author": {
     "name": "Z-SOFT Co., Ltd.",

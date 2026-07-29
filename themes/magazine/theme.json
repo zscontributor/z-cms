@@ -1,13 +1,13 @@
 {
   "id": "vn.zsoft.theme.magazine",
   "name": "Z Magazine",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "kind": "theme",
   "description": "An editorial theme for news sites, magazines and publications: a dateline bar, a serif masthead, a lead story with secondaries, a river of latest news, a most-read rail and an opinion strip. English, Japanese and Vietnamese, with dark and light modes.",
   "changelog": {
-    "en": "The footer and newsletter sign-up form linked to a /newsletter page that did not exist, so both led to a 404. There is now a real Newsletter page — what the email is, what arrives and how to subscribe — seeded in English, Japanese and Vietnamese.\nAdded a fresh Technology long read to the demo news so a newly seeded site opens with more to read.\nTidied the demo navigation: the section menu no longer ships placeholder tabs (World, Technology, Business, Culture, Opinion) that all led to the same page, and the footer's \"The paper\" column no longer repeats a link or carries an outbound Z-SOFT link.",
-    "ja": "フッターとニュースレター登録フォームが、存在しない /newsletter ページにリンクしており、どちらも 404 になっていました。実際のニュースレターページ（内容・届くもの・登録方法）を用意し、英語・日本語・ベトナム語で初期投入します。\nデモのニュースに、新しいテクノロジー長編ルポを追加しました。新規サイトを立ち上げた時点で、読み物がより充実します。\nデモのナビゲーションを整理しました。すべて同じページに飛んでいたセクションメニューのプレースホルダー（World, Technology, Business, Culture, Opinion）を廃止し、フッターの「本紙について」欄の重複リンクと外部 Z-SOFT リンクを取り除きました。",
-    "vi": "Chân trang và biểu mẫu đăng ký bản tin trỏ tới trang /newsletter vốn không tồn tại, nên cả hai đều dẫn tới lỗi 404. Nay đã có một trang Bản tin thật sự — email là gì, bạn nhận được gì và cách đăng ký — được tạo sẵn bằng tiếng Anh, tiếng Nhật và tiếng Việt.\nĐã thêm một bài Công nghệ dài kỳ mới vào tin demo để một trang vừa khởi tạo đã có thêm nội dung để đọc.\nDọn lại điều hướng demo: menu chuyên mục không còn các thẻ giữ chỗ (World, Technology, Business, Culture, Opinion) vốn đều dẫn về cùng một trang, và cột \"Tòa soạn\" ở chân trang không còn lặp liên kết hay chứa liên kết Z-SOFT ra ngoài."
+    "en": "Breadcrumb fix. When a breadcrumb widget is added to the layout, it now follows the menu hierarchy: a page with a flat URL that sits under a menu parent shows the full trail (for example Home / Products / Z-Pets) instead of collapsing to Home / Z-Pets. The deepest matching menu location wins, across any menu, and the current page keeps its real title.",
+    "ja": "パンくずリストの修正。レイアウトにパンくずウィジェットを追加した場合、メニュー階層に従うようになりました。フラットな URL のページでも、メニューの親項目の下にある場合は Home / Z-Pets に省略されず、完全な経路（例：Home / Products / Z-Pets）を表示します。すべてのメニューの中で最も深く一致する位置が採用され、現在のページは本来のタイトルを保持します。",
+    "vi": "Sửa breadcrumb. Khi thêm widget breadcrumb vào layout, nó nay bám theo cấu trúc menu: trang có URL phẳng nằm dưới một mục menu cha sẽ hiển thị đầy đủ đường dẫn (ví dụ Home / Products / Z-Pets) thay vì rút gọn thành Home / Z-Pets. Vị trí menu khớp sâu nhất được chọn, trên mọi menu, và trang hiện tại vẫn giữ đúng tiêu đề thật."
   },
   "author": {
     "name": "Z-SOFT Co., Ltd.",
