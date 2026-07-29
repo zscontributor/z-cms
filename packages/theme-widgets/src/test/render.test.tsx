@@ -658,6 +658,63 @@ describe("Breadcrumb", () => {
     expect(html).not.toContain('href="/vi/shop/dogs/collar"');
   });
 
+  it("uses the deepest menu hierarchy for a page with a flat URL", () => {
+    const ctx = mockCtx({
+      url: (p: string) => `/vi${p}`,
+      menus: {
+        primary: {
+          key: "primary",
+          name: "Primary",
+          items: [
+            {
+              id: "products",
+              label: "Products",
+              url: "/products",
+              target: "",
+              children: [
+                {
+                  id: "zpets",
+                  label: "Z-Pets",
+                  url: "/product-zpets",
+                  target: "",
+                  children: [],
+                },
+              ],
+            },
+          ],
+        },
+        footer: {
+          key: "footer",
+          name: "Footer",
+          items: [
+            {
+              id: "footer-zpets",
+              label: "Z-Pets",
+              url: "/product-zpets",
+              target: "",
+              children: [],
+            },
+          ],
+        },
+      },
+    });
+    const product = {
+      id: "p2",
+      title: "Z-Pets",
+      path: "/product-zpets",
+    } as unknown as ContentDto;
+
+    const html = render(scaffold(widget("bc", "dynamic/breadcrumb")), ctx, product);
+
+    expect(html).toContain('href="/vi/"');
+    expect(html).toContain('href="/vi/products"');
+    expect(html).toContain(">Products<");
+    expect(html).toContain('<span aria-current="page">Z-Pets</span>');
+    expect(html).not.toContain('href="/vi/product-zpets"');
+    expect(html.indexOf("Home")).toBeLessThan(html.indexOf("Products"));
+    expect(html.indexOf("Products")).toBeLessThan(html.indexOf("Z-Pets"));
+  });
+
   it("can hide the Home crumb", () => {
     const html = render(scaffold(widget("bc", "dynamic/breadcrumb", { props: { showHome: false } })), mockCtx(), page());
     expect(html).not.toContain('href="/"');

@@ -846,6 +846,45 @@ function deslugify(segment: string): string {
   return text ? text.charAt(0).toUpperCase() + text.slice(1) : segment;
 }
 
+/** A menu URL reduced to the site-relative path breadcrumb matching needs. */
+function menuPath(url: string): string | null {
+  if (!url || url.startsWith("#") || /^[a-z][a-z\d+.-]*:/i.test(url)) return null;
+  const path = url.split(/[?#]/, 1)[0] || "/";
+  const withSlash = path.startsWith("/") ? path : `/${path}`;
+  return withSlash === "/" ? "/" : withSlash.replace(/\/+$/, "");
+}
+
+/**
+ * Find the deepest menu trail that points at the viewed page.
+ *
+ * A page URL can be intentionally flat (`/product-zpets`) while its information
+ * architecture lives in the menu (`Products > Z-Pets`). Looking only at URL
+ * segments loses that relationship, so the menu tree is the semantic source when
+ * it contains a real parent. Searching every location also covers sites that put
+ * their canonical hierarchy in a menu other than `primary`.
+ */
+function menuTrailForPath(
+  menus: WidgetProps["ctx"]["menus"],
+  path: string,
+): MenuItemDto[] {
+  const target = menuPath(path);
+  if (!target) return [];
+  let best: MenuItemDto[] = [];
+
+  const visit = (items: MenuItemDto[], ancestors: MenuItemDto[]) => {
+    for (const item of items) {
+      const trail = [...ancestors, item];
+      if (menuPath(item.url) === target && trail.length > best.length) best = trail;
+      if (item.children.length > 0) visit(item.children, trail);
+    }
+  };
+
+  for (const menu of Object.values(menus)) {
+    if (menu) visit(menu.items, []);
+  }
+  return best;
+}
+
 export const Breadcrumb: WidgetComponent = ({ node, ctx, content }) => {
   // No viewed page means no trail — home and archive get nothing, like post-title.
   if (!content?.path) return null;
@@ -857,20 +896,36 @@ export const Breadcrumb: WidgetComponent = ({ node, ctx, content }) => {
   const separator = stringProp(node.props, "separator", "chevron");
   const sepChar = separator === "slash" ? "/" : separator === "dot" ? "·" : "›";
 
-  type Crumb = { label: string; href?: string };
+  type Crumb = { label: string; href?: string; current?: boolean };
   const crumbs: Crumb[] = [];
   if (showHome) crumbs.push({ label: homeLabel, href: "/" });
 
-  let acc = "";
-  segments.forEach((segment, i) => {
-    acc += `/${segment}`;
-    const isLast = i === segments.length - 1;
-    // The last segment IS the viewed page — use its real title, never the slug.
-    // Earlier segments are ancestors we only know by their path, so they are
-    // de-slugified and linked (every link through url() to keep the locale).
-    if (isLast) crumbs.push({ label: content.title || deslugify(segment) });
-    else crumbs.push({ label: deslugify(segment), href: acc });
-  });
+  const menuTrail = menuTrailForPath(ctx.menus, content.path);
+  if (menuTrail.length > 1) {
+    // The matching leaf is the current page; its real content title is more
+    // authoritative than a possibly abbreviated menu label. Root/home ancestors
+    // are omitted because the configurable Home crumb above already owns that role.
+    for (const item of menuTrail.slice(0, -1)) {
+      const href = menuPath(item.url);
+      if (href === "/") continue;
+      crumbs.push({ label: item.label, ...(href ? { href } : {}) });
+    }
+    crumbs.push({
+      label: content.title || menuTrail.at(-1)?.label || deslugify(segments.at(-1)!),
+      current: true,
+    });
+  } else {
+    let acc = "";
+    segments.forEach((segment, i) => {
+      acc += `/${segment}`;
+      const isLast = i === segments.length - 1;
+      // The last segment IS the viewed page — use its real title, never the slug.
+      // Earlier segments are ancestors we only know by their path, so they are
+      // de-slugified and linked (every link through url() to keep the locale).
+      if (isLast) crumbs.push({ label: content.title || deslugify(segment), current: true });
+      else crumbs.push({ label: deslugify(segment), href: acc });
+    });
+  }
 
   return (
     <nav className="zw-breadcrumb" aria-label="Breadcrumb">
@@ -880,7 +935,7 @@ export const Breadcrumb: WidgetComponent = ({ node, ctx, content }) => {
             {crumb.href ? (
               <a href={ctx.url(crumb.href)}>{crumb.label}</a>
             ) : (
-              <span aria-current="page">{crumb.label}</span>
+              <span aria-current={crumb.current ? "page" : undefined}>{crumb.label}</span>
             )}
             {i < crumbs.length - 1 ? (
               <span className="zw-breadcrumb-sep" aria-hidden="true">
