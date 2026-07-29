@@ -123,7 +123,14 @@ function csp(nonce: string): string {
     `default-src 'self'`,
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${dev ? " 'unsafe-eval'" : ""}`,
     `style-src 'self' 'unsafe-inline'`,
-    `img-src 'self' data: blob: ${s3} ${siteRuntime} ${marketplace}`.replace(/\s+/g, " ").trim(),
+    // Theme authors reference images from anywhere — placeholder services, their
+    // own CDNs, third-party hosts — so the Theme Studio preview and the media
+    // pickers must load arbitrary external images. `https:` allows any secure image
+    // origin (http: too in dev for local placeholders). Images cannot execute, so
+    // this is the low-risk directive to open; script/connect stay strict.
+    `img-src 'self' data: blob: https: ${dev ? "http:" : ""} ${s3} ${siteRuntime} ${marketplace}`
+      .replace(/\s+/g, " ")
+      .trim(),
     `font-src 'self' data:`,
     // Server actions are same-origin; the API is called from the client only
     // through same-origin route handlers, but allow it explicitly for safety.

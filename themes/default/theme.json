@@ -1,13 +1,13 @@
 {
   "id": "vn.zsoft.theme.default",
   "name": "Z Default",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "kind": "theme",
   "description": "The default Z-CMS theme: a warm, product-led portal for open-source projects, products and company sites. English, Japanese and Vietnamese, with dark and light modes.",
   "changelog": {
-    "en": "Completed English, Japanese and Vietnamese coverage across the theme. Shipped announcement, tagline, footer copy, copyright and SEO defaults now follow the page language while preserving owner customisations.\nNavigation, the website preview, hero metadata, API Reference label and reading-time field are translated. The shipped documentation links now open the matching language, including pagination that retains the locale.",
-    "vi": "Hoàn thiện i18n tiếng Anh, tiếng Nhật và tiếng Việt trên toàn bộ giao diện. Thanh thông báo, tagline, nội dung chân trang, bản quyền và SEO mặc định nay đổi theo ngôn ngữ trang nhưng vẫn giữ nguyên tùy chỉnh của chủ trang.\nMenu, bản xem trước website, metadata hero, nhãn Tham chiếu API và trường thời gian đọc đã được dịch. Các liên kết tài liệu mặc định nay mở đúng ngôn ngữ, đồng thời phân trang luôn giữ locale.",
-    "ja": "テーマ全体の英語・日本語・ベトナム語対応を完成させました。テーマ標準のお知らせ、タグライン、フッター、著作権表記、SEO の既定値がページの言語に合わせて表示され、サイト管理者のカスタマイズはそのまま保持されます。\nナビゲーション、ウェブサイトプレビュー、ヒーローのメタ情報、API リファレンス、読了時間フィールドを翻訳しました。標準のドキュメントリンクも対応言語を開き、ページネーションでもロケールを維持します。"
+    "en": "Breadcrumbs now follow the menu hierarchy. A page with a flat URL (for example a product at /product-zpets) that sits under a menu parent now shows the full trail — Home / Products / Z-Pets — instead of collapsing to Home / Z-Pets. The deepest matching menu location wins, across any menu, and the current page keeps its real title.",
+    "vi": "Breadcrumb nay bám theo cấu trúc menu. Trang có URL phẳng (ví dụ sản phẩm tại /product-zpets) nhưng nằm dưới một mục menu cha giờ hiển thị đầy đủ đường dẫn — Home / Products / Z-Pets — thay vì rút gọn thành Home / Z-Pets. Vị trí menu khớp sâu nhất được chọn, trên mọi menu, và trang hiện tại vẫn giữ đúng tiêu đề thật.",
+    "ja": "パンくずリストがメニュー階層に従うようになりました。フラットな URL のページ（例：/product-zpets の商品）でも、メニューの親項目の下にある場合は Home / Z-Pets に省略されず、Home / Products / Z-Pets という完全な経路を表示します。すべてのメニューの中で最も深く一致する位置が採用され、現在のページは本来のタイトルを保持します。"
   },
   "author": {
     "name": "Z-SOFT Co., Ltd.",
