@@ -306,10 +306,21 @@ export function generatePluginTableDdl(
   );
 
   table.indexes?.forEach((index, i) => {
-    const cols = index.columns.map(ident).join(", ");
+    // A plugin table is multi-tenant and site-scoped: every row carries
+    // tenant_id/site_id and every query filters by them. A manifest index names
+    // only the plugin's own columns, so scope it the way core scopes the table —
+    // prepend tenant_id, site_id. Without this a UNIQUE index is global across the
+    // whole platform: one site seeding SKU "X" would block every other site from
+    // ever holding "X", and "unique" would mean "unique on Z-CMS", not "unique in
+    // this shop". DROP-then-CREATE (like the RLS policy below) so an index whose
+    // columns or uniqueness changed — across plugin versions, or from this very
+    // scoping fix on a table that predates it — is reconciled, not silently left
+    // in its old shape by CREATE ... IF NOT EXISTS.
+    const cols = [ident("tenant_id"), ident("site_id"), ...index.columns.map(ident)].join(", ");
     const name = ident(`${table.name}__ix${i}`);
     const unique = index.unique ? "UNIQUE " : "";
-    statements.push(`CREATE ${unique}INDEX IF NOT EXISTS ${name} ON ${tbl} (${cols})`);
+    statements.push(`DROP INDEX IF EXISTS ${name}`);
+    statements.push(`CREATE ${unique}INDEX ${name} ON ${tbl} (${cols})`);
   });
 
   // RLS, the same policy core writes by hand for every tenant-scoped table it

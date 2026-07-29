@@ -123,7 +123,19 @@ describe("generatePluginTableDdl", () => {
     expect(ddl.some((s) => s.includes("CREATE TABLE IF NOT EXISTS"))).toBe(true);
     expect(ddl.some((s) => s.includes("DROP POLICY IF EXISTS"))).toBe(true);
     expect(ddl.some((s) => s.startsWith("CREATE INDEX IF NOT EXISTS"))).toBe(true);
-    expect(ddl.some((s) => s.startsWith("CREATE UNIQUE INDEX IF NOT EXISTS"))).toBe(true);
+    // A manifest index is DROP-then-CREATE so a changed shape reconciles; the DROP
+    // guards re-runs and the CREATE that follows is only ever hit on an absent name.
+    expect(ddl.some((s) => s.startsWith(`DROP INDEX IF EXISTS "${PREFIX}leads__ix0"`))).toBe(true);
+    expect(ddl.some((s) => s.startsWith("CREATE UNIQUE INDEX"))).toBe(true);
+  });
+
+  it("scopes a manifest index by tenant_id, site_id so 'unique' means per-site", () => {
+    // The table is multi-tenant: a UNIQUE index on the plugin's columns alone would
+    // be global across every tenant, so one site's SKU would block all others'.
+    const ddl = generatePluginTableDdl(PLUGIN, leads).join("\n");
+    expect(ddl).toContain(
+      `CREATE UNIQUE INDEX "${PREFIX}leads__ix0" ON "${PREFIX}leads" ("tenant_id", "site_id", "email")`,
+    );
   });
 
   it("reconciles a pre-existing table by ADD COLUMN IF NOT EXISTS for every declared column", () => {
