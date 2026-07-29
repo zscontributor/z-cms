@@ -1,4 +1,10 @@
 {
+  "defaults": {
+    "tagline": "オープンソース。開発者を第一に。",
+    "metaDescription": "Z-CMS は Next.js、NestJS、PostgreSQL、Redis で構築されたモダンなオープンソース CMS プラットフォームです。",
+    "announcement": "Z-CMS は GitHub でオープンに開発されています。",
+    "footerText": "© 2026 Z-SOFT Co., Ltd. MIT ライセンスで公開。"
+  },
   "layout": {
     "skipToContent": "本文へスキップ",
     "backToTop": "ページ上部へ戻る"
@@ -16,6 +22,7 @@
     "primary": "メインメニュー",
     "about": "概要",
     "features": "機能",
+    "getStarted": "はじめる",
     "ecosystem": "エコシステム",
     "developers": "開発者",
     "community": "コミュニティ",
@@ -34,10 +41,26 @@
     },
     "copy": "Z-CMS は次世代のオープンソース・コンテンツ基盤です。従来の CMS の使いやすい編集体験と、Next.js・NestJS・PostgreSQL・Redis によるモダンなアーキテクチャを両立します。",
     "primary": "Z-CMS を入手",
-    "secondary": "ドキュメントを読む"
+    "secondary": "ドキュメントを読む",
+    "meta": {
+      "themeEngine": "テーマエンジン",
+      "pluginMarketplace": "プラグインマーケットプレイス"
+    }
   },
   "mock": {
-    "aria": "Z-CMS で構築したウェブサイトのプレビュー"
+    "aria": "Z-CMS で構築したウェブサイトのプレビュー",
+    "journal": "Work Studio ジャーナル",
+    "eyebrow": "デジタル体験をデザインする",
+    "title": {
+      "first": "人の心を動かす",
+      "second": "アイデア。"
+    },
+    "cta": "プロジェクトを見る",
+    "cards": {
+      "brandStrategy": "ブランド戦略",
+      "digitalPlatform": "デジタルプラットフォーム",
+      "productDesign": "プロダクトデザイン"
+    }
   },
   "trust": {
     "label": "モダンな技術スタックで構築"
@@ -141,6 +164,7 @@
     "product": "プロダクト",
     "download": "ダウンロード",
     "documentation": "ドキュメント",
+    "apiReference": "API リファレンス",
     "discussions": "ディスカッション",
     "issues": "イシュー",
     "about": "運営",

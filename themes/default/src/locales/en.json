@@ -1,4 +1,10 @@
 {
+  "defaults": {
+    "tagline": "Open source. Developer first.",
+    "metaDescription": "Z-CMS is a modern open-source CMS platform built with Next.js, NestJS, PostgreSQL and Redis.",
+    "announcement": "Z-CMS is being built in the open on GitHub.",
+    "footerText": "© 2026 Z-SOFT Co., Ltd. Released under the MIT License."
+  },
   "layout": {
     "skipToContent": "Skip to content",
     "backToTop": "Back to top"
@@ -16,6 +22,7 @@
     "primary": "Primary",
     "about": "About",
     "features": "Features",
+    "getStarted": "Get started",
     "ecosystem": "Ecosystem",
     "developers": "Developers",
     "community": "Community",
@@ -34,10 +41,26 @@
     },
     "copy": "Z-CMS is a next-generation open-source content platform. It pairs the friendly editing experience of a traditional CMS with a modern architecture built on Next.js, NestJS, PostgreSQL and Redis.",
     "primary": "Get Z-CMS",
-    "secondary": "Read the docs"
+    "secondary": "Read the docs",
+    "meta": {
+      "themeEngine": "Theme Engine",
+      "pluginMarketplace": "Plugin Marketplace"
+    }
   },
   "mock": {
-    "aria": "A preview of a website built with Z-CMS"
+    "aria": "A preview of a website built with Z-CMS",
+    "journal": "Work Studio Journal",
+    "eyebrow": "DESIGNING DIGITAL EXPERIENCES",
+    "title": {
+      "first": "Ideas that",
+      "second": "move people."
+    },
+    "cta": "Explore projects",
+    "cards": {
+      "brandStrategy": "Brand strategy",
+      "digitalPlatform": "Digital platform",
+      "productDesign": "Product design"
+    }
   },
   "trust": {
     "label": "Built on a modern stack"
@@ -141,6 +164,7 @@
     "product": "Product",
     "download": "Download",
     "documentation": "Documentation",
+    "apiReference": "API Reference",
     "discussions": "Discussions",
     "issues": "Issues",
     "about": "About",

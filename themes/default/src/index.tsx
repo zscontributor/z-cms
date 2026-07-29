@@ -65,6 +65,25 @@ export const manifest = manifestJson as unknown as ThemeManifest;
 
 // --------------------------------------------------------------------- helpers
 
+const SHIPPED_COPY_DEFAULTS = {
+  tagline: "Open source. Developer first.",
+  metaDescription:
+    "Z-CMS is a modern open-source CMS platform built with Next.js, NestJS, PostgreSQL and Redis.",
+  announcement: "Z-CMS is being built in the open on GitHub.",
+  footerText: "© 2026 Z-SOFT Co., Ltd. Released under the MIT License.",
+} as const;
+
+type ShippedCopySetting = keyof typeof SHIPPED_COPY_DEFAULTS;
+
+/**
+ * A site owner's custom copy is content and remains verbatim. Only the English
+ * defaults shipped by this theme follow the current page locale.
+ */
+function localizedSetting(ctx: Ctx, key: ShippedCopySetting): string {
+  const value = ctx.settings[key];
+  return value === SHIPPED_COPY_DEFAULTS[key] ? ctx.t(`defaults.${key}`) : value;
+}
+
 /** Block props arrive as unknown JSON. Nothing below trusts their shape. */
 function str(value: unknown, fallback = ""): string {
   return typeof value === "string" ? value : fallback;
@@ -94,9 +113,35 @@ function formatDate(iso: string | null, locale: string): string {
 
 /** Absolute URLs go to another site untouched; site-relative ones get the locale prefix. */
 function itemHref(ctx: Ctx, item: MenuItemDto): string {
+  if (item.url === "https://docs.z-cms.org/en/") return localizedDocsUrl(ctx);
   return /^[a-z]+:\/\//i.test(item.url) || item.url.startsWith("#")
     ? item.url
     : ctx.url(item.url);
+}
+
+/**
+ * Compatibility for demo menus seeded before locale overrides were supported.
+ * New menu rows arrive already translated; old shipped English labels are fixed
+ * during render so updating the theme never requires a destructive demo re-seed.
+ */
+function itemLabel(ctx: Ctx, item: MenuItemDto): string {
+  const shippedLabels: Record<string, string> = {
+    About: "nav.about",
+    Features: "nav.features",
+    "Get started": "nav.getStarted",
+    Blog: "nav.blog",
+    Docs: "nav.docs",
+  };
+  const key = shippedLabels[item.label];
+  return key ? ctx.t(key) : item.label;
+}
+
+/** The shipped docs root follows the page language; an owner-supplied URL does not. */
+function localizedDocsUrl(ctx: Ctx): string {
+  const shipped = "https://docs.z-cms.org/en/";
+  if (ctx.settings.docsUrl !== shipped) return ctx.settings.docsUrl;
+  const locale = ctx.locale.split("-")[0];
+  return `https://docs.z-cms.org/${locale === "vi" || locale === "ja" ? locale : "en"}/`;
 }
 
 /**
@@ -183,7 +228,7 @@ function PrimaryNav({ ctx, menu }: { ctx: Ctx; menu?: MenuDto }) {
   if (items.length === 0) return null;
 
   return (
-    <nav className="zdefault__links" aria-label={menu?.name ?? ctx.t("nav.primary")}>
+    <nav className="zdefault__links" aria-label={ctx.t("nav.primary")}>
       {items.map((item) => (
         <a
           key={item.id}
@@ -192,7 +237,7 @@ function PrimaryNav({ ctx, menu }: { ctx: Ctx; menu?: MenuDto }) {
             ? { target: "_blank", rel: "noopener noreferrer" }
             : {})}
         >
-          {item.label}
+          {itemLabel(ctx, item)}
         </a>
       ))}
     </nav>
@@ -233,6 +278,11 @@ function Layout({ ctx, children }: LayoutProps<DefaultThemeSettings>) {
   const title = settings.siteTitle || site.name;
   const logo = settings.logo || site.brand.logo;
   const footerMenu = menus.footer;
+  const tagline = localizedSetting(ctx, "tagline");
+  const metaDescription = localizedSetting(ctx, "metaDescription");
+  const announcement = localizedSetting(ctx, "announcement");
+  const footerText = localizedSetting(ctx, "footerText");
+  const docsUrl = localizedDocsUrl(ctx);
 
   return (
     <div className="zdefault" style={brandStyle}>
@@ -240,9 +290,9 @@ function Layout({ ctx, children }: LayoutProps<DefaultThemeSettings>) {
         {ctx.t("layout.skipToContent")}
       </a>
 
-      {settings.announcement ? (
+      {announcement ? (
         <div className="zdefault__topbar">
-          <span>{settings.announcement}</span>{" "}
+          <span>{announcement}</span>{" "}
           <a href={settings.githubUrl} target="_blank" rel="noopener noreferrer">
             {ctx.t("topbar.link")} →
           </a>
@@ -271,10 +321,10 @@ function Layout({ ctx, children }: LayoutProps<DefaultThemeSettings>) {
           <div className="zdefault__actions">
             {settings.showSearch ? <SearchBox ctx={ctx} /> : null}
             <LanguageSwitcher ctx={ctx} />
-            {settings.docsUrl ? (
+            {docsUrl ? (
               <a
                 className="zdefault__btn zdefault__btn--light"
-                href={settings.docsUrl}
+                href={docsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -306,7 +356,7 @@ function Layout({ ctx, children }: LayoutProps<DefaultThemeSettings>) {
               </span>
               <span>{title}</span>
             </span>
-            <p>{settings.metaDescription || settings.tagline}</p>
+            <p>{metaDescription || tagline}</p>
           </div>
 
           <div>
@@ -333,21 +383,21 @@ function Layout({ ctx, children }: LayoutProps<DefaultThemeSettings>) {
             <h4>{ctx.t("nav.developers")}</h4>
             <ul>
               <li>
-                <a href={settings.docsUrl}>{ctx.t("footer.documentation")}</a>
+                <a href={docsUrl}>{ctx.t("footer.documentation")}</a>
               </li>
               <li>
-                <a href={docsHref(settings.docsUrl, "developers/theme-handbook/getting-started")}>
+                <a href={docsHref(docsUrl, "developers/theme-handbook/getting-started")}>
                   Theme SDK
                 </a>
               </li>
               <li>
-                <a href={docsHref(settings.docsUrl, "developers/plugin-handbook/getting-started")}>
+                <a href={docsHref(docsUrl, "developers/plugin-handbook/getting-started")}>
                   Plugin SDK
                 </a>
               </li>
               <li>
-                <a href={docsHref(settings.docsUrl, "developers/api-reference")}>
-                  API Reference
+                <a href={docsHref(docsUrl, "developers/api-reference")}>
+                  {ctx.t("footer.apiReference")}
                 </a>
               </li>
             </ul>
@@ -381,7 +431,7 @@ function Layout({ ctx, children }: LayoutProps<DefaultThemeSettings>) {
               {footerMenu && footerMenu.items.length > 0 ? (
                 footerMenu.items.map((item) => (
                   <li key={item.id}>
-                    <a href={itemHref(ctx, item)}>{item.label}</a>
+                    <a href={itemHref(ctx, item)}>{itemLabel(ctx, item)}</a>
                   </li>
                 ))
               ) : (
@@ -406,8 +456,8 @@ function Layout({ ctx, children }: LayoutProps<DefaultThemeSettings>) {
         </div>
 
         <div className="zdefault__container zdefault__footer-bottom">
-          <span>{settings.footerText}</span>
-          <span>{settings.tagline}</span>
+          <span>{footerText}</span>
+          <span>{tagline}</span>
         </div>
       </footer>
 
@@ -447,6 +497,8 @@ function Layout({ ctx, children }: LayoutProps<DefaultThemeSettings>) {
  */
 function HomeTemplate({ ctx, content }: PageTemplateProps<DefaultThemeSettings>) {
   const { settings } = ctx;
+  const tagline = localizedSetting(ctx, "tagline");
+  const docsUrl = localizedDocsUrl(ctx);
 
   // Declared in theme.json, fetched by cms-api, real rows out of the database. The
   // `?? []` is for a misspelt name, not for an empty site — cms-api always sends the
@@ -458,7 +510,7 @@ function HomeTemplate({ ctx, content }: PageTemplateProps<DefaultThemeSettings>)
       <section className="zdefault__hero">
         <div className="zdefault__container zdefault__hero-grid">
           <div>
-            <p className="zdefault__eyebrow">{settings.tagline}</p>
+            <p className="zdefault__eyebrow">{tagline}</p>
             <h1 className="zdefault__hero-title">
               {ctx.t("hero.title.first")}
               <br />
@@ -473,15 +525,15 @@ function HomeTemplate({ ctx, content }: PageTemplateProps<DefaultThemeSettings>)
               >
                 {ctx.t("hero.primary")}
               </a>
-              <a className="zdefault__btn" href={settings.docsUrl}>
+              <a className="zdefault__btn" href={docsUrl}>
                 {ctx.t("hero.secondary")}
               </a>
             </div>
 
             <div className="zdefault__hero-meta">
               <span>MIT License</span>
-              <span>Theme Engine</span>
-              <span>Plugin Marketplace</span>
+              <span>{ctx.t("hero.meta.themeEngine")}</span>
+              <span>{ctx.t("hero.meta.pluginMarketplace")}</span>
             </div>
           </div>
 
@@ -598,7 +650,7 @@ function HomeTemplate({ ctx, content }: PageTemplateProps<DefaultThemeSettings>)
             <p className="zdefault__section-copy">{ctx.t("developers.copy")}</p>
             <a
               className="zdefault__btn zdefault__btn--dark"
-              href={settings.docsUrl}
+              href={docsUrl}
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -620,7 +672,7 @@ function HomeTemplate({ ctx, content }: PageTemplateProps<DefaultThemeSettings>)
               <strong>{ctx.t("community.githubTitle")}</strong>
               <span>{ctx.t("community.github")}</span>
             </a>
-            <a href={settings.docsUrl} target="_blank" rel="noopener noreferrer">
+            <a href={docsUrl} target="_blank" rel="noopener noreferrer">
               <strong>{ctx.t("community.docsTitle")}</strong>
               <span>{ctx.t("community.docs")}</span>
             </a>
@@ -778,7 +830,7 @@ function ArchiveTemplate({ ctx, archive }: ArchiveTemplateProps<DefaultThemeSett
         {archive.totalPages > 1 ? (
           <div className="zdefault__pagination">
             {archive.page > 1 ? (
-              <a href={`${archive.basePath}?page=${archive.page - 1}`}>
+              <a href={ctx.url(`${archive.basePath}?page=${archive.page - 1}`)}>
                 ← {ctx.t("archive.previous")}
               </a>
             ) : (
@@ -791,7 +843,7 @@ function ArchiveTemplate({ ctx, archive }: ArchiveTemplateProps<DefaultThemeSett
               })}
             </span>
             {archive.page < archive.totalPages ? (
-              <a href={`${archive.basePath}?page=${archive.page + 1}`}>
+              <a href={ctx.url(`${archive.basePath}?page=${archive.page + 1}`)}>
                 {ctx.t("archive.next")} →
               </a>
             ) : (
@@ -884,26 +936,26 @@ function MockBrowser({ ctx }: { ctx: Ctx }) {
       <div className="zdefault__mock" aria-hidden="true">
         <div className="zdefault__mock-nav">
           <b>ORIGIN</b>
-          <span>Work Studio Journal</span>
+          <span>{ctx.t("mock.journal")}</span>
         </div>
         <div className="zdefault__mock-hero">
-          <p>DESIGNING DIGITAL EXPERIENCES</p>
+          <p>{ctx.t("mock.eyebrow")}</p>
           <strong>
-            Ideas that
+            {ctx.t("mock.title.first")}
             <br />
-            move people.
+            {ctx.t("mock.title.second")}
           </strong>
-          <div className="zdefault__mock-btn">Explore projects</div>
+          <div className="zdefault__mock-btn">{ctx.t("mock.cta")}</div>
         </div>
         <div className="zdefault__mock-cards">
           <div>
-            Brand strategy<b>North Studio</b>
+            {ctx.t("mock.cards.brandStrategy")}<b>North Studio</b>
           </div>
           <div>
-            Digital platform<b>Future Grid</b>
+            {ctx.t("mock.cards.digitalPlatform")}<b>Future Grid</b>
           </div>
           <div>
-            Product design<b>Form &amp; Function</b>
+            {ctx.t("mock.cards.productDesign")}<b>Form &amp; Function</b>
           </div>
         </div>
       </div>
@@ -1107,10 +1159,12 @@ const theme = defineTheme<DefaultThemeSettings>({
    */
   seo: (ctx): ThemeSeoOverrides => {
     const s = ctx.settings;
+    const tagline = localizedSetting(ctx, "tagline");
+    const metaDescription = localizedSetting(ctx, "metaDescription");
 
     return {
       defaultTitle: s.siteTitle || undefined,
-      description: s.metaDescription || s.tagline || undefined,
+      description: metaDescription || tagline || undefined,
       ogImage: s.ogImage || undefined,
       twitterSite: s.twitterSite || undefined,
       robots: s.noindex ? { index: false, follow: false } : undefined,

@@ -71,6 +71,30 @@ export const manifest = manifestJson as unknown as ThemeManifest;
 
 // --------------------------------------------------------------------- helpers
 
+/**
+ * Settings are site-owned content, so a value customised by the owner must be
+ * rendered verbatim. The values shipped by the theme are different: they are
+ * interface defaults and should follow the page locale just like the rest of the
+ * storefront. `resolveThemeSettings` fills these English defaults before the
+ * theme runs, so compare against them explicitly rather than mistaking every
+ * non-empty setting for a custom value.
+ */
+const SHIPPED_COPY_DEFAULTS = {
+  tagline: "Clean beauty, honestly made.",
+  metaDescription:
+    "Skincare and colour made with short ingredient lists, refillable packaging and nothing to hide. Serums, cleansers and balms for every skin.",
+  announcement:
+    "Complimentary shipping on orders over $50 · Free samples with every order",
+  footerText: "© 2026 Lumière. Made in small batches.",
+} as const;
+
+type ShippedCopySetting = keyof typeof SHIPPED_COPY_DEFAULTS;
+
+function localizedSetting(ctx: Ctx, key: ShippedCopySetting): string {
+  const value = ctx.settings[key];
+  return value === SHIPPED_COPY_DEFAULTS[key] ? ctx.t(`defaults.${key}`) : value;
+}
+
 /** Block props arrive as unknown JSON. Nothing below trusts their shape. */
 function str(value: unknown, fallback = ""): string {
   return typeof value === "string" ? value : fallback;
@@ -165,6 +189,24 @@ function itemHref(ctx: Ctx, item: MenuItemDto): string {
     : ctx.url(item.url);
 }
 
+/**
+ * Compatibility for demo menus seeded before 1.3.1, when menu items could not
+ * carry locale overrides. Newly seeded menus arrive already localised from core;
+ * old English labels are translated here so an update fixes an existing shop
+ * without asking its owner to destructively re-seed all demo content.
+ */
+function itemLabel(ctx: Ctx, item: MenuItemDto): string {
+  const shippedLabels: Record<string, string> = {
+    Shop: "nav.shop",
+    Skincare: "nav.skincare",
+    "Our story": "nav.about",
+    Journal: "nav.journal",
+    "Shop all": "nav.shopAll",
+  };
+  const key = shippedLabels[item.label];
+  return key ? ctx.t(key) : item.label;
+}
+
 /** The shop can live on this site ("/shop") or on another one ("https://…"). */
 function shopHref(ctx: Ctx): string {
   const target = ctx.settings.shopUrl || "/shop";
@@ -246,7 +288,7 @@ function PrimaryNav({ ctx, menu }: { ctx: Ctx; menu?: MenuDto }) {
   if (items.length === 0) return null;
 
   return (
-    <nav className="zmarket__links" aria-label={menu?.name ?? ctx.t("nav.primary")}>
+    <nav className="zmarket__links" aria-label={ctx.t("nav.primary")}>
       {items.map((item) => (
         <a
           key={item.id}
@@ -255,7 +297,7 @@ function PrimaryNav({ ctx, menu }: { ctx: Ctx; menu?: MenuDto }) {
             ? { target: "_blank", rel: "noopener noreferrer" }
             : {})}
         >
-          {item.label}
+          {itemLabel(ctx, item)}
         </a>
       ))}
     </nav>
@@ -276,7 +318,7 @@ function MobileNav({ ctx, menu }: { ctx: Ctx; menu?: MenuDto }) {
       <summary aria-label={ctx.t("nav.menu")}>
         <span aria-hidden="true">☰</span>
       </summary>
-      <nav className="zmarket__burger-menu" aria-label={menu?.name ?? ctx.t("nav.primary")}>
+      <nav className="zmarket__burger-menu" aria-label={ctx.t("nav.primary")}>
         {items.map((item) => (
           <a
             key={item.id}
@@ -285,7 +327,7 @@ function MobileNav({ ctx, menu }: { ctx: Ctx; menu?: MenuDto }) {
               ? { target: "_blank", rel: "noopener noreferrer" }
               : {})}
           >
-            {item.label}
+            {itemLabel(ctx, item)}
           </a>
         ))}
       </nav>
@@ -405,6 +447,10 @@ function Layout({ ctx, children }: LayoutProps<MarketThemeSettings>) {
   const logo = settings.logo || site.brand.logo;
   const footerMenu = menus.footer;
   const shop = shopHref(ctx);
+  const tagline = localizedSetting(ctx, "tagline");
+  const metaDescription = localizedSetting(ctx, "metaDescription");
+  const announcement = localizedSetting(ctx, "announcement");
+  const footerText = localizedSetting(ctx, "footerText");
 
   return (
     <div className="zmarket" style={brandStyle}>
@@ -412,9 +458,9 @@ function Layout({ ctx, children }: LayoutProps<MarketThemeSettings>) {
         {ctx.t("layout.skipToContent")}
       </a>
 
-      {settings.announcement ? (
+      {announcement ? (
         <div className="zmarket__announce">
-          <span>{settings.announcement}</span>{" "}
+          <span>{announcement}</span>{" "}
           <a href={shop}>{ctx.t("topbar.link")} →</a>
         </div>
       ) : null}
@@ -455,7 +501,7 @@ function Layout({ ctx, children }: LayoutProps<MarketThemeSettings>) {
         <div className="zmarket__container zmarket__footer-grid">
           <div className="zmarket__footer-brand">
             <span className="zmarket__wordmark">{title}</span>
-            <p>{settings.metaDescription || settings.tagline}</p>
+            <p>{metaDescription || tagline}</p>
           </div>
 
           <div>
@@ -482,7 +528,7 @@ function Layout({ ctx, children }: LayoutProps<MarketThemeSettings>) {
               {footerMenu && footerMenu.items.length > 0 ? (
                 footerMenu.items.map((item) => (
                   <li key={item.id}>
-                    <a href={itemHref(ctx, item)}>{item.label}</a>
+                    <a href={itemHref(ctx, item)}>{itemLabel(ctx, item)}</a>
                   </li>
                 ))
               ) : (
@@ -549,8 +595,8 @@ function Layout({ ctx, children }: LayoutProps<MarketThemeSettings>) {
         </div>
 
         <div className="zmarket__container zmarket__footer-bottom">
-          <span>{settings.footerText}</span>
-          <span>{settings.tagline}</span>
+          <span>{footerText}</span>
+          <span>{tagline}</span>
         </div>
       </footer>
 
@@ -1468,10 +1514,12 @@ const theme = defineTheme<MarketThemeSettings>({
    */
   seo: (ctx): ThemeSeoOverrides => {
     const s = ctx.settings;
+    const tagline = localizedSetting(ctx, "tagline");
+    const metaDescription = localizedSetting(ctx, "metaDescription");
 
     return {
       defaultTitle: s.siteTitle || undefined,
-      description: s.metaDescription || s.tagline || undefined,
+      description: metaDescription || tagline || undefined,
       ogImage: s.ogImage || undefined,
       twitterSite: s.twitterSite || undefined,
       robots: s.noindex ? { index: false, follow: false } : undefined,

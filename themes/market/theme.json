@@ -1,13 +1,13 @@
 {
   "id": "vn.zsoft.theme.market",
   "name": "Z Market",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "kind": "theme",
   "description": "An elegant storefront for cosmetics and beauty brands: hero, category tiles, product grid, ingredients accordion and newsletter — plus add-to-cart, a slide-in cart and cash-on-delivery checkout. English, Japanese and Vietnamese, dark and light modes.",
   "changelog": {
-    "en": "The footer's Shipping, Returns, FAQ and Contact links now lead to real pages instead of a 404 — each seeded as demo content in English, Japanese and Vietnamese.\nThe Contact page carries a working, no-JS enquiry form: a visitor's message is emailed to the site's Contact email, with their address as reply-to so you can answer straight from your inbox.\nAfter sending, a success or error banner appears reliably beneath the button, in every browser. It sends through the site's own mail server — configure it once in Settings → Mail.\nSet the recipient in the theme's new Contact email setting.",
-    "ja": "フッターの「配送」「返品」「よくあるご質問」「お問い合わせ」の各リンクが、404 ではなく実際のページに移動するようになりました。英語・日本語・ベトナム語のデモコンテンツとして初期投入されます。\nお問い合わせページには、JavaScript 不要の実際に動く問い合わせフォームを用意しました。訪問者のメッセージはサイトの連絡先メールに送信され、返信先には訪問者のアドレスが設定されるため、受信トレイからそのまま返信できます。\n送信後は、成功・失敗のバナーがボタンの下に確実に表示されます。送信はサイト自身のメールサーバー経由です（設定 → メールで一度だけ設定）。\n宛先はテーマの新しい「連絡先メール」設定で指定してください。",
-    "vi": "Các liên kết Vận chuyển, Đổi trả, Câu hỏi thường gặp và Liên hệ ở chân trang nay dẫn tới các trang thật thay vì lỗi 404 — mỗi trang được tạo sẵn dưới dạng nội dung demo bằng tiếng Anh, tiếng Nhật và tiếng Việt.\nTrang Liên hệ có biểu mẫu hoạt động thật, không cần JavaScript: tin nhắn của khách được gửi email đến địa chỉ Liên hệ của trang, với địa chỉ của họ làm reply-to để bạn trả lời ngay từ hộp thư.\nSau khi gửi, một thông báo thành công hoặc lỗi hiện ra ổn định ngay dưới nút, trên mọi trình duyệt. Nó gửi qua máy chủ thư của chính trang — cấu hình một lần trong Cài đặt → Thư.\nĐặt người nhận trong thiết lập Email liên hệ mới của giao diện."
+    "en": "Completed English, Japanese and Vietnamese coverage across the storefront. The shipped announcement, footer description, tagline, copyright and default SEO description now follow the page language while preserving owner-customised copy.\nDemo navigation labels and the journal reading-time field are now translated in all three languages.",
+    "ja": "ストアフロント全体の英語・日本語・ベトナム語対応を完成させました。テーマ標準のお知らせ、フッター説明、タグライン、著作権表記、SEO の既定説明がページの言語に合わせて表示され、サイト管理者が設定した文章はそのまま保持されます。\nデモナビゲーションのラベルとジャーナルの読了時間フィールドも、3 言語すべてに対応しました。",
+    "vi": "Hoàn thiện i18n tiếng Anh, tiếng Nhật và tiếng Việt trên toàn bộ storefront. Nội dung mặc định của thanh thông báo, mô tả chân trang, tagline, bản quyền và mô tả SEO nay đổi theo ngôn ngữ trang, đồng thời vẫn giữ nguyên nội dung do chủ trang tùy chỉnh.\nNhãn menu demo và trường thời gian đọc của bài viết cũng đã có đủ cả 3 ngôn ngữ."
   },
   "author": {
     "name": "Z-SOFT Co., Ltd.",
@@ -401,7 +401,11 @@
           {
             "key": "readingTime",
             "type": "number",
-            "label": "Reading time",
+            "label": {
+              "en": "Reading time",
+              "vi": "Thời gian đọc",
+              "ja": "読了時間"
+            },
             "required": false
           }
         ]
@@ -1340,18 +1344,34 @@
         "items": [
           {
             "label": "Shop",
+            "labels": {
+              "vi": "Cửa hàng",
+              "ja": "ショップ"
+            },
             "url": "/shop"
           },
           {
             "label": "Skincare",
+            "labels": {
+              "vi": "Chăm sóc da",
+              "ja": "スキンケア"
+            },
             "url": "/shop"
           },
           {
             "label": "Our story",
+            "labels": {
+              "vi": "Câu chuyện của chúng tôi",
+              "ja": "私たちの物語"
+            },
             "url": "/about"
           },
           {
             "label": "Journal",
+            "labels": {
+              "vi": "Nhật ký",
+              "ja": "ジャーナル"
+            },
             "url": "/journal"
           }
         ]
@@ -1362,14 +1382,26 @@
         "items": [
           {
             "label": "Shop all",
+            "labels": {
+              "vi": "Tất cả sản phẩm",
+              "ja": "すべての商品"
+            },
             "url": "/shop"
           },
           {
             "label": "Our story",
+            "labels": {
+              "vi": "Câu chuyện của chúng tôi",
+              "ja": "私たちの物語"
+            },
             "url": "/about"
           },
           {
             "label": "Journal",
+            "labels": {
+              "vi": "Nhật ký",
+              "ja": "ジャーナル"
+            },
             "url": "/journal"
           }
         ]

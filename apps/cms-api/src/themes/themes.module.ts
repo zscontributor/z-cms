@@ -153,6 +153,8 @@ function screenshotUrls(
 
 interface ThemeDemoMenuItem {
   label: string;
+  /** Per-locale overrides, resolved away before a menu reaches a public theme. */
+  labels?: Record<string, string>;
   url: string;
   target?: string;
   children?: ThemeDemoMenuItem[];
@@ -915,6 +917,7 @@ export class ThemesController {
           menuId,
           parentId,
           label: item.label,
+          labels: item.labels,
           url: item.url,
           target: item.target ?? "_self",
           order: index,

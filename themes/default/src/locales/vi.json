@@ -1,4 +1,10 @@
 {
+  "defaults": {
+    "tagline": "Mã nguồn mở. Ưu tiên nhà phát triển.",
+    "metaDescription": "Z-CMS là nền tảng CMS mã nguồn mở hiện đại, được xây dựng với Next.js, NestJS, PostgreSQL và Redis.",
+    "announcement": "Z-CMS đang được phát triển công khai trên GitHub.",
+    "footerText": "© 2026 Z-SOFT Co., Ltd. Phát hành theo giấy phép MIT."
+  },
   "layout": {
     "skipToContent": "Tới nội dung chính",
     "backToTop": "Lên đầu trang"
@@ -16,8 +22,9 @@
     "primary": "Menu chính",
     "about": "Giới thiệu",
     "features": "Tính năng",
+    "getStarted": "Bắt đầu",
     "ecosystem": "Hệ sinh thái",
-    "developers": "Developers",
+    "developers": "Nhà phát triển",
     "community": "Cộng đồng",
     "blog": "Blog",
     "docs": "Tài liệu",
@@ -34,10 +41,26 @@
     },
     "copy": "Z-CMS là nền tảng quản trị nội dung mã nguồn mở thế hệ mới, kết hợp trải nghiệm biên tập thân thiện của CMS truyền thống với kiến trúc hiện đại dựa trên Next.js, NestJS, PostgreSQL và Redis.",
     "primary": "Tải Z-CMS",
-    "secondary": "Đọc tài liệu"
+    "secondary": "Đọc tài liệu",
+    "meta": {
+      "themeEngine": "Công cụ giao diện",
+      "pluginMarketplace": "Kho tiện ích"
+    }
   },
   "mock": {
-    "aria": "Bản xem trước một website xây bằng Z-CMS"
+    "aria": "Bản xem trước một website xây bằng Z-CMS",
+    "journal": "Nhật ký Work Studio",
+    "eyebrow": "THIẾT KẾ TRẢI NGHIỆM SỐ",
+    "title": {
+      "first": "Ý tưởng",
+      "second": "lay động con người."
+    },
+    "cta": "Khám phá dự án",
+    "cards": {
+      "brandStrategy": "Chiến lược thương hiệu",
+      "digitalPlatform": "Nền tảng số",
+      "productDesign": "Thiết kế sản phẩm"
+    }
   },
   "trust": {
     "label": "Xây trên nền tảng công nghệ hiện đại"
@@ -141,6 +164,7 @@
     "product": "Sản phẩm",
     "download": "Tải về",
     "documentation": "Tài liệu",
+    "apiReference": "Tham chiếu API",
     "discussions": "Thảo luận",
     "issues": "Báo lỗi",
     "about": "Về chúng tôi",

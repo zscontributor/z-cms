@@ -1,9 +1,14 @@
 {
   "id": "vn.zsoft.theme.default",
   "name": "Z Default",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "kind": "theme",
   "description": "The default Z-CMS theme: a warm, product-led portal for open-source projects, products and company sites. English, Japanese and Vietnamese, with dark and light modes.",
+  "changelog": {
+    "en": "Completed English, Japanese and Vietnamese coverage across the theme. Shipped announcement, tagline, footer copy, copyright and SEO defaults now follow the page language while preserving owner customisations.\nNavigation, the website preview, hero metadata, API Reference label and reading-time field are translated. The shipped documentation links now open the matching language, including pagination that retains the locale.",
+    "vi": "Hoàn thiện i18n tiếng Anh, tiếng Nhật và tiếng Việt trên toàn bộ giao diện. Thanh thông báo, tagline, nội dung chân trang, bản quyền và SEO mặc định nay đổi theo ngôn ngữ trang nhưng vẫn giữ nguyên tùy chỉnh của chủ trang.\nMenu, bản xem trước website, metadata hero, nhãn Tham chiếu API và trường thời gian đọc đã được dịch. Các liên kết tài liệu mặc định nay mở đúng ngôn ngữ, đồng thời phân trang luôn giữ locale.",
+    "ja": "テーマ全体の英語・日本語・ベトナム語対応を完成させました。テーマ標準のお知らせ、タグライン、フッター、著作権表記、SEO の既定値がページの言語に合わせて表示され、サイト管理者のカスタマイズはそのまま保持されます。\nナビゲーション、ウェブサイトプレビュー、ヒーローのメタ情報、API リファレンス、読了時間フィールドを翻訳しました。標準のドキュメントリンクも対応言語を開き、ページネーションでもロケールを維持します。"
+  },
   "author": {
     "name": "Z-SOFT Co., Ltd.",
     "url": "https://z-soft.com.vn"
@@ -217,7 +222,11 @@
           {
             "key": "readingTime",
             "type": "number",
-            "label": "Reading time",
+            "label": {
+              "en": "Reading time",
+              "vi": "Thời gian đọc",
+              "ja": "読了時間"
+            },
             "required": false
           }
         ]
@@ -766,7 +775,7 @@
             "id": "default-architecture-3-ja",
             "type": "core/richtext",
             "props": {
-              "html": "<h2>Marketplace は ZIP download page ではない</h2><p>Plugin marketplace は executable code を production system に配布します。そのため、誰が package を作成したか、改変されていないか、どの permission を要求するか、どの version に vulnerability があるか、bad update からどう recovery するかを説明できなければなりません。</p><h2>Threat model</h2><p>主な threat は typosquatting package、compromised publisher account、upload・storage・delivery 中の package modification、目的と無関係な permission、悪意ある transitive dependency、cross-tenant access、unauthorized data transfer です。</p><h2>Signed package と immutable release</h2><p>各 release は checksum と digital signature を持ちます。CMS は install 前に checksum、marketplace signature、publisher identity を verify します。公開済み version は上書きせず、修正は新 version として publish し、reproducibility と auditability を保ちます。</p><pre><code>Developer builds plugin\n    ↓\nGenerate checksum\n    ↓\nSign package\n    ↓\nMarketplace verifies\n    ↓\nCMS verifies before install</code></pre><h2>Publisher identity と namespace ownership</h2><p>Marketplace は community publisher、verified publisher、verified organization、official package を区別します。@organization/plugin-name 形式の namespace は偽装を減らします。Publish 権限は Owner、Maintainer、Publisher、Security Reviewer などの role で管理します。</p><h2>Permission manifest と runtime enforcement</h2><p>Administrator は plugin がどの data を read、update、external transfer できるかを install 前に確認できる必要があります。Update で新 permission が追加された場合、auto-update を停止して approval を要求します。</p><p>Permission は install 時だけでなく runtime bridge でも enforce します。users:read を持たない plugin は users API を呼び出せません。</p><pre><code>{\n  &quot;permissions&quot;: [\n    &quot;content:read&quot;,\n    &quot;content:update&quot;,\n    &quot;http:domain:api.example.com&quot;\n  ]\n}</code></pre><h2>Multi-tenant isolation</h2><p>Plugin のすべての API call には Core が発行した tenant context が含まれます。Plugin は tenantId を任意に指定できません。Database、cache、storage、queue、search は tenant scope を enforce します。</p><h2>Security scanning pipeline</h2><p>Pipeline には manifest validation、dependency vulnerability scan、static analysis、secret scanning、malware analysis、sensitive permission に対する manual review を含めます。eval()、child_process、process.env、obfuscated code、unrestricted network access などは review 対象です。</p><h2>Security advisory、revocation、rollback</h2><p>Marketplace は affected version、severity、patched version を含む advisory を発行します。必要に応じて package を revoke し、新規 install を block、既存 instance に警告します。Versioned bundle により bad update から迅速に rollback できます。</p><h2>Audit log と data transparency</h2><p>Install、approval、activation、permission change、update は audit log に記録します。Plugin が external domain に data を送信する場合、domain、data type、purpose を明示し、administrator が判断できるようにします。</p><h2>結論</h2><p>安全な marketplace には publisher identity、package signing、immutable release、runtime permission、security scanning、multi-tenant isolation、advisory、revocation、audit log、rollback が必要です。すべての plugin の完全な安全を保証するのではなく、risk を減らし control と transparency を高めることが目的です。</p><h2>Key takeaways</h2><ul><li>Security boundary は plugin の善意ではなく Core 側で enforce する必要があります。</li><li>Lifecycle、permission、tenant context、observability は同じ platform contract の一部です。</li><li>優れた developer experience は、安全な runtime と supply chain の設計によって持続可能になります。</li></ul><p><strong>GitHub:</strong> <a href=\"https://github.com/zscontributor/z-cms\" target=\"_blank\" rel=\"noopener noreferrer\">https://github.com/zscontributor/z-cms</a><br><strong>Website:</strong> <a href=\"https://z-cms.org\" target=\"_blank\" rel=\"noopener noreferrer\">https://z-cms.org</a></p>"
+              "html": "<h2>Marketplace は ZIP download page ではない</h2><p>Plugin marketplace は executable code を production system に配布します。そのため、誰が package を作成したか、改変されていないか、どの permission を要求するか、どの version に vulnerability があるか、bad update からどう recovery するかを説明できなければなりません。</p><h2>Threat model</h2><p>主な threat は typosquatting package、compromised publisher account、upload・storage・delivery 中の package modification、目的と無関係な permission、悪意ある transitive dependency、cross-tenant access、unauthorized data transfer です。</p><h2>Signed package と immutable release</h2><p>各 release は checksum と digital signature を持ちます。CMS は install 前に checksum、marketplace signature、publisher identity を verify します。公開済み version は上書きせず、修正は新 version として publish し、reproducibility と auditability を保ちます。</p><pre><code>Developer builds plugin\n    ↓\nGenerate checksum\n    ↓\nSign package\n    ↓\nMarketplace verifies\n    ↓\nCMS verifies before install</code></pre><h2>Publisher identity と namespace ownership</h2><p>Marketplace は community publisher、verified publisher、verified organization、official package を区別します。@organization/plugin-name 形式の namespace は偽装を減らします。Publish 権限は Owner、Maintainer、Publisher、Security Reviewer などの role で管理します。</p><h2>Permission manifest と runtime enforcement</h2><p>Administrator は plugin がどの data を read、update、external transfer できるかを install 前に確認できる必要があります。Update で新 permission が追加された場合、auto-update を停止して approval を要求します。</p><p>Permission は install 時だけでなく runtime bridge でも enforce します。users:read を持たない plugin は users API を呼び出せません。</p><pre><code>{\n  &quot;permissions&quot;: [\n    &quot;content:read&quot;,\n    &quot;content:update&quot;,\n    &quot;http:domain:api.example.com&quot;\n  ]\n}</code></pre><h2>Multi-tenant isolation</h2><p>Plugin のすべての API call には Core が発行した tenant context が含まれます。Plugin は tenantId を任意に指定できません。Database、cache、storage、queue、search は tenant scope を enforce します。</p><h2>Security scanning pipeline</h2><p>Pipeline には manifest validation、dependency vulnerability scan、static analysis、secret scanning、malware analysis、sensitive permission に対する manual review を含めます。実行時の文字列評価、child_process、process.env、obfuscated code、unrestricted network access などは review 対象です。</p><h2>Security advisory、revocation、rollback</h2><p>Marketplace は affected version、severity、patched version を含む advisory を発行します。必要に応じて package を revoke し、新規 install を block、既存 instance に警告します。Versioned bundle により bad update から迅速に rollback できます。</p><h2>Audit log と data transparency</h2><p>Install、approval、activation、permission change、update は audit log に記録します。Plugin が external domain に data を送信する場合、domain、data type、purpose を明示し、administrator が判断できるようにします。</p><h2>結論</h2><p>安全な marketplace には publisher identity、package signing、immutable release、runtime permission、security scanning、multi-tenant isolation、advisory、revocation、audit log、rollback が必要です。すべての plugin の完全な安全を保証するのではなく、risk を減らし control と transparency を高めることが目的です。</p><h2>Key takeaways</h2><ul><li>Security boundary は plugin の善意ではなく Core 側で enforce する必要があります。</li><li>Lifecycle、permission、tenant context、observability は同じ platform contract の一部です。</li><li>優れた developer experience は、安全な runtime と supply chain の設計によって持続可能になります。</li></ul><p><strong>GitHub:</strong> <a href=\"https://github.com/zscontributor/z-cms\" target=\"_blank\" rel=\"noopener noreferrer\">https://github.com/zscontributor/z-cms</a><br><strong>Website:</strong> <a href=\"https://z-cms.org\" target=\"_blank\" rel=\"noopener noreferrer\">https://z-cms.org</a></p>"
             }
           }
         ]
@@ -792,7 +801,7 @@
             "id": "default-architecture-3-vi",
             "type": "core/richtext",
             "props": {
-              "html": "<h2>Marketplace không chỉ là trang download ZIP</h2><p>Plugin marketplace phân phối executable code vào production system. Nó phải trả lời được ai tạo package, package có bị thay đổi không, yêu cầu permission gì, version nào có vulnerability và administrator có thể phục hồi thế nào sau một bad update.</p><h2>Threat model</h2><p>Các rủi ro chính gồm typosquatting package, publisher account bị compromise, package bị sửa trong quá trình upload hoặc delivery, plugin yêu cầu permission không liên quan, transitive dependency độc hại, cross-tenant access và unauthorized data transfer.</p><h2>Signed package và immutable release</h2><p>Mỗi release cần checksum và digital signature. CMS verify checksum, marketplace signature và publisher identity trước khi install. Một version đã publish không được ghi đè; bản sửa lỗi phải dùng version mới để đảm bảo reproducibility và audit.</p><pre><code>Developer builds plugin\n    ↓\nGenerate checksum\n    ↓\nSign package\n    ↓\nMarketplace verifies\n    ↓\nCMS verifies before install</code></pre><h2>Publisher identity và namespace ownership</h2><p>Marketplace phân biệt community publisher, verified publisher, verified organization và official package. Namespace dạng @organization/plugin-name giúp giảm giả mạo. Quyền publish được quản lý theo role như Owner, Maintainer, Publisher và Security Reviewer.</p><h2>Permission manifest và runtime enforcement</h2><p>Administrator cần thấy rõ plugin có thể đọc, sửa hoặc gửi loại dữ liệu nào. Khi update yêu cầu permission mới, auto-update phải dừng để chờ approval.</p><p>Permission không chỉ được kiểm tra lúc install mà còn enforce ở runtime bridge. Plugin không có users:read sẽ không thể gọi users API, dù source code cố thực hiện thao tác đó.</p><pre><code>{\n  &quot;permissions&quot;: [\n    &quot;content:read&quot;,\n    &quot;content:update&quot;,\n    &quot;http:domain:api.example.com&quot;\n  ]\n}</code></pre><h2>Multi-tenant isolation</h2><p>Mọi API call từ plugin mang tenant context do Core cấp. Plugin không tự chọn tenantId. Database, cache, storage, queue và search layer đều scope theo tenant để ngăn cross-tenant access.</p><h2>Security scanning pipeline</h2><p>Pipeline có thể gồm manifest validation, dependency vulnerability scan, static analysis, secret scanning, malware analysis và manual review cho permission nhạy cảm. Pattern như eval(), child_process, process.env, obfuscated code hoặc unrestricted network access cần được đánh dấu để review.</p><h2>Security advisory, revocation và rollback</h2><p>Marketplace phải phát hành advisory với affected version, severity và patched version. Khi cần, package có thể bị revoke để chặn install mới và cảnh báo instance đang dùng. Versioned bundle giúp rollback nhanh khi update lỗi.</p><h2>Audit log và data transparency</h2><p>Install, approval, activation, permission change và update đều cần audit log. Nếu plugin gửi dữ liệu ra external domain, marketplace phải hiển thị domain, data type và mục đích để administrator quyết định có hiểu biết.</p><h2>Kết luận</h2><p>Một marketplace an toàn cần publisher identity, package signing, immutable release, runtime permission, security scanning, multi-tenant isolation, advisory, revocation, audit log và rollback. Mục tiêu không phải tuyên bố mọi plugin tuyệt đối an toàn, mà là giảm rủi ro và tăng khả năng kiểm soát.</p><h2>Key takeaways</h2><ul><li>Security boundary phải được enforce trong Core, không dựa vào thiện chí của plugin.</li><li>Lifecycle, permission, tenant context và observability là các phần của cùng một platform contract.</li><li>Developer experience tốt chỉ bền vững khi runtime và supply chain được thiết kế an toàn từ đầu.</li></ul><p><strong>GitHub:</strong> <a href=\"https://github.com/zscontributor/z-cms\" target=\"_blank\" rel=\"noopener noreferrer\">https://github.com/zscontributor/z-cms</a><br><strong>Website:</strong> <a href=\"https://z-cms.org\" target=\"_blank\" rel=\"noopener noreferrer\">https://z-cms.org</a></p>"
+              "html": "<h2>Marketplace không chỉ là trang download ZIP</h2><p>Plugin marketplace phân phối executable code vào production system. Nó phải trả lời được ai tạo package, package có bị thay đổi không, yêu cầu permission gì, version nào có vulnerability và administrator có thể phục hồi thế nào sau một bad update.</p><h2>Threat model</h2><p>Các rủi ro chính gồm typosquatting package, publisher account bị compromise, package bị sửa trong quá trình upload hoặc delivery, plugin yêu cầu permission không liên quan, transitive dependency độc hại, cross-tenant access và unauthorized data transfer.</p><h2>Signed package và immutable release</h2><p>Mỗi release cần checksum và digital signature. CMS verify checksum, marketplace signature và publisher identity trước khi install. Một version đã publish không được ghi đè; bản sửa lỗi phải dùng version mới để đảm bảo reproducibility và audit.</p><pre><code>Developer builds plugin\n    ↓\nGenerate checksum\n    ↓\nSign package\n    ↓\nMarketplace verifies\n    ↓\nCMS verifies before install</code></pre><h2>Publisher identity và namespace ownership</h2><p>Marketplace phân biệt community publisher, verified publisher, verified organization và official package. Namespace dạng @organization/plugin-name giúp giảm giả mạo. Quyền publish được quản lý theo role như Owner, Maintainer, Publisher và Security Reviewer.</p><h2>Permission manifest và runtime enforcement</h2><p>Administrator cần thấy rõ plugin có thể đọc, sửa hoặc gửi loại dữ liệu nào. Khi update yêu cầu permission mới, auto-update phải dừng để chờ approval.</p><p>Permission không chỉ được kiểm tra lúc install mà còn enforce ở runtime bridge. Plugin không có users:read sẽ không thể gọi users API, dù source code cố thực hiện thao tác đó.</p><pre><code>{\n  &quot;permissions&quot;: [\n    &quot;content:read&quot;,\n    &quot;content:update&quot;,\n    &quot;http:domain:api.example.com&quot;\n  ]\n}</code></pre><h2>Multi-tenant isolation</h2><p>Mọi API call từ plugin mang tenant context do Core cấp. Plugin không tự chọn tenantId. Database, cache, storage, queue và search layer đều scope theo tenant để ngăn cross-tenant access.</p><h2>Security scanning pipeline</h2><p>Pipeline có thể gồm manifest validation, dependency vulnerability scan, static analysis, secret scanning, malware analysis và manual review cho permission nhạy cảm. Pattern như thực thi chuỗi mã động, child_process, process.env, obfuscated code hoặc unrestricted network access cần được đánh dấu để review.</p><h2>Security advisory, revocation và rollback</h2><p>Marketplace phải phát hành advisory với affected version, severity và patched version. Khi cần, package có thể bị revoke để chặn install mới và cảnh báo instance đang dùng. Versioned bundle giúp rollback nhanh khi update lỗi.</p><h2>Audit log và data transparency</h2><p>Install, approval, activation, permission change và update đều cần audit log. Nếu plugin gửi dữ liệu ra external domain, marketplace phải hiển thị domain, data type và mục đích để administrator quyết định có hiểu biết.</p><h2>Kết luận</h2><p>Một marketplace an toàn cần publisher identity, package signing, immutable release, runtime permission, security scanning, multi-tenant isolation, advisory, revocation, audit log và rollback. Mục tiêu không phải tuyên bố mọi plugin tuyệt đối an toàn, mà là giảm rủi ro và tăng khả năng kiểm soát.</p><h2>Key takeaways</h2><ul><li>Security boundary phải được enforce trong Core, không dựa vào thiện chí của plugin.</li><li>Lifecycle, permission, tenant context và observability là các phần của cùng một platform contract.</li><li>Developer experience tốt chỉ bền vững khi runtime và supply chain được thiết kế an toàn từ đầu.</li></ul><p><strong>GitHub:</strong> <a href=\"https://github.com/zscontributor/z-cms\" target=\"_blank\" rel=\"noopener noreferrer\">https://github.com/zscontributor/z-cms</a><br><strong>Website:</strong> <a href=\"https://z-cms.org\" target=\"_blank\" rel=\"noopener noreferrer\">https://z-cms.org</a></p>"
             }
           }
         ]
@@ -1039,22 +1048,42 @@
         "items": [
           {
             "label": "About",
+            "labels": {
+              "vi": "Giới thiệu",
+              "ja": "概要"
+            },
             "url": "/about"
           },
           {
             "label": "Features",
+            "labels": {
+              "vi": "Tính năng",
+              "ja": "機能"
+            },
             "url": "/features"
           },
           {
             "label": "Get started",
+            "labels": {
+              "vi": "Bắt đầu",
+              "ja": "はじめる"
+            },
             "url": "/get-started"
           },
           {
             "label": "Blog",
+            "labels": {
+              "vi": "Blog",
+              "ja": "ブログ"
+            },
             "url": "/blog"
           },
           {
             "label": "Docs",
+            "labels": {
+              "vi": "Tài liệu",
+              "ja": "ドキュメント"
+            },
             "url": "https://docs.z-cms.org/en/",
             "target": "_blank"
           }
@@ -1066,14 +1095,26 @@
         "items": [
           {
             "label": "About",
+            "labels": {
+              "vi": "Giới thiệu",
+              "ja": "概要"
+            },
             "url": "/about"
           },
           {
             "label": "Get started",
+            "labels": {
+              "vi": "Bắt đầu",
+              "ja": "はじめる"
+            },
             "url": "/get-started"
           },
           {
             "label": "Blog",
+            "labels": {
+              "vi": "Blog",
+              "ja": "ブログ"
+            },
             "url": "/blog"
           },
           {

@@ -466,6 +466,35 @@ describe("ThemesController.seedActiveDemo", () => {
     });
   });
 
+  it("keeps translated labels declared by demo menu items", async () => {
+    holder.db = makeDb({
+      contentTypes: CONTENT_TYPES,
+      contents: [],
+      menus: [
+        {
+          key: "primary",
+          name: "Primary menu",
+          items: [
+            {
+              label: "Shop",
+              labels: { vi: "Cửa hàng", ja: "ショップ" },
+              url: "/shop",
+            },
+          ],
+        },
+      ],
+    });
+
+    await makeController().seedActiveDemo(actor, "s1");
+
+    expect(holder.db.menuItem.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        label: "Shop",
+        labels: { vi: "Cửa hàng", ja: "ショップ" },
+      }),
+    });
+  });
+
   describe("nested demo pages (parent references)", () => {
     it("nests a child under its parent and materializes the full path, order-independent", async () => {
       holder.db = makeDb({

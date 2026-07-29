@@ -71,6 +71,8 @@ export interface ThemeDemoMenu {
   name: string;
   items: {
     label: string;
+    /** Per-locale label overrides; the English/default label remains `label`. */
+    labels?: Record<string, string>;
     url: string;
     target?: string;
     children?: ThemeDemoMenu["items"];

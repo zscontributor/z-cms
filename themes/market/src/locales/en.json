@@ -1,4 +1,10 @@
 {
+  "defaults": {
+    "tagline": "Clean beauty, honestly made.",
+    "metaDescription": "Skincare and colour made with short ingredient lists, refillable packaging and nothing to hide. Serums, cleansers and balms for every skin.",
+    "announcement": "Complimentary shipping on orders over $50 · Free samples with every order",
+    "footerText": "© 2026 Lumière. Made in small batches."
+  },
   "layout": {
     "skipToContent": "Skip to content",
     "backToTop": "Back to top"
@@ -15,6 +21,8 @@
   "nav": {
     "primary": "Primary",
     "shop": "Shop",
+    "shopAll": "Shop all",
+    "skincare": "Skincare",
     "about": "Our story",
     "journal": "Journal",
     "cart": "Bag",

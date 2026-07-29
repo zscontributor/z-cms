@@ -1,4 +1,10 @@
 {
+  "defaults": {
+    "tagline": "Mỹ phẩm lành sạch, được tạo nên bằng sự chân thành.",
+    "metaDescription": "Sản phẩm chăm sóc da và trang điểm với bảng thành phần ngắn gọn, bao bì có thể tái nạp và không có gì phải che giấu. Serum, sữa rửa mặt và son dưỡng cho mọi làn da.",
+    "announcement": "Miễn phí vận chuyển cho đơn trên $50 · Tặng mẫu thử trong mọi đơn hàng",
+    "footerText": "© 2026 Lumière. Sản xuất theo từng mẻ nhỏ."
+  },
   "layout": {
     "skipToContent": "Tới nội dung chính",
     "backToTop": "Lên đầu trang"
@@ -15,6 +21,8 @@
   "nav": {
     "primary": "Menu chính",
     "shop": "Cửa hàng",
+    "shopAll": "Tất cả sản phẩm",
+    "skincare": "Chăm sóc da",
     "about": "Về chúng tôi",
     "journal": "Nhật ký",
     "cart": "Giỏ hàng",
