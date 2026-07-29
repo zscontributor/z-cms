@@ -8,6 +8,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Icon } from "@/components/shell/icon";
 import { MediaGallery } from "@/components/ui/media-gallery";
 import { SideloadActions } from "@/components/sideload-controls";
+import { UpdateBadge, UpdateButton, hasUpdate } from "@/components/package-update";
 import type { InstalledThemeDto } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import { useT } from "@/lib/i18n-provider";
@@ -23,6 +24,8 @@ export function ThemeGrid({
   canSideload,
   canEdit = false,
   draftIdByKey,
+  latestVersionByKey,
+  canInstall = false,
   sideloaded = false,
 }: {
   themes: InstalledThemeDto[];
@@ -34,6 +37,10 @@ export function ThemeGrid({
   canEdit?: boolean;
   /** Theme key → the id of the draft it was drawn from, when one still exists. */
   draftIdByKey?: Record<string, string>;
+  /** Theme key → newest version the marketplace offers, for the "update available" flag. */
+  latestVersionByKey?: Record<string, string>;
+  /** `theme:install` — may pull a newer version from the marketplace. Gates Update. */
+  canInstall?: boolean;
   sideloaded?: boolean;
 }) {
   return (
@@ -48,6 +55,8 @@ export function ThemeGrid({
           canSideload={canSideload ?? false}
           canEdit={canEdit}
           draftId={draftIdByKey?.[theme.key]}
+          latestVersion={latestVersionByKey?.[theme.key] ?? null}
+          canInstall={canInstall}
           sideloaded={sideloaded}
         />
       ))}
@@ -63,6 +72,8 @@ function ThemeCard({
   canSideload,
   canEdit,
   draftId,
+  latestVersion,
+  canInstall,
   sideloaded,
 }: {
   theme: InstalledThemeDto;
@@ -72,10 +83,15 @@ function ThemeCard({
   canSideload: boolean;
   canEdit: boolean;
   draftId?: string;
+  latestVersion: string | null;
+  canInstall: boolean;
   sideloaded: boolean;
 }) {
   const t = useT();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // A marketplace theme with a newer version out there. Sideloads are the
+  // operator's own files, not marketplace packages, so they never show this.
+  const updatable = !sideloaded && hasUpdate(theme.version, latestVersion);
   // Portal target for the settings form's Save / Restore bar, so it lands in the
   // Dialog's sticky footer (like the plugin permissions dialog) instead of at the
   // foot of the scrolling body.
@@ -128,6 +144,11 @@ function ThemeCard({
           <p className="mt-0.5 text-[11px] z-muted">
             <code>{theme.key}</code> · v{theme.version}
           </p>
+          {updatable ? (
+            <div className="mt-1.5">
+              <UpdateBadge latestVersion={latestVersion!} />
+            </div>
+          ) : null}
         </div>
         {sideloaded ? (
           <Badge tone={approved ? "warning" : "danger"} className="mr-8">
@@ -158,6 +179,10 @@ function ThemeCard({
           </p>
         ) : (!sideloaded || approved) && canActivate ? (
           <ActivateButton themeKey={theme.key} name={theme.name} />
+        ) : null}
+
+        {updatable && canInstall ? (
+          <UpdateButton kind="theme" itemKey={theme.key} latestVersion={latestVersion!} />
         ) : null}
       </div>
 

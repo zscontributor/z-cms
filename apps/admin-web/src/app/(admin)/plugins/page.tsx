@@ -1,5 +1,12 @@
 import type { Metadata } from "next";
-import { can, getSession, listPlugins, type CatalogPluginDto } from "@/lib/api";
+import {
+  browseMarketplace,
+  can,
+  getSession,
+  listPlugins,
+  type BrowsePackageDto,
+  type CatalogPluginDto,
+} from "@/lib/api";
 import { PageHeader } from "@/components/page-header";
 import { getT } from "@/lib/locale";
 import { PluginBrowser } from "./plugin-browser";
@@ -19,7 +26,18 @@ export default async function PluginsPage() {
     return <div className="z-card p-10 text-center text-sm">{t("plugins.denied")}</div>;
   }
 
-  const plugins = await safe<CatalogPluginDto[]>(listPlugins, []);
+  const [plugins, market] = await Promise.all([
+    safe<CatalogPluginDto[]>(listPlugins, []),
+    // The marketplace catalogue, only to learn which installed plugins have a
+    // newer version available. Fail-open: an unreachable marketplace just hides
+    // the update badges, it never takes the Plugins screen down.
+    safe<BrowsePackageDto[]>(() => browseMarketplace("plugin"), []),
+  ]);
+
+  // plugin key → the newest version the marketplace offers, so an installed row
+  // can flag "update available" without the admin having to open the marketplace.
+  const latestVersionByKey: Record<string, string> = {};
+  for (const pkg of market) latestVersionByKey[pkg.key] = pkg.latestVersion;
 
   const canInstall = can(user, "plugin:install");
   const canActivate = can(user, "plugin:activate");
@@ -42,6 +60,7 @@ export default async function PluginsPage() {
         installed={installed}
         available={available}
         isEmpty={plugins.length === 0}
+        latestVersionByKey={latestVersionByKey}
         canInstall={canInstall}
         canActivate={canActivate}
         canConfigure={canConfigure}

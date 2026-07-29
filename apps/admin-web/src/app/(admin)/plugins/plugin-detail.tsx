@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/shell/icon";
+import { UpdateBadge, UpdateButton, hasUpdate } from "@/components/package-update";
 import type { CatalogPluginDto } from "@/lib/api";
 import { useT } from "@/lib/i18n-provider";
 import { PluginInfo } from "./plugin-info";
@@ -17,12 +18,15 @@ import { usePluginLifecycle, type PluginTier } from "./use-plugin-lifecycle";
  */
 export function PluginDetail({
   plugin,
+  latestVersion = null,
   canInstall,
   canActivate,
   canConfigure,
   tier = "site",
 }: {
   plugin: CatalogPluginDto;
+  /** Newest version the marketplace offers, when this plugin exists there; else null. */
+  latestVersion?: string | null;
   canInstall: boolean;
   canActivate: boolean;
   canConfigure: boolean;
@@ -30,11 +34,13 @@ export function PluginDetail({
 }) {
   const t = useT();
   const life = usePluginLifecycle(plugin, tier, canConfigure);
+  const updatable = plugin.installed && hasUpdate(plugin.latestVersion, latestVersion);
 
   return (
     <div className="flex flex-col">
       <div className="flex flex-wrap items-center gap-1.5">
         <Badge tone={life.status.tone}>{life.status.label}</Badge>
+        {updatable ? <UpdateBadge latestVersion={latestVersion!} /> : null}
         {plugin.tier === "PLATFORM" ? (
           <Badge tone="info">{t("plugins.card.tier.platform")}</Badge>
         ) : plugin.tier === "ORG" ? (
@@ -107,6 +113,10 @@ export function PluginDetail({
                       ? t("plugins.card.deactivate")
                       : t("plugins.card.activate")}
                 </Button>
+              ) : null}
+
+              {updatable && canInstall ? (
+                <UpdateButton kind="plugin" itemKey={plugin.key} latestVersion={latestVersion!} />
               ) : null}
 
               {canConfigure && plugin.settingsSchema ? (

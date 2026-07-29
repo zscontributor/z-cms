@@ -23,20 +23,26 @@ export function ThemeBrowser({
   available,
   activeKey,
   draftIdByKey,
+  latestVersionByKey,
   canActivate,
   canConfigure,
   canSideload,
   canAuthor,
+  canInstall,
 }: {
   sideloaded: InstalledThemeDto[];
   verified: InstalledThemeDto[];
   available: ThemeCatalogEntry[];
   activeKey: string | null;
   draftIdByKey: Record<string, string>;
+  /** Theme key → newest version the marketplace offers, for the "update available" flag. */
+  latestVersionByKey: Record<string, string>;
   canActivate: boolean;
   canConfigure: boolean;
   canSideload: boolean;
   canAuthor: boolean;
+  /** `theme:install` — may pull a newer version from the marketplace. Gates Update. */
+  canInstall: boolean;
 }) {
   const t = useT();
   const [query, setQuery] = useState("");
@@ -119,6 +125,8 @@ export function ThemeBrowser({
           canConfigure={canConfigure}
           canEdit={canAuthor}
           draftIdByKey={draftIdByKey}
+          latestVersionByKey={latestVersionByKey}
+          canInstall={canInstall}
         />
       ) : null}
 

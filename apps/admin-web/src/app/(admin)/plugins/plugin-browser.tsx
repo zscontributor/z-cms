@@ -7,6 +7,7 @@ import { Drawer } from "@/components/ui/drawer";
 import { EmptyState } from "@/components/ui/table";
 import { SearchField } from "@/components/ui/search-field";
 import { SideloadActions, SideloadUpload } from "@/components/sideload-controls";
+import { UpdateBadge, hasUpdate } from "@/components/package-update";
 import { useT } from "@/lib/i18n-provider";
 import { describeStatus } from "@/lib/plugin-permissions";
 import { PluginDetail } from "./plugin-detail";
@@ -24,6 +25,7 @@ export function PluginBrowser({
   installed,
   available,
   isEmpty,
+  latestVersionByKey,
   canInstall,
   canActivate,
   canConfigure,
@@ -33,6 +35,8 @@ export function PluginBrowser({
   installed: CatalogPluginDto[];
   available: CatalogPluginDto[];
   isEmpty: boolean;
+  /** Plugin key → newest version the marketplace offers, for the "update available" flag. */
+  latestVersionByKey: Record<string, string>;
   canInstall: boolean;
   canActivate: boolean;
   canConfigure: boolean;
@@ -148,6 +152,7 @@ export function PluginBrowser({
               <ManagedRow
                 key={plugin.key}
                 plugin={plugin}
+                latestVersion={latestVersionByKey[plugin.key] ?? null}
                 selected={selectedKey === plugin.key}
                 onOpen={() => setSelectedKey(plugin.key)}
               />
@@ -192,6 +197,7 @@ export function PluginBrowser({
               // revalidation keeps the same key so its notice/error survive.
               key={shown.key}
               plugin={shown}
+              latestVersion={latestVersionByKey[shown.key] ?? null}
               canInstall={canInstall}
               canActivate={canActivate}
               canConfigure={canConfigure}
@@ -213,21 +219,30 @@ function PluginList({ children }: { children: React.ReactNode }) {
 /** A row for an installed/available plugin — its badge is the install status. */
 function ManagedRow({
   plugin,
+  latestVersion = null,
   selected,
   onOpen,
 }: {
   plugin: CatalogPluginDto;
+  /** Newest version the marketplace offers, when this plugin exists there; else null. */
+  latestVersion?: string | null;
   selected: boolean;
   onOpen: () => void;
 }) {
   const t = useT();
   const status = describeStatus(plugin.status, plugin.installed, t);
+  const updatable = plugin.installed && hasUpdate(plugin.latestVersion, latestVersion);
   return (
     <PluginRow
       plugin={plugin}
       selected={selected}
       onOpen={onOpen}
-      badge={<Badge tone={status.tone}>{status.label}</Badge>}
+      badge={
+        <>
+          {updatable ? <UpdateBadge latestVersion={latestVersion!} /> : null}
+          <Badge tone={status.tone}>{status.label}</Badge>
+        </>
+      }
     />
   );
 }
