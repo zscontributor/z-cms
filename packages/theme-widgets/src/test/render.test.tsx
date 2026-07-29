@@ -299,6 +299,14 @@ describe("styleForNode", () => {
     expect(css.backgroundPosition).toBe("top");
   });
 
+  it("lets a photo win over a preset gradient instead of hiding behind it", () => {
+    // The Hero pattern ships an opaque gradient; a photo the author later sets must
+    // be visible, so the gradient is NOT layered over the image.
+    const css = styleForNode({ backgroundImage: "/uploads/hero.jpg", backgroundGradient: "twilight" });
+    expect(css.backgroundImage).toBe('url("/uploads/hero.jpg")');
+    expect(String(css.backgroundImage)).not.toContain("gradient");
+  });
+
   it("keeps a solid colour beneath an image as backgroundColor, not the shorthand", () => {
     const css = styleForNode({ background: "#fff", backgroundImage: "/uploads/hero.jpg" });
     // shorthand would clobber the image — so the solid rides on backgroundColor
