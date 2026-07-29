@@ -254,6 +254,18 @@ describe("styleForNode", () => {
     expect(styleForNode(undefined)).toEqual({});
   });
 
+  it("mirrors border-radius into --zw-node-radius so wrapped media (image/gallery) can round itself", () => {
+    const css = styleForNode({ borderRadius: 16 }) as Record<string, unknown>;
+    expect(css.borderRadius).toBe("16px");
+    // The wrapper has no paint/overflow clip, so the child <img> reads this variable.
+    expect(css["--zw-node-radius"]).toBe("16px");
+  });
+
+  it("does not emit --zw-node-radius when radius is unset, so the theme token still applies", () => {
+    const css = styleForNode({ paddingX: 8 }) as Record<string, unknown>;
+    expect(css["--zw-node-radius"]).toBeUndefined();
+  });
+
   it("lets a gradient preset win over a solid background", () => {
     const css = styleForNode({ background: "#fff", backgroundGradient: "ocean" });
     expect(String(css.background)).toContain("linear-gradient");
@@ -285,6 +297,14 @@ describe("styleForNode", () => {
     );
     expect(css.backgroundSize).toBe("contain");
     expect(css.backgroundPosition).toBe("top");
+  });
+
+  it("lets a photo win over a preset gradient instead of hiding behind it", () => {
+    // The Hero pattern ships an opaque gradient; a photo the author later sets must
+    // be visible, so the gradient is NOT layered over the image.
+    const css = styleForNode({ backgroundImage: "/uploads/hero.jpg", backgroundGradient: "twilight" });
+    expect(css.backgroundImage).toBe('url("/uploads/hero.jpg")');
+    expect(String(css.backgroundImage)).not.toContain("gradient");
   });
 
   it("keeps a solid colour beneath an image as backgroundColor, not the shorthand", () => {

@@ -166,20 +166,20 @@ export function styleForNode(style: NodeStyle | undefined): CSSProperties {
 
   if (style.textColor) out.color = style.textColor;
 
-  // Fills compose. With a background image present, the solid colour, gradient,
-  // overlay and photo are expressed through ONE background-image list so the
-  // shorthand can never clobber the picture — overlay on top (a flat wash that keeps
-  // text legible), then any gradient, then the image; the solid colour sits beneath
-  // as backgroundColor. Without an image the original solid/gradient behaviour is
-  // left exactly as it was. The URL passed CssUrlSchema, so wrapping it in quotes is
-  // safe; the replace is belt-and-suspenders against a `"` the fence already forbids.
+  // Fills are ONE choice, most-specific-wins, so an explicit override is always
+  // visible: a photo is the fill and beats a gradient/solid; a gradient beats a
+  // solid; a solid is the base. With a photo present it is expressed through a
+  // background-image list so the shorthand can never clobber the picture — the ONLY
+  // thing layered on top is a translucent `backgroundOverlay` wash (keeps text
+  // legible); the preset gradients are opaque standalone fills, so layering one over
+  // the photo would just hide it (the bug behind "changed the photo, nothing moved").
+  // The solid colour sits beneath as backgroundColor, showing through a transparent
+  // PNG. The URL passed CssUrlSchema, so quoting it is safe; the replace is
+  // belt-and-suspenders against a `"` the fence already forbids.
   if (style.backgroundImage) {
     const layers: string[] = [];
     if (style.backgroundOverlay) {
       layers.push(`linear-gradient(0deg, ${style.backgroundOverlay}, ${style.backgroundOverlay})`);
-    }
-    if (style.backgroundGradient && style.backgroundGradient !== "none") {
-      layers.push(GRADIENT_VALUES[style.backgroundGradient]);
     }
     layers.push(`url("${style.backgroundImage.replace(/"/g, "%22")}")`);
     out.backgroundImage = layers.join(", ");
@@ -211,7 +211,14 @@ export function styleForNode(style: NodeStyle | undefined): CSSProperties {
     out.marginBottom = `${style.marginY}px`;
   }
 
-  if (style.borderRadius !== undefined) out.borderRadius = `${style.borderRadius}px`;
+  if (style.borderRadius !== undefined) {
+    out.borderRadius = `${style.borderRadius}px`;
+    // Media widgets (image/gallery) draw their visible pixels in an <img> inside this
+    // wrapper, which has no paint and no overflow clip — so its own border-radius is
+    // invisible. Expose the value as a custom property that cascades to those children,
+    // which round themselves with it (see .zw-image img / .zw-gallery-item in widgets.css).
+    out["--zw-node-radius"] = `${style.borderRadius}px`;
+  }
   // A border needs all three or it shows nothing useful. Width drives it; style and
   // colour default to something visible so a width alone still draws a line.
   if (style.borderWidth !== undefined && style.borderWidth > 0) {

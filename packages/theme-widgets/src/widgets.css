@@ -334,7 +334,8 @@
   display: block;
   max-width: 100%;
   height: auto;
-  border-radius: var(--zw-radius, 8px);
+  /* Per-node corner radius (set on the .zw-widget wrapper) wins; otherwise the theme token. */
+  border-radius: var(--zw-node-radius, var(--zw-radius, 8px));
 }
 
 .zw-image.zw-width-full img,
@@ -343,7 +344,8 @@
 }
 
 .zw-image.zw-width-full img {
-  border-radius: 0;
+  /* Full-bleed images square off by default, but an explicit per-node radius overrides. */
+  border-radius: var(--zw-node-radius, 0);
 }
 
 .zw-caption {
@@ -464,7 +466,8 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: var(--zw-radius, 8px);
+  /* Per-node radius (set on the .zw-widget wrapper) rounds each item; else the theme token. */
+  border-radius: var(--zw-node-radius, var(--zw-radius, 8px));
 }
 
 /* Grid: an even N-column grid; below the breakpoint it relaxes to auto-fit so a

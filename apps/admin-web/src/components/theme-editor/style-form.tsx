@@ -62,6 +62,13 @@ export function StyleForm({
       // Widened on purpose: the value came from a control the field spec chose, and
       // NodeStyleSchema is the authority that bounds it on save.
       (next as Record<string, unknown>)[key] = value;
+      // A solid colour and a preset gradient are ONE choice — the fill — so setting
+      // one clears the other. Without this, a node that ships a gradient (the Hero
+      // pattern does) ignores a colour the user picks, because the gradient wins at
+      // render time: "I set a background colour and nothing changed". The photo is a
+      // separate layer (it sits over the fill), so it is left untouched.
+      if (key === "background") delete next.backgroundGradient;
+      if (key === "backgroundGradient" && value !== "none") delete next.background;
     }
     onChange(next);
   };
