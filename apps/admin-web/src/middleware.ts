@@ -131,6 +131,11 @@ function csp(nonce: string): string {
     `img-src 'self' data: blob: https: ${dev ? "http:" : ""} ${s3} ${siteRuntime} ${marketplace}`
       .replace(/\s+/g, " ")
       .trim(),
+    // Same reasoning for <video>/<audio> — background-video nodes and media pickers
+    // point at author-supplied external URLs, which fall to media-src (not img-src).
+    `media-src 'self' data: blob: https: ${dev ? "http:" : ""} ${s3}`
+      .replace(/\s+/g, " ")
+      .trim(),
     `font-src 'self' data:`,
     // Server actions are same-origin; the API is called from the client only
     // through same-origin route handlers, but allow it explicitly for safety.

@@ -32,7 +32,16 @@ export function middleware(request: NextRequest) {
     // without listing every one. In dev, Next's HMR needs eval; never in prod.
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${dev ? " 'unsafe-eval'" : ""}`,
     `style-src 'self' 'unsafe-inline'`,
-    `img-src 'self' data: ${s3}`.trim(),
+    // Themes and authored content reference images from arbitrary external hosts
+    // (CDNs, placeholder services, embedded media), so the public site must load
+    // any secure image origin. `https:` opens image loading only; images cannot
+    // execute, and script/connect stay locked to same-origin + the API.
+    `img-src 'self' data: https:${dev ? " http:" : ""} ${s3}`.replace(/\s+/g, " ").trim(),
+    // <video>/<audio> fall to media-src, not img-src — background-video nodes and
+    // embedded media reference arbitrary external hosts, so open it the same way.
+    `media-src 'self' data: blob: https:${dev ? " http:" : ""} ${s3}`
+      .replace(/\s+/g, " ")
+      .trim(),
     `font-src 'self' data:`,
     `connect-src 'self' ${api}${dev ? " ws:" : ""}`.trim(),
     `object-src 'none'`,

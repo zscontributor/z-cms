@@ -80,10 +80,32 @@ describe("middleware", () => {
   it("reduces S3_PUBLIC_URL to an origin, with and without a path", () => {
     // A CSP source is an origin; the bucket path is not part of one. Stripping it
     // by regex would also eat the host of a URL that never had a path.
-    expect(csp(run())).toContain("img-src 'self' data: https://cdn.example");
+    const imgSrc = (policy: string) =>
+      policy.split(";").find((d) => d.trim().startsWith("img-src")) ?? "";
+
+    expect(imgSrc(csp(run()))).toContain("https://cdn.example");
+    expect(imgSrc(csp(run()))).not.toContain("/bucket");
 
     vi.stubEnv("S3_PUBLIC_URL", "https://cdn.example");
-    expect(csp(run())).toContain("img-src 'self' data: https://cdn.example");
+    expect(imgSrc(csp(run()))).toContain("https://cdn.example");
+  });
+
+  it("allows arbitrary external images so themes can reference any host", () => {
+    // Theme authors embed images from placeholder services and third-party CDNs;
+    // `https:` opens img-src to any secure origin while script/connect stay strict.
+    const imgSrc = csp(run())
+      .split(";")
+      .find((d) => d.trim().startsWith("img-src"));
+    expect(imgSrc).toMatch(/\bhttps:/);
+  });
+
+  it("allows arbitrary external video/audio via media-src", () => {
+    // Background-video nodes and embedded media point at external hosts, and
+    // <video>/<audio> fall to media-src — not img-src.
+    const mediaSrc = csp(run())
+      .split(";")
+      .find((d) => d.trim().startsWith("media-src"));
+    expect(mediaSrc).toMatch(/\bhttps:/);
   });
 
   it("drops an internal API host the browser cannot parse from connect-src", () => {

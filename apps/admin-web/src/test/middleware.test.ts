@@ -188,9 +188,25 @@ describe("middleware", () => {
 
     const response = await middleware(request("/media", { [ACCESS_TOKEN_COOKIE]: "at" }));
 
-    expect(response.headers.get("content-security-policy")).toContain(
-      "img-src 'self' data: blob: https://cdn.example.org",
-    );
+    const csp = response.headers.get("content-security-policy") ?? "";
+    const imgSrc = csp.split(";").find((d) => d.trim().startsWith("img-src")) ?? "";
+    expect(imgSrc).toContain("https://cdn.example.org");
+    expect(imgSrc).not.toContain("/zcms-media");
+  });
+
+  it("allows arbitrary external images so themes can reference any host", async () => {
+    // Theme Studio previews author-supplied images from placeholder services and
+    // third-party CDNs; `https:` opens img-src to any secure origin while
+    // script-src / connect-src stay locked down.
+    const response = await middleware(request("/appearance", { [ACCESS_TOKEN_COOKIE]: "at" }));
+
+    const csp = response.headers.get("content-security-policy") ?? "";
+    const imgSrc = csp.split(";").find((d) => d.trim().startsWith("img-src")) ?? "";
+    expect(imgSrc).toMatch(/\bhttps:/);
+
+    // Background video / audio pickers need the same opening on media-src.
+    const mediaSrc = csp.split(";").find((d) => d.trim().startsWith("media-src")) ?? "";
+    expect(mediaSrc).toMatch(/\bhttps:/);
   });
 
   it("allows the site runtime in img-src, so theme screenshots can be seen", async () => {
