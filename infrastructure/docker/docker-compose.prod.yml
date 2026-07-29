@@ -275,6 +275,9 @@ services:
       PORT: "3000"
       CMS_API_URL: http://cms-api:4100
       THEME_CACHE_DIR: /tmp/zcms-themes
+      # Readiness resolves this real tenant and pre-warms its active signed theme.
+      # A localhost probe can return 404 while every production hostname is broken.
+      READINESS_HOST: ${SITE_HOST:?set SITE_HOST to the canonical production hostname}
       # A theme renders in THIS process, unsandboxed. Built-in theme packages are
       # shipped in the image, but image bytes are still not a trust boundary.
       # Without this key site-runtime refuses to import them, which is why it is
@@ -297,6 +300,12 @@ services:
       # verifies, never signs. Empty means no sideloaded theme loads. See .env.example.
       OPERATOR_PUBLIC_KEY: ${OPERATOR_PUBLIC_KEY:-}
       S3_PUBLIC_URL: ${S3_PUBLIC_URL:?set S3_PUBLIC_URL}
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000/api/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 15s
+      timeout: 45s
+      retries: 3
+      start_period: 90s
     depends_on:
       cms-api:
         condition: service_healthy
