@@ -310,7 +310,11 @@ describe("scanPackage", () => {
           kind: "plugin",
           manifest: {
             id: "vn.zsoft.plugin.seo",
-            database: { tables: ["users"] },
+            database: {
+              tables: [
+                { name: "users", columns: [{ name: "email", type: "text" }] },
+              ],
+            },
           },
         },
       );
@@ -319,7 +323,7 @@ describe("scanPackage", () => {
 
       expect(report.verdict).toBe("reject");
       expect(finding(report, "manifest-table").severity).toBe("block");
-      expect(finding(report, "manifest-table").message).toContain("plugin_vn_zsoft_plugin_seo_");
+      expect(finding(report, "manifest-table").message).toContain("p_vn_zsoft_plugin_seo__");
       expect(finding(report, "manifest-table").file).toBe("plugin.json");
     });
 
@@ -333,7 +337,16 @@ describe("scanPackage", () => {
           manifest: {
             id: "vn.zsoft.plugin.seo",
             database: {
-              tables: ["plugin_vn_zsoft_plugin_seo_redirects", "plugin_vn_zsoft_plugin_seo_meta"],
+              tables: [
+                {
+                  name: "p_vn_zsoft_plugin_seo__redirects",
+                  columns: [{ name: "url", type: "text" }],
+                },
+                {
+                  name: "p_vn_zsoft_plugin_seo__meta",
+                  columns: [{ name: "title", type: "text" }],
+                },
+              ],
             },
           },
         },
@@ -346,7 +359,7 @@ describe("scanPackage", () => {
     });
 
     it("blocks a plugin whose table name only pretends to carry the prefix", async () => {
-      // ATTACK: "plugin_vn_zsoft_plugin_seo" without the trailing underscore, or a
+      // ATTACK: "p_vn_zsoft_plugin_seo" without the double underscore, or a
       // prefix belonging to a DIFFERENT plugin — both are outside this plugin's
       // namespace and must not be granted.
       const file = await buildZcms(
@@ -355,7 +368,14 @@ describe("scanPackage", () => {
           kind: "plugin",
           manifest: {
             id: "vn.zsoft.plugin.seo",
-            database: { tables: ["plugin_vn_zsoft_plugin_analytics_events"] },
+            database: {
+              tables: [
+                {
+                  name: "p_vn_zsoft_plugin_analytics__events",
+                  columns: [{ name: "kind", type: "text" }],
+                },
+              ],
+            },
           },
         },
       );

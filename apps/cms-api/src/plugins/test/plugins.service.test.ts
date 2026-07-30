@@ -41,14 +41,15 @@ function makeSystemDb() {
   };
 }
 
-/** A first-party plugin owning one table, as plugin.findUnique returns it. */
-function tableOwningPlugin() {
+/** A verified plugin owning one table, as plugin.findUnique returns it. */
+function tableOwningPlugin(origin = "BUILTIN") {
   return {
     id: "plugin-1",
     key: "vn.zsoft.testdb",
     isCore: true,
     versions: [
       {
+        origin,
         manifest: {
           database: {
             tables: [
@@ -297,13 +298,20 @@ describe("PluginsService", () => {
       expect(holder.systemDb.$executeRawUnsafe).not.toHaveBeenCalled();
     });
 
-    it("never drops for a community plugin (it owns no tables)", async () => {
-      holder.systemDb.plugin.findUnique.mockResolvedValue({
-        ...tableOwningPlugin(),
-        isCore: false,
-      });
+    it("never drops for an unreviewed sideload", async () => {
+      holder.systemDb.plugin.findUnique.mockResolvedValue(tableOwningPlugin("SIDELOAD"));
       await makeService().dropPluginTablesIfUnused("vn.zsoft.testdb");
       expect(holder.systemDb.$executeRawUnsafe).not.toHaveBeenCalled();
+    });
+
+    it("drops a reviewed marketplace plugin's table after its last install is removed", async () => {
+      holder.systemDb.plugin.findUnique.mockResolvedValue(tableOwningPlugin("MARKETPLACE"));
+      holder.systemDb.sitePlugin.count.mockResolvedValue(0);
+      holder.systemDb.orgPlugin.count.mockResolvedValue(0);
+
+      await makeService().dropPluginTablesIfUnused("vn.zsoft.testdb");
+
+      expect(holder.systemDb.$executeRawUnsafe).toHaveBeenCalled();
     });
   });
 

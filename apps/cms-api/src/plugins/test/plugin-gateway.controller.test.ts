@@ -34,14 +34,14 @@ function makeDb() {
 }
 
 /**
- * The system client resolvePluginTable reads. By default it returns a first-party
+ * The system client resolvePluginTable reads. By default it returns a built-in
  * install whose manifest owns exactly one table, `p_zsoft_seo__leads`. A test that
- * wants a community plugin or a different table set overrides it.
+ * wants another origin or table set overrides it.
  */
-function makeSys(over: { isCore?: boolean; tables?: unknown[] } = {}) {
+function makeSys(over: { origin?: string; tables?: unknown[] } = {}) {
   const install = {
-    plugin: { isCore: over.isCore ?? true },
     version: {
+      origin: over.origin ?? "BUILTIN",
       manifest: {
         database: {
           tables: over.tables ?? [
@@ -322,10 +322,10 @@ describe("PluginGatewayController", () => {
       expect(holder.db.$queryRawUnsafe).not.toHaveBeenCalled();
     });
 
-    it("REFUSES db.* to a community (non-first-party) plugin, even for its own table", async () => {
-      // Owning tables is a first-party privilege. Even declaring the table and
-      // holding the scope, a non-isCore plugin is refused.
-      holder.sys = makeSys({ isCore: false });
+    it("REFUSES db.* to an unreviewed sideload, even for its own table", async () => {
+      // Owning tables requires a pinned built-in or reviewed marketplace package.
+      // Merely declaring the table and holding the scope is not enough.
+      holder.sys = makeSys({ origin: "SIDELOAD" });
       tokens.verify.mockResolvedValue(claims(withDb));
       await expect(
         makeController().call("Bearer x", {
@@ -334,6 +334,18 @@ describe("PluginGatewayController", () => {
         }),
       ).rejects.toBeInstanceOf(ForbiddenException);
       expect(holder.db.$queryRawUnsafe).not.toHaveBeenCalled();
+    });
+
+    it("allows a reviewed marketplace plugin to use its declared table", async () => {
+      holder.sys = makeSys({ origin: "MARKETPLACE" });
+      tokens.verify.mockResolvedValue(claims(withDb));
+
+      await makeController().call("Bearer x", {
+        method: "db.select",
+        params: { table: "p_zsoft_seo__leads", options: {} },
+      });
+
+      expect(holder.db.$queryRawUnsafe).toHaveBeenCalledTimes(1);
     });
 
     it("REFUSES db.* without the data:own scope the admin must grant", async () => {

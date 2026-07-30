@@ -823,6 +823,22 @@ importers:
         specifier: 4.1.10
         version: 4.1.10(@types/node@24.10.1)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1)(vite@8.1.4(@types/node@24.10.1)(esbuild@0.25.12)(jiti@2.7.0)(terser@5.49.0)(tsx@4.20.6))
 
+  plugins/medical:
+    dependencies:
+      '@zcmsorg/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
+    devDependencies:
+      '@zcmsorg/schemas':
+        specifier: workspace:*
+        version: link:../../packages/schemas
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: 4.1.10
+        version: 4.1.10(@types/node@24.10.1)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1)(vite@8.1.4(@types/node@24.10.1)(esbuild@0.25.12)(jiti@2.7.0)(terser@5.49.0)(tsx@4.20.6))
+
   plugins/seo:
     dependencies:
       '@zcmsorg/plugin-sdk':
@@ -913,6 +929,28 @@ importers:
         version: 5.9.3
 
   themes/market:
+    dependencies:
+      '@zcmsorg/schemas':
+        specifier: workspace:*
+        version: link:../../packages/schemas
+      '@zcmsorg/theme-sdk':
+        specifier: workspace:*
+        version: link:../../packages/theme-sdk
+    devDependencies:
+      '@types/react':
+        specifier: 19.2.17
+        version: 19.2.17
+      esbuild:
+        specifier: 0.25.12
+        version: 0.25.12
+      react:
+        specifier: 19.2.7
+        version: 19.2.7
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
+  themes/medical:
     dependencies:
       '@zcmsorg/schemas':
         specifier: workspace:*

@@ -35,6 +35,7 @@ import type { RequestActor } from "../common/request-context";
 import { AuditService } from "../audit/audit.module";
 import { ApiAuthed, ApiNotFound, ApiZodBody, ApiZodResponse } from "../openapi/decorators";
 import { CacheService } from "../redis/cache.service";
+import { canOwnPluginTables } from "./plugin-data-trust";
 import { PluginsService } from "./plugins.service";
 import {
   type CatalogPlugin,
@@ -192,7 +193,7 @@ export class OrgPluginsController {
       admin?: PluginAdminContribution;
       forms?: unknown;
     };
-    if (manifest.database?.tables?.length && !plugin.isCore) {
+    if (manifest.database?.tables?.length && !canOwnPluginTables(latest.origin)) {
       throw new BadRequestException(t()("errors.plugins.tablesFirstPartyOnly"));
     }
     const violations = validatePluginTableSchemas(plugin.key, manifest.database?.tables);

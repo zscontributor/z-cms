@@ -198,15 +198,30 @@ function checkManifest(manifest: PackageManifest): Finding[] {
   // A plugin that declares tables must keep to its own prefix. The authoritative
   // check runs at install time (validatePluginTables); flagging it here means a
   // reviewer sees it before signing rather than after a failed install.
-  const database = (manifest as { database?: { tables?: string[] } }).database;
+  const database = (
+    manifest as {
+      database?: { tables?: Array<string | { name?: unknown }> };
+    }
+  ).database;
   if (database?.tables?.length) {
-    const prefix = `plugin_${slugForPrefix(String(manifest.id))}_`;
-    for (const table of database.tables) {
-      if (!table.startsWith(prefix)) {
+    const prefix = `p_${slugForPrefix(String(manifest.id))}__`;
+    for (const declaration of database.tables) {
+      // Current manifests declare full table schemas. Accepting a string here is
+      // intentionally defensive for an older, hand-forged envelope: either shape
+      // is reduced to the one identity field the scanner needs.
+      const table =
+        typeof declaration === "string"
+          ? declaration
+          : typeof declaration?.name === "string"
+            ? declaration.name
+            : "";
+      if (!table || !table.startsWith(prefix)) {
         findings.push({
           severity: "block",
           rule: "manifest-table",
-          message: `Declares table "${table}" outside its own prefix "${prefix}".`,
+          message: table
+            ? `Declares table "${table}" outside its own prefix "${prefix}".`
+            : "Declares a table without a valid name.",
           file: "plugin.json",
         });
       }

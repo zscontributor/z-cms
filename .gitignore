@@ -68,3 +68,8 @@ z-soft-page-2027.html
 zsoft-wordpress-theme-mockup
 # Private theme — z-soft company site only; shipped via marketplace, never public.
 themes/z-soft/
+
+# Private medical product — built locally and shipped through marketplace review,
+# never published as source to the public repository.
+themes/medical/
+plugins/medical/

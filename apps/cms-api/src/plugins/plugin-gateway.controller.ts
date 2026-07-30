@@ -28,6 +28,7 @@ import {
 import { MailService } from "../mail/mail.service";
 import { QueueService } from "../queue/queue.module";
 import { PluginEgressService } from "./plugin-egress.service";
+import { canOwnPluginTables } from "./plugin-data-trust";
 import { PluginsService } from "./plugins.service";
 import { t } from "../common/i18n";
 import { toContentDto } from "../common/mappers";
@@ -55,8 +56,8 @@ const METHOD_SCOPES: Record<string, Permission | null> = {
   "content.list": "content:read",
   "jobs.enqueue": null,
   // The plugin's own tables. The scope is necessary but not sufficient: dispatch
-  // additionally refuses a plugin that is not first-party and a table the plugin
-  // did not declare, both read from the install's manifest, never from the params.
+  // additionally requires a built-in or reviewed marketplace origin and a table
+  // the plugin declared, both read from the install, never from the params.
   "db.insert": "data:own",
   "db.select": "data:own",
   "db.update": "data:own",
@@ -424,19 +425,18 @@ export class PluginGatewayController {
 
     // The install for this (plugin, site) at either tier — a SitePlugin, or the
     // tenant's OrgPlugin. getSystemDb() reads the catalogue directly; the manifest
-    // and the isCore flag are platform data, not tenant rows.
+    // and package origin are platform data, not tenant rows.
     //
     // Deliberately NOT filtered on status ACTIVE: a plugin's `setup()` runs during
     // activation, while the install is still INACTIVE, and its whole job may be to
     // seed the tables it just declared. The token is the gate that a plugin is
     // legitimately executing at all — it is minted per-invocation only for a real
     // dispatch (setup included) — so ownership here only needs the install to
-    // exist, be first-party, and declare the table. An inactive plugin never
+    // exist, have a verified data-capable origin, and declare the table. An inactive plugin never
     // reaches this code without a token, and cannot mint one.
     const sys = getSystemDb();
     const include = {
-      plugin: { select: { isCore: true } },
-      version: { select: { manifest: true } },
+      version: { select: { manifest: true, origin: true } },
     } as const;
     const install =
       (await sys.sitePlugin.findFirst({
@@ -451,8 +451,8 @@ export class PluginGatewayController {
     if (!install) {
       throw new ForbiddenException(t()("errors.plugins.tableNotOwned", { table: name }));
     }
-    if (!install.plugin.isCore) {
-      // A community plugin holds no tables even if it somehow held the scope.
+    if (!canOwnPluginTables(install.version.origin)) {
+      // An unreviewed sideload holds no tables even if it somehow held the scope.
       throw new ForbiddenException(t()("errors.plugins.tableNotOwned", { table: name }));
     }
 

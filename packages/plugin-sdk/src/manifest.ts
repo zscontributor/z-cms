@@ -186,10 +186,10 @@ export interface PluginManifest {
    * run, and what keeps a plugin-chosen string from ever reaching a `CREATE TABLE`
    * as anything but an already-validated identifier.
    *
-   * Owning tables is a first-party privilege: a community plugin is refused a
-   * `database` block at install and gets `ctx.storage` instead. The rows a plugin
-   * does own are reached through `ctx.db`, which scopes every query to the site
-   * and tenant from the plugin's token.
+   * Owning tables requires a verified package: a pinned built-in or a reviewed,
+   * marketplace-counter-signed plugin. An unreviewed sideload is refused a
+   * `database` block and gets `ctx.storage` instead. Rows are reached through
+   * `ctx.db`, which scopes every query to the site and tenant from the token.
    */
   database?: {
     tables: PluginTableSchema[];

@@ -535,6 +535,13 @@ millions of rows should not be storing them as JSON blobs. Those get real tables
 under two laws that are now **enforced, not merely stated**
 (`packages/plugin-sdk/src/database.ts`):
 
+The package must also have passed a platform trust gate. A pinned `BUILTIN`
+package may declare tables, and so may a `MARKETPLACE` package after publisher
+signature verification, review and registry counter-signing. A raw `SIDELOAD`
+may not: it remains on `ctx.storage`. This distinction lets reviewed vertical
+applications ship through the marketplace without turning arbitrary operator
+uploads into schema/DDL authority.
+
 1. **A plugin never alters, drops or migrates a core table.** Not "should not" —
    it is not granted the privilege.
 2. **Every table a plugin owns is named with the prefix derived from its own

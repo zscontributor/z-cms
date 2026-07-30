@@ -127,7 +127,8 @@ export interface PluginHttpApi {
 /**
  * Read/write access to the plugin's OWN relational tables — the ones it declared
  * in `manifest.database` and core created. Requires the `data:own` scope, and is
- * available only to first-party plugins (a community plugin uses `ctx.storage`).
+ * available only to verified packages: pinned built-ins and reviewed,
+ * marketplace-counter-signed plugins. Unreviewed sideloads use `ctx.storage`.
  *
  * This is not a database handle. There is no connection, no transaction, no SQL
  * string under any of these methods — the plugin names a table it owns and a
@@ -198,9 +199,9 @@ export interface PluginContext<S = Record<string, unknown>> {
   storage: PluginStorage;
   /**
    * The plugin's own relational tables. Present on every context, but every call
-   * is refused unless the plugin holds `data:own` and declared the table — a
-   * community plugin that touches it gets the same "scope not granted" a missing
-   * permission earns anywhere else.
+   * is refused unless the plugin holds `data:own`, declared the table and came
+   * from a verified data-capable origin. An unreviewed sideload that touches it is
+   * refused at the gateway.
    */
   db: PluginDatabaseApi;
   content: PluginContentApi;

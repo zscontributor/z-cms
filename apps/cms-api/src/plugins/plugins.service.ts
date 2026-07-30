@@ -15,6 +15,7 @@ import {
 import type { FormDefinition, ProvidedPermission, Permission, PublicFormDef, RenderIntegration } from "@zcmsorg/schemas";
 import { toPublicForm } from "@zcmsorg/schemas";
 import { currentLocale, t } from "../common/i18n";
+import { canOwnPluginTables } from "./plugin-data-trust";
 import { PluginTokenService } from "./plugin-token.service";
 
 type SettingsSchema = {
@@ -354,8 +355,8 @@ export class PluginsService {
 
   /**
    * Resolves one admin resource to render or serve — its descriptor, its backing
-   * table schema, and whether the plugin is first-party (only first-party plugins
-   * own tables, so only they can back a resource).
+   * table schema, and whether the installed package has a data-capable trust
+   * origin (built-in or reviewed marketplace).
    *
    * Read from the installed manifest, never the request, exactly as the gateway's
    * `resolvePluginTable` is: the user names a plugin and a resource key, and gets
@@ -370,8 +371,7 @@ export class PluginsService {
   ): Promise<{ resource: ResolvedPluginAdminResource; table: PluginTableSchema } | null> {
     const db = getSystemDb();
     const include = {
-      plugin: { select: { isCore: true } },
-      version: { select: { manifest: true } },
+      version: { select: { manifest: true, origin: true } },
     } as const;
     const install =
       (await db.sitePlugin.findFirst({
@@ -383,7 +383,7 @@ export class PluginsService {
         include,
       }));
 
-    if (!install || !install.plugin.isCore) return null;
+    if (!install || !canOwnPluginTables(install.version.origin)) return null;
 
     const manifest = install.version.manifest as {
       admin?: PluginAdminContribution;
@@ -645,7 +645,7 @@ export class PluginsService {
   }
 
   /**
-   * Creates (or reconciles) a first-party plugin's declared tables — the DDL half
+   * Creates (or reconciles) a verified plugin's declared tables — the DDL half
    * of activation, run before `setup()` so the plugin's own setup can already
    * write to its tables.
    *
@@ -655,18 +655,19 @@ export class PluginsService {
    * is idempotent (every statement is `IF NOT EXISTS` or drop-then-create), so
    * this is safe to run on every activation, the way WordPress re-runs `dbDelta`.
    *
-   * A no-op for a community plugin: owning tables is a first-party privilege, and
-   * install already refused a `database` block from anyone else, so there is
-   * nothing here to create. The `isCore` re-check is defence in depth.
+   * A no-op for an unreviewed sideload: install already refused its `database`
+   * block, so there is nothing here to create. The origin re-check is defence in
+   * depth.
    */
   async ensurePluginTables(pluginKey: string): Promise<void> {
     const plugin = await getSystemDb().plugin.findUnique({
       where: { key: pluginKey },
       include: { versions: { orderBy: { createdAt: "desc" }, take: 1 } },
     });
-    if (!plugin?.isCore) return;
+    const version = plugin?.versions[0];
+    if (!plugin || !version || !canOwnPluginTables(version.origin)) return;
 
-    const manifest = plugin.versions[0]?.manifest as {
+    const manifest = version.manifest as {
       database?: { tables?: PluginTableSchema[] };
     } | null;
     const tables = manifest?.database?.tables ?? [];
@@ -702,7 +703,7 @@ export class PluginsService {
    * the caller's own rows, and only from a table the plugin owns (the builder emits
    * the validated table name and nothing else).
    *
-   * A no-op for a community plugin, which has no tables.
+   * A no-op for an unreviewed sideload, which has no tables.
    */
   async purgePluginSiteData(
     tenantId: string,
@@ -713,9 +714,10 @@ export class PluginsService {
       where: { key: pluginKey },
       include: { versions: { orderBy: { createdAt: "desc" }, take: 1 } },
     });
-    if (!plugin?.isCore) return;
+    const version = plugin?.versions[0];
+    if (!plugin || !version || !canOwnPluginTables(version.origin)) return;
 
-    const manifest = plugin.versions[0]?.manifest as {
+    const manifest = version.manifest as {
       database?: { tables?: PluginTableSchema[] };
     } | null;
     const tables = manifest?.database?.tables ?? [];
@@ -742,7 +744,7 @@ export class PluginsService {
    * the LAST install goes, not the first. The count runs on the system client, so
    * it sees installs across every tenant — dropping while another tenant still
    * holds the plugin would nuke their data, and this exists to make that
-   * impossible. Guarded like the create path: first-party only, own prefix only,
+   * impossible. Guarded like the create path: verified origin, own prefix only,
    * re-validated before a single DROP is emitted.
    */
   async dropPluginTablesIfUnused(pluginKey: string): Promise<void> {
@@ -751,7 +753,8 @@ export class PluginsService {
       where: { key: pluginKey },
       include: { versions: { orderBy: { createdAt: "desc" }, take: 1 } },
     });
-    if (!plugin?.isCore) return;
+    const version = plugin?.versions[0];
+    if (!plugin || !version || !canOwnPluginTables(version.origin)) return;
 
     const [siteInstalls, orgInstalls] = await Promise.all([
       sys.sitePlugin.count({ where: { pluginId: plugin.id } }),
@@ -759,7 +762,7 @@ export class PluginsService {
     ]);
     if (siteInstalls + orgInstalls > 0) return; // Still in use somewhere — never drop.
 
-    const manifest = plugin.versions[0]?.manifest as {
+    const manifest = version.manifest as {
       database?: { tables?: PluginTableSchema[] };
     } | null;
     const tables = manifest?.database?.tables ?? [];

@@ -76,7 +76,7 @@
     "invalidTables": "Plugin chỉ được tạo bảng có tiền tố \"{prefix}\". Bị từ chối: {tables}.",
     "invalidForms": "Các biểu mẫu plugin khai báo không hợp lệ: {detail}",
     "invalidProvidedPermissions": "Plugin chỉ được giới thiệu quyền có namespace của chính nó, và không được trùng quyền lõi. Bị từ chối: {permissions}.",
-    "tablesFirstPartyOnly": "Bảng quan hệ là đặc quyền của plugin first-party. Plugin này phải dùng lưu trữ key-value thay thế.",
+    "tablesFirstPartyOnly": "Bảng quan hệ chỉ dành cho gói built-in hoặc đã qua review marketplace. Gói sideload này phải dùng lưu trữ key-value.",
     "tableNotOwned": "Plugin này không thể thao tác bảng \"{table}\": đây không phải bảng do plugin khai báo và sở hữu.",
     "invalidAdmin": "Màn hình admin của plugin chỉ được tham chiếu tới bảng và resource của chính nó. Bị từ chối: {detail}.",
     "resourceNotFound": "Không có resource plugin: \"{resource}\".",

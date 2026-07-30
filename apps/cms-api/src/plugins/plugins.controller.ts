@@ -41,6 +41,7 @@ import {
   ApiZodResponse,
 } from "../openapi/decorators";
 import { CacheService } from "../redis/cache.service";
+import { canOwnPluginTables } from "./plugin-data-trust";
 import { PluginsService } from "./plugins.service";
 
 /** A plugin's activation reach, mirroring the Prisma `PluginScope` enum. */
@@ -284,10 +285,9 @@ export class PluginsController {
       admin?: PluginAdminContribution;
       forms?: unknown;
     };
-    // Owning relational tables is a first-party privilege. A community plugin that
-    // declares a `database` block is refused here rather than silently ignored, so
-    // its author learns at install that `ctx.storage` is the tier they are on.
-    if (manifest.database?.tables?.length && !plugin.isCore) {
+    // Relational tables require a verified package: first-party-signed built-ins or
+    // marketplace-reviewed/counter-signed packages. Raw sideloads stay on storage.
+    if (manifest.database?.tables?.length && !canOwnPluginTables(latest.origin)) {
       throw new BadRequestException(t()("errors.plugins.tablesFirstPartyOnly"));
     }
     const violations = validatePluginTableSchemas(plugin.key, manifest.database?.tables);

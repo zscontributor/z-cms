@@ -76,7 +76,7 @@
     "invalidTables": "A plugin may only create tables prefixed with \"{prefix}\". Refused: {tables}.",
     "invalidForms": "This plugin's declared forms are not valid: {detail}",
     "invalidProvidedPermissions": "A plugin may only introduce permissions namespaced to itself, and may not shadow a core one. Refused: {permissions}.",
-    "tablesFirstPartyOnly": "Relational tables are a first-party privilege. This plugin must use key-value storage instead.",
+    "tablesFirstPartyOnly": "Relational tables require a built-in or marketplace-reviewed package. This sideload must use key-value storage instead.",
     "tableNotOwned": "This plugin cannot operate the table \"{table}\": it is not one the plugin declared and owns.",
     "invalidAdmin": "A plugin's admin screens must reference its own tables and resources. Refused: {detail}.",
     "resourceNotFound": "No such plugin resource: \"{resource}\".",
