@@ -15,6 +15,7 @@ import { Flag } from "@/components/shell/flag";
 import { PageHeader } from "@/components/page-header";
 import { getT } from "@/lib/locale";
 import { loadParentOptions } from "@/lib/parent-options";
+import { returnHref, withReturnTo } from "@/lib/return-to";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,7 @@ interface PageProps {
    * an existing one. Both are needed: the id says which page, the locale says
    * which language, and neither can be inferred from the other.
    */
-  searchParams: Promise<{ translationOf?: string; locale?: string }>;
+  searchParams: Promise<{ translationOf?: string; locale?: string; from?: string }>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -40,7 +41,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function NewContentPage({ params, searchParams }: PageProps) {
   const { typeKey } = await params;
-  const { translationOf, locale: targetLocale } = await searchParams;
+  const { translationOf, locale: targetLocale, from } = await searchParams;
   const t = await getT();
   // `listContentTypes` is the same cached call `getContentTypeByKey` resolves the
   // URL key through, so asking for the whole set costs no second request. A
@@ -123,12 +124,13 @@ export default async function NewContentPage({ params, searchParams }: PageProps
             ? t("content.new.translating", { title: translating.title })
             : t("content.new.metaTitle", { type: type.name.toLowerCase() })
         }
+        back={{
+          href: returnHref(`/content/${type.key}`, from),
+          label: t("common.backToList"),
+        }}
         description={
           <>
-            <Link href={`/content/${type.key}`} className="hover:underline">
-              {type.pluralName}
-            </Link>{" "}
-            ·{" "}
+            {type.pluralName} ·{" "}
             {translating ? (
               <Link
                 href={`/content/${type.key}/${translating.id}`}
@@ -156,7 +158,10 @@ export default async function NewContentPage({ params, searchParams }: PageProps
             return (
               <Link
                 key={value}
-                href={`/content/${type.key}/new?locale=${encodeURIComponent(value)}`}
+                href={withReturnTo(
+                  `/content/${type.key}/new?locale=${encodeURIComponent(value)}`,
+                  from,
+                )}
                 role="tab"
                 aria-selected={active}
                 className={

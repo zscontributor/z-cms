@@ -108,7 +108,11 @@
     "createdAt": "Tạo lúc",
     "updatedAt": "Cập nhật lúc",
     "emptyValue": "Chưa có",
-    "markup": "Mã HTML đã lưu"
+    "markup": "Mã HTML đã lưu",
+    "referenceSearch": "Tìm theo tên…",
+    "referenceEmpty": "Không có kết quả.",
+    "related": "Liên quan",
+    "relatedEmpty": "Chưa có gì."
   },
   "sandbox": {
     "database": "Truy cập trực tiếp cơ sở dữ liệu",

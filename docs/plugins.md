@@ -302,6 +302,25 @@ against `buildFormSchema(fields)` — the same declaration the browser validated
 so client and server cannot disagree — before your handler is called. `{ ok: false }`
 is a handled rejection shown to the visitor as a normal error; throwing is a 502.
 
+**Optional groups — one coffee, not three.** A declared form is a flat field list,
+which is right for something a server validates and a handler reads, and wrong for
+a visitor buying one of something from a shop that sells up to three. A field may
+name a `group`, and the renderer holds that group back behind a single button:
+
+```json
+"groups": [{ "id": "item2", "addLabel": { "vi": "+ Thêm món", "en": "+ Add item" },
+             "removeLabel": { "vi": "Bỏ món này", "en": "Remove" } }],
+"fields": [{ "name": "item2", "type": "select", "group": "item2", … }]
+```
+
+Rendering only: the fields exist all along and submit empty, so nothing about
+validation or the handler's payload changes. A group is refused at install if it
+holds a `required` field (nobody has to open it) or if a field names a group that
+was never declared (it would render nowhere). Removing a group clears what it
+held, and a server-side refusal inside a closed group opens it — a message on a
+field nobody can see is not a message. `defaultValue` and `step` round it out: a
+quantity starts at 1 and counts in whole drinks rather than offering 1.5.
+
 A `label`, `title`, `submitLabel` or `successMessage` may be one string or a
 `{ locale: string }` map, and an option may be `{ value, label }`. Core resolves them
 to the locale of the page being rendered, so one manifest serves every language;
@@ -366,6 +385,35 @@ generates a settings form from `settingsSchema`:
 - a **form**, from `form.fields`, offered on the record and for a new row to whoever
   also holds the resource's write permission. A resource that declares no `form` is
   read-only for everyone, including its own author.
+
+A `reference` field is a **searchable picker**, not a box to paste an id into. It
+names the table it points at, the column whose value is stored, and the column a
+human reads:
+
+```json
+{ "column": "staff_id", "input": "reference", "refTable": "p_…__staff",
+  "refValue": "id", "refLabel": "full_name" }
+```
+
+`refValue` defaults to `id` and `refLabel` to the first column the target resource
+LISTS — the same "most identifying thing the plugin chose to show" the record
+screen uses for its heading. The list is fetched twenty rows at a time, filtered by
+the same substring rule the list screen searches with, and it is gated by the
+**target's** read permission: a shift form must not become a way to read the staff
+table.
+
+A resource may also declare **`children`** — other resources whose rows belong to
+one of its records:
+
+```json
+"children": [{ "resource": "recipe", "foreignColumn": "item_code",
+               "localColumn": "item_code", "label": { "en": "Ingredients" } }]
+```
+
+A plain join by value, shown under the record, gated by the child's own read
+permission — a child the reader may not see is omitted, not refused, because the
+record itself is still theirs. It is what lets a menu item say what it is made of
+without the recipe living on a screen you reach by remembering an item code.
 
 Labels are locale maps, so the screens speak the admin's language rather than the
 plugin author's.

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { PluginResourceField, PluginRow } from "@/lib/api";
+import type { PluginColumnType, PluginResourceField, PluginRow } from "@/lib/api";
 import { createPluginRowAction, updatePluginRowAction } from "@/app/actions/plugin-admin";
 import { Button } from "@/components/ui/button";
 import { Checkbox, Field, Input, Select, Textarea } from "@/components/ui/field";
@@ -9,6 +9,7 @@ import { MediaPickerField } from "@/components/editor/media-picker";
 import { RichTextEditor } from "@/components/editor/rich-text-editor";
 import { useLocale } from "@/lib/i18n-provider";
 import { formatCell } from "./format-cell";
+import { ReferenceField } from "./reference-field";
 
 export interface ResourceFormLabels {
   save: string;
@@ -28,6 +29,7 @@ export function ResourceForm({
   pluginKey,
   resourceKey,
   fields,
+  columnTypes,
   row,
   labels,
   onSaved,
@@ -36,6 +38,8 @@ export function ResourceForm({
   pluginKey: string;
   resourceKey: string;
   fields: PluginResourceField[];
+  /** Declared column types, so a read-only cell is rendered as its own type. */
+  columnTypes?: Record<string, PluginColumnType>;
   /** The row being edited, or null to create one. */
   row: PluginRow | null;
   labels: ResourceFormLabels;
@@ -82,7 +86,7 @@ export function ResourceForm({
         return (
           <Field key={f.column} label={f.label}>
             {f.readonly ? (
-              <Input value={formatCell(values[f.column], locale)} disabled readOnly />
+              <Input value={formatCell(values[f.column], locale, columnTypes?.[f.column])} disabled readOnly />
             ) : f.input === "textarea" ? (
               <Textarea
                 value={String(values[f.column] ?? "")}
@@ -114,6 +118,16 @@ export function ResourceForm({
                   </option>
                 ))}
               </Select>
+            ) : f.input === "reference" ? (
+              // The picker, not a uuid box. See reference-field.tsx.
+              <ReferenceField
+                pluginKey={pluginKey}
+                resourceKey={resourceKey}
+                column={f.column}
+                value={String(values[f.column] ?? "")}
+                disabled={pending}
+                onChange={(next) => set(next)}
+              />
             ) : f.input === "media" ? (
               <MediaPickerField
                 mode="id"

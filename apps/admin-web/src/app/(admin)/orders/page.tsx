@@ -15,6 +15,7 @@ import {
   paymentStatusKey,
 } from "@/lib/format";
 import { getLocale, getT } from "@/lib/locale";
+import { searchOf, withReturnTo } from "@/lib/return-to";
 import { OrderToolbar } from "./order-toolbar";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +32,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function OrdersPage({ searchParams }: PageProps) {
-  const { page: pageParam, status: statusParam, q } = await searchParams;
+  const search = await searchParams;
+  const { page: pageParam, status: statusParam, q } = search;
+  // Carried into each order so its back link returns to this page of this list.
+  const listSearch = searchOf(search);
   const t = await getT();
   const locale = await getLocale();
   const user = await getSession();
@@ -80,7 +84,7 @@ export default async function OrdersPage({ searchParams }: PageProps) {
                 <TR key={order.id}>
                   <TD>
                     <Link
-                      href={`/orders/${order.id}`}
+                      href={withReturnTo(`/orders/${order.id}`, listSearch)}
                       className="font-medium hover:text-brand-600 dark:hover:text-brand-400"
                     >
                       #{order.orderNumber}

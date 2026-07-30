@@ -30,9 +30,17 @@ export async function POST(request: Request, context: RouteContext): Promise<Res
     .toLowerCase();
 
   const back = safeReturn(incoming.get("referer"), proto, hostname);
-  const done = (ok: boolean): Response =>
+  /**
+   * `fields` is cms-api's per-field verdict — `{ quantity1: "min" }` — passed
+   * straight through to the island, which owns the wording. It is only ever
+   * present on the JSON path: the no-JS fallback navigates to a fragment and has
+   * nowhere to put it.
+   */
+  const done = (ok: boolean, fields?: Record<string, string>): Response =>
     wantsJson
-      ? NextResponse.json({ ok }, { status: 200 })
+      ? NextResponse.json(fields && Object.keys(fields).length ? { ok, fields } : { ok }, {
+          status: 200,
+        })
       : NextResponse.redirect(`${back}#${encodeURIComponent(formId)}-${ok ? "sent" : "error"}`, 303);
 
   if (!hostname || !formId) return done(false);
@@ -64,17 +72,18 @@ export async function POST(request: Request, context: RouteContext): Promise<Res
       cache: "no-store",
     });
     // cms-api returns { ok } with 200 for a handled rejection, non-2xx for a real
-    // failure; either way `response.ok && body.ok` is the answer.
+    // failure; either way `response.ok && body.ok` is the answer. A 400 from the
+    // validator additionally carries which fields were refused.
     let ok = response.ok;
-    if (ok) {
-      try {
-        const data = (await response.json()) as { ok?: boolean };
-        ok = data.ok !== false;
-      } catch {
-        /* keep response.ok */
-      }
+    let fields: Record<string, string> | undefined;
+    try {
+      const data = (await response.json()) as { ok?: boolean; fields?: Record<string, string> };
+      if (ok) ok = data.ok !== false;
+      if (data.fields && typeof data.fields === "object") fields = data.fields;
+    } catch {
+      /* keep response.ok */
     }
-    return done(ok);
+    return done(ok, fields);
   } catch {
     return done(false);
   }

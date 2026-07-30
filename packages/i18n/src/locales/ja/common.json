@@ -7,6 +7,7 @@
   "new": "新規",
   "edit": "編集",
   "actions": "操作",
+  "backToList": "一覧に戻る",
   "empty": "まだ何もありません。",
   "confirmDelete": "これを削除しますか？元に戻せません。",
   "error": "問題が発生しました。",

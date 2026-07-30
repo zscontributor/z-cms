@@ -81,7 +81,20 @@ describe("PluginAdminController.detail", () => {
     expect(result.row).toMatchObject({ id: ROW_ID, patient_name: "Nguyễn Minh Anh" });
     // The descriptor rides along so the screen can label the fields without a
     // second request for something the list already returns.
-    expect(result.resource).toBe(RESOURCE);
+    expect(result.resource).toMatchObject(RESOURCE);
+    // …and with it the DECLARED type of every column, reserved ones included, so
+    // the screen reads a value as the plugin meant it. Guessing from the shape of
+    // the string made a phone number ("0908999888") render as an amount.
+    expect(result.resource.columnTypes).toEqual({
+      patient_name: "text",
+      phone: "text",
+      internal_notes: "text",
+      id: "uuid",
+      tenant_id: "uuid",
+      site_id: "uuid",
+      created_at: "timestamptz",
+      updated_at: "timestamptz",
+    });
   });
 
   it("reads only within the caller's tenant and the requested site", async () => {
@@ -736,6 +749,164 @@ describe("PluginAdminController: telling the plugin a human changed its rows", (
     );
 
     // The write already happened; an action is a notification, not a gate.
+    expect(result.row).toMatchObject({ id: ROW_ID });
+  });
+});
+
+/**
+ * The picker behind a `reference`, and the rows that belong to a record.
+ *
+ * Both are listings of a resource OTHER than the one on screen, which is the whole
+ * reason they need their own permission check: a shift form must not become a way
+ * to read the staff table, and a menu item must not become a way to read costs.
+ */
+describe("PluginAdminController: references and children", () => {
+  const STAFF_TABLE = {
+    name: "p_vn_zsoft_plugin_medical__staff",
+    columns: [{ name: "full_name", type: "text" }],
+  } as const;
+
+  const SHIFTS = {
+    key: "shifts",
+    label: "Shifts",
+    table: TABLE.name,
+    list: { columns: [{ column: "patient_name", label: "Staff" }] },
+    form: {
+      fields: [
+        {
+          column: "phone",
+          label: "Staff",
+          input: "reference",
+          refTable: STAFF_TABLE.name,
+          refValue: "id",
+          refLabel: "full_name",
+        },
+      ],
+    },
+    permissions: { read: "x:p:shifts:read", write: "x:p:shifts:manage" },
+  };
+  const STAFF = {
+    key: "staff",
+    label: "Staff",
+    table: STAFF_TABLE.name,
+    list: { columns: [{ column: "full_name", label: "Name" }] },
+    permissions: { read: "x:p:staff:read" },
+  };
+
+  /**
+   * The plugin as the controller sees it: the resource on screen, plus its
+   * siblings — which is the point, since a reference and a child both name one.
+   */
+  function withSiblings(resource: { key: string } = SHIFTS) {
+    const own = resource.key === STAFF.key ? STAFF_TABLE : TABLE;
+    const siblings = [
+      { resource: SHIFTS, table: TABLE },
+      { resource: STAFF, table: STAFF_TABLE },
+    ].filter((entry) => entry.resource.key !== resource.key);
+
+    const plugins = {
+      adminResourceFor: vi.fn().mockResolvedValue({ resource, table: own }),
+      adminResourcesFor: vi
+        .fn()
+        .mockResolvedValue([{ resource, table: own }, ...siblings]),
+      dispatchActionTo: vi.fn().mockResolvedValue(undefined),
+    };
+    return { controller: new PluginAdminController(plugins as never), plugins };
+  }
+
+  beforeEach(() => {
+    holder.db = makeDb([{ id: ROW_ID, full_name: "Nguyễn Thảo Vy" }]);
+  });
+
+  it("answers a reference with {value,label} from the table it points at", async () => {
+    const { controller } = withSiblings();
+
+    const result = await controller.options(
+      actor("x:p:shifts:read", "x:p:staff:read"),
+      "s1",
+      "vn.zsoft.plugin.medical",
+      "shifts",
+      "phone",
+      "vy",
+    );
+
+    expect(result.options).toEqual([{ value: ROW_ID, label: "Nguyễn Thảo Vy" }]);
+    // Searched on the label column, in the referenced table — not this one.
+    const [text] = holder.db.$queryRawUnsafe.mock.calls[0];
+    expect(text).toContain(`FROM "${STAFF_TABLE.name}"`);
+    expect(text).toContain("ILIKE");
+  });
+
+  it("refuses the picker to someone who may not read the referenced resource", async () => {
+    const { controller } = withSiblings();
+
+    // Holds the shift screen's own permission, but not the staff screen's. A form
+    // is not a side door onto a table.
+    await expect(
+      controller.options(
+        actor("x:p:shifts:read"),
+        "s1",
+        "vn.zsoft.plugin.medical",
+        "shifts",
+        "phone",
+      ),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it("404s a column that is not a reference at all", async () => {
+    const { controller } = withSiblings();
+
+    await expect(
+      controller.options(
+        actor("x:p:shifts:read", "x:p:staff:read"),
+        "s1",
+        "vn.zsoft.plugin.medical",
+        "shifts",
+        "patient_name",
+      ),
+    ).rejects.toThrow(NotFoundException);
+  });
+
+  it("returns a record's child rows, filtered by the parent's own value", async () => {
+    const parent = {
+      ...STAFF,
+      children: [{ resource: "shifts", foreignColumn: "phone", localColumn: "id", label: "Shifts" }],
+    };
+    const { controller } = withSiblings(parent);
+
+    const result = await controller.detail(
+      actor("x:p:staff:read", "x:p:shifts:read"),
+      "s1",
+      "vn.zsoft.plugin.medical",
+      "staff",
+      ROW_ID,
+    );
+
+    expect(result.children).toHaveLength(1);
+    expect(result.children[0]).toMatchObject({ resource: "shifts", label: "Shifts" });
+    // The join is the parent's value, bound as a parameter like any other filter.
+    const childQuery = holder.db.$queryRawUnsafe.mock.calls.at(-1)!;
+    expect(String(childQuery[0])).toContain('"phone" = $3');
+    expect(childQuery).toContain(ROW_ID);
+  });
+
+  it("omits a child the reader may not see, and still shows them the record", async () => {
+    const parent = {
+      ...STAFF,
+      children: [{ resource: "shifts", foreignColumn: "phone", localColumn: "id", label: "Shifts" }],
+    };
+    const { controller } = withSiblings(parent);
+
+    const result = await controller.detail(
+      actor("x:p:staff:read"),
+      "s1",
+      "vn.zsoft.plugin.medical",
+      "staff",
+      ROW_ID,
+    );
+
+    // Omitted, not refused: the record is theirs to read, the child is not.
+    expect(result.children).toEqual([]);
     expect(result.row).toMatchObject({ id: ROW_ID });
   });
 });

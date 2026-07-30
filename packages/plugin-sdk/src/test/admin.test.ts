@@ -242,3 +242,112 @@ describe("localized labels", () => {
     expect(resolvePluginAdminResource(plain.resources![0]!, "vi").label).toBe("Plain");
   });
 });
+
+/**
+ * References and children point at OTHER resources, so the validator has to hold
+ * the whole contribution at once. Both were declared long before anything rendered
+ * them — `refTable` was a comment for as long as it existed — and a dangling one
+ * is refused here, where the fix is the manifest.
+ */
+describe("validateAdminContribution: references and children", () => {
+  const TABLES = [
+    { name: "p_x__shifts", columns: [{ name: "staff_id", type: "uuid" }, { name: "staff_name", type: "text" }] },
+    { name: "p_x__staff", columns: [{ name: "full_name", type: "text" }, { name: "code", type: "text" }] },
+  ] as const;
+
+  const shifts = {
+    key: "shifts",
+    label: "Shifts",
+    table: "p_x__shifts",
+    list: { columns: [{ column: "staff_name", label: "Staff" }] },
+    form: {
+      fields: [
+        {
+          column: "staff_id",
+          label: "Staff",
+          input: "reference" as const,
+          refTable: "p_x__staff",
+          refValue: "id",
+          refLabel: "full_name",
+        },
+      ],
+    },
+    permissions: { read: "x:x:s:read", write: "x:x:s:manage" },
+  };
+  const staff = {
+    key: "staff",
+    label: "Staff",
+    table: "p_x__staff",
+    list: { columns: [{ column: "full_name", label: "Name" }] },
+    permissions: { read: "x:x:st:read" },
+  };
+
+  it("accepts a reference whose table another resource surfaces", () => {
+    expect(
+      validateAdminContribution({ resources: [shifts, staff] }, TABLES as never),
+    ).toEqual([]);
+  });
+
+  it("accepts a reference declared BEFORE the resource it points at", () => {
+    // Order in a manifest is presentation, not dependency; a forward reference is
+    // not a mistake, and refusing one would be the validator's.
+    expect(
+      validateAdminContribution({ resources: [shifts, staff] }, TABLES as never),
+    ).toEqual([]);
+  });
+
+  it("refuses a reference no resource surfaces — a picker with nothing to pick", () => {
+    const violations = validateAdminContribution({ resources: [shifts] }, TABLES as never);
+    expect(violations).toContainEqual({
+      where: "resource:shifts",
+      reason: "unknown-ref-table",
+      detail: "staff_id",
+    });
+  });
+
+  it("refuses a reference naming a column the target does not have", () => {
+    const broken = {
+      ...shifts,
+      form: {
+        fields: [{ ...shifts.form.fields[0]!, refLabel: "nickname" }],
+      },
+    };
+    expect(validateAdminContribution({ resources: [broken, staff] }, TABLES as never)).toContainEqual(
+      { where: "resource:shifts", reason: "unknown-ref-column", detail: "nickname" },
+    );
+  });
+
+  it("refuses a child naming an unknown resource or an unknown column", () => {
+    const withChildren = {
+      ...staff,
+      children: [
+        { resource: "nope", foreignColumn: "staff_id", label: "Shifts" },
+        { resource: "shifts", foreignColumn: "not_a_column", label: "Shifts" },
+      ],
+    };
+    const violations = validateAdminContribution(
+      { resources: [shifts, withChildren] },
+      TABLES as never,
+    );
+    expect(violations).toContainEqual({
+      where: "resource:staff",
+      reason: "unknown-child-resource",
+      detail: "nope",
+    });
+    expect(violations).toContainEqual({
+      where: "resource:staff",
+      reason: "unknown-child-column",
+      detail: "not_a_column",
+    });
+  });
+
+  it("accepts a child joined on a declared column of both sides", () => {
+    const withChildren = {
+      ...staff,
+      children: [{ resource: "shifts", foreignColumn: "staff_id", localColumn: "id", label: "Shifts" }],
+    };
+    expect(
+      validateAdminContribution({ resources: [shifts, withChildren] }, TABLES as never),
+    ).toEqual([]);
+  });
+});

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import type { BlockDocument, ContentStatus, ContentTypeDto } from "@zcmsorg/schemas";
 import { ContentStatusSchema, resolveLocalizedLabel } from "@zcmsorg/schemas";
@@ -19,6 +19,7 @@ import type { ContentTypeOption, ThemeBlockSchema } from "@/lib/block-registry";
 import { buildBlockRegistry } from "@/lib/block-registry";
 import { STATUS_TONES, formatDateTime, statusKey } from "@/lib/format";
 import { useLocale, useT } from "@/lib/i18n-provider";
+import { RETURN_PARAM, withReturnTo } from "@/lib/return-to";
 import { isValidSlug, slugify } from "@/lib/slugify";
 import { BlockEditor } from "./block-editor";
 import { DynamicFields, normalizeFieldValues } from "./dynamic-fields";
@@ -112,6 +113,10 @@ export function ContentEditor({
     [t, uiLocale, themeBlocks],
   );
   const router = useRouter();
+  // The list this editor was opened from, carried through a save that turns a new
+  // document into a saved one and through a delete, so both end where the reader
+  // started rather than on page one of the list.
+  const from = useSearchParams().get(RETURN_PARAM) ?? undefined;
   const [pending, startTransition] = useTransition();
 
   const [id, setId] = useState(initial.id);
@@ -229,7 +234,7 @@ export function ContentEditor({
       }
 
       if (wasNew) {
-        router.replace(`/content/${type.key}/${result.id}`);
+        router.replace(withReturnTo(`/content/${type.key}/${result.id}`, from));
       } else {
         router.refresh();
       }
@@ -243,6 +248,7 @@ export function ContentEditor({
       formData.set("id", id);
       formData.set("typeKey", type.key);
       formData.set("returnToList", "true");
+      if (from) formData.set("from", from);
       try {
         await deleteContentAction(formData);
       } catch (cause) {

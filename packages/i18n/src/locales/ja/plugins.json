@@ -108,7 +108,11 @@
     "createdAt": "作成日時",
     "updatedAt": "最終更新",
     "emptyValue": "未設定",
-    "markup": "保存されたマークアップ"
+    "markup": "保存されたマークアップ",
+    "referenceSearch": "名前で検索…",
+    "referenceEmpty": "該当なし。",
+    "related": "関連",
+    "relatedEmpty": "まだありません。"
   },
   "sandbox": {
     "database": "データベースに直接アクセスする",

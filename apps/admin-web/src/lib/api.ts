@@ -651,6 +651,16 @@ export interface PluginResourceField {
   readonly?: boolean;
 }
 
+export type PluginColumnType =
+  | "text"
+  | "integer"
+  | "bigint"
+  | "boolean"
+  | "numeric"
+  | "timestamptz"
+  | "uuid"
+  | "jsonb";
+
 export interface PluginResourceDescriptor {
   key: string;
   label: string;
@@ -661,6 +671,29 @@ export interface PluginResourceDescriptor {
   };
   form?: { fields: PluginResourceField[] };
   permissions: { read: string; write?: string };
+  /**
+   * The declared type of every column of the backing table, reserved ones
+   * included. Sent so a screen reads a value as the plugin meant it — a `text`
+   * column of digits is a phone number, not an amount. Optional because a
+   * descriptor cached from an older server will not carry it.
+   */
+  columnTypes?: Record<string, PluginColumnType>;
+  /** Other resources whose rows belong to one record of this one. */
+  children?: {
+    resource: string;
+    foreignColumn: string;
+    localColumn?: string;
+    label: string;
+  }[];
+}
+
+/** One child resource's rows, already filtered to the record being viewed. */
+export interface PluginChildRows {
+  resource: string;
+  label: string;
+  columns: { column: string; label: string }[];
+  columnTypes: Record<string, PluginColumnType>;
+  rows: PluginRow[];
 }
 
 export interface PluginAdminContributions {
@@ -739,7 +772,11 @@ export async function getPluginRow(
   pluginKey: string,
   resourceKey: string,
   id: string,
-): Promise<{ resource: PluginResourceDescriptor; row: PluginRow }> {
+): Promise<{
+  resource: PluginResourceDescriptor;
+  row: PluginRow;
+  children?: PluginChildRows[];
+}> {
   return apiFetch(
     `/plugin-admin/${encodeURIComponent(pluginKey)}/${encodeURIComponent(resourceKey)}/${encodeURIComponent(id)}`,
   );

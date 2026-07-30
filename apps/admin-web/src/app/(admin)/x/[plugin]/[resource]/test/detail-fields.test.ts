@@ -151,6 +151,32 @@ describe("formatCell is shared with the list, so both screens agree", () => {
     expect(formatCell(true, "en")).toBe("✓");
     expect(formatCell(false, "en")).toBe("—");
   });
+
+  it("prints a text column exactly as stored, however much it looks like a number", () => {
+    // The bug this exists for: a phone number is the exact shape of an integer, so
+    // guessing from the shape grouped it like money and ate the leading zero.
+    expect(formatCell("0908999888", "vi", "text")).toBe("0908999888");
+    expect(formatCell("0908999888", "vi")).toBe("908.999.888"); // what guessing did
+    expect(formatCell("84908999888", "en", "text")).toBe("84908999888");
+  });
+
+  it("groups only the columns the plugin declared as numbers", () => {
+    expect(formatCell("300000.00", "vi", "numeric")).toBe("300.000,00");
+    expect(formatCell("55000", "en", "integer")).toBe("55,000");
+    expect(formatCell("55000", "en", "bigint")).toBe("55,000");
+  });
+
+  it("localizes a timestamptz and leaves a uuid alone", () => {
+    expect(formatCell("2026-07-30T02:15:00.000Z", "en", "timestamptz")).toContain("2026");
+    const id = "3f1c9d2e-5a7b-4c8d-9e0f-1a2b3c4d5e6f";
+    expect(formatCell(id, "en", "uuid")).toBe(id);
+  });
+
+  it("still recognises shapes when the column type is unknown", () => {
+    // A descriptor from a server that predates `columnTypes` must keep working.
+    expect(formatCell("55000", "en")).toBe("55,000");
+    expect(formatCell("DV-NOI-01", "en")).toBe("DV-NOI-01");
+  });
 });
 
 describe("sortHref", () => {

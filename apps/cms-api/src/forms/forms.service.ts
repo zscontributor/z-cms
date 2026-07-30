@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { getSystemDb } from "@zcmsorg/database";
-import { FORM_ID_RE, buildFormSchema } from "@zcmsorg/schemas";
+import { FORM_ID_RE, buildFormSchema, checkFormValues } from "@zcmsorg/schemas";
 import { t } from "../common/i18n";
 import { PluginsService } from "../plugins/plugins.service";
 
@@ -48,7 +48,21 @@ export class FormsService {
       const detail = parsed.error.issues
         .map((issue) => `${issue.path.join(".") || "form"}: ${issue.message}`)
         .join("; ");
-      throw new BadRequestException(t()("errors.forms.invalidSubmission", { detail }));
+      /**
+       * The same refusal, twice, for two different readers.
+       *
+       * `message` is the operator's: a developer reading a log wants Zod's own
+       * account of what failed. `fields` is the visitor's: a map of field name to
+       * a CODE, which the browser turns into a sentence in their language and puts
+       * beside the input that is wrong. Sending only the first would leave a form
+       * saying "check the fields" without saying which — which is what it did.
+       */
+      throw new BadRequestException({
+        message: t()("errors.forms.invalidSubmission", { detail }),
+        error: "Bad Request",
+        statusCode: 400,
+        fields: checkFormValues(found.form.fields, rawValues as Record<string, unknown>),
+      });
     }
 
     // Hand the validated values to the plugin's own handler, in the sandbox, under

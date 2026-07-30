@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { PluginResourceField, PluginRow } from "@/lib/api";
+import type { PluginColumnType, PluginResourceField, PluginRow } from "@/lib/api";
 import { deletePluginRowAction } from "@/app/actions/plugin-admin";
 import { Button } from "@/components/ui/button";
 import { ResourceForm } from "../resource-form";
@@ -18,6 +18,7 @@ import { ResourceForm } from "../resource-form";
 export function RecordActions({
   pluginKey,
   resourceKey,
+  columnTypes,
   listPath,
   fields,
   row,
@@ -27,6 +28,8 @@ export function RecordActions({
   resourceKey: string;
   listPath: string;
   fields: PluginResourceField[];
+  /** Declared column types, forwarded so the edit form reads values as declared. */
+  columnTypes?: Record<string, PluginColumnType>;
   row: PluginRow;
   labels: {
     edit: string;
@@ -63,6 +66,7 @@ export function RecordActions({
         pluginKey={pluginKey}
         resourceKey={resourceKey}
         fields={fields}
+        columnTypes={columnTypes}
         row={row}
         labels={{ save: labels.save, cancel: labels.cancel }}
         onSaved={() => {
@@ -81,7 +85,9 @@ export function RecordActions({
           {error}
         </div>
       )}
-      <div className="flex gap-2">
+      {/* Right-aligned above the record's card, where the list screen keeps its own
+          "new" button: the same corner does the writing on both screens. */}
+      <div className="flex justify-end gap-2">
         <Button type="button" onClick={() => setEditing(true)} disabled={pending}>
           {labels.edit}
         </Button>

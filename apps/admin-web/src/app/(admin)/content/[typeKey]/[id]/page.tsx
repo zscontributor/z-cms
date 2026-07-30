@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   ApiError,
@@ -18,11 +17,14 @@ import { PageHeader } from "@/components/page-header";
 import { STATUS_TONES, statusKey } from "@/lib/format";
 import { getT } from "@/lib/locale";
 import { loadParentOptions } from "@/lib/parent-options";
+import { RETURN_PARAM, returnHref } from "@/lib/return-to";
 
 export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ typeKey: string; id: string }>;
+  /** `?from=…` — the list state this document was opened from. See lib/return-to. */
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -35,8 +37,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 }
 
-export default async function EditContentPage({ params }: PageProps) {
+export default async function EditContentPage({ params, searchParams }: PageProps) {
   const { typeKey, id } = await params;
+  const search = await searchParams;
 
   const t = await getT();
   // `listContentTypes` is the same cached call `getContentTypeByKey` resolves the
@@ -88,12 +91,15 @@ export default async function EditContentPage({ params }: PageProps) {
     <>
       <PageHeader
         title={content.title || t("content.editor.untitled")}
+        // The list link that used to live in the description is the back link now:
+        // one way out of the editor, in the same place every record screen keeps it.
+        back={{
+          href: returnHref(`/content/${type.key}`, search[RETURN_PARAM]),
+          label: t("common.backToList"),
+        }}
         description={
           <>
-            <Link href={`/content/${type.key}`} className="hover:underline">
-              {type.pluralName}
-            </Link>{" "}
-            · <code className="font-mono">{content.path || "/"}</code>
+            {type.pluralName} · <code className="font-mono">{content.path || "/"}</code>
           </>
         }
         actions={

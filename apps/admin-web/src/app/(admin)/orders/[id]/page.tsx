@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { can, getOrder, getSession } from "@/lib/api";
 import { ApiError } from "@/lib/api";
@@ -14,12 +13,15 @@ import {
   paymentStatusKey,
 } from "@/lib/format";
 import { getLocale, getT } from "@/lib/locale";
+import { RETURN_PARAM, returnHref } from "@/lib/return-to";
 import { OrderStatusForm } from "./order-status-form";
 
 export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+  /** `?from=…` — the list state this order was opened from. See lib/return-to. */
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -33,8 +35,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 }
 
-export default async function OrderDetailPage({ params }: PageProps) {
+export default async function OrderDetailPage({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const search = await searchParams;
   const t = await getT();
   const locale = await getLocale();
   const user = await getSession();
@@ -59,11 +62,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
       <PageHeader
         title={`#${order.orderNumber}`}
         description={formatDateTime(order.placedAt, locale)}
-        actions={
-          <Link href="/orders" className="text-sm z-muted hover:underline">
-            ← {t("commerce.detail.back")}
-          </Link>
-        }
+        back={{ href: returnHref("/orders", search[RETURN_PARAM]), label: t("commerce.detail.back") }}
       />
 
       <div className="mb-3 flex flex-wrap gap-2">

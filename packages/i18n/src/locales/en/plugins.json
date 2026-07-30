@@ -108,7 +108,11 @@
     "createdAt": "Created",
     "updatedAt": "Last updated",
     "emptyValue": "Not set",
-    "markup": "Stored markup"
+    "markup": "Stored markup",
+    "referenceSearch": "Search by name…",
+    "referenceEmpty": "No matches.",
+    "related": "Related",
+    "relatedEmpty": "Nothing yet."
   },
   "sandbox": {
     "database": "Reach the database directly",

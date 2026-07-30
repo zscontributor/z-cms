@@ -17,6 +17,7 @@ import { Pagination } from "@/components/pagination";
 import { Icon } from "@/components/shell/icon";
 import { STATUS_TONES, formatDateTime, statusKey } from "@/lib/format";
 import { getLocale, getT } from "@/lib/locale";
+import { searchOf, withReturnTo } from "@/lib/return-to";
 import { ListToolbar } from "./list-toolbar";
 import { RowActions } from "./row-actions";
 
@@ -37,7 +38,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function ContentListPage({ params, searchParams }: PageProps) {
   const { typeKey } = await params;
-  const { page: pageParam, status: statusParam, q, locale: localeParam } = await searchParams;
+  const search = await searchParams;
+  const { page: pageParam, status: statusParam, q, locale: localeParam } = search;
+  // Carried into the editor so its back link returns to this page of this list.
+  const listSearch = searchOf(search);
 
   const t = await getT();
   const locale = await getLocale();
@@ -97,7 +101,10 @@ export default async function ContentListPage({ params, searchParams }: PageProp
         actions={
           canCreate ? (
             <LinkButton
-              href={`/content/${typeKey}/new?locale=${encodeURIComponent(selectedLocale)}`}
+              href={withReturnTo(
+                `/content/${typeKey}/new?locale=${encodeURIComponent(selectedLocale)}`,
+                listSearch,
+              )}
               variant="primary"
             >
               <Icon name="plus" size={18} />
@@ -123,7 +130,10 @@ export default async function ContentListPage({ params, searchParams }: PageProp
             action={
               canCreate && !q && !status ? (
                 <LinkButton
-                  href={`/content/${typeKey}/new?locale=${encodeURIComponent(selectedLocale)}`}
+                  href={withReturnTo(
+                    `/content/${typeKey}/new?locale=${encodeURIComponent(selectedLocale)}`,
+                    listSearch,
+                  )}
                   variant="primary"
                   size="sm"
                 >
@@ -150,7 +160,7 @@ export default async function ContentListPage({ params, searchParams }: PageProp
                 <TR key={item.id}>
                   <TD>
                     <Link
-                      href={`/content/${typeKey}/${item.id}`}
+                      href={withReturnTo(`/content/${typeKey}/${item.id}`, listSearch)}
                       className="font-medium hover:text-brand-600 dark:hover:text-brand-400"
                     >
                       {item.title}

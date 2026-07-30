@@ -108,6 +108,24 @@ export const FormFieldSchema = z.object({
   options: z.array(FormOptionSchema).max(200).optional(),
   /** Human label (rendering); optional because a theme may label its own inputs. */
   label: localized(200).optional(),
+  /**
+   * The optional group this field belongs to, by id — see `FormDefinition.groups`.
+   *
+   * A grouped field is not rendered until the visitor asks for it. Nothing about
+   * validation changes: a group nobody opened submits empty values, which is why
+   * only optional fields belong in one.
+   */
+  group: z.string().regex(FIELD_NAME_RE).optional(),
+  /** What the field starts with. A quantity of one is not a decision to make. */
+  defaultValue: z.string().max(500).optional(),
+  /**
+   * The granularity of a `number` — 1 for a count of drinks, 0.5 for a weight.
+   *
+   * It reaches the input as `step`, so the browser's own spinner offers only
+   * values the form will accept. Absent means "any", which is right for money and
+   * wrong for a quantity: without it, a quantity spinner offers 1.5 coffees.
+   */
+  step: z.number().positive().optional(),
 });
 
 export type FormField = z.infer<typeof FormFieldSchema>;
@@ -117,10 +135,37 @@ export type FormField = z.infer<typeof FormFieldSchema>;
  * cms-api validates a submission against `buildFormSchema(fields)` and the runtime
  * validates the same rules client-side via `toClientRules`.
  */
+export const FormGroupSchema = z.object({
+  id: z.string().regex(FIELD_NAME_RE),
+  /** The button that reveals the group: "+ Add another item". */
+  addLabel: localized(120),
+  /** A heading for the revealed group, e.g. "Second item". */
+  label: localized(120).optional(),
+  /** The button that hides it again and clears what it holds. */
+  removeLabel: localized(120).optional(),
+});
+
+export type FormGroup = z.infer<typeof FormGroupSchema>;
+
 export const FormDefinitionSchema = z.object({
   id: z.string().regex(FORM_ID_RE),
   title: localized(200).optional(),
   fields: z.array(FormFieldSchema).min(1).max(50),
+  /**
+   * Optional groups of fields, revealed on request and in this order.
+   *
+   * A declared form is a flat, static field list — which is the right shape for
+   * something a server validates and a plugin handler reads, and the wrong shape
+   * for a visitor who wants one coffee and is shown three sets of boxes. Groups
+   * change only the RENDERING: the fields exist all along, empty, exactly as they
+   * were when the form drew them all at once.
+   *
+   * It is deliberately not a repeat: repetition would mean generated field names
+   * (`item[2].code`), which changes what a handler receives and what a manifest can
+   * declare. A form that wants three items declares three groups of two fields, and
+   * the visitor sees one.
+   */
+  groups: z.array(FormGroupSchema).max(10).optional(),
   submitLabel: localized(80).optional(),
   /** A short success message key/text the handler confirms with (optional). */
   successMessage: localized(500).optional(),
@@ -184,15 +229,29 @@ export interface PublicFormField {
   maxLength?: number;
   min?: number;
   max?: number;
+  step?: number;
   pattern?: string;
   options?: PublicFormOption[];
   label?: string;
+  /** The optional group that reveals this field, by id. */
+  group?: string;
+  defaultValue?: string;
+}
+
+/** One optional group, with its labels already resolved for this reader. */
+export interface PublicFormGroup {
+  id: string;
+  addLabel: string;
+  label?: string;
+  removeLabel?: string;
 }
 
 export interface PublicFormDef {
   id: string;
   title?: string;
   fields: PublicFormField[];
+  /** Optional groups, in the order they are offered. */
+  groups?: PublicFormGroup[];
   submitLabel?: string;
   successMessage?: string;
 }
@@ -236,6 +295,16 @@ export function toPublicForm(def: FormDefinition, locale = "en"): PublicFormDef 
     ...(text(parsed.successMessage)
       ? { successMessage: text(parsed.successMessage)! }
       : {}),
+    ...(parsed.groups?.length
+      ? {
+          groups: parsed.groups.map((group) => ({
+            id: group.id,
+            addLabel: text(group.addLabel) ?? group.id,
+            ...(text(group.label) ? { label: text(group.label)! } : {}),
+            ...(text(group.removeLabel) ? { removeLabel: text(group.removeLabel)! } : {}),
+          })),
+        }
+      : {}),
     fields: parsed.fields.map((field) => {
       const { label, options, ...rest } = field;
       return {
@@ -271,6 +340,13 @@ export function validateFormDefinitions(forms: unknown): string[] {
   for (const form of parsed.data) {
     if (seen.has(form.id)) errors.push(`forms: duplicate form id "${form.id}"`);
     seen.add(form.id);
+    const groupIds = new Set<string>();
+    for (const group of form.groups ?? []) {
+      if (groupIds.has(group.id)) {
+        errors.push(`forms.${form.id}: duplicate group id "${group.id}"`);
+      }
+      groupIds.add(group.id);
+    }
     const names = new Set<string>();
     for (const f of form.fields) {
       if (names.has(f.name)) errors.push(`forms.${form.id}: duplicate field "${f.name}"`);
@@ -281,6 +357,16 @@ export function validateFormDefinitions(forms: unknown): string[] {
         } catch {
           errors.push(`forms.${form.id}.${f.name}: invalid pattern`);
         }
+      }
+      // A field pointing at a group nobody declared would simply never render —
+      // an invisible required box is worse than a refused manifest.
+      if (f.group != null && !(form.groups ?? []).some((g) => g.id === f.group)) {
+        errors.push(`forms.${form.id}.${f.name}: unknown group "${f.group}"`);
+      }
+      if (f.group != null && f.required) {
+        errors.push(
+          `forms.${form.id}.${f.name}: a required field cannot live in an optional group`,
+        );
       }
     }
   }
@@ -399,6 +485,136 @@ export function toClientRules(fields: FormField[]): FormClientRule[] {
     ...(f.max != null ? { max: f.max } : {}),
     ...(f.pattern != null ? { pattern: f.pattern } : {}),
   }));
+}
+
+/**
+ * Why one field was refused — a code, never a sentence.
+ *
+ * `buildFormSchema` answers "is this submission acceptable?", which is the only
+ * question the server has to get right. It is a bad answer to the DIFFERENT
+ * question a visitor is asking, which is "what did I do wrong, and where?": a Zod
+ * issue names a path and carries an English message written for a developer.
+ *
+ * So a refusal travels as a code. The browser turns it into a sentence in the
+ * visitor's own language, next to the input it belongs to — and because it is data
+ * rather than prose, the server can send one for a rule the browser has no way to
+ * check without either shipping English to a Vietnamese shop or parsing a message
+ * back into a field name.
+ */
+export const FORM_FIELD_ERROR_CODES = [
+  "required",
+  "email",
+  "url",
+  "date",
+  "pattern",
+  /** Not a number at all — "abc" in a numeric field. */
+  "number",
+  /** Below `min` / above `max`: the VALUE, for a number. */
+  "min",
+  "max",
+  /** Below `minLength` / above `maxLength`: the LENGTH, for text. */
+  "minLength",
+  "maxLength",
+  /** A choice that is not one of the declared options, and anything else. */
+  "invalid",
+] as const;
+export type FormFieldErrorCode = (typeof FORM_FIELD_ERROR_CODES)[number];
+
+/**
+ * The subset of a field both sides can see: the declaration, or its browser-safe
+ * projection. Written structurally so `FormField`, `PublicFormField` and
+ * `FormClientRule` all satisfy it and neither side has to convert.
+ */
+export interface FormFieldRules {
+  name: string;
+  type: FormFieldType;
+  required?: boolean;
+  minLength?: number;
+  maxLength?: number;
+  min?: number;
+  max?: number;
+  pattern?: string;
+  options?: (string | { value: string })[];
+}
+
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+const URL_RE = /^https?:\/\/[^\s]+$/i;
+
+/**
+ * What is wrong with ONE value, by the same rules `buildFormSchema` enforces.
+ *
+ * This exists because the rules were being written twice: once here as Zod, and
+ * once again in the runtime's form island as hand-rolled checks. The second copy
+ * had quietly fallen behind — it validated no numeric field at all, so a quantity
+ * of "-2" sailed past the browser, was refused by the server, and came back as a
+ * banner saying "check the fields" without saying which. That is the drift this
+ * module was written to end, reappearing one layer up.
+ *
+ * `buildFormSchema` remains the authority on accept/reject; this only explains a
+ * refusal. Where the two could ever disagree — Zod's email grammar is not this
+ * regex — the schema wins and the visitor gets the generic message rather than a
+ * wrong one, which is the safe direction for a disagreement to fail in.
+ */
+export function checkFormField(field: FormFieldRules, raw: unknown): FormFieldErrorCode | null {
+  const value = typeof raw === "string" ? raw.trim() : raw == null ? "" : String(raw).trim();
+
+  // An HTML form posts "" for a blank, not "absent" — so empty is the one case
+  // that is about `required` and never about the type.
+  if (value === "") return field.required ? "required" : null;
+
+  switch (field.type) {
+    case "email":
+      if (!EMAIL_RE.test(value)) return "email";
+      break;
+    case "url":
+      if (!URL_RE.test(value)) return "url";
+      break;
+    case "number": {
+      const parsed = Number(value);
+      if (!Number.isFinite(parsed)) return "number";
+      if (field.min != null && parsed < field.min) return "min";
+      if (field.max != null && parsed > field.max) return "max";
+      return null;
+    }
+    case "date":
+      if (!DATE_VALUE_RE.test(value) || !isRealCalendarDate(value)) return "date";
+      return null;
+    case "select": {
+      const values = (field.options ?? []).map((option) =>
+        typeof option === "string" ? option : option.value,
+      );
+      if (values.length > 0 && !values.includes(value)) return "invalid";
+      return null;
+    }
+    default:
+      break;
+  }
+
+  // Length and pattern apply to everything that is stored as a string.
+  const min = field.minLength ?? (field.required ? 1 : undefined);
+  if (min != null && value.length < min) return "minLength";
+  if (field.maxLength != null && value.length > field.maxLength) return "maxLength";
+  if (field.pattern != null) {
+    try {
+      if (!new RegExp(field.pattern).test(value)) return "pattern";
+    } catch {
+      // An unparsable pattern never blocks a visitor; the server is authoritative.
+    }
+  }
+  return null;
+}
+
+/** Every field with something wrong, as `{ fieldName: code }`. Empty when clean. */
+export function checkFormValues(
+  fields: FormFieldRules[],
+  values: Record<string, unknown> | undefined,
+): Record<string, FormFieldErrorCode> {
+  const errors: Record<string, FormFieldErrorCode> = {};
+  for (const field of fields) {
+    const code = checkFormField(field, values?.[field.name]);
+    if (code) errors[field.name] = code;
+  }
+  return errors;
 }
 
 /**

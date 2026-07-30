@@ -83,6 +83,25 @@ describe("FormsService", () => {
     expect(plugins.callPlugin).not.toHaveBeenCalled();
   });
 
+  it("says WHICH field was refused, as a code the browser can word itself", async () => {
+    const { service } = make();
+
+    // Before this, the only machine-readable part of a refusal was "400", so the
+    // form could say no more than "check the fields and try again".
+    const error = await service
+      .submit("acme.com", "feedback", { email: "not-an-email", message: "short" })
+      .catch((err: BadRequestException) => err);
+
+    expect(error).toBeInstanceOf(BadRequestException);
+    const body = (error as BadRequestException).getResponse() as {
+      fields?: Record<string, string>;
+      message?: string;
+    };
+    expect(body.fields).toMatchObject({ email: "email", message: "minLength" });
+    // The operator's sentence survives alongside it, for the log.
+    expect(typeof body.message).toBe("string");
+  });
+
   it("relays a handler's handled rejection as { ok: false }", async () => {
     const { service } = make({ result: { ok: false } });
     const res = await service.submit("acme.com", "feedback", { message: "long enough here" });

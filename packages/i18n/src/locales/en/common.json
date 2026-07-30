@@ -7,6 +7,7 @@
   "new": "New",
   "edit": "Edit",
   "actions": "Actions",
+  "backToList": "Back to list",
   "empty": "Nothing here yet.",
   "confirmDelete": "Delete this? This cannot be undone.",
   "error": "Something went wrong.",

@@ -1,9 +1,14 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ApiError, getPluginRow, getSession } from "@/lib/api";
-import type { PluginResourceDescriptor, PluginRow } from "@/lib/api";
+import type {
+  PluginChildRows,
+  PluginColumnType,
+  PluginResourceDescriptor,
+  PluginRow,
+} from "@/lib/api";
 import { PageHeader } from "@/components/page-header";
 import { getLocale, getT } from "@/lib/locale";
+import { RETURN_PARAM, returnHref } from "@/lib/return-to";
 import { formatCell } from "../format-cell";
 import { SYSTEM_COLUMNS, detailFields } from "../detail-fields";
 import { RecordActions } from "./record-actions";
@@ -12,6 +17,8 @@ export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ plugin: string; resource: string; id: string }>;
+  /** `?from=…` — the list state this record was opened from. See lib/return-to. */
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 /**
@@ -23,13 +30,18 @@ interface PageProps {
  * the read screen — gated by the resource's read permission, like the list — with
  * edit and delete offered to whoever also holds the write permission.
  */
-export default async function PluginRecordPage({ params }: PageProps) {
+export default async function PluginRecordPage({ params, searchParams }: PageProps) {
   const { plugin, resource, id } = await params;
+  const search = await searchParams;
   const t = await getT();
   const locale = await getLocale();
   const user = await getSession();
 
-  let data: { resource: PluginResourceDescriptor; row: PluginRow };
+  let data: {
+    resource: PluginResourceDescriptor;
+    row: PluginRow;
+    children?: PluginChildRows[];
+  };
   try {
     data = await getPluginRow(plugin, resource, id);
   } catch (error) {
@@ -43,14 +55,18 @@ export default async function PluginRecordPage({ params }: PageProps) {
   const row = data.row;
   const fields = detailFields(descriptor);
   const listPath = `/x/${encodeURIComponent(plugin)}/${encodeURIComponent(resource)}`;
+  // The list as the reader left it — page 5 of a filtered, sorted list comes back
+  // as page 5 of that same list, both from the back link and after a delete.
+  const backPath = returnHref(listPath, search[RETURN_PARAM]);
   const canWrite = Boolean(
     descriptor.permissions.write && user?.permissions.includes(descriptor.permissions.write),
   );
 
   // The most identifying thing the plugin chose to list, used as the page title so
   // the browser tab and the back-stack say which record this is — a uuid would not.
+  const types = descriptor.columnTypes ?? {};
   const headline = descriptor.list.columns[0]
-    ? formatCell(row[descriptor.list.columns[0].column], locale)
+    ? formatCell(row[descriptor.list.columns[0].column], locale, types[descriptor.list.columns[0].column])
     : t("plugins.resource.detailTitle");
 
   return (
@@ -58,11 +74,7 @@ export default async function PluginRecordPage({ params }: PageProps) {
       <PageHeader
         title={headline === "—" ? t("plugins.resource.detailTitle") : headline}
         description={descriptor.label}
-        actions={
-          <Link href={listPath} className="text-sm z-muted hover:underline">
-            ← {t("plugins.resource.back")}
-          </Link>
-        }
+        back={{ href: backPath, label: t("plugins.resource.back") }}
       />
 
       <div className="flex flex-col gap-4">
@@ -70,8 +82,9 @@ export default async function PluginRecordPage({ params }: PageProps) {
           <RecordActions
             pluginKey={plugin}
             resourceKey={resource}
-            listPath={listPath}
+            listPath={backPath}
             fields={descriptor.form.fields}
+            columnTypes={descriptor.columnTypes}
             row={row}
             labels={{
               edit: t("common.edit"),
@@ -90,7 +103,7 @@ export default async function PluginRecordPage({ params }: PageProps) {
               <div key={field.column} className="grid gap-1 py-3 sm:grid-cols-[minmax(0,14rem)_1fr] sm:gap-4">
                 <dt className="text-[13px] z-muted">{field.label}</dt>
                 <dd className="min-w-0 text-sm">
-                  <Value value={row[field.column]} input={field.input} locale={locale} empty={t("plugins.resource.emptyValue")} markupLabel={t("plugins.resource.markup")} />
+                  <Value value={row[field.column]} input={field.input} type={types[field.column]} locale={locale} empty={t("plugins.resource.emptyValue")} markupLabel={t("plugins.resource.markup")} />
                 </dd>
               </div>
             ))}
@@ -110,7 +123,7 @@ export default async function PluginRecordPage({ params }: PageProps) {
                       : t("plugins.resource.updatedAt")}
                 </dt>
                 <dd className="min-w-0 break-all font-mono text-[12px]">
-                  {formatCell(row[column], locale)}
+                  {formatCell(row[column], locale, types[column])}
                 </dd>
               </div>
             ))}
@@ -136,12 +149,15 @@ export default async function PluginRecordPage({ params }: PageProps) {
 function Value({
   value,
   input,
+  type,
   locale,
   empty,
   markupLabel,
 }: {
   value: unknown;
   input?: string;
+  /** The column's declared type, so a text column of digits stays as stored. */
+  type?: PluginColumnType;
   locale: string;
   empty: string;
   markupLabel: string;
@@ -167,5 +183,5 @@ function Value({
     return <p className="whitespace-pre-wrap break-words">{String(value)}</p>;
   }
 
-  return <span className="break-words">{formatCell(value, locale)}</span>;
+  return <span className="break-words">{formatCell(value, locale, type)}</span>;
 }

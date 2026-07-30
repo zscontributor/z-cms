@@ -8,6 +8,7 @@ import { deletePluginRowAction } from "@/app/actions/plugin-admin";
 import { Button } from "@/components/ui/button";
 import { EmptyState, TBody, TD, TH, THead, TR, Table } from "@/components/ui/table";
 import { useLocale } from "@/lib/i18n-provider";
+import { withReturnTo } from "@/lib/return-to";
 import { formatCell } from "./format-cell";
 import { sortHref } from "./list-url";
 import { ResourceForm } from "./resource-form";
@@ -71,9 +72,15 @@ export function ResourcePanel({
    * while looking at a form that no longer showed it, and it could not show a
    * column the plugin left out of its form at all. A row with no id cannot be
    * addressed, so it stays plain text rather than becoming a link to nowhere.
+   *
+   * The link carries this list's query string, so the record's "back to list" can
+   * return to the page, ordering and filters the reader left — not to a fresh
+   * first page.
    */
   const detailPath = (row: PluginRow): string | null =>
-    row.id === null || row.id === undefined ? null : `${basePath}/${encodeURIComponent(String(row.id))}`;
+    row.id === null || row.id === undefined
+      ? null
+      : withReturnTo(`${basePath}/${encodeURIComponent(String(row.id))}`, params.toString());
 
   function remove(row: PluginRow) {
     if (!window.confirm(labels.confirmDelete)) return;
@@ -105,6 +112,7 @@ export function ResourcePanel({
           pluginKey={pluginKey}
           resourceKey={resourceKey}
           fields={fields}
+          columnTypes={descriptor.columnTypes}
           row={null}
           labels={{ save: labels.save, cancel: labels.cancel }}
           onSaved={() => {
@@ -162,10 +170,10 @@ export function ResourcePanel({
                           href={href}
                           className="font-medium hover:text-brand-600 dark:hover:text-brand-400"
                         >
-                          {formatCell(row[c.column], locale)}
+                          {formatCell(row[c.column], locale, descriptor.columnTypes?.[c.column])}
                         </Link>
                       ) : (
-                        formatCell(row[c.column], locale)
+                        formatCell(row[c.column], locale, descriptor.columnTypes?.[c.column])
                       )}
                     </TD>
                   ))}

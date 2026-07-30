@@ -21,11 +21,13 @@ import {
   buildPluginUpdate,
   coercePluginRow,
   isPluginRowId,
+  pluginColumnTypes,
+  resolveLocalized,
   type ResolvedPluginAdminResource,
   type PluginTableSchema,
 } from "@zcmsorg/plugin-sdk";
 import { Actor, SiteId, SiteScoped } from "../auth/decorators";
-import { t } from "../common/i18n";
+import { currentLocale, t } from "../common/i18n";
 import type { RequestActor } from "../common/request-context";
 import { PluginsService } from "./plugins.service";
 
@@ -35,6 +37,15 @@ import { PluginsService } from "./plugins.service";
  * says plainly which parts of it are filters.
  */
 const FILTER_PREFIX = "f.";
+
+/** One child resource's rows, as the record screen receives them. */
+export interface PluginChildRows {
+  resource: string;
+  label: string;
+  columns: { column: string; label: string }[];
+  columnTypes: Record<string, string>;
+  rows: Record<string, unknown>[];
+}
 
 /**
  * Serves the admin screens plugins declare — the list/detail/form over a plugin's
@@ -199,6 +210,78 @@ export class PluginAdminController {
    * row's full contents was to open the edit form — which a read-only role cannot,
    * and which is the wrong tool for "what does this say?" anyway.
    */
+  /**
+   * The rows a `reference` field may point at — the picker's list.
+   *
+   * `refTable` had been a comment in the manifest for as long as it existed: the
+   * admin rendered a reference as a text box, so choosing a member of staff meant
+   * pasting a uuid. This resolves the target table to the sibling resource that
+   * surfaces it, and answers with `{ value, label }` pairs.
+   *
+   * Guarded by the TARGET's read permission, not this one. A picker is a listing:
+   * whoever may not see the staff screen may not read the staff list through a
+   * shift form either.
+   */
+  @Get(":plugin/:resource/options/:column")
+  @ApiOperation({
+    summary: "The choices for a reference field",
+    description:
+      "Up to 20 rows of the referenced resource, filtered by `q` against the label " +
+      "column. Requires the READ permission of the RESOURCE BEING REFERENCED.",
+  })
+  @ApiQuery({ name: "q", required: false, description: "Case-insensitive substring." })
+  async options(
+    @Actor() actor: RequestActor,
+    @SiteId() siteId: string,
+    @Param("plugin") pluginKey: string,
+    @Param("resource") resourceKey: string,
+    @Param("column") column: string,
+    @Query("q") q?: string,
+  ): Promise<{ options: { value: string; label: string }[] }> {
+    const all = await this.plugins.adminResourcesFor(actor.tenantId, siteId, pluginKey);
+    const own = all.find((entry) => entry.resource.key === resourceKey);
+    if (!own) {
+      throw new NotFoundException(t()("errors.plugins.resourceNotFound", { resource: resourceKey }));
+    }
+    this.require(actor, own.resource.permissions.read);
+
+    const field = own.resource.form?.fields.find((f) => f.column === column);
+    if (!field || field.input !== "reference" || !field.refTable) {
+      throw new NotFoundException(t()("errors.plugins.rowNotFound", { id: column }));
+    }
+
+    const target = all.find((entry) => entry.resource.table === field.refTable);
+    if (!target) {
+      throw new NotFoundException(t()("errors.plugins.resourceNotFound", { resource: field.refTable }));
+    }
+    // The target's own gate. Reading a list through a form is still reading it.
+    this.require(actor, target.resource.permissions.read);
+
+    const valueColumn = field.refValue ?? "id";
+    // The most identifying thing the target chose to LIST — the same convention the
+    // record screen uses for its heading, so a picker and a record agree on names.
+    const labelColumn = field.refLabel ?? target.resource.list.columns[0]?.column ?? valueColumn;
+    const term = typeof q === "string" ? q.trim().slice(0, 200) : "";
+
+    const rows = await this.run(target.table, () =>
+      buildPluginSelect(
+        target.table,
+        { tenantId: actor.tenantId, siteId },
+        {
+          ...(term ? { search: { columns: [labelColumn], term } } : {}),
+          orderBy: { column: labelColumn, direction: "asc" },
+          limit: 20,
+        },
+      ),
+    );
+
+    return {
+      options: rows
+        .map((row) => ({ value: String(row[valueColumn] ?? ""), label: String(row[labelColumn] ?? "") }))
+        .filter((option) => option.value !== ""),
+    };
+  }
+
   @Get(":plugin/:resource/:id")
   @ApiOperation({
     summary: "Read one row of a plugin resource",
@@ -212,7 +295,12 @@ export class PluginAdminController {
     @Param("plugin") pluginKey: string,
     @Param("resource") resourceKey: string,
     @Param("id") id: string,
-  ): Promise<{ resource: ResolvedPluginAdminResource; row: Record<string, unknown> }> {
+  ): Promise<{
+    resource: ResolvedPluginAdminResource;
+    row: Record<string, unknown>;
+    /** The rows of other resources that name this record. See `children`. */
+    children: PluginChildRows[];
+  }> {
     const { resource, table } = await this.resolve(actor, siteId, pluginKey, resourceKey);
     this.require(actor, resource.permissions.read);
     const rowId = this.rowId(id);
@@ -228,7 +316,64 @@ export class PluginAdminController {
     if (!row) {
       throw new NotFoundException(t()("errors.plugins.rowNotFound", { id }));
     }
-    return { resource, row };
+
+    return { resource, row, children: await this.childrenOf(actor, siteId, pluginKey, resource, row) };
+  }
+
+  /**
+   * The rows belonging to one record — a drink's ingredients, an order's lines.
+   *
+   * Resolved here rather than fetched by the screen because the filter is the
+   * parent's own value, and because each child is gated by its OWN read
+   * permission: a reader who may not open the recipe screen does not get recipes
+   * by opening a menu item instead. A child they may not read is omitted, not
+   * refused — the record itself is still theirs to see.
+   */
+  private async childrenOf(
+    actor: RequestActor,
+    siteId: string,
+    pluginKey: string,
+    resource: ResolvedPluginAdminResource,
+    row: Record<string, unknown>,
+  ): Promise<PluginChildRows[]> {
+    const declared = resource.children ?? [];
+    if (declared.length === 0) return [];
+
+    const all = await this.plugins.adminResourcesFor(actor.tenantId, siteId, pluginKey);
+    const out: PluginChildRows[] = [];
+
+    for (const child of declared) {
+      const target = all.find((entry) => entry.resource.key === child.resource);
+      if (!target) continue;
+      if (!actor.permissions.includes(target.resource.permissions.read)) continue;
+
+      const parentValue = row[child.localColumn ?? "id"];
+      // A parent column that is null matches nothing rather than everything: a
+      // menu item with no code must not adopt every recipe line with none.
+      if (parentValue === null || parentValue === undefined || parentValue === "") continue;
+
+      const rows = await this.run(target.table, () =>
+        buildPluginSelect(
+          target.table,
+          { tenantId: actor.tenantId, siteId },
+          {
+            where: { [child.foreignColumn]: parentValue },
+            orderBy: target.resource.list.orderBy,
+            limit: 100,
+          },
+        ),
+      );
+
+      out.push({
+        resource: child.resource,
+        label: resolveLocalized(child.label, currentLocale()),
+        columns: target.resource.list.columns,
+        columnTypes: target.resource.columnTypes ?? {},
+        rows,
+      });
+    }
+
+    return out;
   }
 
   @Post(":plugin/:resource")
@@ -465,7 +610,13 @@ export class PluginAdminController {
     if (!found) {
       throw new NotFoundException(t()("errors.plugins.resourceNotFound", { resource: resourceKey }));
     }
-    return found;
+    // The declared column types ride along with the descriptor, so every screen
+    // that already receives one can read a value as the plugin meant it rather
+    // than guessing from the shape of the string. See `columnTypes`.
+    return {
+      ...found,
+      resource: { ...found.resource, columnTypes: pluginColumnTypes(found.table) },
+    };
   }
 
   /**

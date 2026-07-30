@@ -12,6 +12,7 @@ import {
 } from "@zcmsorg/schemas";
 import { ApiError, apiFetch, can, getSession } from "@/lib/api";
 import { getT } from "@/lib/locale";
+import { returnHref } from "@/lib/return-to";
 
 export interface ContentFormPayload {
   /** Absent for a new document. */
@@ -167,6 +168,10 @@ export async function deleteContentAction(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   const typeKey = String(formData.get("typeKey") ?? "");
   const returnToList = String(formData.get("returnToList") ?? "false") === "true";
+  // The list state the editor was opened from, so a delete lands back on the page
+  // of the list the reader was on. `returnHref` re-serialises it, so this cannot
+  // redirect anywhere but that list.
+  const from = String(formData.get("from") ?? "");
 
   const denied = await assertPermission("content:delete");
   if (denied) throw new Error(denied);
@@ -176,5 +181,5 @@ export async function deleteContentAction(formData: FormData): Promise<void> {
   revalidatePath(`/content/${typeKey}`);
   revalidatePath("/");
 
-  if (returnToList) redirect(`/content/${typeKey}`);
+  if (returnToList) redirect(returnHref(`/content/${typeKey}`, from));
 }

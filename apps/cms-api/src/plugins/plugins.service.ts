@@ -398,6 +398,49 @@ export class PluginsService {
     return { resource: resolvePluginAdminResource(resource, locale), table };
   }
 
+  /**
+   * EVERY resource of one active plugin, resolved together.
+   *
+   * A resource is no longer an island: a `reference` field points at a sibling's
+   * table and a `children` entry names a sibling by key, so answering "what may I
+   * pick here" or "what belongs under this record" means holding the whole set at
+   * once — including each sibling's own read permission, which is what guards it.
+   */
+  async adminResourcesFor(
+    tenantId: string,
+    siteId: string,
+    pluginKey: string,
+    locale: string = currentLocale(),
+  ): Promise<{ resource: ResolvedPluginAdminResource; table: PluginTableSchema }[]> {
+    const db = getSystemDb();
+    const include = {
+      version: { select: { manifest: true, origin: true } },
+    } as const;
+    const install =
+      (await db.sitePlugin.findFirst({
+        where: { siteId, plugin: { key: pluginKey }, status: "ACTIVE" },
+        include,
+      })) ??
+      (await db.orgPlugin.findFirst({
+        where: { tenantId, plugin: { key: pluginKey }, status: "ACTIVE" },
+        include,
+      }));
+
+    if (!install || !canOwnPluginTables(install.version.origin)) return [];
+
+    const manifest = install.version.manifest as {
+      admin?: PluginAdminContribution;
+      database?: { tables?: PluginTableSchema[] };
+    } | null;
+
+    const out: { resource: ResolvedPluginAdminResource; table: PluginTableSchema }[] = [];
+    for (const resource of manifest?.admin?.resources ?? []) {
+      const table = manifest?.database?.tables?.find((t) => t.name === resource.table);
+      if (table) out.push({ resource: resolvePluginAdminResource(resource, locale), table });
+    }
+    return out;
+  }
+
   /** Capabilities contributed by the site's ACTIVE plugins — themes read these. */
   async capabilitiesFor(tenantId: string, siteId: string): Promise<string[]> {
     const db = getSystemDb();

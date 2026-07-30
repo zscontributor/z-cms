@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   CONTACT_FORM_FIELDS,
   buildFormSchema,
+  checkFormField,
+  checkFormValues,
   toClientRules,
   toPublicForm,
   validateFormDefinitions,
@@ -210,5 +212,143 @@ describe("toClientRules", () => {
     const company = rules.find((r) => r.name === "company");
     expect(company).toMatchObject({ type: "text", maxLength: 200 });
     expect(company).not.toHaveProperty("required");
+  });
+});
+
+/**
+ * `checkFormField` explains a refusal; `buildFormSchema` decides one. They are two
+ * readings of the same declaration, so the tests that matter are the ones that pin
+ * them to each other — a rule the schema enforces and the checker cannot name is
+ * exactly how a visitor ends up with "check the fields" and no idea which.
+ */
+describe("checkFormField", () => {
+  const quantity: FormField = { name: "quantity1", type: "number", required: true, min: 1 };
+
+  it("catches the negative quantity the browser used to wave through", () => {
+    expect(checkFormField(quantity, "-2")).toBe("min");
+    expect(checkFormField(quantity, "0")).toBe("min");
+    expect(checkFormField(quantity, "2")).toBeNull();
+  });
+
+  it("tells a value that is out of range apart from one that is not a number", () => {
+    // Two different sentences for the visitor: "enter a number" vs "enter 1 or more".
+    expect(checkFormField(quantity, "abc")).toBe("number");
+    expect(checkFormField({ name: "n", type: "number", max: 10 }, "11")).toBe("max");
+  });
+
+  it("keeps length and value apart", () => {
+    // "at least 1" on a quantity is a value; on a name it is a character count.
+    expect(checkFormField({ name: "t", type: "text", minLength: 3 }, "ab")).toBe("minLength");
+    expect(checkFormField({ name: "t", type: "text", maxLength: 3 }, "abcd")).toBe("maxLength");
+  });
+
+  it("reports an empty required field as required, whatever its type", () => {
+    for (const type of ["text", "email", "number", "date", "select"] as const) {
+      expect(checkFormField({ name: "f", type, required: true }, "")).toBe("required");
+      expect(checkFormField({ name: "f", type }, "")).toBeNull();
+    }
+    // Whitespace is empty: a space bar is not an answer.
+    expect(checkFormField({ name: "f", type: "text", required: true }, "   ")).toBe("required");
+  });
+
+  it("refuses a choice the form never offered", () => {
+    const field: FormField = {
+      name: "orderType",
+      type: "select",
+      options: ["takeaway", { value: "delivery", label: "Delivery" }],
+    };
+    expect(checkFormField(field, "delivery")).toBeNull();
+    expect(checkFormField(field, "dine-in")).toBe("invalid");
+  });
+
+  it("names a field for every submission the authoritative schema refuses", () => {
+    const fields: FormField[] = [
+      { name: "customerName", type: "text", required: true, maxLength: 5 },
+      { name: "email", type: "email" },
+      { name: "quantity1", type: "number", required: true, min: 1 },
+      { name: "pickupDate", type: "date" },
+    ];
+    const schema = buildFormSchema(fields);
+
+    const bad = [
+      { customerName: "", quantity1: "2" },
+      { customerName: "Linh", quantity1: "-2" },
+      { customerName: "Linh", quantity1: "1", email: "nope" },
+      { customerName: "Linh", quantity1: "1", pickupDate: "2026-02-30" },
+      { customerName: "much too long", quantity1: "1" },
+    ];
+
+    for (const values of bad) {
+      expect(schema.safeParse(values).success).toBe(false);
+      // The point: something was refused AND the visitor can be told where.
+      expect(Object.keys(checkFormValues(fields, values))).not.toEqual([]);
+    }
+
+    const good = { customerName: "Linh", quantity1: "3", email: "a@b.co", pickupDate: "2026-08-01" };
+    expect(schema.safeParse(good).success).toBe(true);
+    expect(checkFormValues(fields, good)).toEqual({});
+  });
+});
+
+/**
+ * Optional groups: rendering only.
+ *
+ * A declared form is a flat field list because that is what a server validates and
+ * a plugin handler reads. Groups let the RENDERER hold some of it back until the
+ * visitor asks — so the rules here are the ones that keep "held back" from turning
+ * into "impossible to fill in".
+ */
+describe("form groups", () => {
+  const form = {
+    id: "cafe-order",
+    fields: [
+      { name: "item1", type: "text", required: true },
+      { name: "item2", type: "text", group: "more" },
+      { name: "quantity2", type: "number", group: "more", min: 1, defaultValue: "1", step: 1 },
+    ],
+    groups: [{ id: "more", addLabel: { vi: "+ Thêm món", en: "+ Add item" } }],
+  };
+
+  it("accepts a form whose optional fields live in a declared group", () => {
+    expect(validateFormDefinitions([form])).toEqual([]);
+  });
+
+  it("refuses a field pointing at a group that does not exist", () => {
+    const broken = { ...form, groups: [] };
+    // A field in an undeclared group renders nowhere. Better to refuse the
+    // manifest than to ship a form with an invisible box in it.
+    expect(validateFormDefinitions([broken])).toEqual([
+      'forms.cafe-order.item2: unknown group "more"',
+      'forms.cafe-order.quantity2: unknown group "more"',
+    ]);
+  });
+
+  it("refuses a REQUIRED field inside a group nobody has to open", () => {
+    const broken = {
+      ...form,
+      fields: [...form.fields, { name: "why", type: "text", required: true, group: "more" }],
+    };
+    expect(validateFormDefinitions([broken])).toContain(
+      "forms.cafe-order.why: a required field cannot live in an optional group",
+    );
+  });
+
+  it("leaves validation alone: an unopened group submits empty and passes", () => {
+    const schema = buildFormSchema(form.fields as FormField[]);
+    expect(schema.safeParse({ item1: "CF-02" }).success).toBe(true);
+    expect(schema.safeParse({ item1: "CF-02", item2: "", quantity2: "" }).success).toBe(true);
+    // And an opened one is validated exactly as before.
+    expect(schema.safeParse({ item1: "CF-02", item2: "BK-02", quantity2: "0" }).success).toBe(false);
+  });
+
+  it("hands the browser the group labels in one language", () => {
+    const pub = toPublicForm(form as never, "vi");
+    expect(pub.groups).toEqual([{ id: "more", addLabel: "+ Thêm món" }]);
+    expect(pub.fields.find((f) => f.name === "quantity2")).toMatchObject({
+      group: "more",
+      defaultValue: "1",
+      step: 1,
+      min: 1,
+    });
   });
 });

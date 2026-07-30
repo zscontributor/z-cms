@@ -1,5 +1,9 @@
 import { isValidLocalizedLabel, resolveLocalized, type LocalizedString } from "./localized";
-import { RESERVED_COLUMNS, type PluginTableSchema } from "./table-schema";
+import {
+  RESERVED_COLUMNS,
+  type PluginColumnType,
+  type PluginTableSchema,
+} from "./table-schema";
 
 /**
  * How a plugin adds screens to the admin — declared, and rendered by core.
@@ -69,8 +73,29 @@ export interface PluginResourceField {
   input?: PluginFieldInput;
   /** Choices for a `select` input. */
   options?: PluginFieldOption[];
-  /** For `reference`: the plugin table a chosen id points at (display hint). */
+  /**
+   * For `reference`: the plugin table this column points into.
+   *
+   * Until there was a picker behind it this was a comment — the admin rendered a
+   * `reference` as a plain text box, so "which member of staff is on this shift"
+   * was answered by pasting a uuid. Core now resolves the table to the resource
+   * that surfaces it and offers a searchable list of its rows.
+   */
   refTable?: string;
+  /**
+   * The column of `refTable` whose value is STORED here. Defaults to `id`.
+   *
+   * Not every reference is by id: a recipe line names a menu item by its code,
+   * because a barista reads "CF-02" and a uuid means nothing to anyone. The
+   * picker stores whatever this names and shows {@link refLabel}.
+   */
+  refValue?: string;
+  /**
+   * The column of `refTable` a human READS. Defaults to the first column the
+   * referenced resource lists — the same "most identifying thing the plugin
+   * chose to show" the record screen already uses for its heading.
+   */
+  refLabel?: string;
   /** Shown but not editable — an `id`, a `created_at`, a computed status. */
   readonly?: boolean;
 }
@@ -89,11 +114,37 @@ export interface PluginAdminResource {
   /** The create/edit form. Omit for a read-only resource. */
   form?: { fields: PluginResourceField[] };
   /**
+   * Other resources of this plugin whose rows belong to THIS record — the
+   * ingredients of a drink, the lines of an order.
+   *
+   * The generated screens are one table each, which is the right default and the
+   * wrong answer for data that is only meaningful together: a menu item's recipe
+   * lived on its own screen, so "what is in a cà phê sữa" was a question you
+   * answered by remembering an item code and going somewhere else to filter by it.
+   *
+   * A child is a plain join by value: `child.foreignColumn = parent[localColumn]`.
+   * No cascade, no ownership, no delete semantics — the parent record simply shows
+   * the rows that name it, gated by the CHILD's own read permission, because a
+   * cost price does not become public by being listed under something else.
+   */
+  children?: PluginResourceChild[];
+  /**
    * The permissions that guard this resource. `read` gates the list and detail;
    * `write` gates create/update/delete and, absent, makes the resource read-only
    * for everyone regardless of role.
    */
   permissions: { read: string; write?: string };
+}
+
+export interface PluginResourceChild {
+  /** The `key` of another resource of the same plugin. */
+  resource: string;
+  /** The child column that names the parent, e.g. `item_code`. */
+  foreignColumn: string;
+  /** The parent column it is matched against. Defaults to `id`. */
+  localColumn?: string;
+  /** Heading for the section, e.g. "Ingredients". */
+  label: LocalizedString;
 }
 
 export interface PluginAdminContribution {
@@ -126,7 +177,35 @@ export type ResolvedPluginAdminResource = Omit<
     orderBy?: { column: string; direction?: "asc" | "desc" };
   };
   form?: { fields: ResolvedPluginResourceField[] };
+  /**
+   * The DECLARED type of every column of the backing table, reserved ones
+   * included — so a screen can read a value the way the plugin meant it.
+   *
+   * Without this the admin had only the shape of the string to go on, and a shape
+   * is not a type: `"0908999888"` is a phone number that looks exactly like an
+   * integer, and the list rendered it as "908.999.888" — grouped like money, with
+   * the leading zero gone. The platform never had to guess. The plugin declared
+   * `text` in `manifest.database.tables`, and this is that declaration, travelling
+   * as far as the screen that renders it.
+   */
+  columnTypes?: Record<string, PluginColumnType>;
 };
+
+/**
+ * Every column of a table with its declared type, including the five core owns on
+ * every plugin table (which no manifest declares but every row carries).
+ */
+export function pluginColumnTypes(table: PluginTableSchema): Record<string, PluginColumnType> {
+  const types: Record<string, PluginColumnType> = {
+    id: "uuid",
+    tenant_id: "uuid",
+    site_id: "uuid",
+    created_at: "timestamptz",
+    updated_at: "timestamptz",
+  };
+  for (const column of table.columns) types[column.name] = column.type;
+  return types;
+}
 
 const SLUG_RE = /^[a-z][a-z0-9-]*$/;
 
@@ -141,7 +220,11 @@ export interface PluginAdminViolation {
     | "invalid-label"
     | "invalid-option"
     | "nav-unknown-resource"
-    | "nav-missing-permission";
+    | "nav-missing-permission"
+    | "unknown-ref-table"
+    | "unknown-ref-column"
+    | "unknown-child-resource"
+    | "unknown-child-column";
   detail?: string;
 }
 
@@ -230,6 +313,52 @@ export function validateAdminContribution(
     for (const column of named) {
       if (!columns.has(column)) {
         violations.push({ where: at, reason: "unknown-column", detail: column });
+      }
+    }
+  }
+
+  /**
+   * References and children are checked in a SECOND pass.
+   *
+   * Both point at other resources, and a manifest is free to declare them in any
+   * order — a first pass would refuse a perfectly good forward reference. So the
+   * first pass collects what exists and this one checks what points at it.
+   */
+  const byKey = new Map((admin.resources ?? []).map((r) => [r.key, r]));
+  for (const resource of admin.resources ?? []) {
+    const at = `resource:${resource.key}`;
+
+    for (const field of resource.form?.fields ?? []) {
+      if (field.input !== "reference") continue;
+      const target = [...byKey.values()].find((r) => r.table === field.refTable);
+      if (!field.refTable || !target) {
+        // A picker with nothing to pick from is a text box asking for a uuid.
+        violations.push({ where: at, reason: "unknown-ref-table", detail: field.column });
+        continue;
+      }
+      const targetColumns = tables.get(target.table);
+      for (const named of [field.refValue, field.refLabel]) {
+        if (named && !targetColumns?.has(named)) {
+          violations.push({ where: at, reason: "unknown-ref-column", detail: named });
+        }
+      }
+    }
+
+    for (const child of resource.children ?? []) {
+      const target = byKey.get(child.resource);
+      if (!target) {
+        violations.push({ where: at, reason: "unknown-child-resource", detail: child.resource });
+        continue;
+      }
+      if (!isValidLocalizedLabel(child.label)) {
+        violations.push({ where: at, reason: "invalid-label", detail: `child:${child.resource}` });
+      }
+      if (!tables.get(target.table)?.has(child.foreignColumn)) {
+        violations.push({ where: at, reason: "unknown-child-column", detail: child.foreignColumn });
+      }
+      const local = child.localColumn ?? "id";
+      if (!tables.get(resource.table)?.has(local)) {
+        violations.push({ where: at, reason: "unknown-child-column", detail: local });
       }
     }
   }
