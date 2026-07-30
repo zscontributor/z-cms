@@ -57,6 +57,50 @@ export interface PluginActions {
     pluginId: string;
   };
   /**
+   * Someone edited one of THIS plugin's own rows through the generated admin
+   * screens — created, updated or deleted.
+   *
+   * The one action that is not broadcast. Every other action here describes
+   * something that happened to the CMS and is fired at every active plugin; this
+   * one carries a plugin's own row, so it is delivered to that plugin and to
+   * nobody else. A shop's cost prices are not an event another plugin subscribes to.
+   *
+   * It exists because `manifest.admin` is a *generic* CRUD screen: core writes the
+   * row the form posted and knows nothing about what the row MEANS. Without this,
+   * a plugin whose data has consequences — a stock movement that should change a
+   * balance, an order line that should change a total — would be correct only when
+   * the row came in through its own code, and quietly wrong the moment a human
+   * typed it at the counter. The plugin is the authority on its own tables; this is
+   * how it hears about a write it did not make.
+   *
+   * Deliberately NOT fired for the plugin's own `ctx.db` writes. A plugin that
+   * inserted a row already knows; re-entering its own handler for its own write is
+   * how a stock deduction gets applied twice.
+   *
+   * It is an action, so the admin does not wait for it and a broken handler cannot
+   * fail somebody's save. The consequence is honest and worth stating: the row is
+   * saved first and the plugin reacts a moment later.
+   */
+  "admin.record.changed": {
+    siteId: string;
+    /** The `key` of the resource in `manifest.admin.resources`. */
+    resource: string;
+    /** The table it backs onto — the plugin's own, always. */
+    table: string;
+    operation: "created" | "updated" | "deleted";
+    rowId: string;
+    /** The row as it now stands. Null for a delete. */
+    row: Record<string, unknown> | null;
+    /**
+     * The row as it stood before. Null for a create.
+     *
+     * Present because a plugin cannot reverse what it cannot see: correcting a
+     * goods-in movement from 10 to 6 is "give back 10, take 6", and a handler
+     * holding only the new value would have to guess the old one.
+     */
+    previous: Record<string, unknown> | null;
+  };
+  /**
    * An email left the building. Fired for EVERY send on the site — the plugin's
    * own, another plugin's, and the CMS's — because the plugins that care about
    * this are the ones logging deliverability, and a log with only its own mail in

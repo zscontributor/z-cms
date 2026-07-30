@@ -247,7 +247,11 @@ export class PluginAdminController {
     const rows = await this.run(table, () =>
       buildPluginInsert(table, { tenantId: actor.tenantId, siteId }, row),
     );
-    return { row: rows[0] ?? null };
+    const created = rows[0] ?? null;
+    if (created) {
+      this.emit(actor, siteId, pluginKey, resource, table, "created", created, null);
+    }
+    return { row: created };
   }
 
   @Patch(":plugin/:resource/:id")
@@ -264,10 +268,18 @@ export class PluginAdminController {
     this.requireWrite(actor, resource);
     const rowId = this.rowId(id);
 
+    // Read before writing: the plugin's handler is told what the row WAS as well
+    // as what it now is, and there is no other moment at which the old value still
+    // exists. Cheap — a primary-key lookup — and only on a write path.
+    const previous = await this.currentRow(table, siteId, actor.tenantId, rowId);
+
     const row = this.coerce(table, body, false);
     const rows = await this.run(table, () =>
       buildPluginUpdate(table, { tenantId: actor.tenantId, siteId }, row, { id: rowId }),
     );
+    if (rows[0]) {
+      this.emit(actor, siteId, pluginKey, resource, table, "updated", rows[0], previous);
+    }
     return { rows };
   }
 
@@ -284,9 +296,60 @@ export class PluginAdminController {
     this.requireWrite(actor, resource);
     const rowId = this.rowId(id);
 
+    const previous = await this.currentRow(table, siteId, actor.tenantId, rowId);
     const q = buildPluginDelete(table, { tenantId: actor.tenantId, siteId }, { id: rowId });
     const deleted = await db().$executeRawUnsafe(q.text, ...q.values);
+    if (deleted > 0 && previous) {
+      this.emit(actor, siteId, pluginKey, resource, table, "deleted", null, previous);
+    }
     return { deleted };
+  }
+
+  /** The row as it stands, by id, scoped like every other read on this controller. */
+  private async currentRow(
+    table: PluginTableSchema,
+    siteId: string,
+    tenantId: string,
+    rowId: string,
+  ): Promise<Record<string, unknown> | null> {
+    const q = buildPluginSelect(table, { tenantId, siteId }, { where: { id: rowId }, limit: 1 });
+    const rows = await db().$queryRawUnsafe<Record<string, unknown>[]>(q.text, ...q.values);
+    return rows[0] ?? null;
+  }
+
+  /**
+   * Tells the plugin that a human changed one of its rows.
+   *
+   * Not awaited, and delivered only to the plugin that owns the table. A plugin
+   * whose data has consequences — a stock movement that moves a balance, an order
+   * line that changes a total — cannot learn about them any other way: this
+   * controller writes what the form posted and has no idea what it means.
+   *
+   * The save has already succeeded by the time this runs. That ordering is the
+   * point: a slow or broken plugin must not be able to fail somebody's Save, and
+   * an action that ran first would be able to.
+   */
+  private emit(
+    actor: RequestActor,
+    siteId: string,
+    pluginKey: string,
+    resource: ResolvedPluginAdminResource,
+    table: PluginTableSchema,
+    operation: "created" | "updated" | "deleted",
+    row: Record<string, unknown> | null,
+    previous: Record<string, unknown> | null,
+  ): void {
+    void this.plugins
+      .dispatchActionTo(actor.tenantId, siteId, pluginKey, "admin.record.changed", {
+        siteId,
+        resource: resource.key,
+        table: table.name,
+        operation,
+        rowId: String((row ?? previous)?.id ?? ""),
+        row,
+        previous,
+      })
+      .catch(() => undefined);
   }
 
   /**

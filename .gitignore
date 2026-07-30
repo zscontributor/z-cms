@@ -76,3 +76,8 @@ themes/z-soft/
 # never published as source to the public repository.
 themes/medical/
 plugins/medical/
+
+# Private cafe product — same arrangement as medical: built here, signed here,
+# distributed through the marketplace, never public as source.
+themes/cafe/
+plugins/cafe/

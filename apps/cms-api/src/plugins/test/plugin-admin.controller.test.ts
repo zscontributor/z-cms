@@ -54,6 +54,7 @@ function make(resource: unknown = RESOURCE) {
     adminResourceFor: vi.fn().mockResolvedValue(
       resource === null ? null : { resource, table: TABLE },
     ),
+    dispatchActionTo: vi.fn().mockResolvedValue(undefined),
   };
   return {
     controller: new PluginAdminController(plugins as never),
@@ -461,6 +462,7 @@ describe("PluginAdminController.list: searching and filtering", () => {
   function wide(resource: unknown = FILTERABLE) {
     const plugins = {
       adminResourceFor: vi.fn().mockResolvedValue({ resource, table: WIDE_TABLE }),
+      dispatchActionTo: vi.fn().mockResolvedValue(undefined),
     };
     return new PluginAdminController(plugins as never);
   }
@@ -642,5 +644,98 @@ describe("PluginAdminController: the id guard covers the write routes too", () =
       ),
     ).rejects.toThrow(NotFoundException);
     expect(holder.db.$executeRawUnsafe).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The generic CRUD screen writes what the form posted and has no idea what it
+ * means. `admin.record.changed` is how the plugin that owns the table finds out —
+ * so a stock movement typed at the counter moves the same balance as one its own
+ * code inserted.
+ */
+describe("PluginAdminController: telling the plugin a human changed its rows", () => {
+  const write = () => actor(RESOURCE.permissions.read, RESOURCE.permissions.write);
+
+  beforeEach(() => {
+    holder.db = makeDb([{ id: ROW_ID, patient_name: "Nguyễn Minh Anh" }]);
+  });
+
+  it("fires at the owning plugin after a create, with the row that was written", async () => {
+    const { controller, plugins } = make();
+
+    await controller.create(write(), "s1", "vn.zsoft.plugin.medical", RESOURCE.key, {
+      patient_name: "Nguyễn Minh Anh",
+      phone: "0901 234 567",
+    });
+
+    const [tenantId, siteId, pluginKey, action, payload] =
+      plugins.dispatchActionTo.mock.calls[0]!;
+    expect([tenantId, siteId, pluginKey, action]).toEqual([
+      "t1",
+      "s1",
+      "vn.zsoft.plugin.medical",
+      "admin.record.changed",
+    ]);
+    expect(payload).toMatchObject({
+      resource: RESOURCE.key,
+      table: TABLE.name,
+      operation: "created",
+      rowId: ROW_ID,
+      previous: null,
+    });
+    expect(payload.row).toMatchObject({ patient_name: "Nguyễn Minh Anh" });
+  });
+
+  it("carries the row as it was, as well as as it is, on an update", async () => {
+    const { controller, plugins } = make();
+    holder.db.$queryRawUnsafe = vi
+      .fn()
+      .mockResolvedValueOnce([{ id: ROW_ID, patient_name: "Before" }])
+      .mockResolvedValueOnce([{ id: ROW_ID, patient_name: "After" }]);
+
+    await controller.update(write(), "s1", "vn.zsoft.plugin.medical", RESOURCE.key, ROW_ID, {
+      patient_name: "After",
+    });
+
+    const payload = plugins.dispatchActionTo.mock.calls[0]![4];
+    expect(payload.operation).toBe("updated");
+    // Without the old value a handler cannot reverse what the edit undid.
+    expect(payload.previous).toMatchObject({ patient_name: "Before" });
+    expect(payload.row).toMatchObject({ patient_name: "After" });
+  });
+
+  it("carries only the vanished row on a delete", async () => {
+    const { controller, plugins } = make();
+
+    await controller.remove(write(), "s1", "vn.zsoft.plugin.medical", RESOURCE.key, ROW_ID);
+
+    const payload = plugins.dispatchActionTo.mock.calls[0]![4];
+    expect(payload).toMatchObject({ operation: "deleted", row: null });
+    expect(payload.previous).toMatchObject({ id: ROW_ID });
+  });
+
+  it("says nothing when the delete removed nothing", async () => {
+    const { controller, plugins } = make();
+    holder.db.$executeRawUnsafe = vi.fn().mockResolvedValue(0);
+
+    await controller.remove(write(), "s1", "vn.zsoft.plugin.medical", RESOURCE.key, ROW_ID);
+
+    expect(plugins.dispatchActionTo).not.toHaveBeenCalled();
+  });
+
+  it("saves the row even when the plugin's handler is broken", async () => {
+    const { controller, plugins } = make();
+    plugins.dispatchActionTo.mockRejectedValue(new Error("the plugin exploded"));
+
+    const result = await controller.create(
+      write(),
+      "s1",
+      "vn.zsoft.plugin.medical",
+      RESOURCE.key,
+      { patient_name: "Nguyễn Minh Anh", phone: "0901 234 567" },
+    );
+
+    // The write already happened; an action is a notification, not a gate.
+    expect(result.row).toMatchObject({ id: ROW_ID });
   });
 });

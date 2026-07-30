@@ -151,7 +151,7 @@ The vocabulary is fixed — a plugin cannot invent a hook the host does not fire
 
 | Kind | Hooks |
 | --- | --- |
-| **Actions** | `content.created`, `content.updated`, `content.published`, `content.unpublished`, `content.deleted`, `theme.activated`, `plugin.activated`, `mail.sent`, `mail.failed` |
+| **Actions** | `content.created`, `content.updated`, `content.published`, `content.unpublished`, `content.deleted`, `theme.activated`, `plugin.activated`, `mail.sent`, `mail.failed`, `admin.record.changed` |
 | **Filters** | `content.seo` — the metadata a page renders with; `mail.sending` — the letter, before it is handed to SMTP |
 
 `content.seo` is the one the whole capability story rests on: it is how an SEO plugin
@@ -369,6 +369,40 @@ generates a settings form from `settingsSchema`:
 
 Labels are locale maps, so the screens speak the admin's language rather than the
 plugin author's.
+
+### The screen is generic; the data is not
+
+A generated screen writes the row the form posted, and that is all it can do: core
+has no idea that a stock movement moves a balance, or that an order line changes an
+order's total. So a plugin whose data has consequences would be correct only when
+the row arrived through its own code, and quietly wrong the moment somebody typed
+one at the counter.
+
+`admin.record.changed` closes that. After a create, update or delete on one of
+these screens, the action fires **at the plugin that owns the table** — not
+broadcast, because the payload is a row out of that plugin's own tables, complete
+with whatever it keeps there:
+
+```ts
+actions: {
+  "admin.record.changed": async ({ table, operation, row, previous }, ctx) => {
+    if (table !== MOVES) return;
+    if (previous) await moveStock(ctx, previous.stock_code, +previous.quantity);
+    if (row)      await moveStock(ctx, row.stock_code,      -row.quantity);
+  },
+}
+```
+
+`previous` is there because a plugin cannot reverse what it cannot see: correcting
+a goods-in note from 10 to 6 is "give back 10, take 6", and a handler holding only
+the new value would have to guess the old one.
+
+Two properties are worth knowing before writing one of these. It is an **action**,
+so the row is saved first and the handler runs after — a slow or broken plugin
+cannot fail somebody's Save, and the price of that is that the consequence lands a
+moment later. And it does **not** fire for the plugin's own `ctx.db` writes: a
+plugin that inserted a row already knows, and re-entering the handler for your own
+write is how a stock deduction gets applied twice.
 
 Each resource names the permission keys that guard it, and a plugin may *introduce*
 those keys in `manifest.permissionsProvided` — `x:<plugin-slug>:<resource>:<read|manage>`,

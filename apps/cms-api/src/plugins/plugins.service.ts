@@ -575,6 +575,41 @@ export class PluginsService {
   }
 
   /**
+   * Fires an action at ONE plugin — the one whose data the event is about.
+   *
+   * The counterpart of `dispatchAction` for an event that is nobody else's
+   * business. `admin.record.changed` carries a row out of a plugin's own table,
+   * complete with whatever the plugin keeps there: a cost price, a customer's
+   * phone number, a salary. Broadcasting that to every active plugin would turn
+   * the admin's generic CRUD screen into a way for any installed plugin to read
+   * any other's records — the exact isolation `ctx.db` and `ctx.storage` exist to
+   * hold.
+   *
+   * Same fire-and-forget contract as the broadcast: a plugin that is inactive,
+   * broken or slow produces a log line, never a failed request for the person who
+   * pressed Save.
+   */
+  async dispatchActionTo(
+    tenantId: string,
+    siteId: string,
+    pluginKey: string,
+    action: string,
+    payload: Record<string, unknown>,
+  ): Promise<void> {
+    const targets = await this.activePlugins(tenantId, siteId);
+    const target = targets.find((candidate) => candidate.pluginKey === pluginKey);
+    if (!target) return;
+
+    try {
+      await this.execute(tenantId, siteId, target, { kind: "action", name: action, payload });
+    } catch (err) {
+      this.logger.warn(
+        `Plugin ${pluginKey} failed on ${action}: ${(err as Error).message}`,
+      );
+    }
+  }
+
+  /**
    * Runs a filter through the active plugins, in sequence, threading the value.
    *
    * This one DOES block the caller, so it is used only where a stale value is
