@@ -42,6 +42,17 @@ export const FORM_FIELD_TYPES = [
 ] as const;
 export type FormFieldType = (typeof FORM_FIELD_TYPES)[number];
 
+/**
+ * What a field IS, beyond what it accepts.
+ *
+ * Only one role so far: a `pick` field is a basket line — a select the visitor
+ * fills from somewhere else on the site (a product grid, a menu) rather than by
+ * opening the dropdown. See `FormField.role`.
+ */
+export const FORM_FIELD_ROLES = ["pick"] as const;
+
+export type FormFieldRole = (typeof FORM_FIELD_ROLES)[number];
+
 /** A field name is the submitted key and must be a plain identifier. */
 export const FIELD_NAME_RE = /^[a-zA-Z][a-zA-Z0-9_]*$/;
 /** A form id is a stable, url-safe slug (it appears in `/forms/<id>/submit`). */
@@ -126,6 +137,30 @@ export const FormFieldSchema = z.object({
    * wrong for a quantity: without it, a quantity spinner offers 1.5 coffees.
    */
   step: z.number().positive().optional(),
+  /**
+   * `"pick"` — this select is a BASKET LINE, filled by an Add button elsewhere on
+   * the site rather than typed into here.
+   *
+   * A form declaring this is saying "these boxes are a shopping list". The runtime
+   * then fills them from the visitor's basket (`data-zc-pick`), and draws the
+   * basket in their place instead of asking a visitor who already chose from a
+   * menu to choose the same thing again from a dropdown.
+   *
+   * It is OPTIONAL, and a form that declares nothing is still handled — core
+   * infers the same thing from the shape (see `formPickSlots`). But inference is a
+   * guess, and a guess is not something a platform should make a plugin depend on:
+   * declare it and the behaviour is exact, whatever the fields are called.
+   */
+  role: z.enum(FORM_FIELD_ROLES).optional(),
+  /**
+   * This `number` field is the quantity of the named `role: "pick"` field.
+   *
+   * Explicit, because the fallback is ADJACENCY — "the number declared straight
+   * after the select" — and a plugin is entitled to declare `item1, item2, qty1,
+   * qty2`, or to put a note between them. Naming the partner removes the
+   * assumption entirely.
+   */
+  quantityFor: z.string().regex(FIELD_NAME_RE).optional(),
 });
 
 export type FormField = z.infer<typeof FormFieldSchema>;
@@ -236,6 +271,10 @@ export interface PublicFormField {
   /** The optional group that reveals this field, by id. */
   group?: string;
   defaultValue?: string;
+  /** `"pick"` — a basket line, filled from elsewhere on the site. */
+  role?: FormFieldRole;
+  /** For a `number`: the `role: "pick"` field this counts. */
+  quantityFor?: string;
 }
 
 /** One optional group, with its labels already resolved for this reader. */
@@ -246,6 +285,21 @@ export interface PublicFormGroup {
   removeLabel?: string;
 }
 
+/**
+ * This form read as a basket, decided once on the server.
+ *
+ * A theme needs two facts to render an Add button — how many lines the form holds
+ * and which values it accepts — and it must not work them out for itself: a theme
+ * that guessed differently from the runtime would count a line into its badge that
+ * the form then refused. Present only when the form HAS a basket.
+ */
+export interface PublicFormBasket {
+  /** How many lines it holds. */
+  slots: number;
+  /** Every value a line may take. */
+  values: string[];
+}
+
 export interface PublicFormDef {
   id: string;
   title?: string;
@@ -254,6 +308,8 @@ export interface PublicFormDef {
   groups?: PublicFormGroup[];
   submitLabel?: string;
   successMessage?: string;
+  /** Present when this form is fillable from a basket. See `PublicFormBasket`. */
+  basket?: PublicFormBasket;
 }
 
 /** The public projection as a schema, for the OpenAPI document. */
@@ -270,12 +326,30 @@ export const PublicFormDefSchema = z.object({
       min: z.number().optional(),
       max: z.number().optional(),
       pattern: z.string().optional(),
+      step: z.number().optional(),
       options: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
       label: z.string().optional(),
+      group: z.string().optional(),
+      defaultValue: z.string().optional(),
+      role: z.enum(FORM_FIELD_ROLES).optional(),
+      quantityFor: z.string().optional(),
     }),
   ),
+  groups: z
+    .array(
+      z.object({
+        id: z.string(),
+        addLabel: z.string(),
+        label: z.string().optional(),
+        removeLabel: z.string().optional(),
+      }),
+    )
+    .optional(),
   submitLabel: z.string().optional(),
   successMessage: z.string().optional(),
+  basket: z
+    .object({ slots: z.int().nonnegative(), values: z.array(z.string()) })
+    .optional(),
 });
 
 /**
@@ -287,6 +361,28 @@ export const PublicFormDefSchema = z.object({
 export function toPublicForm(def: FormDefinition, locale = "en"): PublicFormDef {
   const parsed = FormDefinitionSchema.parse(def);
   const text = (value: LocalizedFormText | undefined) => resolveFormText(value, locale);
+
+  const fields: PublicFormField[] = parsed.fields.map((field) => {
+    const { label, options, ...rest } = field;
+    return {
+      ...rest,
+      ...(text(label) ? { label: text(label)! } : {}),
+      ...(options
+        ? {
+            options: options.map((option) => ({
+              value: optionValue(option),
+              label:
+                (typeof option === "string" ? undefined : text(option.label)) ??
+                optionValue(option),
+            })),
+          }
+        : {}),
+    };
+  });
+
+  // Worked out HERE, once, so every theme reading this form agrees with the
+  // runtime that fills it about which boxes are lines.
+  const basket = formPickSlots({ fields });
 
   return {
     id: parsed.id,
@@ -305,24 +401,87 @@ export function toPublicForm(def: FormDefinition, locale = "en"): PublicFormDef 
           })),
         }
       : {}),
-    fields: parsed.fields.map((field) => {
-      const { label, options, ...rest } = field;
-      return {
-        ...rest,
-        ...(text(label) ? { label: text(label)! } : {}),
-        ...(options
-          ? {
-              options: options.map((option) => ({
-                value: optionValue(option),
-                label:
-                  (typeof option === "string" ? undefined : text(option.label)) ??
-                  optionValue(option),
-              })),
-            }
-          : {}),
-      };
-    }),
+    fields,
+    ...(basket.slots.length > 0
+      ? { basket: { slots: basket.slots.length, values: basket.values } }
+      : {}),
   };
+}
+
+/** A form's basket: which boxes are lines, and which box counts each one. */
+export interface FormPickSlots {
+  /** The line boxes, in declaration order. Empty when this form has no basket. */
+  slots: PublicFormField[];
+  /** Quantity box per slot name. A slot with no quantity box is simply one of. */
+  quantities: Record<string, PublicFormField>;
+  /** Every value a line may take — what an Add button is allowed to add. */
+  values: string[];
+  /** True when the form SAID so, rather than core working it out from the shape. */
+  declared: boolean;
+}
+
+/**
+ * The basket a form describes — declared if it says so, inferred if it does not.
+ *
+ * This is the one place either question is answered, so the runtime's form island
+ * and a theme's Add button cannot drift apart about which boxes are lines.
+ *
+ * **Declared** (`role: "pick"`, and `quantityFor` on the counting box) is exact and
+ * is what a plugin should use: nothing about it depends on what the fields are
+ * called or the order they are declared in.
+ *
+ * **Inferred** is the fallback for the forms that already exist, and it is a guess
+ * with two premises worth stating plainly: repeatable lines are selects offering
+ * the SAME option list, and a line's quantity is the `number` declared straight
+ * after it in the same group. A form built differently — one select and a text box
+ * for the item, or all the selects followed by all the quantities — gets no basket
+ * from inference, which is why the declaration exists.
+ */
+export function formPickSlots(def: Pick<PublicFormDef, "fields">): FormPickSlots {
+  const fields = def.fields;
+  const declared = fields.filter((field) => field.role === "pick" && field.type === "select");
+
+  const slots = declared.length > 0 ? declared : inferPickSlots(fields);
+  const quantities: Record<string, PublicFormField> = {};
+  for (const slot of slots) {
+    const named = fields.find(
+      (field) => field.type === "number" && field.quantityFor === slot.name,
+    );
+    const partner = named ?? adjacentNumber(fields, slot);
+    if (partner) quantities[slot.name] = partner;
+  }
+
+  const values = [...new Set(slots.flatMap((slot) => (slot.options ?? []).map((o) => o.value)))];
+  return { slots, quantities, values, declared: declared.length > 0 };
+}
+
+/** The `number` declared straight after a slot, in the same group. */
+function adjacentNumber(
+  fields: PublicFormField[],
+  slot: PublicFormField,
+): PublicFormField | undefined {
+  const next = fields[fields.indexOf(slot) + 1];
+  if (!next || next.type !== "number") return undefined;
+  // A number belonging to a DIFFERENT slot by name is not this one's, even if it
+  // happens to sit next to it.
+  if (next.quantityFor != null && next.quantityFor !== slot.name) return undefined;
+  return (next.group ?? "") === (slot.group ?? "") ? next : undefined;
+}
+
+/** The largest set of selects offering one and the same option list. */
+function inferPickSlots(fields: PublicFormField[]): PublicFormField[] {
+  const bySignature = new Map<string, PublicFormField[]>();
+  for (const field of fields) {
+    if (field.type !== "select" || !field.options?.length) continue;
+    const signature = field.options.map((option) => option.value).join("\n");
+    bySignature.set(signature, [...(bySignature.get(signature) ?? []), field]);
+  }
+
+  let best: PublicFormField[] = [];
+  for (const group of bySignature.values()) if (group.length > best.length) best = group;
+  // One lone select is not a shopping list — it is "how would you like it?". Only a
+  // REPEATED box is evidence of a basket, and a form that means it can say so.
+  return best.length > 1 ? best : [];
 }
 
 /** Validates a list of declared forms (e.g. at plugin install). Returns error strings. */
@@ -368,6 +527,37 @@ export function validateFormDefinitions(forms: unknown): string[] {
           `forms.${form.id}.${f.name}: a required field cannot live in an optional group`,
         );
       }
+      // A basket line the visitor cannot fill is not a line. `role: "pick"` means
+      // "an Add button puts a value in here", and a box with no list of allowed
+      // values has nothing to put.
+      if (f.role === "pick" && (f.type !== "select" || !f.options?.length)) {
+        errors.push(
+          `forms.${form.id}.${f.name}: role "pick" needs a select with options`,
+        );
+      }
+      if (f.quantityFor != null && f.type !== "number") {
+        errors.push(`forms.${form.id}.${f.name}: quantityFor belongs on a number field`);
+      }
+    }
+    // Checked after the loop: a `quantityFor` may name a field declared later.
+    const picks = new Set(
+      form.fields.filter((f) => f.role === "pick").map((f) => f.name),
+    );
+    const counted = new Set<string>();
+    for (const f of form.fields) {
+      if (f.quantityFor == null) continue;
+      if (!picks.has(f.quantityFor)) {
+        errors.push(
+          `forms.${form.id}.${f.name}: quantityFor "${f.quantityFor}" is not a role "pick" field`,
+        );
+      } else if (counted.has(f.quantityFor)) {
+        // Two boxes counting one line is a form that cannot say how many were
+        // ordered — whichever the runtime picked would be the wrong one half the time.
+        errors.push(
+          `forms.${form.id}.${f.name}: "${f.quantityFor}" already has a quantity field`,
+        );
+      }
+      counted.add(f.quantityFor);
     }
   }
   return errors;

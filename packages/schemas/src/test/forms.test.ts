@@ -4,6 +4,7 @@ import {
   buildFormSchema,
   checkFormField,
   checkFormValues,
+  formPickSlots,
   toClientRules,
   toPublicForm,
   validateFormDefinitions,
@@ -350,5 +351,120 @@ describe("form groups", () => {
       step: 1,
       min: 1,
     });
+  });
+});
+
+/**
+ * Whose basket is it? Z-CMS is a platform: the cafe plugin is one instance of a
+ * form-as-a-basket, not the definition of one. A plugin that names nothing the
+ * same way must get the same behaviour by SAYING what its fields are.
+ */
+describe("formPickSlots", () => {
+  it("takes a plugin at its word, whatever the fields are called", () => {
+    const basket = formPickSlots({
+      fields: [
+        { name: "khach", type: "text" },
+        { name: "sanPhamA", type: "select", role: "pick", options: [{ value: "P1", label: "Áo" }] },
+        { name: "sanPhamB", type: "select", role: "pick", options: [{ value: "P2", label: "Quần" }] },
+        // Declared far from their slots, and in the "wrong" order — adjacency
+        // would pair none of these, which is the point of naming the partner.
+        { name: "slB", type: "number", quantityFor: "sanPhamB" },
+        { name: "slA", type: "number", quantityFor: "sanPhamA" },
+      ],
+    });
+
+    expect(basket.declared).toBe(true);
+    expect(basket.slots.map((f) => f.name)).toEqual(["sanPhamA", "sanPhamB"]);
+    expect(basket.quantities.sanPhamA?.name).toBe("slA");
+    expect(basket.quantities.sanPhamB?.name).toBe("slB");
+    expect(basket.values).toEqual(["P1", "P2"]);
+  });
+
+  it("declared slots need not offer the same list as each other", () => {
+    // Inference could never see this as one basket; a declaration says it is.
+    const basket = formPickSlots({
+      fields: [
+        { name: "drink", type: "select", role: "pick", options: [{ value: "CF", label: "Cà phê" }] },
+        { name: "cake", type: "select", role: "pick", options: [{ value: "BK", label: "Bánh" }] },
+      ],
+    });
+
+    expect(basket.slots.map((f) => f.name)).toEqual(["drink", "cake"]);
+    expect(basket.values).toEqual(["CF", "BK"]);
+  });
+
+  it("falls back to the shape for a form that declares nothing", () => {
+    const drinks = [{ value: "CF-04", label: "Cà phê muối" }];
+    const basket = formPickSlots({
+      fields: [
+        { name: "orderType", type: "select", options: [{ value: "takeaway", label: "Mang đi" }] },
+        { name: "item1", type: "select", options: drinks },
+        { name: "quantity1", type: "number" },
+        { name: "item2", type: "select", options: drinks },
+        { name: "quantity2", type: "number" },
+      ],
+    });
+
+    expect(basket.declared).toBe(false);
+    expect(basket.slots.map((f) => f.name)).toEqual(["item1", "item2"]);
+    expect(basket.quantities.item1?.name).toBe("quantity1");
+    // "How would you like it?" repeats nothing, so it is not a line.
+    expect(basket.slots.some((f) => f.name === "orderType")).toBe(false);
+  });
+
+  it("infers no basket from a lone select, rather than guessing wrong", () => {
+    // One select is "how will you pay?" far more often than it is a shopping
+    // list. A form that means the latter says role: "pick".
+    const basket = formPickSlots({
+      fields: [
+        { name: "payment", type: "select", options: [{ value: "cash", label: "Tiền mặt" }] },
+        { name: "note", type: "textarea" },
+      ],
+    });
+
+    expect(basket.slots).toEqual([]);
+  });
+});
+
+describe("validateFormDefinitions — declared baskets", () => {
+  const form = (fields: unknown[]) => [{ id: "order", fields }];
+
+  it("refuses a pick that offers nothing to pick", () => {
+    const errors = validateFormDefinitions(
+      form([{ name: "item", type: "text", role: "pick" }]),
+    );
+    expect(errors.join(" ")).toContain('role "pick" needs a select with options');
+  });
+
+  it("refuses a quantity pointing at a field that is not a pick", () => {
+    const errors = validateFormDefinitions(
+      form([
+        { name: "item", type: "select", options: ["A"] },
+        { name: "qty", type: "number", quantityFor: "item" },
+      ]),
+    );
+    expect(errors.join(" ")).toContain('is not a role "pick" field');
+  });
+
+  it("refuses two quantities counting one line", () => {
+    const errors = validateFormDefinitions(
+      form([
+        { name: "item", type: "select", role: "pick", options: ["A"] },
+        { name: "qty", type: "number", quantityFor: "item" },
+        { name: "qtyAgain", type: "number", quantityFor: "item" },
+      ]),
+    );
+    expect(errors.join(" ")).toContain("already has a quantity field");
+  });
+
+  it("accepts a well-declared basket", () => {
+    expect(
+      validateFormDefinitions(
+        form([
+          { name: "item", type: "select", role: "pick", options: ["A"] },
+          { name: "qty", type: "number", quantityFor: "item" },
+        ]),
+      ),
+    ).toEqual([]);
   });
 });

@@ -2,5 +2,27 @@
   "notFound": {
     "title": "Không tìm thấy trang",
     "backHome": "Về trang chủ"
+  },
+  "form": {
+    "required": "Vui lòng nhập trường này.",
+    "email": "Vui lòng nhập email hợp lệ, ví dụ: ten@example.com.",
+    "url": "Vui lòng nhập URL hợp lệ bắt đầu bằng http:// hoặc https://.",
+    "date": "Vui lòng chọn ngày hợp lệ.",
+    "pattern": "Giá trị không đúng định dạng.",
+    "number": "Vui lòng nhập một con số.",
+    "min": "Vui lòng nhập từ {n} trở lên.",
+    "max": "Vui lòng nhập tối đa {n}.",
+    "minLength": "Vui lòng nhập tối thiểu {n} ký tự.",
+    "maxLength": "Vui lòng nhập tối đa {n} ký tự.",
+    "invalid": "Vui lòng chọn một trong các lựa chọn.",
+    "send": "Gửi",
+    "sending": "Đang gửi…",
+    "ok": "Cảm ơn bạn! Chúng tôi đã nhận được thông tin.",
+    "error": "Rất tiếc, chưa gửi được. Vui lòng kiểm tra lại các trường và thử lại.",
+    "choose": "— Vui lòng chọn —",
+    "basket": "Giỏ hàng của bạn",
+    "removeLine": "Bỏ",
+    "less": "Bớt một",
+    "more": "Thêm một"
   }
 }

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { BlockProps } from "@zcmsorg/theme-sdk";
 import { FormIsland } from "@/components/form-island";
+import { formMessages } from "@/lib/form-messages";
 
 /**
  * Block types the RUNTIME owns, rendered on every theme regardless of whether the
@@ -29,7 +30,9 @@ function FormBlock({ props, ctx }: BlockProps): ReactNode {
     }
     return null;
   }
-  return <FormIsland def={def} locale={ctx.locale} />;
+  // Resolved here, on the server: the island is handed one language, never a
+  // catalogue, and never a list of languages baked into a component.
+  return <FormIsland def={def} messages={formMessages(ctx.locale)} />;
 }
 
 export const runtimeCoreBlocks: Record<string, RuntimeBlock> = {

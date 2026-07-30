@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { checkFormField } from "@zcmsorg/schemas";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { checkFormField, formPickSlots } from "@zcmsorg/schemas";
 import type { FormFieldErrorCode, PublicFormDef, PublicFormField } from "@zcmsorg/schemas";
 import { PICK_EVENT, readPicks, writePicks, type FormPick } from "@/lib/form-pick";
+import type { FormMessages } from "@/lib/form-messages";
 
 /**
  * The runtime-owned renderer for a plugin-declared public form.
@@ -18,89 +19,21 @@ import { PICK_EVENT, readPicks, writePicks, type FormPick } from "@/lib/form-pic
  */
 
 /**
- * Every refusal the shared validator can return, in the visitor's language.
+ * The words this form says, resolved for one visitor by the SERVER.
  *
- * Keyed by `FormFieldErrorCode`, so a code that arrives from the SERVER — for a
- * rule this browser never ran — is worded here rather than shipped as English
- * prose from an API. `min`/`max` are about a NUMBER's value; `minLength`/
- * `maxLength` are about a string's length. Conflating the two is how "at least 1"
- * became "at least 1 characters" on a quantity box.
+ * There used to be an `{ en, vi, ja }` dictionary here — a platform component with
+ * a hardcoded list of languages in it, so a site in a fourth language read English
+ * from Z-CMS while its theme spoke the visitor's own. The catalogue is
+ * `@zcmsorg/i18n`'s (`site.form.*`) and the resolving happens in
+ * `lib/form-messages.ts`; a TYPE import cannot pull a server catalogue into this
+ * bundle, which is the point of taking it as a prop.
  */
-type Dict = {
-  required: string;
-  email: string;
-  url: string;
-  date: string;
-  pattern: string;
-  number: string;
-  min: (n: number) => string;
-  max: (n: number) => string;
-  minLength: (n: number) => string;
-  maxLength: (n: number) => string;
-  invalid: string;
-  send: string;
-  sending: string;
-  ok: string;
-  error: string;
-  choose: string;
-};
+type Dict = FormMessages;
 
-const MESSAGES: Record<string, Dict> = {
-  en: {
-    required: "This field is required.",
-    email: "Please enter a valid email address, e.g. name@example.com.",
-    url: "Please enter a valid URL starting with http:// or https://.",
-    date: "Please choose a valid date.",
-    pattern: "This value is not in the expected format.",
-    number: "Please enter a number.",
-    min: (n) => `Please enter ${n} or more.`,
-    max: (n) => `Please enter ${n} or less.`,
-    minLength: (n) => `Please use at least ${n} characters.`,
-    maxLength: (n) => `Please use at most ${n} characters.`,
-    invalid: "Please choose one of the options.",
-    send: "Send",
-    sending: "Sending…",
-    ok: "Thank you! Your submission has been received.",
-    error: "Sorry, that could not be sent. Please check the fields and try again.",
-    choose: "— Please choose —",
-  },
-  vi: {
-    required: "Vui lòng nhập trường này.",
-    email: "Vui lòng nhập email hợp lệ, ví dụ: ten@example.com.",
-    url: "Vui lòng nhập URL hợp lệ bắt đầu bằng http:// hoặc https://.",
-    date: "Vui lòng chọn ngày hợp lệ.",
-    pattern: "Giá trị không đúng định dạng.",
-    number: "Vui lòng nhập một con số.",
-    min: (n) => `Vui lòng nhập từ ${n} trở lên.`,
-    max: (n) => `Vui lòng nhập tối đa ${n}.`,
-    minLength: (n) => `Vui lòng nhập tối thiểu ${n} ký tự.`,
-    maxLength: (n) => `Vui lòng nhập tối đa ${n} ký tự.`,
-    invalid: "Vui lòng chọn một trong các lựa chọn.",
-    send: "Gửi",
-    sending: "Đang gửi…",
-    ok: "Cảm ơn bạn! Chúng tôi đã nhận được thông tin.",
-    error: "Rất tiếc, chưa gửi được. Vui lòng kiểm tra lại các trường và thử lại.",
-    choose: "— Vui lòng chọn —",
-  },
-  ja: {
-    required: "この項目は必須です。",
-    email: "有効なメールアドレスを入力してください（例: name@example.com）。",
-    url: "http:// または https:// で始まる有効なURLを入力してください。",
-    date: "有効な日付を選択してください。",
-    pattern: "形式が正しくありません。",
-    number: "数値を入力してください。",
-    min: (n) => `${n} 以上の値を入力してください。`,
-    max: (n) => `${n} 以下の値を入力してください。`,
-    minLength: (n) => `${n}文字以上で入力してください。`,
-    maxLength: (n) => `${n}文字以内で入力してください。`,
-    invalid: "選択肢の中から選んでください。",
-    send: "送信",
-    sending: "送信中…",
-    ok: "ありがとうございます。送信を受け付けました。",
-    error: "申し訳ありません。送信できませんでした。項目を確認して再度お試しください。",
-    choose: "— 選択してください —",
-  },
-};
+/** Fills the `{n}` a count-bearing message carries. */
+function fill(template: string, n: number): string {
+  return template.replace("{n}", String(n));
+}
 
 /**
  * A code, worded for this visitor. `min`/`max` and the two length codes need the
@@ -109,13 +42,13 @@ const MESSAGES: Record<string, Dict> = {
 function say(code: FormFieldErrorCode, field: PublicFormField, d: Dict): string {
   switch (code) {
     case "min":
-      return d.min(field.min ?? 0);
+      return fill(d.min, field.min ?? 0);
     case "max":
-      return d.max(field.max ?? 0);
+      return fill(d.max, field.max ?? 0);
     case "minLength":
-      return d.minLength(field.minLength ?? (field.required ? 1 : 0));
+      return fill(d.minLength, field.minLength ?? (field.required ? 1 : 0));
     case "maxLength":
-      return d.maxLength(field.maxLength ?? 0);
+      return fill(d.maxLength, field.maxLength ?? 0);
     default:
       return d[code];
   }
@@ -135,43 +68,61 @@ function validate(field: PublicFormField, raw: string, d: Dict): string {
   return code ? say(code, field, d) : "";
 }
 
-/**
- * The quantity box belonging to a chosen item.
- *
- * A form declares its fields flat and in order — `item1, quantity1, item2,
- * quantity2` — because that is what a server validates and a plugin handler
- * reads. The pairing is therefore ADJACENCY, not a naming convention: the number
- * field declared straight after a slot, in the same group, is that slot's
- * quantity. A form whose slots carry no quantity simply has none, and a pick just
- * chooses the item.
- */
-function qtyPartner(def: PublicFormDef, slot: PublicFormField): PublicFormField | undefined {
-  const next = def.fields[def.fields.indexOf(slot) + 1];
-  if (!next || next.type !== "number") return undefined;
-  return (next.group ?? "") === (slot.group ?? "") ? next : undefined;
+/** One line of the basket, as the form draws it back to the visitor. */
+interface BasketLine {
+  value: string;
+  qty: number;
+  label: string;
 }
+
+/**
+ * What the basket does to this form: the values it fills, and the boxes it
+ * REPLACES. `slots`/`slotGroups` are what stops being asked for, because the
+ * basket above them already says it.
+ */
+interface Plan {
+  values: Record<string, string>;
+  groups: string[];
+  applied: FormPick[];
+  lines: BasketLine[];
+  slots: Set<string>;
+  slotGroups: Set<string>;
+}
+
+const EMPTY_PLAN: Plan = {
+  values: {},
+  groups: [],
+  applied: [],
+  lines: [],
+  slots: new Set(),
+  slotGroups: new Set(),
+};
 
 /**
  * Where the basket lands in this form.
  *
- * A "slot" is any select that OFFERS the picked value — which is how the three
- * item boxes of a pre-order form are told apart from its "how would you like it?"
- * and "how will you pay?" boxes without core inventing a naming convention for
- * plugins to obey. A pick the form cannot take (every slot full, or a drink the
- * shop has withdrawn since it was added) is dropped rather than forced, and the
- * caller writes the survivors back so the badge stops counting a line that no
- * longer exists.
+ * Which boxes ARE the basket is not decided here — `formPickSlots` in
+ * @zcmsorg/schemas answers that once, from the form's own declaration
+ * (`role: "pick"`) or, for a form that declares nothing, from its shape. The
+ * runtime and a theme's Add button therefore cannot disagree about it.
+ *
+ * What is left is the matching: each stored line goes into the first free slot
+ * that OFFERS it, so a value the form does not sell (a drink withdrawn since the
+ * basket was filled) and a line past the last slot are both dropped rather than
+ * forced. The caller writes the survivors back, so the badge stops counting a line
+ * that no longer exists.
  */
-function planPicks(def: PublicFormDef, picks: FormPick[]) {
+function planPicks(def: PublicFormDef, picks: FormPick[]): Plan {
+  const basket = formPickSlots(def);
   const taken = new Set<string>();
   const values: Record<string, string> = {};
   const groups: string[] = [];
   const applied: FormPick[] = [];
+  const lines: BasketLine[] = [];
 
   for (const pick of picks) {
-    const slot = def.fields.find(
+    const slot = basket.slots.find(
       (field) =>
-        field.type === "select" &&
         !taken.has(field.name) &&
         (field.options ?? []).some((option) => option.value === pick.value),
     );
@@ -179,12 +130,38 @@ function planPicks(def: PublicFormDef, picks: FormPick[]) {
     taken.add(slot.name);
     values[slot.name] = pick.value;
     if (slot.group) groups.push(slot.group);
-    const qty = qtyPartner(def, slot);
+    const qty = basket.quantities[slot.name];
     if (qty) values[qty.name] = String(pick.qty);
     applied.push(pick);
+    lines.push({
+      value: pick.value,
+      qty: pick.qty,
+      label:
+        (slot.options ?? []).find((option) => option.value === pick.value)?.label || pick.value,
+    });
   }
 
-  return { values, groups, applied };
+  // Every line box, filled or not. A basket of one drink still has to silence the
+  // second and third item boxes and the button that offers them: the menu is where
+  // a line is added now, so a form asking again for the thing it is already
+  // showing is asking the same question twice.
+  const slots = new Set<string>();
+  const slotGroups = new Set<string>();
+  if (lines.length > 0) {
+    for (const slot of basket.slots) {
+      slots.add(slot.name);
+      const qty = basket.quantities[slot.name];
+      if (qty) slots.add(qty.name);
+      if (slot.group) slotGroups.add(slot.group);
+    }
+  }
+  // A group that holds ANYTHING else still has to be drawn, minus its item boxes.
+  for (const group of [...slotGroups]) {
+    const all = def.fields.filter((field) => field.group === group);
+    if (!all.every((field) => slots.has(field.name))) slotGroups.delete(group);
+  }
+
+  return { values, groups, applied, lines, slots, slotGroups };
 }
 
 /** A field's starting value: what the form declared, or empty. */
@@ -196,8 +173,13 @@ function initialValues(def: PublicFormDef): Record<string, string> {
   return values;
 }
 
-export function FormIsland({ def, locale }: { def: PublicFormDef; locale: string }) {
-  const d = MESSAGES[locale.slice(0, 2)] ?? MESSAGES.en!;
+export function FormIsland({
+  def,
+  messages: d,
+}: {
+  def: PublicFormDef;
+  messages: FormMessages;
+}) {
   const [values, setValues] = useState<Record<string, string>>(() => initialValues(def));
   const [errors, setErrors] = useState<Record<string, string>>({});
   /**
@@ -211,6 +193,14 @@ export function FormIsland({ def, locale }: { def: PublicFormDef; locale: string
   const [open, setOpen] = useState<string[]>([]);
   const [status, setStatus] = useState<"idle" | "sending" | "ok" | "error">("idle");
   const formRef = useRef<HTMLFormElement>(null);
+  /**
+   * The basket as this form currently stands: the lines it shows and the boxes it
+   * is therefore not asking for. Kept in state because it decides what renders,
+   * and in a ref as well because emptying the basket has to know which boxes to
+   * hand back — by then the plan is empty and cannot say.
+   */
+  const [plan, setPlan] = useState<Plan>(EMPTY_PLAN);
+  const slotsRef = useRef<Plan>(EMPTY_PLAN);
 
   /**
    * A field that is already marked wrong re-checks itself as the visitor types, so
@@ -243,13 +233,31 @@ export function FormIsland({ def, locale }: { def: PublicFormDef; locale: string
    */
   const applyPicks = useCallback(() => {
     const picks = readPicks(def.id);
-    if (picks.length === 0) return;
-    const plan = planPicks(def, picks);
-    if (plan.applied.length > 0) {
-      setValues((current) => ({ ...current, ...plan.values }));
-      setOpen((current) => [...new Set([...current, ...plan.groups])]);
-    }
-    if (plan.applied.length !== picks.length) writePicks(def.id, plan.applied);
+    const next = planPicks(def, picks);
+    // Which boxes the basket governs — from this plan while it has lines, and from
+    // the last one that did when it no longer does. Emptying a basket has to hand
+    // the boxes BACK, and an empty plan knows of no boxes.
+    const governed = next.lines.length > 0 ? next : slotsRef.current;
+    if (next.lines.length > 0) slotsRef.current = next;
+
+    setValues((current) => {
+      const values = { ...current };
+      // Reset every slot first: with two drinks in the basket and one taken out,
+      // the second box would otherwise keep the line that just moved up into the
+      // first, and the visitor would be charged for a drink twice.
+      for (const name of governed.slots) {
+        const field = def.fields.find((entry) => entry.name === name);
+        if (field?.defaultValue != null) values[name] = field.defaultValue;
+        else delete values[name];
+      }
+      return { ...values, ...next.values };
+    });
+    setOpen((current) => [
+      ...new Set([...current.filter((id) => !governed.slotGroups.has(id)), ...next.groups]),
+    ]);
+    setPlan(next);
+
+    if (next.applied.length !== picks.length) writePicks(def.id, next.applied);
   }, [def]);
 
   useEffect(() => {
@@ -262,9 +270,29 @@ export function FormIsland({ def, locale }: { def: PublicFormDef; locale: string
     return () => document.removeEventListener(PICK_EVENT, onPick);
   }, [applyPicks, def.id]);
 
+  /**
+   * The basket is the item boxes now, so it has to do what they did.
+   *
+   * Taking the quantity spinner away and leaving no way to say "two of these" would
+   * be a worse form, not a shorter one — so a line counts up, counts down, and goes
+   * away, and every one of those writes the STORE. The store is the single copy:
+   * the badge in the header, this form and the next page all read it back.
+   */
+  const setLine = (value: string, qty: number) => {
+    const picks = readPicks(def.id)
+      .map((pick) => (pick.value === value ? { ...pick, qty } : pick))
+      .filter((pick) => pick.qty > 0);
+    writePicks(def.id, picks);
+  };
+
   const groups = def.groups ?? [];
-  /** The next group on offer — one button at a time, in declaration order. */
-  const nextGroup = groups.find((group) => !open.includes(group.id));
+  /**
+   * The next group on offer — one button at a time, in declaration order, and
+   * never one whose only content is item boxes the basket has taken over.
+   */
+  const nextGroup = groups.find(
+    (group) => !open.includes(group.id) && !plan.slotGroups.has(group.id),
+  );
 
   const openGroup = (id: string) => setOpen((current) => [...current, id]);
 
@@ -363,6 +391,10 @@ export function FormIsland({ def, locale }: { def: PublicFormDef; locale: string
         .filter((field) => field.group && fromServer[field.name])
         .map((field) => field.group!);
       if (reveal.length) setOpen((current) => [...new Set([...current, ...reveal])]);
+      // Same rule for a box the BASKET is standing in for: if the server refused
+      // one of those, the visitor needs the control back to fix it, or the form is
+      // a dead end that only says "check the fields" about a field it is hiding.
+      if (Object.keys(fromServer).some((name) => plan.slots.has(name))) setPlan(EMPTY_PLAN);
 
       setErrors(fromServer);
       setStatus("error");
@@ -407,17 +439,86 @@ export function FormIsland({ def, locale }: { def: PublicFormDef; locale: string
     </div>
   );
 
+  /**
+   * The basket, drawn where the item boxes used to be.
+   *
+   * It is not a summary printed beside the form — it IS those fields. Their values
+   * are still in `values` and still submitted under the names the plugin reads, so
+   * nothing downstream knows the difference; what changed is that a visitor who
+   * already chose a drink on the menu is not asked to choose it again from a
+   * dropdown, next to a quantity box saying the same thing a third time.
+   */
+  const basket = (
+    <div className="zcms-form__basket" key="__basket" style={BASKET}>
+      <span className="zcms-form__label" style={LABEL}>
+        {d.basket}
+      </span>
+      <ul className="zcms-form__basket-lines" style={LINES}>
+        {plan.lines.map((line) => (
+          <li className="zcms-form__basket-line" key={line.value} style={LINE}>
+            <span style={{ flex: 1 }}>{line.label}</span>
+            <span className="zcms-form__basket-qty" style={QTY}>
+              <button
+                type="button"
+                onClick={() => setLine(line.value, line.qty - 1)}
+                aria-label={d.less}
+                style={STEP}
+              >
+                −
+              </button>
+              <b style={{ minWidth: 18, textAlign: "center" }}>{line.qty}</b>
+              <button
+                type="button"
+                onClick={() => setLine(line.value, line.qty + 1)}
+                aria-label={d.more}
+                style={STEP}
+              >
+                +
+              </button>
+            </span>
+            <button
+              type="button"
+              className="zcms-form__basket-remove"
+              onClick={() => setLine(line.value, 0)}
+              aria-label={`${d.removeLine}: ${line.label}`}
+              style={GHOST_BTN}
+            >
+              {d.removeLine}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+
+  /**
+   * The ungrouped fields, with the basket standing in for the first box it took
+   * over. In place rather than at the top: the item boxes sat between "how would
+   * you like it?" and the pickup time, and that is where a reader looks for them.
+   */
+  const lead: ReactNode[] = [];
+  let drawn = false;
+  for (const field of def.fields) {
+    if (field.group) continue;
+    if (plan.slots.has(field.name)) {
+      if (!drawn) lead.push(basket);
+      drawn = true;
+      continue;
+    }
+    lead.push(renderField(field));
+  }
+
   return (
     <form className="zcms-form" ref={formRef} onSubmit={onSubmit} noValidate style={FORM}>
       {def.title ? <h3 className="zcms-form__title" style={TITLE}>{def.title}</h3> : null}
       {/* Ungrouped fields first: the form as it always was, minus the optional
           extras that used to sit in the middle of it. */}
-      {def.fields.filter((field) => !field.group).map(renderField)}
+      {lead}
 
       {/* Then each group the visitor opened, boxed so it reads as one thing that
           can be taken away again rather than four more boxes in a column. */}
       {groups
-        .filter((group) => open.includes(group.id))
+        .filter((group) => open.includes(group.id) && !plan.slotGroups.has(group.id))
         .map((group) => (
           <fieldset className="zcms-form__group" key={group.id} style={GROUP}>
             {group.label || group.removeLabel ? (
@@ -441,7 +542,9 @@ export function FormIsland({ def, locale }: { def: PublicFormDef; locale: string
                 ) : null}
               </div>
             ) : null}
-            {def.fields.filter((field) => field.group === group.id).map(renderField)}
+            {def.fields
+              .filter((field) => field.group === group.id && !plan.slots.has(field.name))
+              .map(renderField)}
           </fieldset>
         ))}
 
@@ -561,6 +664,44 @@ const GROUP: React.CSSProperties = {
   border: "1px solid #e2e8f0",
   borderRadius: 12,
   background: "rgba(15,23,42,.02)",
+};
+const BASKET: React.CSSProperties = {
+  display: "grid",
+  gap: 8,
+  padding: 14,
+  border: "1px solid #e2e8f0",
+  borderRadius: 12,
+  background: "rgba(15,23,42,.02)",
+};
+const LINES: React.CSSProperties = {
+  listStyle: "none",
+  margin: 0,
+  padding: 0,
+  display: "grid",
+  gap: 8,
+};
+const LINE: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  flexWrap: "wrap",
+};
+const QTY: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+};
+const STEP: React.CSSProperties = {
+  font: "inherit",
+  lineHeight: 1,
+  width: 26,
+  height: 26,
+  padding: 0,
+  border: "1px solid #cbd5e1",
+  borderRadius: 999,
+  background: "#fff",
+  color: "#0f172a",
+  cursor: "pointer",
 };
 const GROUP_HEAD: React.CSSProperties = {
   display: "flex",

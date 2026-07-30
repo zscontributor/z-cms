@@ -2,5 +2,27 @@
   "notFound": {
     "title": "Page not found",
     "backHome": "Back to home"
+  },
+  "form": {
+    "required": "This field is required.",
+    "email": "Please enter a valid email address, e.g. name@example.com.",
+    "url": "Please enter a valid URL starting with http:// or https://.",
+    "date": "Please choose a valid date.",
+    "pattern": "This value is not in the expected format.",
+    "number": "Please enter a number.",
+    "min": "Please enter {n} or more.",
+    "max": "Please enter {n} or less.",
+    "minLength": "Please use at least {n} characters.",
+    "maxLength": "Please use at most {n} characters.",
+    "invalid": "Please choose one of the options.",
+    "send": "Send",
+    "sending": "Sending…",
+    "ok": "Thank you! Your submission has been received.",
+    "error": "Sorry, that could not be sent. Please check the fields and try again.",
+    "choose": "— Please choose —",
+    "basket": "Your basket",
+    "removeLine": "Remove",
+    "less": "One fewer",
+    "more": "One more"
   }
 }

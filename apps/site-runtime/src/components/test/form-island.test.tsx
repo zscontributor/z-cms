@@ -2,7 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { PublicFormDef } from "@zcmsorg/schemas";
 import { FormIsland } from "../form-island";
+import { formMessages } from "@/lib/form-messages";
 import { readPicks, writePicks } from "@/lib/form-pick";
+
+/** The same words the server would hand the island for a Vietnamese visitor. */
+const VI = formMessages("vi");
 
 /**
  * What a visitor is told when something is wrong.
@@ -51,7 +55,7 @@ describe("FormIsland inline validation", () => {
   it("refuses a negative quantity in the browser, beside the box it was typed in", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
-    render(<FormIsland def={DEF} locale="vi" />);
+    render(<FormIsland def={DEF} messages={VI} />);
 
     type("Tên người đặt", "Linh");
     type("Số lượng", "-2");
@@ -80,7 +84,7 @@ describe("FormIsland inline validation", () => {
         json: async () => ({ ok: false, fields: { quantity1: "number" } }),
       }),
     );
-    render(<FormIsland def={DEF} locale="vi" />);
+    render(<FormIsland def={DEF} messages={VI} />);
 
     type("Tên người đặt", "Linh");
     type("Số lượng", "3");
@@ -93,7 +97,7 @@ describe("FormIsland inline validation", () => {
 
   it("clears a field's message as soon as the visitor fixes it", async () => {
     vi.stubGlobal("fetch", vi.fn());
-    render(<FormIsland def={DEF} locale="vi" />);
+    render(<FormIsland def={DEF} messages={VI} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Gửi đơn đặt" }));
     // Only the name: the quantity starts at its declared default of 1, which is
@@ -115,7 +119,7 @@ describe("FormIsland inline validation", () => {
         json: async () => ({ ok: false, fields: { quantity1: "min" } }),
       }),
     );
-    render(<FormIsland def={DEF} locale="vi" />);
+    render(<FormIsland def={DEF} messages={VI} />);
 
     type("Tên người đặt", "Linh");
     type("Số lượng", "3");
@@ -135,7 +139,7 @@ describe("FormIsland inline validation", () => {
       "fetch",
       vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ok: false }) }),
     );
-    render(<FormIsland def={DEF} locale="vi" />);
+    render(<FormIsland def={DEF} messages={VI} />);
 
     type("Tên người đặt", "Linh");
     type("Số lượng", "3");
@@ -150,7 +154,7 @@ describe("FormIsland inline validation", () => {
 
   it("keeps what the visitor typed when a send fails", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
-    render(<FormIsland def={DEF} locale="vi" />);
+    render(<FormIsland def={DEF} messages={VI} />);
 
     type("Tên người đặt", "Linh");
     type("Số lượng", "3");
@@ -166,7 +170,7 @@ describe("FormIsland inline validation", () => {
       "fetch",
       vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ok: true }) }),
     );
-    render(<FormIsland def={{ ...DEF, successMessage: "Đã nhận đơn." }} locale="vi" />);
+    render(<FormIsland def={{ ...DEF, successMessage: "Đã nhận đơn." }} messages={VI} />);
 
     type("Tên người đặt", "Linh");
     type("Số lượng", "3");
@@ -186,7 +190,7 @@ describe("FormIsland inline validation", () => {
  */
 describe("FormIsland optional groups", () => {
   it("starts with the group closed, and offers one button to open it", () => {
-    render(<FormIsland def={DEF} locale="vi" />);
+    render(<FormIsland def={DEF} messages={VI} />);
 
     expect(screen.queryByLabelText("Món thứ hai", { exact: false })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "+ Thêm món khác" }));
@@ -196,12 +200,12 @@ describe("FormIsland optional groups", () => {
   });
 
   it("fills a declared default, so a quantity of one is not typed", () => {
-    render(<FormIsland def={DEF} locale="vi" />);
+    render(<FormIsland def={DEF} messages={VI} />);
     expect(screen.getByLabelText("Số lượng", { exact: false })).toHaveValue(1);
   });
 
   it("counts in whole drinks and refuses to go below one", () => {
-    render(<FormIsland def={DEF} locale="vi" />);
+    render(<FormIsland def={DEF} messages={VI} />);
     const quantity = screen.getByLabelText("Số lượng", { exact: false });
     // The spinner itself will not offer 0, 0.5 or -1.
     expect(quantity).toHaveAttribute("min", "1");
@@ -213,7 +217,7 @@ describe("FormIsland optional groups", () => {
       .fn()
       .mockResolvedValue({ ok: true, json: async () => ({ ok: true }) });
     vi.stubGlobal("fetch", fetchMock);
-    render(<FormIsland def={DEF} locale="vi" />);
+    render(<FormIsland def={DEF} messages={VI} />);
 
     type("Tên người đặt", "Linh");
     fireEvent.click(screen.getByRole("button", { name: "+ Thêm món khác" }));
@@ -236,7 +240,7 @@ describe("FormIsland optional groups", () => {
         json: async () => ({ ok: false, fields: { quantity2: "min" } }),
       }),
     );
-    render(<FormIsland def={DEF} locale="vi" />);
+    render(<FormIsland def={DEF} messages={VI} />);
 
     type("Tên người đặt", "Linh");
     fireEvent.click(screen.getByRole("button", { name: "Gửi đơn đặt" }));
@@ -289,24 +293,66 @@ function field(name: string): HTMLElement {
 describe("FormIsland basket", () => {
   afterEach(() => window.localStorage.clear());
 
-  it("fills its item slots from a basket filled on the menu page", () => {
+  it("shows what was picked instead of asking for it again", () => {
     writePicks("cafe-order", [
       { value: "CF-04", qty: 2 },
       { value: "TR-01", qty: 1 },
     ]);
-    render(<FormIsland def={ORDER} locale="vi" />);
+    render(<FormIsland def={ORDER} messages={VI} />);
 
-    expect(field("item1")).toHaveValue("CF-04");
-    expect(field("quantity1")).toHaveValue(2);
-    // The second drink opened its own box: a line folded away has not been added.
-    expect(screen.getByLabelText("Món thứ hai", { exact: false })).toHaveValue("TR-01");
+    // The basket says it, so the item and quantity boxes are not asked for — that
+    // is the whole change: the dropdowns were repeating the menu the visitor had
+    // just used, and the second/third lines were empty boxes below them.
+    expect(document.querySelector('[name="item1"]')).toBeNull();
+    expect(document.querySelector('[name="quantity1"]')).toBeNull();
+    expect(document.querySelector('[name="item2"]')).toBeNull();
+    expect(screen.queryByRole("button", { name: "+ Thêm món khác" })).not.toBeInTheDocument();
+
+    expect(screen.getByText("Cà phê muối")).toBeInTheDocument();
+    expect(screen.getByText("Trà đào cam sả")).toBeInTheDocument();
+  });
+
+  it("still sends the picked drinks under the names the plugin reads", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ok: true }) });
+    vi.stubGlobal("fetch", fetchMock);
+    writePicks("cafe-order", [
+      { value: "CF-04", qty: 2 },
+      { value: "TR-01", qty: 1 },
+    ]);
+    render(<FormIsland def={ORDER} messages={VI} />);
+
+    type("Tên người đặt", "Linh");
+    fireEvent.change(screen.getByLabelText("Hình thức nhận", { exact: false }), {
+      target: { value: "takeaway" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Gửi đơn đặt" }));
+
+    // Nothing downstream knows the boxes are gone: the order is the same order.
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const body = new URLSearchParams(fetchMock.mock.calls[0]![1].body as string);
+    expect(body.get("item1")).toBe("CF-04");
+    expect(body.get("quantity1")).toBe("2");
+    expect(body.get("item2")).toBe("TR-01");
+    expect(body.get("quantity2")).toBe("1");
+  });
+
+  it("counts a line up and down where the quantity box used to be", () => {
+    writePicks("cafe-order", [{ value: "CF-04", qty: 1 }]);
+    render(<FormIsland def={ORDER} messages={VI} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Thêm một" }));
+    expect(readPicks("cafe-order")).toEqual([{ value: "CF-04", qty: 2 }]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Bớt một" }));
+    expect(readPicks("cafe-order")).toEqual([{ value: "CF-04", qty: 1 }]);
   });
 
   it("never mistakes another select for an item slot", () => {
     writePicks("cafe-order", [{ value: "CF-04", qty: 1 }]);
-    render(<FormIsland def={ORDER} locale="vi" />);
+    render(<FormIsland def={ORDER} messages={VI} />);
 
-    // "How would you like it?" offers no drinks, so no drink may land in it.
+    // "How would you like it?" offers no drinks, so it is neither filled from the
+    // basket nor taken away with the item boxes.
     expect(field("orderType")).toHaveValue("");
   });
 
@@ -316,7 +362,7 @@ describe("FormIsland basket", () => {
       { value: "TR-01", qty: 1 },
       { value: "BK-02", qty: 1 },
     ]);
-    render(<FormIsland def={ORDER} locale="vi" />);
+    render(<FormIsland def={ORDER} messages={VI} />);
 
     // Two slots, three drinks: the badge must not go on promising the third.
     expect(readPicks("cafe-order")).toEqual([
@@ -325,22 +371,70 @@ describe("FormIsland basket", () => {
     ]);
   });
 
-  it("takes a line out of the basket when its box is removed", () => {
+  it("takes a line out of the basket, and out of the order it fills", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ok: true }) });
+    vi.stubGlobal("fetch", fetchMock);
     writePicks("cafe-order", [
       { value: "CF-04", qty: 1 },
       { value: "TR-01", qty: 1 },
     ]);
-    render(<FormIsland def={ORDER} locale="vi" />);
+    render(<FormIsland def={ORDER} messages={VI} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Bỏ món này" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Bỏ: Cà phê muối$/ }));
+    expect(readPicks("cafe-order")).toEqual([{ value: "TR-01", qty: 1 }]);
 
-    expect(readPicks("cafe-order")).toEqual([{ value: "CF-04", qty: 1 }]);
+    type("Tên người đặt", "Linh");
+    fireEvent.change(screen.getByLabelText("Hình thức nhận", { exact: false }), {
+      target: { value: "takeaway" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Gửi đơn đặt" }));
+
+    // The line that moved up must not ALSO still be sitting in the second slot —
+    // the drink removed was the first one, and one drink was ordered.
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const body = new URLSearchParams(fetchMock.mock.calls[0]![1].body as string);
+    expect(body.get("item1")).toBe("TR-01");
+    expect(body.get("item2")).toBe("");
+  });
+
+  it("hands the boxes back when the last line is taken out", () => {
+    writePicks("cafe-order", [{ value: "CF-04", qty: 1 }]);
+    render(<FormIsland def={ORDER} messages={VI} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /^Bỏ: Cà phê muối$/ }));
+
+    // An empty basket is a form nobody has used yet: it must still be orderable
+    // by someone who landed straight on it.
+    expect(field("item1")).toHaveValue("");
+    expect(field("quantity1")).toHaveValue(1);
+  });
+
+  it("hands a refused box back so the visitor can fix it", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        json: async () => ({ ok: false, fields: { item1: "invalid" } }),
+      }),
+    );
+    writePicks("cafe-order", [{ value: "CF-04", qty: 1 }]);
+    render(<FormIsland def={ORDER} messages={VI} />);
+
+    type("Tên người đặt", "Linh");
+    fireEvent.change(screen.getByLabelText("Hình thức nhận", { exact: false }), {
+      target: { value: "takeaway" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Gửi đơn đặt" }));
+
+    // Otherwise the form says "check the fields" about a field it is hiding.
+    expect(await screen.findByText("Vui lòng chọn một trong các lựa chọn.")).toBeInTheDocument();
+    expect(field("item1")).toHaveValue("CF-04");
   });
 
   it("empties the basket once the order is placed", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ok: true }) }));
     writePicks("cafe-order", [{ value: "CF-04", qty: 1 }]);
-    render(<FormIsland def={ORDER} locale="vi" />);
+    render(<FormIsland def={ORDER} messages={VI} />);
 
     type("Tên người đặt", "Linh");
     fireEvent.change(screen.getByLabelText("Hình thức nhận", { exact: false }), {
@@ -349,5 +443,65 @@ describe("FormIsland basket", () => {
     fireEvent.click(screen.getByRole("button", { name: "Gửi đơn đặt" }));
 
     await waitFor(() => expect(readPicks("cafe-order")).toEqual([]));
+  });
+});
+
+/**
+ * A DIFFERENT plugin's form. Nothing here is called `item` or `quantity`, the
+ * quantity boxes are declared after both slots rather than beside them, and the
+ * two slots sell different things — inference would find no basket in any of that.
+ * The form says what its fields are, and the runtime obeys.
+ */
+const SHOP: PublicFormDef = {
+  id: "shop-order",
+  submitLabel: "Đặt hàng",
+  fields: [
+    { name: "khachHang", type: "text", required: true, label: "Khách hàng" },
+    {
+      name: "sanPhamChinh",
+      type: "select",
+      role: "pick",
+      label: "Sản phẩm",
+      options: [{ value: "AO-01", label: "Áo thun" }],
+    },
+    {
+      name: "quaTang",
+      type: "select",
+      role: "pick",
+      label: "Quà tặng",
+      options: [{ value: "QT-01", label: "Ly sứ" }],
+    },
+    { name: "soLuongQua", type: "number", quantityFor: "quaTang", label: "SL quà" },
+    { name: "soLuongChinh", type: "number", quantityFor: "sanPhamChinh", label: "SL chính" },
+  ],
+};
+
+describe("FormIsland basket — a plugin that declares its own shape", () => {
+  afterEach(() => window.localStorage.clear());
+
+  it("fills and hides the declared boxes, whatever they are called", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ok: true }) });
+    vi.stubGlobal("fetch", fetchMock);
+    writePicks("shop-order", [
+      { value: "AO-01", qty: 3 },
+      { value: "QT-01", qty: 1 },
+    ]);
+    render(<FormIsland def={SHOP} messages={VI} />);
+
+    expect(document.querySelector('[name="sanPhamChinh"]')).toBeNull();
+    expect(document.querySelector('[name="soLuongChinh"]')).toBeNull();
+    expect(screen.getByText("Áo thun")).toBeInTheDocument();
+
+    type("Khách hàng", "Linh");
+    fireEvent.click(screen.getByRole("button", { name: "Đặt hàng" }));
+
+    // Each quantity reached the box the form NAMED, not the one that happened to
+    // be next to it — `soLuongQua` is declared first and belongs to the gift.
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const body = new URLSearchParams(fetchMock.mock.calls[0]![1].body as string);
+    expect(body.get("sanPhamChinh")).toBe("AO-01");
+    expect(body.get("soLuongChinh")).toBe("3");
+    expect(body.get("quaTang")).toBe("QT-01");
+    expect(body.get("soLuongQua")).toBe("1");
   });
 });
