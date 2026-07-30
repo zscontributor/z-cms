@@ -1,18 +1,12 @@
 import type { SessionUser } from "@zcmsorg/schemas";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { apiFetchMock, canMock, getSessionMock, revalidateMock } = vi.hoisted(() => ({
-  apiFetchMock: vi.fn(),
-  canMock: vi.fn(),
-  getSessionMock: vi.fn(),
-  revalidateMock: vi.fn(),
-}));
-
-vi.mock("next/headers", () => ({ cookies: async () => ({ delete: vi.fn() }) }));
-vi.mock("next/cache", () => ({ revalidatePath: revalidateMock }));
-vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
-vi.mock("@/lib/locale", () => ({ getT: async () => (key: string) => key }));
-vi.mock("@/lib/api", () => {
+const { ApiError, apiFetchMock, canMock, getSessionMock, revalidateMock } = vi.hoisted(() => {
+  /**
+   * The action decides whether to show the API's own words with `instanceof`, so
+   * a rejection has to be an instance of the very class the mocked module exports.
+   * Declared here, where both the factory below and the tests can reach it.
+   */
   class ApiError extends Error {
     status: number;
     body: unknown;
@@ -23,8 +17,25 @@ vi.mock("@/lib/api", () => {
       this.body = body;
     }
   }
-  return { ApiError, apiFetch: apiFetchMock, can: canMock, getSession: getSessionMock };
+  return {
+    ApiError,
+    apiFetchMock: vi.fn(),
+    canMock: vi.fn(),
+    getSessionMock: vi.fn(),
+    revalidateMock: vi.fn(),
+  };
 });
+
+vi.mock("next/headers", () => ({ cookies: async () => ({ delete: vi.fn() }) }));
+vi.mock("next/cache", () => ({ revalidatePath: revalidateMock }));
+vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
+vi.mock("@/lib/locale", () => ({ getT: async () => (key: string) => key }));
+vi.mock("@/lib/api", () => ({
+  ApiError,
+  apiFetch: apiFetchMock,
+  can: canMock,
+  getSession: getSessionMock,
+}));
 
 import { createUserAction } from "../user";
 
@@ -57,8 +68,7 @@ beforeEach(() => {
  */
 describe("createUserAction — what it hands back on a failure", () => {
   it("echoes every field when the API rejects the create", async () => {
-    const { ApiError } = await import("@/lib/api");
-    apiFetchMock.mockRejectedValue(new (ApiError as never)(409, "that address is taken"));
+    apiFetchMock.mockRejectedValue(new ApiError(409, "that address is taken"));
 
     const state = await createUserAction({}, form({ password: "a long enough password" }));
 
@@ -111,6 +121,6 @@ describe("createUserAction — what it hands back on a failure", () => {
 
     await createUserAction({}, form({ siteId: "" }));
 
-    expect(apiFetchMock.mock.calls[0][1].body.siteId).toBeNull();
+    expect(apiFetchMock.mock.calls[0]![1].body.siteId).toBeNull();
   });
 });

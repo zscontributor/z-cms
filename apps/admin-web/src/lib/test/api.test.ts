@@ -56,10 +56,11 @@ beforeEach(() => {
   // The cookie names a site the list below also contains, so it survives the check.
   cookieJar.set(SITE_COOKIE, "site-1");
   fetchMock = vi.fn();
+  // `vi.fn()` with no signature is typed as callable-or-constructable, which is
+  // not callable on its own. The cast names the shape it is standing in for.
+  const send = fetchMock as unknown as (url: string, init?: RequestInit) => Promise<Response>;
   vi.stubGlobal("fetch", (url: string, init?: RequestInit) =>
-    isSiteList(url, init)
-      ? Promise.resolve(jsonResponse([{ id: "site-1" }]))
-      : fetchMock(url, init),
+    isSiteList(url, init) ? Promise.resolve(jsonResponse([{ id: "site-1" }])) : send(url, init),
   );
 });
 
