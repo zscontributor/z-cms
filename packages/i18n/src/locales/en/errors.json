@@ -84,6 +84,7 @@
     "resourceReadOnly": "This resource is read-only.",
     "fieldRequired": "\"{column}\" is required.",
     "fieldInvalid": "\"{column}\" has a value of the wrong type.",
+    "fieldOutOfRange": "\"{column}\" must be {range}.",
     "invalidFieldValues": "Some fields are not valid: {detail}",
     "invalidHosts": "A plugin may only declare real hostnames it will reach. Refused: {hosts}. Wildcards on their own, IP addresses, ports and schemes are not allowed.",
     "noNetworkHosts": "The plugin \"{plugin}\" was granted network access but its manifest declares no hosts, so there is nowhere it may go.",

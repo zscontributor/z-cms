@@ -630,6 +630,12 @@ export interface PluginNavContribution {
 export interface PluginResourceColumn {
   column: string;
   label: string;
+  /**
+   * Present when this cell may be switched from the list itself — the plugin
+   * marked the column editable and declared a `select` for it, and the server
+   * resolved that field's choices here. Absent means an ordinary read-only cell.
+   */
+  editOptions?: Array<{ value: string; label: string }>;
 }
 
 export interface PluginResourceField {
@@ -678,6 +684,12 @@ export interface PluginResourceDescriptor {
    * descriptor cached from an older server will not carry it.
    */
   columnTypes?: Record<string, PluginColumnType>;
+  /**
+   * The declared bounds of every numeric column that has them, so a number input
+   * can carry `min`/`max`. The server enforces the same bounds on write; these
+   * only save the reader a round trip to find out.
+   */
+  columnBounds?: Record<string, { min?: number; max?: number }>;
   /** Other resources whose rows belong to one record of this one. */
   children?: {
     resource: string;
@@ -781,6 +793,21 @@ export async function getPluginRow(
 }> {
   return apiFetch(
     `/plugin-admin/${encodeURIComponent(pluginKey)}/${encodeURIComponent(resourceKey)}/${encodeURIComponent(id)}`,
+  );
+}
+
+/**
+ * The descriptor a create screen renders — the form, with no row behind it and no
+ * page of rows fetched to get at it. Refused for a reader who may not write, which
+ * is what makes the create screen a real URL rather than a form only reachable
+ * from a button somebody was allowed to see.
+ */
+export async function getPluginResourceForm(
+  pluginKey: string,
+  resourceKey: string,
+): Promise<{ resource: PluginResourceDescriptor }> {
+  return apiFetch(
+    `/plugin-admin/${encodeURIComponent(pluginKey)}/${encodeURIComponent(resourceKey)}/new`,
   );
 }
 

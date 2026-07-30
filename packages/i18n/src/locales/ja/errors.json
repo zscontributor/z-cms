@@ -84,6 +84,7 @@
     "resourceReadOnly": "このリソースは読み取り専用です。",
     "fieldRequired": "「{column}」は必須です。",
     "fieldInvalid": "「{column}」の値の型が正しくありません。",
+    "fieldOutOfRange": "「{column}」は {range} である必要があります。",
     "invalidFieldValues": "一部のフィールドが無効です: {detail}",
     "invalidHosts": "プラグインが宣言できるのは、実際に接続する正当なホスト名だけです。拒否されました: {hosts}。ワイルドカード単独、IP アドレス、ポート、スキームは使用できません。",
     "noNetworkHosts": "プラグイン「{plugin}」にはネットワーク権限が付与されていますが、マニフェストにホストの宣言がないため、接続先がありません。",

@@ -623,6 +623,56 @@ describe("PluginAdminController.list: searching and filtering", () => {
   });
 });
 
+/**
+ * The create screen's own fetch. It exists so opening a blank form does not have
+ * to list a page of rows to learn what the form is.
+ */
+describe("PluginAdminController.blank: the descriptor a create screen renders", () => {
+  beforeEach(() => {
+    holder.db = makeDb([]);
+  });
+
+  it("answers with the descriptor and its column types, reading no rows at all", async () => {
+    const { controller } = make();
+
+    const result = await controller.blank(
+      actor(RESOURCE.permissions.read, RESOURCE.permissions.write),
+      "s1",
+      "vn.zsoft.plugin.medical",
+      RESOURCE.key,
+    );
+
+    expect(result.resource).toMatchObject(RESOURCE);
+    expect(result.resource.columnTypes).toMatchObject({ phone: "text", id: "uuid" });
+    // The whole point: no SELECT, and above all no count(*) over the table.
+    expect(holder.db.$queryRawUnsafe).not.toHaveBeenCalled();
+  });
+
+  it("is gated by WRITE — a read-only role has no create screen", async () => {
+    const { controller } = make();
+
+    await expect(
+      controller.blank(actor(RESOURCE.permissions.read), "s1", "vn.zsoft.plugin.medical", RESOURCE.key),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it("refuses a resource the plugin declared read-only for everyone", async () => {
+    const { controller } = make({
+      ...RESOURCE,
+      permissions: { read: RESOURCE.permissions.read },
+    });
+
+    await expect(
+      controller.blank(
+        actor(RESOURCE.permissions.read, RESOURCE.permissions.write),
+        "s1",
+        "vn.zsoft.plugin.medical",
+        RESOURCE.key,
+      ),
+    ).rejects.toThrow(ForbiddenException);
+  });
+});
+
 describe("PluginAdminController: the id guard covers the write routes too", () => {
   beforeEach(() => {
     holder.db = makeDb([{ id: ROW_ID }]);
@@ -657,6 +707,97 @@ describe("PluginAdminController: the id guard covers the write routes too", () =
       ),
     ).rejects.toThrow(NotFoundException);
     expect(holder.db.$executeRawUnsafe).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * A bound is a property of the COLUMN, so it holds for whatever wrote the row —
+ * and the `<input min>` the admin renders is a courtesy, not the control. These
+ * cover the control.
+ */
+describe("PluginAdminController: declared numeric bounds", () => {
+  const PRICED = {
+    name: "p_vn_zsoft_plugin_medical__fees",
+    columns: [
+      { name: "label", type: "text" },
+      { name: "price", type: "numeric", min: 0 },
+      { name: "discount", type: "integer", nullable: true, min: 0, max: 100 },
+    ],
+  } as const;
+
+  const RES = {
+    ...RESOURCE,
+    table: PRICED.name,
+    list: { columns: [{ column: "label", label: "Fee" }] },
+    form: {
+      fields: [
+        { column: "label", label: "Fee" },
+        { column: "price", label: "Price", input: "number" },
+      ],
+    },
+  } as const;
+
+  function priced() {
+    const plugins = {
+      adminResourceFor: vi.fn().mockResolvedValue({ resource: RES, table: PRICED }),
+      dispatchActionTo: vi.fn().mockResolvedValue(undefined),
+    };
+    return new PluginAdminController(plugins as never);
+  }
+
+  const write = () => actor(RES.permissions.read, RES.permissions.write);
+
+  beforeEach(() => {
+    holder.db = makeDb([{ id: ROW_ID }]);
+  });
+
+  it("refuses a negative price on create, and writes nothing", async () => {
+    await expect(
+      priced().create(write(), "s1", "vn.zsoft.plugin.medical", RES.key, {
+        label: "Consultation",
+        price: -1,
+      }),
+    ).rejects.toMatchObject({ status: 400 });
+    expect(holder.db.$queryRawUnsafe).not.toHaveBeenCalled();
+  });
+
+  it("refuses one on update too — a reprice is where this actually happens", async () => {
+    await expect(
+      priced().update(write(), "s1", "vn.zsoft.plugin.medical", RES.key, ROW_ID, { price: -0.5 }),
+    ).rejects.toMatchObject({ status: 400 });
+  });
+
+  it("names the column and the bound rather than saying 'invalid'", async () => {
+    // "-5 is not a number" would send whoever typed it looking for a fault that is
+    // not there. The message has to say which column and what would be accepted.
+    const error = await priced()
+      .create(write(), "s1", "vn.zsoft.plugin.medical", RES.key, { label: "X", price: -5 })
+      .catch((e: Error) => e);
+    expect((error as Error).message).toContain("price");
+    expect((error as Error).message).toContain("0");
+  });
+
+  it("lets the boundary itself through", async () => {
+    await expect(
+      priced().create(write(), "s1", "vn.zsoft.plugin.medical", RES.key, {
+        label: "Free check",
+        price: 0,
+      }),
+    ).resolves.toBeDefined();
+  });
+
+  it("hands the bounds to the screen so the input can carry them", async () => {
+    const detail = await priced().detail(
+      actor(RES.permissions.read),
+      "s1",
+      "vn.zsoft.plugin.medical",
+      RES.key,
+      ROW_ID,
+    );
+    expect(detail.resource.columnBounds).toEqual({
+      price: { min: 0 },
+      discount: { min: 0, max: 100 },
+    });
   });
 });
 

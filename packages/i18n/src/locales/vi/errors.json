@@ -84,6 +84,7 @@
     "resourceReadOnly": "Resource này chỉ đọc.",
     "fieldRequired": "\"{column}\" là bắt buộc.",
     "fieldInvalid": "\"{column}\" có giá trị sai kiểu.",
+    "fieldOutOfRange": "\"{column}\" phải {range}.",
     "invalidFieldValues": "Một số trường không hợp lệ: {detail}",
     "invalidHosts": "Plugin chỉ được khai báo hostname có thật mà nó sẽ gọi tới. Bị từ chối: {hosts}. Không chấp nhận ký tự đại diện đứng một mình, địa chỉ IP, cổng hay scheme.",
     "noNetworkHosts": "Plugin \"{plugin}\" được cấp quyền gọi mạng nhưng manifest không khai báo host nào, nên nó không có nơi nào để gọi tới.",

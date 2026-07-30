@@ -108,10 +108,7 @@ export default async function PluginResourcePage({ params, searchParams }: PageP
         labels={{
           new: t("common.new"),
           view: t("plugins.resource.view"),
-          edit: t("common.edit"),
           delete: t("common.delete"),
-          save: t("common.save"),
-          cancel: t("common.cancel"),
           empty: t("common.empty"),
           confirmDelete: t("common.confirmDelete"),
           actions: t("common.actions"),

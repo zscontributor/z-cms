@@ -30,6 +30,7 @@ export function ResourceForm({
   resourceKey,
   fields,
   columnTypes,
+  columnBounds,
   row,
   labels,
   onSaved,
@@ -40,10 +41,14 @@ export function ResourceForm({
   fields: PluginResourceField[];
   /** Declared column types, so a read-only cell is rendered as its own type. */
   columnTypes?: Record<string, PluginColumnType>;
+  /** Declared numeric bounds, put straight onto the number inputs. */
+  columnBounds?: Record<string, { min?: number; max?: number }>;
   /** The row being edited, or null to create one. */
   row: PluginRow | null;
   labels: ResourceFormLabels;
-  onSaved: () => void;
+  /** `id` is the row just created — absent on an update, which changed a row the
+   *  caller already knows about. */
+  onSaved: (id?: string) => void;
   onCancel: () => void;
 }) {
   const locale = useLocale();
@@ -68,7 +73,7 @@ export function ResourceForm({
         ? await updatePluginRowAction(pluginKey, resourceKey, String(row.id), payload)
         : await createPluginRowAction(pluginKey, resourceKey, payload);
 
-      if (result.ok) onSaved();
+      if (result.ok) onSaved(result.id);
       else setError(result.error);
     });
   }
@@ -137,6 +142,10 @@ export function ResourceForm({
             ) : (
               <Input
                 type={f.input === "number" ? "number" : f.input === "date" ? "datetime-local" : "text"}
+                // The declared bounds of the column, so the browser refuses a
+                // negative price at the keyboard. The server checks the same
+                // bounds on write — this is the courtesy, not the control.
+                {...(f.input === "number" ? (columnBounds?.[f.column] ?? {}) : {})}
                 value={
                   f.input === "date"
                     ? toDateTimeLocal(values[f.column])

@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import type { ReactNode } from "react";
 import { colorModeIconCss, colorModeScript } from "@/lib/color-mode";
 import { contactEnhanceScript } from "@/lib/contact-enhance";
+import { formPickScript } from "@/lib/form-pick";
 import { revealOnTargetScript } from "@/lib/reveal-on-target";
 import { sliderScript } from "@/lib/slider";
 import { queryScript } from "@/lib/plugin-query";
@@ -103,6 +104,15 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           nonce={nonce}
           suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: queryScript() }}
+        />
+        {/* Enhances every `data-zc-pick` Add control: keeps a per-form basket in
+            localStorage, counts it into the theme's `data-zc-pick-count` badge and
+            tells the form island to fill its item slots. With no JS the control is
+            still the anchor to the form it always was. */}
+        <script
+          nonce={nonce}
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: formPickScript() }}
         />
       </body>
     </html>

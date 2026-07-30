@@ -390,6 +390,58 @@ describe("coercePluginRow", () => {
     expect(errors).toEqual([]);
     expect(row.email).toBeNull();
   });
+
+  describe("declared bounds", () => {
+    const bounded: PluginTableSchema = {
+      name: "p_vn_zsoft_plugin_crm__prices",
+      columns: [
+        { name: "price", type: "numeric", min: 0 },
+        { name: "discount", type: "integer", nullable: true, min: 0, max: 100 },
+        { name: "delta", type: "integer", nullable: true },
+        { name: "label", type: "text", nullable: true, min: 5 },
+      ],
+    };
+
+    it("refuses a value below the minimum, and says so as a RANGE error", () => {
+      const { errors } = coercePluginRow(bounded, { price: -1 });
+      // Not `type`: "-1" IS a number, and telling someone who typed one that it is
+      // not a number sends them looking for a fault that is not there.
+      expect(errors).toEqual([{ column: "price", reason: "range" }]);
+    });
+
+    it("accepts the boundary itself — the bounds are inclusive", () => {
+      expect(coercePluginRow(bounded, { price: 0, discount: 100 }).errors).toEqual([]);
+    });
+
+    it("refuses a value above the maximum", () => {
+      const { errors } = coercePluginRow(bounded, { price: 1, discount: 101 });
+      expect(errors).toEqual([{ column: "discount", reason: "range" }]);
+    });
+
+    it("checks the coerced number, not the string that arrived", () => {
+      // A form posts strings. A bound that only compared what it was given would
+      // be comparing "-5" to 0 as text, where "-5" is the larger.
+      expect(coercePluginRow(bounded, { price: "-5" }).errors).toEqual([
+        { column: "price", reason: "range" },
+      ]);
+    });
+
+    it("leaves an unbounded column alone", () => {
+      expect(coercePluginRow(bounded, { price: 1, delta: -40 }).errors).toEqual([]);
+    });
+
+    it("ignores a bound on a non-numeric column rather than guessing at length", () => {
+      // `min: 5` on a `text` column is an author's mistake. Reading it as "at least
+      // five characters" would invent a second, undeclared rule.
+      expect(coercePluginRow(bounded, { price: 1, label: "hi" }).errors).toEqual([]);
+    });
+
+    it("still applies on a partial update, where a price is most often changed", () => {
+      expect(coercePluginRow(bounded, { price: -0.01 }, { partial: true }).errors).toEqual([
+        { column: "price", reason: "range" },
+      ]);
+    });
+  });
 });
 
 describe("buildPluginSelect where operators", () => {

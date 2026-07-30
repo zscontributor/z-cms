@@ -21,6 +21,7 @@ import {
   buildPluginUpdate,
   coercePluginRow,
   isPluginRowId,
+  pluginColumnBounds,
   pluginColumnTypes,
   resolveLocalized,
   type ResolvedPluginAdminResource,
@@ -298,6 +299,36 @@ export class PluginAdminController {
         .map((row) => ({ value: String(row[valueColumn] ?? ""), label: String(row[labelColumn] ?? "") }))
         .filter((option) => option.value !== ""),
     };
+  }
+
+  /**
+   * The create screen's descriptor — the form, with no row behind it.
+   *
+   * A create screen needs exactly what a list response carries and none of its
+   * rows, and asking for "page 1, one row" to get at the descriptor made every
+   * opening of a blank form run a `count(*)` over the plugin's table. Declared
+   * before `:id`, which cannot claim it anyway: every plugin row id is a uuid, so
+   * "new" names no row and would 404 there.
+   *
+   * Gated by WRITE, not read: this describes a form for making a row, and a
+   * read-only role has nothing to do with one.
+   */
+  @Get(":plugin/:resource/new")
+  @ApiOperation({
+    summary: "The descriptor a create screen renders",
+    description:
+      "The resource descriptor — label, form fields, column types and bounds — " +
+      "without reading any rows. Requires the resource's write permission.",
+  })
+  async blank(
+    @Actor() actor: RequestActor,
+    @SiteId() siteId: string,
+    @Param("plugin") pluginKey: string,
+    @Param("resource") resourceKey: string,
+  ): Promise<{ resource: ResolvedPluginAdminResource }> {
+    const { resource } = await this.resolve(actor, siteId, pluginKey, resourceKey);
+    this.requireWrite(actor, resource);
+    return { resource };
   }
 
   @Get(":plugin/:resource/:id")
@@ -685,8 +716,28 @@ export class PluginAdminController {
     // than guessing from the shape of the string. See `columnTypes`.
     return {
       ...found,
-      resource: { ...found.resource, columnTypes: pluginColumnTypes(found.table) },
+      resource: {
+        ...found.resource,
+        columnTypes: pluginColumnTypes(found.table),
+        columnBounds: pluginColumnBounds(found.table),
+      },
     };
+  }
+
+  /**
+   * The bounds of one column as a human reads them: "\u2265 0", "\u2264 100", "0\u2013100".
+   *
+   * Composed here rather than interpolated into the message, so one translation
+   * string covers a minimum, a maximum and a range instead of three — and so a
+   * column with only a `min` never renders the word "max" beside nothing.
+   */
+  private describeBoundsFor(table: PluginTableSchema, column: string): string {
+    const declared = table.columns.find((c) => c.name === column);
+    const { min, max } = declared ?? {};
+    if (min !== undefined && max !== undefined) return `${min}\u2013${max}`;
+    if (min !== undefined) return `\u2265 ${min}`;
+    if (max !== undefined) return `\u2264 ${max}`;
+    return "";
   }
 
   /**
@@ -703,11 +754,21 @@ export class PluginAdminController {
     if (errors.length) {
       const tr = t();
       const detail = errors
-        .map((e) =>
-          e.reason === "required"
-            ? tr("errors.plugins.fieldRequired", { column: e.column })
-            : tr("errors.plugins.fieldInvalid", { column: e.column }),
-        )
+        .map((e) => {
+          if (e.reason === "required") {
+            return tr("errors.plugins.fieldRequired", { column: e.column });
+          }
+          // A number outside its bounds is a DIFFERENT mistake from a value that
+          // is not a number, and saying "invalid" to someone who typed -5 sends
+          // them hunting for a fault that is not there.
+          if (e.reason === "range") {
+            return tr("errors.plugins.fieldOutOfRange", {
+              column: e.column,
+              range: this.describeBoundsFor(table, e.column),
+            });
+          }
+          return tr("errors.plugins.fieldInvalid", { column: e.column });
+        })
         .join(" ");
       throw new BadRequestException(tr("errors.plugins.invalidFieldValues", { detail }));
     }

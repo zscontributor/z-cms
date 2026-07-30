@@ -101,6 +101,7 @@
     "perPage": "Số dòng mỗi trang",
     "sortAsc": "Sắp xếp tăng dần",
     "sortDesc": "Sắp xếp giảm dần",
+    "newTitle": "Thêm mới",
     "detailTitle": "Chi tiết bản ghi",
     "fields": "Thông tin",
     "system": "Thông tin hệ thống",
@@ -111,6 +112,7 @@
     "markup": "Mã HTML đã lưu",
     "referenceSearch": "Tìm theo tên…",
     "referenceEmpty": "Không có kết quả.",
+    "referenceForbidden": "Bạn không có quyền xem danh sách này.",
     "related": "Liên quan",
     "relatedEmpty": "Chưa có gì."
   },

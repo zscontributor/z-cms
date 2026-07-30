@@ -226,6 +226,81 @@ describe("localized labels", () => {
     expect(stage.options).toEqual([{ value: "lead", label: "Tiềm năng" }]);
   });
 
+  describe("an editable list column", () => {
+    const editable = (
+      column: Record<string, unknown>,
+      field?: Record<string, unknown>,
+    ): PluginAdminContribution => ({
+      resources: [
+        {
+          key: "leads",
+          label: "Leads",
+          table: table.name,
+          list: { columns: [{ column: "stage", label: "Stage", ...column } as never] },
+          ...(field
+            ? { form: { fields: [{ column: "stage", label: "Stage", ...field } as never] } }
+            : {}),
+          permissions: { read: "crm:read", write: "crm:manage" },
+        },
+      ],
+    });
+
+    it("carries the record form's own choices onto the cell", () => {
+      const resolved = resolvePluginAdminResource(
+        editable(
+          { editable: true },
+          {
+            input: "select",
+            options: [
+              { value: "lead", label: { vi: "Tiềm năng", en: "Lead" } },
+              { value: "won", label: { vi: "Chốt", en: "Won" } },
+            ],
+          },
+        ).resources![0]!,
+        "vi",
+      );
+      // The list can never offer a value the record screen would refuse, and a new
+      // status is added in one place — this is what keeps the two from drifting.
+      expect(resolved.list.columns[0]?.editOptions).toEqual([
+        { value: "lead", label: "Tiềm năng" },
+        { value: "won", label: "Chốt" },
+      ]);
+    });
+
+    it("offers nothing when the column has no select behind it", () => {
+      // A column marked editable whose form field is a text box, or which has no
+      // form field at all: the cell degrades to plain text rather than to a
+      // dropdown with nothing in it.
+      for (const field of [undefined, { input: "text" as const }]) {
+        const resolved = resolvePluginAdminResource(
+          editable({ editable: true }, field).resources![0]!,
+          "en",
+        );
+        expect(resolved.list.columns[0]?.editOptions).toBeUndefined();
+      }
+    });
+
+    it("offers nothing for a readonly field — the record screen refuses it too", () => {
+      const resolved = resolvePluginAdminResource(
+        editable(
+          { editable: true },
+          { input: "select", readonly: true, options: [{ value: "lead", label: "Lead" }] },
+        ).resources![0]!,
+        "en",
+      );
+      expect(resolved.list.columns[0]?.editOptions).toBeUndefined();
+    });
+
+    it("leaves an ordinary column without choices", () => {
+      const resolved = resolvePluginAdminResource(
+        editable({}, { input: "select", options: [{ value: "lead", label: "Lead" }] })
+          .resources![0]!,
+        "en",
+      );
+      expect(resolved.list.columns[0]?.editOptions).toBeUndefined();
+    });
+  });
+
   it("passes a plain-string label through unchanged (back-compat)", () => {
     const plain: PluginAdminContribution = {
       resources: [

@@ -64,6 +64,21 @@ export interface PluginResourceColumn {
   /** A column of the backing table (a declared one, or a reserved core column). */
   column: string;
   label: LocalizedString;
+  /**
+   * Change this column from the list, without opening the record.
+   *
+   * For the columns a screen exists to *move* rather than to read: an order's
+   * status, a task's stage. Those get touched dozens of times a shift, and making
+   * each one a navigation — open, change one dropdown, save, go back, find your
+   * place again — is most of the work of using the screen.
+   *
+   * Only honoured when the column also has a `select` form field: the choices are
+   * that field's `options`, so a list cell can never offer a value the record
+   * screen would reject, and there is one place to add a new status. Ignored when
+   * the resource declares no write permission, and hidden from a reader who does
+   * not hold it — the same gate the edit form is behind, since this IS an edit.
+   */
+  editable?: boolean;
 }
 
 export interface PluginResourceField {
@@ -166,7 +181,19 @@ export type ResolvedPluginResourceField = Omit<PluginResourceField, "label" | "o
   label: string;
   options?: ResolvedPluginFieldOption[];
 };
-export type ResolvedPluginResourceColumn = { column: string; label: string };
+export type ResolvedPluginResourceColumn = {
+  column: string;
+  label: string;
+  /**
+   * The choices this cell may be switched between, resolved for one reader.
+   *
+   * Present only when the plugin marked the column `editable` AND declared a
+   * `select` field for it — so the admin needs no second lookup, and an
+   * `editable` the plugin cannot honour simply arrives without choices and
+   * renders as ordinary text.
+   */
+  editOptions?: ResolvedPluginFieldOption[];
+};
 export type ResolvedPluginAdminResource = Omit<
   PluginAdminResource,
   "label" | "list" | "form"
@@ -189,6 +216,16 @@ export type ResolvedPluginAdminResource = Omit<
    * as far as the screen that renders it.
    */
   columnTypes?: Record<string, PluginColumnType>;
+  /**
+   * The declared bounds of every numeric column that has them, so a number input
+   * can carry `min`/`max` and a browser can refuse "-5" before anyone waits for a
+   * round trip.
+   *
+   * Presentation only. `coercePluginRow` enforces the same bounds on the server
+   * for every write, which is where the guarantee lives — an `<input min>` is a
+   * courtesy to whoever is typing, not a control.
+   */
+  columnBounds?: Record<string, { min?: number; max?: number }>;
 };
 
 /**
@@ -205,6 +242,21 @@ export function pluginColumnTypes(table: PluginTableSchema): Record<string, Plug
   };
   for (const column of table.columns) types[column.name] = column.type;
   return types;
+}
+
+/** The declared `min`/`max` of every column that has one. */
+export function pluginColumnBounds(
+  table: PluginTableSchema,
+): Record<string, { min?: number; max?: number }> {
+  const bounds: Record<string, { min?: number; max?: number }> = {};
+  for (const column of table.columns) {
+    if (column.min === undefined && column.max === undefined) continue;
+    bounds[column.name] = {
+      ...(column.min !== undefined ? { min: column.min } : {}),
+      ...(column.max !== undefined ? { max: column.max } : {}),
+    };
+  }
+  return bounds;
 }
 
 const SLUG_RE = /^[a-z][a-z0-9-]*$/;
@@ -406,10 +458,23 @@ export function resolvePluginAdminResource(
     label: resolveLocalized(resource.label, locale),
     list: {
       ...resource.list,
-      columns: resource.list.columns.map((column) => ({
-        column: column.column,
-        label: resolveLocalized(column.label, locale),
-      })),
+      columns: resource.list.columns.map((column) => {
+        // An editable cell's choices ARE the record form's, looked up here so the
+        // two can never drift: a status added to the form appears in the list, and
+        // a list cell can never offer one the record screen would refuse.
+        const field = column.editable
+          ? resource.form?.fields.find((f) => f.column === column.column)
+          : undefined;
+        const editOptions =
+          field?.input === "select" && !field.readonly
+            ? resolvePluginFieldOptions(field.options, locale)
+            : undefined;
+        return {
+          column: column.column,
+          label: resolveLocalized(column.label, locale),
+          ...(editOptions?.length ? { editOptions } : {}),
+        };
+      }),
     },
     form: resource.form
       ? {

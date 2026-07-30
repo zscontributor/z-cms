@@ -19,12 +19,20 @@
  *     element with `data-zc-field="col"` gets that row value as TEXT (never HTML —
  *     plugin data is untrusted); any `data-zc-href="col"` gets a safe href, and any
  *     `data-zc-src="col"` gets a safe src (a product photo, a store front).
+ *   - any `data-zc-attr="data-x:col,data-y:col"` writes row values into that
+ *     element's own `data-*` attributes — how a row's identity reaches a control
+ *     that acts on it later (the Add button's `data-zc-pick-value`).
  *   - optional `[data-zc-query-empty]` (shown when no rows) and
  *     `[data-zc-query-error]` (shown when the fetch fails).
  *
  * It is bounded: it only ever touches elements inside a `[data-zc-query]` the theme
  * marked, writes values as text, and refuses any non-http(s), non-relative URL — a
  * row from a plugin cannot inject markup or a `javascript:` link.
+ *
+ * `data-zc-attr` is fenced the same way, by NAME rather than by value: only an
+ * attribute beginning `data-` is ever written. A row column can therefore become
+ * `data-zc-pick-value` (which is the point — a basket needs to know WHICH drink
+ * was added) and can never become `onclick`, `href`, `src` or `style`.
  *
  * `src` goes through the SAME filter as `href` rather than a looser one, because
  * the dangerous shapes are the same: `javascript:` is inert in an `<img src>` but
@@ -84,6 +92,22 @@ export function queryScript(): string {
       for(var m=0;m<media.length;m++){
         var src=safeHref(item[media[m].getAttribute("data-zc-src")]);
         if(src)media[m].setAttribute("src",src);else media[m].removeAttribute("src");
+      }
+      var carriers=node.querySelectorAll("[data-zc-attr]");
+      for(var c=0;c<carriers.length;c++){
+        var pairs=(carriers[c].getAttribute("data-zc-attr")||"").split(",");
+        for(var p=0;p<pairs.length;p++){
+          var at=pairs[p].indexOf(":");
+          if(at<1)continue;
+          var attr=pairs[p].slice(0,at).trim().toLowerCase(),col=pairs[p].slice(at+1).trim();
+          /* Only a data-* attribute, never a handler or a URL one. */
+          if(!/^data-[a-z0-9-]+$/.test(attr)||!col)continue;
+          var val=item[col];
+          /* Raw, not fmt(): this is an identity a later click compares, and a
+             thousands separator would make "1500" stop matching itself. */
+          if(val==null||val==="")carriers[c].removeAttribute(attr);
+          else carriers[c].setAttribute(attr,""+val);
+        }
       }
       frag.appendChild(node);
     }

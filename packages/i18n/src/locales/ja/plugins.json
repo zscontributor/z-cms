@@ -101,6 +101,7 @@
     "perPage": "1ページの表示件数",
     "sortAsc": "昇順で並べ替え",
     "sortDesc": "降順で並べ替え",
+    "newTitle": "レコードを追加",
     "detailTitle": "レコード詳細",
     "fields": "項目",
     "system": "システム情報",
@@ -111,6 +112,7 @@
     "markup": "保存されたマークアップ",
     "referenceSearch": "名前で検索…",
     "referenceEmpty": "該当なし。",
+    "referenceForbidden": "この一覧を表示する権限がありません。",
     "related": "関連",
     "relatedEmpty": "まだありません。"
   },

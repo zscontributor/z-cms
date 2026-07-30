@@ -11,7 +11,10 @@ import {
 } from "@/lib/api";
 import { getT } from "@/lib/locale";
 
-export type PluginRowResult = { ok: true } | { ok: false; error: string };
+export type PluginRowResult =
+  /** `id` is set by create, so the screen can open the record it just made. */
+  | { ok: true; id?: string }
+  | { ok: false; error: string };
 
 function toMessage(error: unknown, fallback: string): string {
   return error instanceof ApiError ? error.message : fallback;
@@ -34,9 +37,10 @@ export async function createPluginRowAction(
   const t = await getT();
   if (!(await getSession())) return { ok: false, error: t("auth.session.expired") };
   try {
-    await createPluginRow(pluginKey, resourceKey, row);
+    const created = await createPluginRow(pluginKey, resourceKey, row);
     revalidatePath(`/x/${pluginKey}/${resourceKey}`);
-    return { ok: true };
+    const id = created.row?.id;
+    return { ok: true, ...(id === null || id === undefined ? {} : { id: String(id) }) };
   } catch (error) {
     return { ok: false, error: toMessage(error, t("common.error")) };
   }

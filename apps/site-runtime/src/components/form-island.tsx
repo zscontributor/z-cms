@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { checkFormField } from "@zcmsorg/schemas";
 import type { FormFieldErrorCode, PublicFormDef, PublicFormField } from "@zcmsorg/schemas";
+import { PICK_EVENT, readPicks, writePicks, type FormPick } from "@/lib/form-pick";
 
 /**
  * The runtime-owned renderer for a plugin-declared public form.
@@ -134,6 +135,58 @@ function validate(field: PublicFormField, raw: string, d: Dict): string {
   return code ? say(code, field, d) : "";
 }
 
+/**
+ * The quantity box belonging to a chosen item.
+ *
+ * A form declares its fields flat and in order — `item1, quantity1, item2,
+ * quantity2` — because that is what a server validates and a plugin handler
+ * reads. The pairing is therefore ADJACENCY, not a naming convention: the number
+ * field declared straight after a slot, in the same group, is that slot's
+ * quantity. A form whose slots carry no quantity simply has none, and a pick just
+ * chooses the item.
+ */
+function qtyPartner(def: PublicFormDef, slot: PublicFormField): PublicFormField | undefined {
+  const next = def.fields[def.fields.indexOf(slot) + 1];
+  if (!next || next.type !== "number") return undefined;
+  return (next.group ?? "") === (slot.group ?? "") ? next : undefined;
+}
+
+/**
+ * Where the basket lands in this form.
+ *
+ * A "slot" is any select that OFFERS the picked value — which is how the three
+ * item boxes of a pre-order form are told apart from its "how would you like it?"
+ * and "how will you pay?" boxes without core inventing a naming convention for
+ * plugins to obey. A pick the form cannot take (every slot full, or a drink the
+ * shop has withdrawn since it was added) is dropped rather than forced, and the
+ * caller writes the survivors back so the badge stops counting a line that no
+ * longer exists.
+ */
+function planPicks(def: PublicFormDef, picks: FormPick[]) {
+  const taken = new Set<string>();
+  const values: Record<string, string> = {};
+  const groups: string[] = [];
+  const applied: FormPick[] = [];
+
+  for (const pick of picks) {
+    const slot = def.fields.find(
+      (field) =>
+        field.type === "select" &&
+        !taken.has(field.name) &&
+        (field.options ?? []).some((option) => option.value === pick.value),
+    );
+    if (!slot) continue;
+    taken.add(slot.name);
+    values[slot.name] = pick.value;
+    if (slot.group) groups.push(slot.group);
+    const qty = qtyPartner(def, slot);
+    if (qty) values[qty.name] = String(pick.qty);
+    applied.push(pick);
+  }
+
+  return { values, groups, applied };
+}
+
 /** A field's starting value: what the form declared, or empty. */
 function initialValues(def: PublicFormDef): Record<string, string> {
   const values: Record<string, string> = {};
@@ -179,6 +232,36 @@ export function FormIsland({ def, locale }: { def: PublicFormDef; locale: string
     });
   };
 
+  /**
+   * The basket, poured into this form's item slots.
+   *
+   * This runs on mount as well as on every change, because the Add button is
+   * usually on ANOTHER page — a menu page has the list, this page has the form —
+   * so what a visitor chose reaches the form as stored state, not as a click this
+   * component saw. Opening the groups is part of applying: a second drink whose
+   * box is still folded away has not been added, it has been hidden.
+   */
+  const applyPicks = useCallback(() => {
+    const picks = readPicks(def.id);
+    if (picks.length === 0) return;
+    const plan = planPicks(def, picks);
+    if (plan.applied.length > 0) {
+      setValues((current) => ({ ...current, ...plan.values }));
+      setOpen((current) => [...new Set([...current, ...plan.groups])]);
+    }
+    if (plan.applied.length !== picks.length) writePicks(def.id, plan.applied);
+  }, [def]);
+
+  useEffect(() => {
+    applyPicks();
+    const onPick = (event: Event) => {
+      const detail = (event as CustomEvent<{ formId?: string }>).detail;
+      if (detail?.formId === def.id) applyPicks();
+    };
+    document.addEventListener(PICK_EVENT, onPick);
+    return () => document.removeEventListener(PICK_EVENT, onPick);
+  }, [applyPicks, def.id]);
+
   const groups = def.groups ?? [];
   /** The next group on offer — one button at a time, in declaration order. */
   const nextGroup = groups.find((group) => !open.includes(group.id));
@@ -192,6 +275,13 @@ export function FormIsland({ def, locale }: { def: PublicFormDef; locale: string
    */
   const closeGroup = (id: string) => {
     const names = def.fields.filter((field) => field.group === id).map((field) => field.name);
+    // Taking a line away takes it out of the BASKET too, or the badge keeps
+    // counting it and the next page pours it straight back in.
+    const dropped = new Set(names.map((name) => values[name]).filter(Boolean));
+    if (dropped.size > 0) {
+      const kept = readPicks(def.id).filter((pick) => !dropped.has(pick.value));
+      writePicks(def.id, kept);
+    }
     setOpen((current) => current.filter((entry) => entry !== id));
     setValues((current) => {
       const next = { ...current };
@@ -253,6 +343,8 @@ export function FormIsland({ def, locale }: { def: PublicFormDef; locale: string
       if (res.ok && data.ok !== false) {
         setValues({});
         setErrors({});
+        // The order is placed: the basket that filled it is spent, badge and all.
+        writePicks(def.id, []);
         setStatus("ok");
         return;
       }

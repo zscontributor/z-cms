@@ -101,6 +101,7 @@
     "perPage": "Rows per page",
     "sortAsc": "Sort ascending",
     "sortDesc": "Sort descending",
+    "newTitle": "New record",
     "detailTitle": "Record detail",
     "fields": "Fields",
     "system": "System information",
@@ -111,6 +112,7 @@
     "markup": "Stored markup",
     "referenceSearch": "Search by name…",
     "referenceEmpty": "No matches.",
+    "referenceForbidden": "You do not have permission to see this list.",
     "related": "Related",
     "relatedEmpty": "Nothing yet."
   },

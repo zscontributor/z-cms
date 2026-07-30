@@ -86,6 +86,7 @@ export default async function PluginRecordPage({ params, searchParams }: PagePro
             listPath={backPath}
             fields={descriptor.form.fields}
             columnTypes={descriptor.columnTypes}
+            columnBounds={descriptor.columnBounds}
             row={row}
             labels={{
               edit: t("common.edit"),

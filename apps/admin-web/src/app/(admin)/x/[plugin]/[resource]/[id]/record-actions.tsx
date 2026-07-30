@@ -19,6 +19,7 @@ export function RecordActions({
   pluginKey,
   resourceKey,
   columnTypes,
+  columnBounds,
   listPath,
   fields,
   row,
@@ -30,6 +31,8 @@ export function RecordActions({
   fields: PluginResourceField[];
   /** Declared column types, forwarded so the edit form reads values as declared. */
   columnTypes?: Record<string, PluginColumnType>;
+  /** Declared numeric bounds, forwarded so the edit form can refuse -5 locally. */
+  columnBounds?: Record<string, { min?: number; max?: number }>;
   row: PluginRow;
   labels: {
     edit: string;
@@ -67,6 +70,7 @@ export function RecordActions({
         resourceKey={resourceKey}
         fields={fields}
         columnTypes={columnTypes}
+        columnBounds={columnBounds}
         row={row}
         labels={{ save: labels.save, cancel: labels.cancel }}
         onSaved={() => {

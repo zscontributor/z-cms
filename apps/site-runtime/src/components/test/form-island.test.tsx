@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { PublicFormDef } from "@zcmsorg/schemas";
 import { FormIsland } from "../form-island";
+import { readPicks, writePicks } from "@/lib/form-pick";
 
 /**
  * What a visitor is told when something is wrong.
@@ -12,6 +13,14 @@ import { FormIsland } from "../form-island";
  * WHICH field or WHY. Every test here is about that message reaching the input it
  * belongs to, in the visitor's language.
  */
+
+/** The drinks an item slot offers — shared by every slot, which is what marks
+ * them as the same repeatable box rather than three unrelated dropdowns. */
+const DRINKS = [
+  { value: "CF-04", label: "Cà phê muối" },
+  { value: "TR-01", label: "Trà đào cam sả" },
+  { value: "BK-02", label: "Croissant bơ" },
+];
 
 const DEF: PublicFormDef = {
   id: "cafe-order",
@@ -235,5 +244,110 @@ describe("FormIsland optional groups", () => {
     // A message on a field nobody can see is not a message.
     expect(await screen.findByLabelText("Số lượng món hai", { exact: false })).toBeInTheDocument();
     expect(screen.getByText("Vui lòng nhập từ 1 trở lên.")).toBeInTheDocument();
+  });
+});
+
+/**
+ * The basket. A menu card's "Thêm" is on a page that usually does NOT carry this
+ * form, so what a visitor chose reaches it as stored state rather than as a click
+ * this component saw. Before this, the button scrolled here and added nothing.
+ */
+const ORDER: PublicFormDef = {
+  id: "cafe-order",
+  submitLabel: "Gửi đơn đặt",
+  fields: [
+    { name: "customerName", type: "text", required: true, label: "Tên người đặt" },
+    {
+      name: "orderType",
+      type: "select",
+      required: true,
+      label: "Hình thức nhận",
+      options: [{ value: "takeaway", label: "Mang đi" }],
+    },
+    { name: "item1", type: "select", required: true, label: "Món", options: DRINKS },
+    { name: "quantity1", type: "number", required: true, min: 1, defaultValue: "1", label: "Số lượng" },
+    { name: "item2", type: "select", group: "item2", label: "Món thứ hai", options: DRINKS },
+    {
+      name: "quantity2",
+      type: "number",
+      group: "item2",
+      min: 1,
+      defaultValue: "1",
+      label: "Số lượng món hai",
+    },
+  ],
+  groups: [{ id: "item2", addLabel: "+ Thêm món khác", label: "Món thứ hai", removeLabel: "Bỏ món này" }],
+};
+
+/** A control by the name the server will receive — two of them say "Món". */
+function field(name: string): HTMLElement {
+  const el = document.querySelector<HTMLElement>(`[name="${name}"]`);
+  if (!el) throw new Error(`no field named ${name}`);
+  return el;
+}
+
+describe("FormIsland basket", () => {
+  afterEach(() => window.localStorage.clear());
+
+  it("fills its item slots from a basket filled on the menu page", () => {
+    writePicks("cafe-order", [
+      { value: "CF-04", qty: 2 },
+      { value: "TR-01", qty: 1 },
+    ]);
+    render(<FormIsland def={ORDER} locale="vi" />);
+
+    expect(field("item1")).toHaveValue("CF-04");
+    expect(field("quantity1")).toHaveValue(2);
+    // The second drink opened its own box: a line folded away has not been added.
+    expect(screen.getByLabelText("Món thứ hai", { exact: false })).toHaveValue("TR-01");
+  });
+
+  it("never mistakes another select for an item slot", () => {
+    writePicks("cafe-order", [{ value: "CF-04", qty: 1 }]);
+    render(<FormIsland def={ORDER} locale="vi" />);
+
+    // "How would you like it?" offers no drinks, so no drink may land in it.
+    expect(field("orderType")).toHaveValue("");
+  });
+
+  it("drops a line the form cannot take, and stops counting it", () => {
+    writePicks("cafe-order", [
+      { value: "CF-04", qty: 1 },
+      { value: "TR-01", qty: 1 },
+      { value: "BK-02", qty: 1 },
+    ]);
+    render(<FormIsland def={ORDER} locale="vi" />);
+
+    // Two slots, three drinks: the badge must not go on promising the third.
+    expect(readPicks("cafe-order")).toEqual([
+      { value: "CF-04", qty: 1 },
+      { value: "TR-01", qty: 1 },
+    ]);
+  });
+
+  it("takes a line out of the basket when its box is removed", () => {
+    writePicks("cafe-order", [
+      { value: "CF-04", qty: 1 },
+      { value: "TR-01", qty: 1 },
+    ]);
+    render(<FormIsland def={ORDER} locale="vi" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Bỏ món này" }));
+
+    expect(readPicks("cafe-order")).toEqual([{ value: "CF-04", qty: 1 }]);
+  });
+
+  it("empties the basket once the order is placed", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ok: true }) }));
+    writePicks("cafe-order", [{ value: "CF-04", qty: 1 }]);
+    render(<FormIsland def={ORDER} locale="vi" />);
+
+    type("Tên người đặt", "Linh");
+    fireEvent.change(screen.getByLabelText("Hình thức nhận", { exact: false }), {
+      target: { value: "takeaway" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Gửi đơn đặt" }));
+
+    await waitFor(() => expect(readPicks("cafe-order")).toEqual([]));
   });
 });

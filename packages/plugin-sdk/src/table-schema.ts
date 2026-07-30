@@ -57,6 +57,23 @@ export interface PluginColumn {
    * function allowed, and only on a `timestamptz`.
    */
   default?: string | number | boolean | null;
+  /**
+   * Inclusive bounds for a numeric column — `min: 0` on a price, `max: 100` on a
+   * percentage.
+   *
+   * On the COLUMN rather than on the admin form field, because "a selling price is
+   * never negative" is a fact about the data, not about one screen. A form field
+   * is one of several doors: a website order, a row a barista types at the counter
+   * and an `admin.record.changed` handler all reach the same table, and a bound
+   * that only existed as an `<input min>` would be a suggestion to the first of
+   * them and absent from the rest. `coercePluginRow` enforces it on every write,
+   * and the admin ALSO reads it to put the bounds on the number input — so a
+   * mistake is caught before the round trip and cannot get through without one.
+   *
+   * Ignored on a non-numeric column.
+   */
+  min?: number;
+  max?: number;
 }
 
 export interface PluginIndex {
@@ -703,7 +720,12 @@ export function isPluginRowId(value: string): boolean {
   return UUID_RE.test(value);
 }
 
-export type PluginCoercionReason = "required" | "type";
+/**
+ * `range` is separate from `type` because they are different mistakes and the
+ * reader needs to be told which: "-5" IS a number, and answering "not a number"
+ * to someone who typed one sends them looking for a fault that is not there.
+ */
+export type PluginCoercionReason = "required" | "type" | "range";
 
 export interface PluginRowCoercion {
   /** The coerced row, ready for {@link buildPluginInsert}/{@link buildPluginUpdate}. */
@@ -760,6 +782,19 @@ function coerceValue(
 }
 
 /**
+ * Whether a coerced number satisfies its column's declared bounds.
+ *
+ * Bounds are only meaningful on a number, so a `min` an author put on a `text`
+ * column is ignored rather than compared against a string's length — guessing at
+ * what they meant would be a second, undeclared rule.
+ */
+function withinBounds(column: PluginColumn, value: number): boolean {
+  if (column.min !== undefined && value < column.min) return false;
+  if (column.max !== undefined && value > column.max) return false;
+  return true;
+}
+
+/**
  * Coerce and validate a form-posted row against a plugin table's declared column
  * types — the one place per-field typing lives, so every plugin's CRUD form gets
  * the same guarantees without writing any of it.
@@ -793,6 +828,10 @@ export function coercePluginRow(
     const { value, ok } = coerceValue(column.type, raw);
     if (!ok) {
       errors.push({ column: key, reason: "type" });
+      continue;
+    }
+    if (typeof value === "number" && !withinBounds(column, value)) {
+      errors.push({ column: key, reason: "range" });
       continue;
     }
     if (value === null) {

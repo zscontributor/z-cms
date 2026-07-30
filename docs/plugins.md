@@ -386,9 +386,17 @@ generates a settings form from `settingsSchema`:
   resource's READ permission, so a read-only role can open a record; a column the
   plugin declared in neither its form nor its list is not shown, because a plugin that
   surfaced it nowhere chose not to;
-- a **form**, from `form.fields`, offered on the record and for a new row to whoever
-  also holds the resource's write permission. A resource that declares no `form` is
+- a **form**, from `form.fields`, offered to whoever also holds the resource's write
+  permission: in place on the record for an edit, and at `…/<resource>/new` for a new
+  row. Creating has its own address rather than a panel that appears above the table,
+  so the form has a heading, survives a reload, can be linked to, and carries the same
+  "back to list" every record screen has. A resource that declares no `form` is
   read-only for everyone, including its own author.
+
+Every link into a record or into the create form carries the list's own state — page,
+ordering, search, filters — in a `?from=` parameter, and every way out of those screens
+(back, cancel, and the redirect after a delete) returns to it. A reader who opened the
+third row on page 5 of a filtered list comes back to page 5 of that filtered list.
 
 A `reference` field is a **searchable picker**, not a box to paste an id into. It
 names the table it points at, the column whose value is stored, and the column a

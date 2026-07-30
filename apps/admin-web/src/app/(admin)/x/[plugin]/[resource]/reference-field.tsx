@@ -43,6 +43,16 @@ export function ReferenceField({
   const t = useT();
   const [term, setTerm] = useState("");
   const [options, setOptions] = useState<Option[]>([]);
+  /**
+   * Set when the SERVER said no, as opposed to "nothing matched".
+   *
+   * A reference is gated by the read permission of the table it points AT, not of
+   * the screen it is on — so a role that may schedule shifts but may not read the
+   * staff list gets a 403 here. Rendering that as "No matches." is how this stayed
+   * invisible: an empty box looks like an empty table, and the one person who
+   * could have diagnosed it (an owner) never saw it.
+   */
+  const [forbidden, setForbidden] = useState(false);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   /**
@@ -101,7 +111,10 @@ export function ReferenceField({
           cache: "no-store",
         });
         const data = res.ok ? ((await res.json()) as { options?: Option[] }) : { options: [] };
-        if (!cancelled) setOptions(data.options ?? []);
+        if (!cancelled) {
+          setForbidden(res.status === 403);
+          setOptions(data.options ?? []);
+        }
       } catch {
         if (!cancelled) setOptions([]);
       } finally {
@@ -165,7 +178,13 @@ export function ReferenceField({
           {loading && options.length === 0 ? (
             <li className="px-3 py-2 text-sm z-muted">{t("common.loading")}</li>
           ) : options.length === 0 ? (
-            <li className="px-3 py-2 text-sm z-muted">{t("plugins.resource.referenceEmpty")}</li>
+            <li className="px-3 py-2 text-sm z-muted">
+              {t(
+                forbidden
+                  ? "plugins.resource.referenceForbidden"
+                  : "plugins.resource.referenceEmpty",
+              )}
+            </li>
           ) : (
             options.map((option) => (
               <li key={option.value}>
