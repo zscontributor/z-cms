@@ -4,8 +4,12 @@ import { CMS_API_URL, CMS_INTERNAL_TOKEN } from "@/lib/env";
 
 /**
  * The public plugin-query gateway, served at `/plugin-query/*` — deliberately NOT
- * under `/api/*`, which the cluster ingress reserves for cms-api (same reasoning as
- * `/commerce/*`). A runtime widget fetches here same-origin with the filter in the
+ * under `/api/*` (same reasoning as `/commerce/*`): a reverse proxy in front of the
+ * cluster only has to route cms-api's own prefix, `/api/v1`, and a gateway outside
+ * `/api` cannot be swallowed by a proxy rule that claims more than that. It has
+ * happened: an ingress `PathPrefix(/api)` sent `/api/forms/<id>/submit` to cms-api,
+ * which has no such route, and every public form 404'd. A runtime widget fetches
+ * here same-origin with the filter in the
  * query string; we forward it to cms-api's `/plugin-query/:capability` with the
  * internal token (the browser never sees it), and cms-api resolves the site from
  * `hostname`, dispatches the filter to the plugin that provides the capability, and
