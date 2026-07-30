@@ -3,6 +3,22 @@ packages:
   - "packages/*"
   - "themes/*"
   - "plugins/*"
+  # Private products, kept out of the workspace on purpose.
+  #
+  # Their source is gitignored — they ship as signed packages through the
+  # marketplace, never as source in this repository. But a workspace member with
+  # dependencies gets an `importers:` entry in pnpm-lock.yaml, and THAT file is
+  # public: the lockfile was publishing the name and full dependency list of
+  # every private product to anyone who cloned z-cms. Excluding them here is
+  # what keeps the lockfile describing only what the repository actually ships.
+  #
+  # They are built exactly the way a community theme is: their own install
+  # inside their own directory (`pnpm install --ignore-workspace`), resolving
+  # this repo's SDKs through `link:` rather than `workspace:*`. Nothing about
+  # them is special any more, which is the point.
+  - "!themes/z-soft"
+  - "!themes/medical"
+  - "!plugins/medical"
 
 # Keep a single copy of these across the workspace so that themes/plugins
 # never bundle their own React against the site-runtime's React.

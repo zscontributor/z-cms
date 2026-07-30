@@ -2,6 +2,9 @@ node_modules/
 dist/
 .next/
 out/
+# A local package store, created when a private package outside the workspace
+# runs its own `pnpm install --ignore-workspace`. Cache, never source.
+.pnpm-store/
 
 # Verified-bundle caches: downloaded and re-verified at runtime, never source.
 .zcms-themes/
