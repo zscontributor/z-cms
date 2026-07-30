@@ -338,9 +338,37 @@ cost price deliberately absent from what `query` returns.
 A plugin that owns tables usually needs somewhere to look at them.
 `manifest.admin.resources` declares one per table — its label, its list columns, its
 form fields, its default ordering — and `manifest.admin.nav` places them in the
-sidebar. The admin generates the CRUD screens from that, the same way it generates a
-settings form from `settingsSchema`. Labels are locale maps, so the screens speak the
-admin's language rather than the plugin author's.
+sidebar. The admin generates three screens from that declaration, the same way it
+generates a settings form from `settingsSchema`:
+
+- a **list**, from `list.columns`, ordered by `list.orderBy` — paged, searchable and
+  filterable, with every control in the URL so the view a reader is looking at is a
+  link they can send. All three read closed sets off the declaration, and none of them
+  needs a line of admin code:
+  - **sort** — any column the resource LISTS;
+  - **search** (`q`) — a case-insensitive substring across the listed columns whose
+    declared type is `text`, so an already-published plugin gets a working search box
+    without a new manifest;
+  - **filters** (`f.<column>`) — a dropdown for each listed column the form declares
+    as a `select` or a `boolean`, accepting only the values the plugin declared. A
+    free-text column gets no dropdown: its values are not a knowable set, and one
+    built from the current page would claim there are no others.
+
+  Anything outside those sets — a real column the plugin surfaced nowhere, a status
+  value it never declared — is **ignored in favour of the plugin's own ordering and no
+  filter**, not refused: a stale bookmark should show records, and a filter the screen
+  would not draw must not be reachable by hand-writing the URL either;
+- a **record**, reached by clicking a row — every column the resource declared
+  anywhere, plus the platform's own `id`/`created_at`/`updated_at`. It is gated by the
+  resource's READ permission, so a read-only role can open a record; a column the
+  plugin declared in neither its form nor its list is not shown, because a plugin that
+  surfaced it nowhere chose not to;
+- a **form**, from `form.fields`, offered on the record and for a new row to whoever
+  also holds the resource's write permission. A resource that declares no `form` is
+  read-only for everyone, including its own author.
+
+Labels are locale maps, so the screens speak the admin's language rather than the
+plugin author's.
 
 Each resource names the permission keys that guard it, and a plugin may *introduce*
 those keys in `manifest.permissionsProvided` — `x:<plugin-slug>:<resource>:<read|manage>`,

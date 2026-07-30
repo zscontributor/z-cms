@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildPluginCount,
   buildPluginDelete,
   buildPluginInsert,
   buildPluginSelect,
   buildPluginUpdate,
+  isPluginRowId,
   coercePluginRow,
   generatePluginTableDdl,
   generatePluginTableDropDdl,
@@ -273,6 +275,52 @@ describe("query builders", () => {
     const q = buildPluginSelect(leads, scope, { where: { note: null } });
     expect(q.text).toContain(`"note" IS NULL`);
     expect(q.values).toEqual(["t1", "s1"]);
+  });
+});
+
+describe("buildPluginCount", () => {
+  it("counts within the token's tenant and site, never across them", () => {
+    const q = buildPluginCount(leads, scope);
+    expect(q.text).toBe(
+      `SELECT count(*)::bigint AS count FROM "${PREFIX}leads" ` +
+        `WHERE "tenant_id" = $1 AND "site_id" = $2`,
+    );
+    expect(q.values).toEqual(["t1", "s1"]);
+  });
+
+  it("takes the same where vocabulary as the select it paginates", () => {
+    // A count phrased more loosely than the select beside it would leak the size
+    // of a set the caller cannot read.
+    const q = buildPluginCount(leads, scope, { email: { op: "contains", value: "acme" } });
+    expect(q.text).toContain(`"email" ILIKE $3`);
+    expect(q.values).toEqual(["t1", "s1", "%acme%"]);
+  });
+
+  it("REFUSES a where on a column the table does not have", () => {
+    expect(() => buildPluginCount(leads, scope, { password: "x" })).toThrow(/Unknown column/);
+  });
+
+  it("binds a hostile value as a parameter, never as text", () => {
+    const q = buildPluginCount(leads, scope, { email: "x'; DROP TABLE users; --" });
+    expect(q.text).not.toContain("DROP TABLE");
+    expect(q.values).toContain("x'; DROP TABLE users; --");
+  });
+
+  it("has no LIMIT — a count of one page is not a total", () => {
+    expect(buildPluginCount(leads, scope).text).not.toContain("LIMIT");
+  });
+});
+
+describe("isPluginRowId", () => {
+  it("accepts the uuid the platform puts on every row, in either case", () => {
+    expect(isPluginRowId("3f1c9d2e-5a7b-4c8d-9e0f-1a2b3c4d5e6f")).toBe(true);
+    expect(isPluginRowId("3F1C9D2E-5A7B-4C8D-9E0F-1A2B3C4D5E6F")).toBe(true);
+  });
+
+  it("rejects anything else, so a uuid column is never compared against it", () => {
+    for (const value of ["", "1", "abc", "' OR 1=1 --", "3f1c9d2e5a7b4c8d9e0f1a2b3c4d5e6f"]) {
+      expect(isPluginRowId(value)).toBe(false);
+    }
   });
 });
 

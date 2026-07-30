@@ -676,14 +676,72 @@ export const getPluginAdminContributions = cache(
 
 export type PluginRow = Record<string, unknown>;
 
+export type PluginSortDirection = "asc" | "desc";
+
 export async function listPluginResource(
   pluginKey: string,
   resourceKey: string,
-  query: { page?: number; perPage?: number } = {},
-): Promise<{ resource: PluginResourceDescriptor; rows: PluginRow[] }> {
+  query: {
+    page?: number;
+    perPage?: number;
+    sort?: string;
+    dir?: PluginSortDirection;
+    /** Free-text term, matched against the resource's listed text columns. */
+    q?: string;
+    /** Equality filters, by column. Sent as `f.<column>`; the server re-validates. */
+    filters?: Record<string, string>;
+  } = {},
+): Promise<{
+  resource: PluginResourceDescriptor;
+  rows: PluginRow[];
+  /** Rows on this site, not on this page — what the pager counts against. */
+  total: number;
+  /** Echoed back: the server caps `perPage`, so it decides what a page is. */
+  page: number;
+  perPage: number;
+  /**
+   * The ordering the server APPLIED, which is not always the one asked for: a
+   * `sort` naming a column the plugin does not list falls back to its declared
+   * default. Read this, not the URL, when marking the sorted column.
+   */
+  order: { column: string; direction: PluginSortDirection } | null;
+  /** Columns the search term is matched against — empty means no search is possible. */
+  searchable: string[];
+  /** The filters the server ACCEPTED. An undeclared value is dropped, not echoed. */
+  filters: Record<string, unknown>;
+}> {
   return apiFetch(
     `/plugin-admin/${encodeURIComponent(pluginKey)}/${encodeURIComponent(resourceKey)}`,
-    { query: { page: query.page, perPage: query.perPage } },
+    {
+      query: {
+        page: query.page,
+        perPage: query.perPage,
+        sort: query.sort,
+        dir: query.dir,
+        q: query.q,
+        // `f.<column>` — the same prefix the endpoint reads, so a filter cannot
+        // collide with `page`/`sort`/`q` whatever a plugin called its column.
+        ...Object.fromEntries(
+          Object.entries(query.filters ?? {}).map(([column, value]) => [`f.${column}`, value]),
+        ),
+      },
+    },
+  );
+}
+
+/**
+ * One row, for the detail screen. Gated by the resource's READ permission, so a
+ * read-only role can open a record — which is the whole reason this exists next to
+ * `listPluginResource`: the list shows the columns the plugin chose for a table, and
+ * everything else about a record used to be visible only inside the edit form.
+ */
+export async function getPluginRow(
+  pluginKey: string,
+  resourceKey: string,
+  id: string,
+): Promise<{ resource: PluginResourceDescriptor; row: PluginRow }> {
+  return apiFetch(
+    `/plugin-admin/${encodeURIComponent(pluginKey)}/${encodeURIComponent(resourceKey)}/${encodeURIComponent(id)}`,
   );
 }
 

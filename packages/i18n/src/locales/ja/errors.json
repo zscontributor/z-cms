@@ -80,6 +80,7 @@
     "tableNotOwned": "このプラグインはテーブル「{table}」を操作できません。プラグインが宣言・所有するテーブルではありません。",
     "invalidAdmin": "プラグインの管理画面は自身のテーブルとリソースのみを参照できます。拒否されました: {detail}。",
     "resourceNotFound": "そのようなプラグインリソースはありません: 「{resource}」。",
+    "rowNotFound": "該当するレコードがありません: 「{id}」。",
     "resourceReadOnly": "このリソースは読み取り専用です。",
     "fieldRequired": "「{column}」は必須です。",
     "fieldInvalid": "「{column}」の値の型が正しくありません。",

@@ -92,6 +92,24 @@
     "settingsSaveFailed": "Could not save the settings.",
     "configureDenied": "You do not have permission to configure plugins."
   },
+  "resource": {
+    "view": "View",
+    "back": "Back to list",
+    "search": "Search records",
+    "searchPlaceholder": "Search…",
+    "filterAll": "all",
+    "perPage": "Rows per page",
+    "sortAsc": "Sort ascending",
+    "sortDesc": "Sort descending",
+    "detailTitle": "Record detail",
+    "fields": "Fields",
+    "system": "System information",
+    "id": "Record ID",
+    "createdAt": "Created",
+    "updatedAt": "Last updated",
+    "emptyValue": "Not set",
+    "markup": "Stored markup"
+  },
   "sandbox": {
     "database": "Reach the database directly",
     "filesystem": "Read or write files on the host",

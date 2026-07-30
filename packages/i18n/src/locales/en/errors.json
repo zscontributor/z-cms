@@ -80,6 +80,7 @@
     "tableNotOwned": "This plugin cannot operate the table \"{table}\": it is not one the plugin declared and owns.",
     "invalidAdmin": "A plugin's admin screens must reference its own tables and resources. Refused: {detail}.",
     "resourceNotFound": "No such plugin resource: \"{resource}\".",
+    "rowNotFound": "No such record: \"{id}\".",
     "resourceReadOnly": "This resource is read-only.",
     "fieldRequired": "\"{column}\" is required.",
     "fieldInvalid": "\"{column}\" has a value of the wrong type.",

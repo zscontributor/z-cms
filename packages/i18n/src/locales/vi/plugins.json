@@ -92,6 +92,24 @@
     "settingsSaveFailed": "Không lưu được cấu hình.",
     "configureDenied": "Bạn không có quyền cấu hình plugin."
   },
+  "resource": {
+    "view": "Xem",
+    "back": "Về danh sách",
+    "search": "Tìm bản ghi",
+    "searchPlaceholder": "Tìm kiếm…",
+    "filterAll": "tất cả",
+    "perPage": "Số dòng mỗi trang",
+    "sortAsc": "Sắp xếp tăng dần",
+    "sortDesc": "Sắp xếp giảm dần",
+    "detailTitle": "Chi tiết bản ghi",
+    "fields": "Thông tin",
+    "system": "Thông tin hệ thống",
+    "id": "Mã bản ghi",
+    "createdAt": "Tạo lúc",
+    "updatedAt": "Cập nhật lúc",
+    "emptyValue": "Chưa có",
+    "markup": "Mã HTML đã lưu"
+  },
   "sandbox": {
     "database": "Truy cập trực tiếp cơ sở dữ liệu",
     "filesystem": "Đọc hoặc ghi tệp trên hệ thống",

@@ -410,8 +410,29 @@ export interface PluginWhereClause {
  */
 export type PluginWhere = Record<string, unknown | PluginWhereClause>;
 
+/**
+ * One search box, across several columns — the only OR this grammar has, and a
+ * named shape rather than a general one.
+ *
+ * `where` cannot express it: it AND-s columns, so "name OR phone contains anh" is
+ * not sayable. The alternative to naming it here would be an OR tree in the query
+ * language, which is a much larger thing to have to keep safe for the sake of a
+ * search box. This is bounded instead: one term, one operator (case-insensitive
+ * substring), every column validated, the term bound ONCE and reused by every
+ * placeholder.
+ *
+ * An empty or blank term adds no condition at all — "search for nothing" means the
+ * unfiltered list, not zero rows.
+ */
+export interface PluginSearch {
+  /** Columns to look in. Each is validated against the table like any other. */
+  columns: string[];
+  term: string;
+}
+
 export interface PluginSelectOptions {
   where?: PluginWhere;
+  search?: PluginSearch;
   orderBy?: { column: string; direction?: "asc" | "desc" };
   limit?: number;
   offset?: number;
@@ -466,6 +487,7 @@ function buildWhere(
   scope: { tenantId: string; siteId: string },
   where: PluginWhere | undefined,
   start: number,
+  search?: PluginSearch,
 ): { clause: string; values: unknown[] } {
   const conds = [`"tenant_id" = $${start}`, `"site_id" = $${start + 1}`];
   const values: unknown[] = [scope.tenantId, scope.siteId];
@@ -521,11 +543,26 @@ function buildWhere(
     }
   }
 
+  // The search group, AND-ed with everything else: a term narrows the filtered set
+  // rather than widening it back out. One placeholder for the term, reused by every
+  // column, so a five-column search binds one value and not five copies of it.
+  const term = search?.term.trim();
+  if (term && search && search.columns.length > 0) {
+    const placeholder = bind(`%${escapeLike(term)}%`);
+    const ors = search.columns.map((column) => {
+      assertColumn(known, column);
+      return `${ident(column)}::text ILIKE ${placeholder}`;
+    });
+    conds.push(`(${ors.join(" OR ")})`);
+  }
+
   return { clause: conds.join(" AND "), values };
 }
 
 /**
- * The four builders below are the whole of what a plugin can do to its tables.
+ * The builders below are the whole of what can be phrased against a plugin's tables
+ * — four a plugin itself reaches through `ctx.db`, plus `buildPluginCount`, which
+ * only the admin screens use.
  * They are pure and take the tenant/site scope as an argument, because that scope
  * comes from the plugin's signed token at the gateway, never from the plugin —
  * so a plugin cannot phrase a query that reaches another site's rows, and cannot
@@ -560,7 +597,7 @@ export function buildPluginSelect(
   options: PluginSelectOptions = {},
 ): SqlQuery {
   const known = knownColumns(table);
-  const { clause, values } = buildWhere(known, scope, options.where, 1);
+  const { clause, values } = buildWhere(known, scope, options.where, 1, options.search);
 
   let text = `SELECT * FROM ${ident(table.name)} WHERE ${clause}`;
 
@@ -624,11 +661,47 @@ export function buildPluginDelete(
   return { text, values };
 }
 
+/**
+ * How many rows match — the number a pager needs and a `SELECT` cannot give.
+ *
+ * It exists for the admin screens: "page 3 of 7, 128 records" is not derivable from
+ * one page of rows, and the alternative (ask for one row more than fits and offer
+ * only next/prev) trades a real pager for a guess. Same `buildWhere`, so it is
+ * scoped, column-checked and parameterized exactly like the other builders — a
+ * count that could be phrased more loosely than the select beside it would be a way
+ * to learn the size of another site's table.
+ *
+ * Not reachable from plugin code: the gateway maps `ctx.db.select/insert/update/
+ * delete` and nothing else, and a plugin that wants a count can select and measure
+ * within its own bounded page.
+ */
+export function buildPluginCount(
+  table: PluginTableSchema,
+  scope: { tenantId: string; siteId: string },
+  where?: PluginWhere,
+  search?: PluginSearch,
+): SqlQuery {
+  const known = knownColumns(table);
+  const { clause, values } = buildWhere(known, scope, where, 1, search);
+  return { text: `SELECT count(*)::bigint AS count FROM ${ident(table.name)} WHERE ${clause}`, values };
+}
+
 // ---------------------------------------------------------------------------
 // Value coercion
 // ---------------------------------------------------------------------------
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Is this a value the `id` column could hold? Every plugin table's primary key is
+ * the platform's own `uuid` (see the DDL above), so anything else names no row —
+ * and comparing a uuid column against it is a type error, not an empty result.
+ * Exported so the API layer answers a mistyped id with a 404 instead of letting
+ * Postgres answer it with a 500.
+ */
+export function isPluginRowId(value: string): boolean {
+  return UUID_RE.test(value);
+}
 
 export type PluginCoercionReason = "required" | "type";
 

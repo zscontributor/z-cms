@@ -92,6 +92,24 @@
     "settingsSaveFailed": "設定を保存できませんでした。",
     "configureDenied": "プラグインを構成する権限がありません。"
   },
+  "resource": {
+    "view": "表示",
+    "back": "一覧へ戻る",
+    "search": "レコードを検索",
+    "searchPlaceholder": "検索…",
+    "filterAll": "すべて",
+    "perPage": "1ページの表示件数",
+    "sortAsc": "昇順で並べ替え",
+    "sortDesc": "降順で並べ替え",
+    "detailTitle": "レコード詳細",
+    "fields": "項目",
+    "system": "システム情報",
+    "id": "レコードID",
+    "createdAt": "作成日時",
+    "updatedAt": "最終更新",
+    "emptyValue": "未設定",
+    "markup": "保存されたマークアップ"
+  },
   "sandbox": {
     "database": "データベースに直接アクセスする",
     "filesystem": "ホスト上のファイルの読み取りまたは書き込み",
