@@ -797,6 +797,33 @@ export async function getPluginRow(
 }
 
 /**
+ * The rows a `reference` field may point at — what the picker on a shift form
+ * lists when you type a name.
+ *
+ * Called from a route handler rather than from a screen, because the picker is a
+ * client component: it searches as the visitor types, which is a fetch from the
+ * browser, and the browser has no cms-api token. See
+ * `app/api/plugin-admin/[plugin]/[resource]/options/[column]/route.ts`.
+ *
+ * `value` resolves ONE stored id to its label (for a form opened on a row that
+ * already points at something); `q` searches. The endpoint gives `value`
+ * precedence, so passing both is a lookup.
+ */
+export async function getPluginReferenceOptions(
+  pluginKey: string,
+  resourceKey: string,
+  column: string,
+  query: { q?: string; value?: string },
+): Promise<{ options: Array<{ value: string; label: string }> }> {
+  return apiFetch(
+    `/plugin-admin/${encodeURIComponent(pluginKey)}/${encodeURIComponent(
+      resourceKey,
+    )}/options/${encodeURIComponent(column)}`,
+    { query: { q: query.q, value: query.value } },
+  );
+}
+
+/**
  * The descriptor a create screen renders — the form, with no row behind it and no
  * page of rows fetched to get at it. Refused for a reader who may not write, which
  * is what makes the create screen a real URL rather than a form only reachable

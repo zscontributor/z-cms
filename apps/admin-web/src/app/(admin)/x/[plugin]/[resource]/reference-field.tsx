@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Input } from "@/components/ui/field";
+import { adminAssetPath } from "@/lib/assets";
 import { useT } from "@/lib/i18n-provider";
 
 /**
@@ -67,11 +68,23 @@ export function ReferenceField({
   const [chosenLabel, setChosenLabel] = useState<string | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
 
+  /**
+   * Through `adminAssetPath`, not as a bare "/api/…".
+   *
+   * The admin is served under a base path — "/admin" by default in production —
+   * so a root-relative fetch from the browser leaves the app entirely and asks
+   * the origin for a route only Next knows about. That is a 404, which this
+   * picker then drew as "no matches": the reason "Staff member" on a shift was
+   * empty in production and fine in dev, where the base path is "". The media
+   * dialog already wraps its own fetch this way.
+   */
   const endpoint = useMemo(
     () =>
-      `/api/plugin-admin/${encodeURIComponent(pluginKey)}/${encodeURIComponent(
-        resourceKey,
-      )}/options/${encodeURIComponent(column)}`,
+      adminAssetPath(
+        `/api/plugin-admin/${encodeURIComponent(pluginKey)}/${encodeURIComponent(
+          resourceKey,
+        )}/options/${encodeURIComponent(column)}`,
+      ),
     [pluginKey, resourceKey, column],
   );
 
