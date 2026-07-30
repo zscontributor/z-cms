@@ -392,7 +392,7 @@ contains `dist/` (JavaScript plus `.d.ts`) and the licence, never TypeScript sou
 - **[docs/security.md](docs/security.md)** — threat model and the defences, each with the test that proves it
 - **[docs/distribution.md](docs/distribution.md)** — package format, signing, and marketplace verification
 - **[docs/i18n.md](docs/i18n.md)** — how to translate Z-CMS: the two catalogues, themes, and what is not translated
-- **[docs/jobs.md](docs/jobs.md)** — the queue, the seven jobs, deduplication, and the dead-letter queue
+- **[docs/jobs.md](docs/jobs.md)** — the queue, the eight jobs, deduplication, and the dead-letter queue
 - **[docs/testing.md](docs/testing.md)** — where tests live, the coverage floors, and how the attack suites are written
 - **[packages/i18n/README.md](packages/i18n/README.md)** — adding a language, step by step
 

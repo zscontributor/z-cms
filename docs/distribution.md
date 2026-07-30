@@ -58,6 +58,13 @@ Packing is **reproducible**: the same source produces the same checksum (entries
 sorted, mtimes zeroed, POSIX separators). That is what lets anyone check that a
 package on the marketplace was built from the source they can read.
 
+A version's release notes ride in the manifest as `changelog` — one string, or a
+`{ locale: string }` map — and the admin shows them on the package card when an update
+is available. In the manifest rather than a `CHANGELOG.md` inside the payload because
+the answer to "what changed in the version you are being offered?" has to be readable
+*before* installing it: the envelope's manifest is what a registry and an admin screen
+can see, and the payload is not opened until a package is being installed.
+
 ## Screenshots and video
 
 Nobody installs a theme they cannot see. A package may declare up to three
@@ -361,10 +368,20 @@ zcms keygen [--out <dir>]
     and must never be committed or shared.
 
 zcms pack <dir> --kind theme|plugin --key <private.pem> --pub <public.pem> [--out <file>]
+            [--bump patch|minor|major] [--no-bump] [--set-version <semver>]
     Turns a built directory into one signed .zcms file. The result carries a
     publisher signature only, so no runtime will run it yet.
     Add --operator-key <private.pem> to ALSO stamp an operator signature, for
     sideloading into your own instance (see "Sideloading" below).
+
+    The version model is "ship what the manifest says, then advance it": the file
+    carries the version currently in the manifest, and after a successful pack the
+    manifest (and its sibling package.json) is bumped, so the next pack is
+    automatically a new version. That default matters because an installed version
+    is IMMUTABLE — a second pack of the same number is refused on install with
+    "already exists with different contents". Use --no-bump to leave the manifest
+    alone (repacking a version you have not shipped yet), --bump minor|major to
+    advance further, or --set-version to ship an exact one.
 
 zcms verify <file.zcms> [--marketplace-key <public.pem>]
     Checks a package the way a runtime would, so an author can prove to

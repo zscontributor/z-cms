@@ -259,6 +259,96 @@ and any marketplace package can put `"capabilities": ["ai.assistant"]` in its
 manifest. A capability string is a claim; `isCore` is a platform-controlled column.
 That one call insists on the second.
 
+### Two call names the platform dispatches for you
+
+`forms.submit` and `query` are ordinary calls with one difference: the *platform*
+invokes them, from a public HTTP door it owns, on behalf of a visitor nobody
+authenticated. That is why they are the only two a visitor's request can ever reach —
+a public endpoint that took the call name from the request would be a way to invoke
+any handler a plugin has.
+
+**`forms.submit` — a form on the public site, without shipping a theme.** A plugin
+declares the form in its manifest and the handler in `calls`:
+
+```ts
+manifest: {
+  forms: [{
+    id: "feedback",
+    title: { en: "Send feedback", vi: "Gửi góp ý" },
+    submitLabel: { en: "Send", vi: "Gửi" },
+    fields: [
+      { name: "email",   type: "email",    required: true, maxLength: 320,
+        label: { en: "Email", vi: "Email" } },
+      { name: "visited", type: "date",     label: { en: "When?", vi: "Khi nào?" } },
+      { name: "message", type: "textarea", required: true, minLength: 10,
+        label: { en: "Message", vi: "Nội dung" } },
+    ],
+  }],
+},
+
+calls: {
+  "forms.submit": async ({ formId, values }, ctx) => {
+    if (formId !== "feedback") return { ok: false };
+    await ctx.db.insert(NOTES, { email: values.email, body: values.message });
+    return { ok: true };
+  },
+},
+```
+
+Everything else is the platform's. The declaration is projected into the render
+payload; site-runtime's `core/form` block renders it **on every theme**, so a form
+appears on a site whose theme has never heard of your plugin. The values are validated
+against `buildFormSchema(fields)` — the same declaration the browser validated against,
+so client and server cannot disagree — before your handler is called. `{ ok: false }`
+is a handled rejection shown to the visitor as a normal error; throwing is a 502.
+
+A `label`, `title`, `submitLabel` or `successMessage` may be one string or a
+`{ locale: string }` map, and an option may be `{ value, label }`. Core resolves them
+to the locale of the page being rendered, so one manifest serves every language;
+option **values** are never translated, so a stored row reads the same whatever
+language it was submitted in. Field types are `text`, `textarea`, `email`, `tel`,
+`url`, `number`, `date` and `select` — `date` gives the visitor the browser's own
+calendar and is validated as a real calendar day on both sides.
+
+**`query` — a live, filtered list.** The read twin, reached at
+`/plugin-query/<capability>`:
+
+```ts
+calls: {
+  query: async ({ params }, ctx) => {
+    const rows = await ctx.db.select(PRODUCTS, {
+      where: params.q ? { name: { op: "contains", value: params.q } } : {},
+      orderBy: { column: "name", direction: "asc" },
+      limit: 60,
+    });
+    return { items: rows.map(publicFieldsOnly) };
+  },
+},
+```
+
+A theme renders a filter `<form data-zc-query="catalog.search">` and a row
+`<template>`; a runtime enhancer turns a submit into the fetch and writes each returned
+value in as **text**, never HTML, so plugin data cannot inject markup. Return only
+public fields — this is a door to the open internet, and the handler is the last place
+that decides what walks through it. `plugins/catalog` is the worked example, with the
+cost price deliberately absent from what `query` returns.
+
+### Admin screens, without shipping admin code
+
+A plugin that owns tables usually needs somewhere to look at them.
+`manifest.admin.resources` declares one per table — its label, its list columns, its
+form fields, its default ordering — and `manifest.admin.nav` places them in the
+sidebar. The admin generates the CRUD screens from that, the same way it generates a
+settings form from `settingsSchema`. Labels are locale maps, so the screens speak the
+admin's language rather than the plugin author's.
+
+Each resource names the permission keys that guard it, and a plugin may *introduce*
+those keys in `manifest.permissionsProvided` — `x:<plugin-slug>:<resource>:<read|manage>`,
+with the roles that hold them by default. They are namespaced from the plugin's own id
+and validated at install, so a plugin cannot mint `content:delete` or borrow another
+plugin's key. A user's effective permissions are their role's, unioned with the keys
+the site's active plugins provide; deactivating the plugin takes its keys away again.
+
 ---
 
 ## Mail: a plugin writes the letter, the host addresses the envelope
@@ -597,7 +687,12 @@ long as both declare `seo.metadata`.
   Federation for community plugins.
 - **No plugin-provided blocks.** Themes render blocks; a plugin's block would
   have to be rendered server-side inside the sandbox and returned as sanitised
-  HTML.
+  HTML. The gap is narrower than it was — a plugin's declared *form* renders on any
+  theme through the runtime's `core/form` block, and its `query` fills a theme's row
+  template — but both are shapes the platform renders, not markup the plugin wrote.
+- **No coverage floor on any plugin.** `pnpm verify:test-convention` insists each
+  plugin ships a suite; nothing notices if that suite stops covering anything. See
+  [testing.md](./testing.md#coverage-the-floor-not-the-target).
 - **Egress is not blocked at the infrastructure layer, and this now matters more
   than it did.** The isolate gives a plugin no way to open a socket, and every
   outbound request goes through cms-api, where the manifest's host list and the

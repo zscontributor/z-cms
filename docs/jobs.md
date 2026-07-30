@@ -35,7 +35,7 @@ cms-api ──enqueue──►  Redis (BullMQ)  ──►  apps/worker
 
 ## Jobs
 
-Seven of them. Four are produced by cms-api in response to something a person did;
+Eight of them. Five are produced by cms-api in response to something a person did;
 three the worker schedules for itself.
 
 | Job | Producer | What it does |
@@ -44,6 +44,7 @@ three the worker schedules for itself.
 | `site.sitemap` | publish / unpublish / delete | rebuilds `sitemap.xml` from published content |
 | `mail.send` | a plugin's `ctx.mail.send()`, or the CMS itself | delivers one email through the site's SMTP server, with retries |
 | `plugin.deferred` | a plugin's `ctx.jobs.enqueue()` | re-invokes the plugin in the sandbox, later |
+| `theme.build` | **Build** on a Theme Editor draft | turns the draft's `LayoutDocument` into source, CSS and a signed bundle (codegen → esbuild → sign), then installs it through cms-api's sideload gate. Carries the actor and their locale, so the audit entry has a name on it and a refusal — "this version already exists, bump it" — reaches the author in their own language |
 | `marketplace.sync` | the worker's clock, hourly at `:07` | pulls the signed revocation list and quarantines anything that was pulled — **the kill switch**, not housekeeping |
 | `media.sweep` | nightly, `03:45` | deletes storage objects no media row points at, and only if they are over 24 hours old |
 | `sessions.prune` | nightly, `03:15` | drops expired and revoked refresh tokens after a 30-day grace |
@@ -118,12 +119,15 @@ trust boundary intact.
 The sandbox gives a `job` handler 30s, against 5s for an action and 800ms for a
 filter: a deferred job is off the request path, so it can afford a real sweep.
 
-**In practice the ceiling is 12 seconds, not 30.** cms-api aborts its call to
-plugin-runtime at 12s for every invocation kind, and the worker aborts its call to
-cms-api at 15s, so a job that runs longer dies on the network backstop rather than on
-its own deadline. That is a bug, not a design — it is written down in
-[architecture.md](./architecture.md#what-we-still-owe-plainly). Until it is fixed,
-write deferred jobs that finish inside 12 seconds, or chunk them.
+**In practice the ceiling is 15 seconds, not 30.** cms-api no longer pre-empts the
+handler — its wait on plugin-runtime is now sized per invocation kind, with headroom
+over the sandbox's own deadline (35s for a job or a call, 15s for setup/teardown, 3s
+for a filter, 12s for an action). What still cuts a deferred job short is the leg
+*above* it: the worker aborts its call to cms-api at 15s
+([`plugin-deferred.ts`](../apps/worker/src/jobs/plugin-deferred.ts)), so a job that
+runs longer dies on that backstop rather than on its own deadline. Until the two
+agree, write deferred jobs that finish inside 15 seconds, or chunk them. It is
+written down in [plugins.md](./plugins.md#what-we-still-owe-plainly).
 
 ## Running it
 
@@ -144,7 +148,7 @@ encryption key or the JWT signing keys. That is the point of `marketplace.sync` 
 a worker job that posts *back* to cms-api rather than verifying anything itself: the
 worker is the clock, not the brain.
 
-## Deduplication is the same trick, four times
+## Deduplication is the same trick, five times
 
 Every producer sets a deterministic `jobId`, and BullMQ refuses a duplicate while
 the job is still pending. So:
@@ -155,6 +159,13 @@ the job is still pending. So:
 | `site.sitemap` | `sitemap-{siteId}` (+5s delay) | a burst of publishes → **one** rebuild |
 | `plugin.deferred` | `plugin-deferred-{sha256 of plugin, site, name, payload}` | a plugin enqueuing the same work in a loop |
 | `mail.send` | `mail-{fingerprint of the message}` | the same email enqueued twice |
+| `theme.build` | `theme-build-{draftId}` | two Builds of one draft |
+
+`theme.build` is the one that also *discards* the prior job under that id before
+enqueuing. The others want the pending job kept — a second identical upload has
+nothing to add. A rebuild does: the draft has changed since, so returning the older
+job's outcome would report the wrong build, and a completed-but-not-cleaned job
+under the same id would leave the draft stuck in `BUILDING`.
 
 (BullMQ forbids `:` in a job id, which is why these read as `media-variants-…` rather
 than the `media:variants:…` you might expect.)

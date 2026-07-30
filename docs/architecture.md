@@ -177,8 +177,9 @@ infrastructure/    PostgreSQL, Redis, API/admin images and persistent bundle vol
 The two vendored packages define a cross-repository protocol. Run
 `pnpm vendored:check` in `z-cms-marketplace` when changing package or scanner
 logic; signature, archive and scanning behavior must not drift between producer
-and consumer. The check currently reports drift; see
-[Known gaps and status-sensitive facts](#known-gaps-and-status-sensitive-facts).
+and consumer. It currently reports all 20 vendored files matching `z-cms` — so a
+change to `packages/package` or `packages/scanner` here is a change the marketplace
+must be re-synced against, and this check is what says whether that happened.
 
 ---
 
@@ -203,7 +204,7 @@ Browser          site-runtime               cms-api                 Redis / Post
    |                  |                         |-------------------------->|
    |                  |<------------------------| RenderPayload             |
    |                  | site/theme/menus/content/collections/alternates/    |
-   |                  | integrations/commerce                               |
+   |                  | archive/capabilities/integrations/forms             |
    |                  |                         |                           |
    |                  | verify + load theme, build ThemeContext             |
    |<-----------------| render HTML, metadata and runtime-owned slots       |
@@ -506,7 +507,37 @@ and snapshots those values into `orders`/`order_items`. Current checkout support
 cash on delivery; fulfilment and refund statuses adjust payment state in the
 admin workflow.
 
-### 10. SEO, robots and sitemap
+### 10. Public forms and plugin queries
+
+A theme renders on the server and ships no JavaScript, so it can neither validate
+input nor fetch. Two runtime-owned gateways close that gap without giving a theme or
+a plugin any more reach than it already had.
+
+**Writes — the forms layer.** A plugin declares a form in `manifest.forms` and a
+handler in `calls["forms.submit"]`. cms-api projects the declaration into
+`RenderPayload.forms`, resolving each localizable label to the locale being rendered;
+site-runtime's `core/form` block renders it on *every* theme (no theme cooperation,
+and a theme cannot meaningfully style a platform island). A submission posts to
+site-runtime, which forwards it to `POST /api/v1/forms/<id>/submit` with the render
+token. cms-api resolves which plugin owns that id from the installed manifests —
+never from the request — validates the values against `buildFormSchema(fields)`, the
+same declaration the browser validated against, and dispatches them to the plugin's
+handler in the sandbox. `{ ok: false }` is a handled rejection; a thrown handler is a
+502. The contact form is the core-owned twin of the same shape, mailing the active
+theme's configured address.
+
+**Reads — plugin query.** A plugin may also expose `calls["query"]`, reached at
+`/plugin-query/<capability>` (site-runtime → cms-api → the plugin that provides that
+capability). A theme renders a filter form and a row `<template>`; a runtime enhancer
+turns a submit into that fetch and writes the returned rows in as **text**. Only the
+fixed call name `query` is ever invoked, so a visitor cannot reach an arbitrary plugin
+call, and only for a capability an active plugin actually provides. Read-only,
+rate-limited, and a failure degrades to an empty list rather than an error page.
+
+Both are dispatched by capability or by declared form id, so neither the theme nor the
+browser ever names a plugin.
+
+### 11. SEO, robots and sitemap
 
 SEO resolution remains theme-owned:
 
@@ -647,6 +678,22 @@ respectively. Production Compose sets those ports explicitly and normally expose
 them through a reverse proxy. Marketplace admin/API use 3301/4300 in both local
 and production configurations.
 
+### What a reverse proxy in front of a site may claim
+
+Route **`/api/v1`** to `cms-api`, not `/api`. Every cms-api route hangs off the
+`api/v1` global prefix, docs included, so it answers nothing else under `/api` — while
+`site-runtime` owns several `/api/*` paths of its own: `/api/contact/submit`,
+`/api/forms/<id>/submit`, `/api/zai/chat`, `/api/integrations/*`, `/api/revalidate`
+and `/api/purge-package`. A rule that claims all of `/api` hands those to cms-api,
+which 404s on paths it never had, and every public form on the site stops working.
+
+This is not hypothetical: a Traefik router matching `PathPrefix(/api)` over every
+subdomain of the site host did exactly that. The failure is easy to misread, because a
+tenant on its own custom domain is unaffected — it falls through to the catch-all —
+so only the sites served under the platform host break. It is also why the browser
+gateways introduced later (`/plugin-query/*`, `/commerce/*`, `/integrations/*`) live
+outside `/api` entirely: a gateway there cannot be caught by that class of mistake.
+
 ### Network and credential placement
 
 - `cms-api` reaches PostgreSQL, Redis, S3, the marketplace and the sandbox network.
@@ -677,21 +724,23 @@ These are present limitations observed in the current source:
 - **Some system-client tenant reads remain.** Async plugin discovery and MFA/plugin
   paths use explicit tenant filters through `getSystemDb()`. They are safe only
   while those filters remain correct, unlike normal RLS-protected `db()` calls.
-- **Deferred plugin deadlines disagree.** The sandbox offers a longer `job`
-  budget than the CMS HTTP abort used for runtime calls, so the outer request may
-  terminate a job before its advertised sandbox budget.
+- **Deferred plugin deadlines disagree.** The sandbox gives a `job` handler 30s and
+  cms-api now waits per invocation kind with headroom over it (35s for job/call), but
+  the *worker's* call to cms-api still aborts at 15s — so a deferred job is cut off
+  by the leg above it, not by its advertised budget. See
+  [jobs.md](./jobs.md#timeouts).
 - **Repeated plugin runtime failures do not trip an automatic circuit breaker.**
   Marketplace revocation quarantines a package, but ordinary repeated
   timeout/error behavior does not.
 - **Package scanning is static only.** There is no dependency vulnerability/SBOM
   scan. The marketplace's human review covers non-trusted submissions, but cannot
   infer newly disclosed dependency risk from bundled code metadata.
-- **The vendored package protocol currently drifts between repositories.**
-  `pnpm vendored:check` in `z-cms-marketplace` reports marketplace-local changes
-  in `scanner/src/{ast,rules}.ts` and newer `archive`, `build`, `loader`,
-  `manifest-rules` and `types` files in `z-cms/packages/package`. Until the
-  intended versions are reconciled and synced, producer, registry and consumer
-  validation can disagree.
+- **The vendored package protocol is synced, and nothing enforces that it stays
+  synced.** `pnpm vendored:check` in `z-cms-marketplace` currently reports all 20
+  files matching, but it is a command someone has to remember to run: no CI job in
+  *this* repository fails when a change to `packages/package` or `packages/scanner`
+  lands without the marketplace being re-synced, and drift there means producer,
+  registry and consumer can disagree about whether a package is valid.
 - **Marketplace revocations are a full, unpaginated snapshot.** This is adequate
   at the current scale but not for an unbounded feed.
 - **The theme settings schema is duplicated** between the theme-side contract and

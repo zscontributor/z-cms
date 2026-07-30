@@ -33,6 +33,8 @@ acknowledgement and a fix timeline rather than a lawyer.
 | An admin accidentally granting a permission the plugin never asked for | The API refuses any grant outside the manifest | 400 (tested) |
 | A plugin declaring a core table as its own | `validatePluginTables()` rejects the install before any of its code runs | `verify:tables` (9 attacks) |
 | A broken plugin taking the website down | Actions are fire-and-forget; a failed filter is skipped and the original value used | site still 200 (tested) |
+| A visitor's request invoking an arbitrary plugin call | The two public doors dispatch **fixed** call names only — `forms.submit` and `query` — to whichever plugin owns the declared form id or provides the capability, resolved from installed manifests and never from the request. Both are rate-limited per IP; values are validated against the plugin's own declared fields before its handler sees them | by design |
+| A plugin's rows injecting markup into a page | The query enhancer writes every returned value as **text**, and refuses an `href` that is not http(s) or relative | by design |
 | A plugin escaping the sandbox (worst case assumed) | Container: read-only FS, `cap_drop: ALL`, non-root, **no credentials** — and **no route off the host**: plugin-runtime sits on an `internal: true` Docker network with no gateway, alone with cms-api. An escaped plugin cannot reach the internet or the cloud metadata endpoint, because there is nothing to reach it *through* | `docker-compose.prod.yml` **and** `z-cms-deploy/z-cms.stack.yml` — the lock must exist in **whichever one you deploy** (see below) |
 | A hostile **theme** (runs in-process in site-runtime, no isolate) reading a secret | site-runtime holds no DB/JWT/encryption/S3 secret — only a render-scoped token — and is hardened like plugin-runtime: read-only FS, `cap_drop: ALL`, non-root | stack files |
 | A theme using its stolen token to send mail as any tenant | The render token opens only read-only render endpoints; `/mail/deliver` requires the separate privileged token | by design |
@@ -114,9 +116,20 @@ route dynamic) and only the *API fetch* is cached, so each request produces fres
 HTML with a fresh nonce while still reusing the expensive lookup.
 
 Next stamps its own inline scripts with the nonce automatically. A script the app
-writes itself — admin-web's dark-mode bootstrap — must be stamped by hand from the
-`x-nonce` request header, or the CSP refuses it. That was a real 1-violation bug,
-caught in a browser and not by any typecheck.
+writes itself — admin-web's dark-mode bootstrap, and site-runtime's colour-mode,
+contact, slider and query enhancers — must be stamped by hand from the `x-nonce`
+request header, or the CSP refuses it. That was a real 1-violation bug, caught in a
+browser and not by any typecheck.
+
+`script-src` and `connect-src` are the strict ones, and deliberately so. `img-src`
+and `media-src` are **not**: on both front ends they allow any `https:` origin,
+because authored content and themes legitimately reference images and embedded media
+on hosts nobody can enumerate in advance — a CDN, a placeholder service, a customer's
+own bucket. That is a considered trade, not an oversight: an image cannot execute, and
+opening it does not widen where script may come from or where the page may talk to.
+`style-src` keeps `'unsafe-inline'` for the same practical reason (per-node styles a
+theme editor produces), which is why authored HTML is *also* sanitised on write rather
+than trusted to the CSP alone.
 
 ## Invariants worth dying on
 

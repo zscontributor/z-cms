@@ -39,7 +39,9 @@ that an attack fails.** Everything below is detail on that.
 
 ```bash
 pnpm test            # every unit suite in the workspace, via turbo
-pnpm verify          # the attack suites: RLS, sandbox escape, package signing,
+pnpm verify          # the convention and attack suites, in order: every package
+                     # declares a suite, every built-in package verifies against the
+                     # first-party key, then RLS, sandbox escape, package signing,
                      # revocation forgery, malware scan, plugin table ownership
 ```
 
@@ -188,6 +190,7 @@ a change drops below it. The floors are deliberately unequal:
 | --- | --- |
 | Contracts and queue (`schemas`, `queue`) | 90% |
 | Security-critical (`package`, `scanner`, `plugin-sdk`, `theme-sdk`, `i18n`) | 85% |
+| Theme generation (`theme-widgets`, `theme-codegen`, `theme-runner`) | 70–80% |
 | Core services (`database`, `worker`, `plugin-runtime`) | 75–80% |
 | Apps and UI (`cms-api`, `site-runtime`, `admin-web`) | 60–70% |
 
@@ -196,9 +199,12 @@ Two exceptions, both written down rather than quietly enjoyed:
 - **`packages/cli` has a floor of 0.** Its logic lives in `main.ts` and the `verify-*`
   entry points, which the harness always excludes from coverage; a floor over an empty
   measurement is theatre. Its behaviour is covered by tests all the same.
-- **`plugins/seo` and `plugins/zai` set no floor at all** and do not call `preset()`.
-  That is debt, not design — their tests can rot and CI will not notice. It is listed
-  in [architecture.md](./architecture.md#what-we-still-owe-plainly).
+- **No plugin under `plugins/` sets a floor**, and none calls `preset()` — a few have
+  no `vitest.config.ts` at all and run on the defaults. `pnpm verify:test-convention`
+  still insists each one ships at least one `test/*.test.ts`, so a plugin cannot arrive
+  untested; what is missing is the floor that would notice its tests rotting
+  afterwards. That is debt, not design, and it is listed in
+  [plugins.md](./plugins.md#what-we-still-owe-plainly).
 
 Coverage counts files with *no* test against you (`all: true`), so deleting a test
 can only lower the number, never raise it. But the floor is a floor: 85% of the
