@@ -51,6 +51,19 @@ export class CacheService implements OnModuleDestroy {
     return `cms:host:${hostname}`;
   }
 
+  /**
+   * hostname -> the site's public identity, for the sign-in screen.
+   *
+   * Its own key rather than a reuse of `hostKey`: that one holds the render
+   * resolution (tenant, locales, every domain) and is only ever written for a
+   * PUBLISHED site, while this one answers for a site in any state — an owner
+   * whose site is still a draft has to be able to sign in and see whose admin
+   * they are standing in. Both are purged together by `forgetHosts`.
+   */
+  static brandKey(hostname: string): string {
+    return `cms:brand:${hostname}`;
+  }
+
   /** Monotonic counter naming the current generation of a site's render cache. */
   static versionKey(siteId: string): string {
     return `cms:sitever:${siteId}`;
@@ -139,9 +152,13 @@ export class CacheService implements OnModuleDestroy {
    */
   async forgetHosts(hostnames: string[]): Promise<void> {
     if (hostnames.length === 0) return;
-    const keys = [...new Set(hostnames.flatMap(hostnameVariants))].map((h) =>
+    const keys = [...new Set(hostnames.flatMap(hostnameVariants))].flatMap((h) => [
       CacheService.hostKey(h),
-    );
+      // The login screen's copy of the same facts. It has its own key and its own
+      // TTL, so a rename or a new logo that skipped it would keep greeting the
+      // owner with the old brand long after the site itself had moved on.
+      CacheService.brandKey(h),
+    ]);
     try {
       await this.redis.unlink(...keys);
     } catch (err) {

@@ -418,6 +418,20 @@ const SiteDtoSchema = z.object({
     .nullable(),
 });
 
+/**
+ * The public sliver of a site, keyed by hostname. See `SiteBrandingDto` — every
+ * field is something a visitor to that hostname can already read off the page,
+ * which is what makes the endpoint safe to leave unauthenticated.
+ */
+const SiteBrandingDtoSchema = z.object({
+  siteId: z.uuid(),
+  name: z.string(),
+  brand: SiteBrandSchema.required(),
+  host: z
+    .string()
+    .describe("The registered spelling of the hostname asked about, e.g. \"example.com\"."),
+});
+
 const ContentTypeDtoSchema = z.object({
   id: z.uuid(),
   key: z.string(),
@@ -939,6 +953,7 @@ responses.add(SessionUserSchema, { id: "SessionUser" });
 responses.add(AuthResultSchema, { id: "AuthResult" });
 responses.add(BlockSchema, { id: "Block" });
 responses.add(SiteDtoSchema, { id: "SiteDto" });
+responses.add(SiteBrandingDtoSchema, { id: "SiteBrandingDto" });
 responses.add(ContentTypeDtoSchema, { id: "ContentTypeDto" });
 responses.add(ContentDtoSchema, { id: "ContentDto" });
 responses.add(TranslationDtoSchema, { id: "TranslationDto" });
@@ -1024,6 +1039,7 @@ export type ResponseSchemaId =
   | "InvitationCreated"
   | "UserCreated"
   | "SiteDto"
+  | "SiteBrandingDto"
   | "ContentTypeDto"
   | "ContentDto"
   | "TranslationDto"

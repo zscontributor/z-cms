@@ -566,6 +566,37 @@ export interface SiteDto {
   activeTheme: { key: string; name: string; version: string } | null;
 }
 
+/**
+ * Who a hostname belongs to, as much of it as an anonymous caller may know.
+ *
+ * The admin is served at `/admin` on EVERY tenant hostname, so the sign-in screen
+ * already knows which site it is standing in front of — it just has no session to
+ * ask with. This is the answer to that one question, and deliberately the whole
+ * answer: a name, a logo and the address of the site's own front door, all of them
+ * things any visitor to that hostname can already read off the public page.
+ *
+ * Nothing here is a secret, and nothing here is worth guessing: the id names a site
+ * whose domain the caller had to know in order to ask, and every other field is on
+ * the site's home page. What is NOT here matters as much — no status, no tenant, no
+ * locales, no theme — because none of that is visible from outside and none of it
+ * belongs on a login screen.
+ */
+export interface SiteBrandingDto {
+  /** The site this hostname resolves to. */
+  siteId: string;
+  /** The site's name, as its owner wrote it. */
+  name: string;
+  brand: SiteBrand;
+  /**
+   * The REGISTERED spelling of the hostname that was asked about.
+   *
+   * A request arriving on "www.example.com" when only "example.com" is registered
+   * resolves to "example.com" — the address the site actually answers at, which is
+   * the one worth putting behind a link.
+   */
+  host: string;
+}
+
 export type ContentTypeDto = {
   id: string;
   key: string;

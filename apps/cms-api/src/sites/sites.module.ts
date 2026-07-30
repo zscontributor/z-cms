@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   ConflictException,
   Controller,
@@ -9,20 +10,32 @@ import {
   Param,
   Patch,
   Post,
+  Query,
+  UseGuards,
 } from "@nestjs/common";
-import { ApiOperation, ApiTags } from "@nestjs/swagger";
-import { db, installCorePlugins, type Prisma } from "@zcmsorg/database";
-import { parseSiteBrand, type SiteBrand, type SiteDto } from "@zcmsorg/schemas";
+import { ApiOperation, ApiQuery, ApiTags } from "@nestjs/swagger";
+import { db, getSystemDb, installCorePlugins, type Prisma } from "@zcmsorg/database";
+import {
+  hostnameVariants,
+  normalizeHostname,
+  parseSiteBrand,
+  type SiteBrand,
+  type SiteBrandingDto,
+  type SiteDto,
+} from "@zcmsorg/schemas";
 import type { z } from "zod";
-import { Actor, RequirePermissions } from "../auth/decorators";
+import { Actor, Public, RequirePermissions } from "../auth/decorators";
 import { AuditService } from "../audit/audit.module";
 import { t } from "../common/i18n";
 import { toSiteDto } from "../common/mappers";
+import { RateLimit } from "../common/rate-limit.decorator";
+import { RateLimitGuard } from "../common/rate-limit.guard";
 import type { RequestActor } from "../common/request-context";
 import { ZodValidationPipe } from "../common/zod-validation.pipe";
 import {
   ApiAuthed,
   ApiNotFound,
+  ApiRateLimited,
   ApiZodBody,
   ApiZodResponse,
 } from "../openapi/decorators";
@@ -522,5 +535,91 @@ export class SitesController {
   }
 }
 
-@Module({ controllers: [SitesController] })
+/**
+ * The one thing a stranger may ask about a hostname: whose site is this?
+ *
+ * It exists for the sign-in screen. The admin is served at `/admin` on every tenant
+ * hostname, so a person signing in at `z-soft.com.vn/admin` is unmistakably signing
+ * in to Z-SOFT's site — and until this endpoint, the screen greeted them with the
+ * product's own logo, identical on all of them, because the only way to learn a
+ * site's name was to already hold a session on it.
+ *
+ * Unauthenticated by necessity and safe by narrowness: the caller must already know
+ * a hostname to ask, and every field of the answer is printed on that hostname's own
+ * home page. Nothing invisible from the outside — status, tenant, theme, locales —
+ * is in the DTO, so a wrong answer here cannot become a leak. Rate limited by IP
+ * regardless, since an open endpoint backed by a database query is worth capping.
+ *
+ * Cross-tenant by definition — we do not know whose site a hostname is until we have
+ * looked it up — so it uses the system client, exactly like `RenderService.resolveHost`,
+ * and caches for the same ten minutes under a key `forgetHosts` already purges.
+ */
+@ApiTags("Sites")
+@Controller("public/sites")
+@UseGuards(RateLimitGuard)
+export class PublicSiteController {
+  constructor(private readonly cache: CacheService) {}
+
+  @Public()
+  @Get("branding")
+  @ApiOperation({
+    summary: "Whose site answers at this hostname",
+    description:
+      "The site's name, brand and canonical hostname, for a surface that has no " +
+      "session yet — the admin sign-in screen, which is served at /admin on every " +
+      "tenant hostname and otherwise has no way to know which site it belongs to.\n\n" +
+      "Public on purpose, and narrow on purpose: the caller has to know a hostname " +
+      "to ask, and everything in the answer is already on that hostname's home " +
+      "page. Answers for a site in ANY status — a draft site's owner still has to " +
+      "sign in. 404 when no site is registered under the hostname.",
+  })
+  @ApiQuery({
+    name: "hostname",
+    required: true,
+    description: 'The host being served, e.g. "www.example.com". Port and scheme are ignored.',
+  })
+  @ApiZodResponse("SiteBrandingDto")
+  @ApiZodResponse("Error", { status: 400, description: "`hostname` is required." })
+  @ApiNotFound("No site is registered under that hostname.")
+  @ApiRateLimited("Too many lookups from this IP.")
+  @RateLimit({ by: "ip", points: 120, windowSec: 60 })
+  async branding(@Query("hostname") hostname?: string): Promise<SiteBrandingDto> {
+    // A Host header carries a port ("localhost:3001"); a registered domain never
+    // does. `normalizeHostname` strips scheme and path, this strips the port.
+    const requested = (normalizeHostname(hostname ?? "").split(":")[0] ?? "").trim();
+    if (!requested) throw new BadRequestException(t()("errors.render.missingHostname"));
+
+    const key = CacheService.brandKey(requested);
+    const cached = await this.cache.get<SiteBrandingDto>(key);
+    if (cached) return cached;
+
+    // Both spellings, for the same reason `resolveHost` looks at both: "www.x.com"
+    // is not a different site from "x.com". An exact row still wins — the fallback
+    // only fires when nothing matched.
+    const rows = await getSystemDb().domain.findMany({
+      where: { hostname: { in: hostnameVariants(requested) } },
+      select: {
+        hostname: true,
+        siteId: true,
+        site: { select: { name: true, settings: true } },
+      },
+    });
+    const domain = rows.find((row) => row.hostname === requested) ?? rows[0];
+    if (!domain) {
+      throw new NotFoundException(t()("errors.render.hostNotFound", { hostname: requested }));
+    }
+
+    const branding: SiteBrandingDto = {
+      siteId: domain.siteId,
+      name: domain.site.name,
+      brand: parseSiteBrand(domain.site.settings),
+      host: domain.hostname,
+    };
+
+    await this.cache.set(key, branding, 600);
+    return branding;
+  }
+}
+
+@Module({ controllers: [SitesController, PublicSiteController] })
 export class SitesModule {}
