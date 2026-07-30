@@ -960,16 +960,23 @@ export class PluginsService {
    * projector: the plugin declared the fields, core decides they may reach the page
    * (they are all presentational — no handler, no settings, no secrets). First
    * declarer of an id wins, so a duplicate across plugins can't shadow silently.
+   *
+   * `locale` is the locale being rendered, and it is what turns a plugin's
+   * multilingual declaration into one language. A plugin ships one manifest to every
+   * site, so its labels may be `{ en, vi, ja }`; resolving them HERE — rather than
+   * shipping the map to the browser — is what keeps `FormIsland` a renderer and
+   * keeps the payload one language, the same one the page around it is in.
    */
   async publicFormsFor(
     tenantId: string,
     siteId: string,
+    locale = "en",
   ): Promise<Record<string, PublicFormDef>> {
     const targets = await this.activePlugins(tenantId, siteId);
     const forms: Record<string, PublicFormDef> = {};
     for (const target of targets) {
       for (const form of target.forms) {
-        if (!forms[form.id]) forms[form.id] = toPublicForm(form);
+        if (!forms[form.id]) forms[form.id] = toPublicForm(form, locale);
       }
     }
     return forms;

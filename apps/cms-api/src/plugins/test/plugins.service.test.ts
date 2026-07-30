@@ -122,6 +122,58 @@ describe("PluginsService", () => {
     });
   });
 
+  describe("publicFormsFor", () => {
+    const localizedForm = {
+      id: "medical-appointment",
+      title: { en: "Request an appointment", vi: "Yêu cầu đặt lịch" },
+      submitLabel: { en: "Send", vi: "Gửi" },
+      fields: [
+        {
+          name: "service",
+          type: "select",
+          required: true,
+          label: { en: "Service", vi: "Dịch vụ" },
+          options: [{ value: "general", label: { en: "General medicine", vi: "Nội tổng quát" } }],
+        },
+      ],
+    };
+
+    function activeWithForm() {
+      holder.systemDb.sitePlugin.findMany.mockResolvedValue([
+        activeRow({
+          version: {
+            version: "1.0.0",
+            origin: "MARKETPLACE",
+            manifest: { forms: [localizedForm] },
+          },
+        }),
+      ]);
+    }
+
+    it("resolves a plugin's localized labels to the locale being rendered", async () => {
+      activeWithForm();
+
+      const forms = await makeService().publicFormsFor("t1", "s1", "vi");
+
+      const form = forms["medical-appointment"]!;
+      expect(form.title).toBe("Yêu cầu đặt lịch");
+      expect(form.submitLabel).toBe("Gửi");
+      expect(form.fields[0]?.label).toBe("Dịch vụ");
+      // The value stays stable across languages; only the label is translated.
+      expect(form.fields[0]?.options).toEqual([
+        { value: "general", label: "Nội tổng quát" },
+      ]);
+    });
+
+    it("falls back to English for a locale the plugin has no translation for", async () => {
+      activeWithForm();
+
+      const forms = await makeService().publicFormsFor("t1", "s1", "ja");
+
+      expect(forms["medical-appointment"]?.title).toBe("Request an appointment");
+    });
+  });
+
   describe("aiAssistantFor", () => {
     it("returns only public presentation settings, never provider credentials", async () => {
       holder.systemDb.sitePlugin.findFirst.mockResolvedValue({

@@ -82,6 +82,96 @@ describe("buildFormSchema", () => {
   });
 });
 
+describe("buildFormSchema: date fields", () => {
+  const schema = buildFormSchema([
+    { name: "day", type: "date", required: true },
+    { name: "maybe", type: "date" },
+  ]);
+
+  it("accepts a real calendar day and a blank optional", () => {
+    expect(schema.safeParse({ day: "2026-08-03", maybe: "" }).success).toBe(true);
+  });
+
+  it("rejects a wrong shape and a day that does not exist", () => {
+    expect(schema.safeParse({ day: "03/08/2026" }).success).toBe(false);
+    expect(schema.safeParse({ day: "2026-2-3" }).success).toBe(false);
+    expect(schema.safeParse({ day: "2026-02-30" }).success).toBe(false);
+    expect(schema.safeParse({ day: "2026-13-01" }).success).toBe(false);
+  });
+
+  it("still requires a required date", () => {
+    expect(schema.safeParse({ day: "" }).success).toBe(false);
+  });
+});
+
+describe("localized declarations", () => {
+  const form = {
+    id: "appointment",
+    title: { en: "Request an appointment", vi: "Yêu cầu đặt lịch" },
+    submitLabel: { en: "Send", vi: "Gửi" },
+    successMessage: { en: "Thank you.", vi: "Cảm ơn bạn." },
+    fields: [
+      {
+        name: "phone",
+        type: "tel" as const,
+        required: true,
+        label: { en: "Phone number", vi: "Số điện thoại" },
+      },
+      {
+        name: "service",
+        type: "select" as const,
+        required: true,
+        label: { en: "Service", vi: "Dịch vụ" },
+        options: [
+          { value: "general", label: { en: "General medicine", vi: "Nội tổng quát" } },
+          "other",
+        ],
+      },
+    ],
+  };
+
+  it("is a valid declaration", () => {
+    expect(validateFormDefinitions([form])).toEqual([]);
+  });
+
+  it("resolves every text to the rendered locale, options to value+label pairs", () => {
+    const vi = toPublicForm(form, "vi");
+    expect(vi.title).toBe("Yêu cầu đặt lịch");
+    expect(vi.submitLabel).toBe("Gửi");
+    expect(vi.successMessage).toBe("Cảm ơn bạn.");
+    expect(vi.fields[0]?.label).toBe("Số điện thoại");
+    expect(vi.fields[1]?.options).toEqual([
+      { value: "general", label: "Nội tổng quát" },
+      { value: "other", label: "other" },
+    ]);
+  });
+
+  it("falls back: region → base language → en → whatever exists", () => {
+    expect(toPublicForm(form, "vi-VN").fields[0]?.label).toBe("Số điện thoại");
+    expect(toPublicForm(form, "ja").fields[0]?.label).toBe("Phone number");
+    const viOnly = { id: "vi-only", fields: [{ name: "a", type: "text" as const, label: { vi: "Tên" } }] };
+    expect(toPublicForm(viOnly, "ja").fields[0]?.label).toBe("Tên");
+  });
+
+  it("validates the option VALUE, so the stored row is locale-independent", () => {
+    const schema = buildFormSchema(form.fields);
+    expect(schema.safeParse({ phone: "0901234567", service: "general" }).success).toBe(true);
+    // The Vietnamese label is a label, not an accepted value.
+    expect(schema.safeParse({ phone: "0901234567", service: "Nội tổng quát" }).success).toBe(
+      false,
+    );
+  });
+
+  it("keeps a plain string declaration working unchanged", () => {
+    const pub = toPublicForm(
+      { id: "plain", title: "Contact", fields: [{ name: "a", type: "text", label: "Name" }] },
+      "vi",
+    );
+    expect(pub.title).toBe("Contact");
+    expect(pub.fields[0]?.label).toBe("Name");
+  });
+});
+
 describe("toPublicForm + validateFormDefinitions", () => {
   it("projects a declared form to browser-safe JSON (round-trips)", () => {
     const pub = toPublicForm({

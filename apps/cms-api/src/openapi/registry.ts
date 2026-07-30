@@ -27,7 +27,7 @@ import {
   MfaVerifySchema,
   parseHostnameList,
   SiteBrandSchema,
-  FormDefinitionSchema,
+  PublicFormDefSchema,
   PermissionSchema,
   SendTestMailSchema,
   RegenerateRecoveryCodesSchema,
@@ -570,7 +570,7 @@ const RenderPayloadSchema = z.object({
   // Deprecated compatibility field. New consumers use integrations["ai.assistant"].
   aiAssistant: z.object({ name: z.string(), welcomeMessage: z.string() }).optional(),
   // Public forms declared by active plugins, keyed by id. A `core/form` block renders one.
-  forms: z.record(z.string(), FormDefinitionSchema).optional(),
+  forms: z.record(z.string(), PublicFormDefSchema).optional(),
 });
 
 const CatalogPluginSchema = z.object({

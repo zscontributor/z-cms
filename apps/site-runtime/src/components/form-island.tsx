@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { DATE_VALUE_RE as DATE_RE, isRealCalendarDate } from "@zcmsorg/schemas";
 import type { PublicFormDef, PublicFormField } from "@zcmsorg/schemas";
 
 /**
@@ -19,6 +20,7 @@ type Dict = {
   required: string;
   email: string;
   url: string;
+  date: string;
   pattern: string;
   min: (n: number) => string;
   max: (n: number) => string;
@@ -26,6 +28,7 @@ type Dict = {
   sending: string;
   ok: string;
   error: string;
+  choose: string;
 };
 
 const MESSAGES: Record<string, Dict> = {
@@ -33,6 +36,7 @@ const MESSAGES: Record<string, Dict> = {
     required: "This field is required.",
     email: "Please enter a valid email address, e.g. name@example.com.",
     url: "Please enter a valid URL starting with http:// or https://.",
+    date: "Please choose a valid date.",
     pattern: "This value is not in the expected format.",
     min: (n) => `Please use at least ${n} characters.`,
     max: (n) => `Please use at most ${n} characters.`,
@@ -40,11 +44,13 @@ const MESSAGES: Record<string, Dict> = {
     sending: "Sending…",
     ok: "Thank you! Your submission has been received.",
     error: "Sorry, that could not be sent. Please check the fields and try again.",
+    choose: "— Please choose —",
   },
   vi: {
     required: "Vui lòng nhập trường này.",
     email: "Vui lòng nhập email hợp lệ, ví dụ: ten@example.com.",
     url: "Vui lòng nhập URL hợp lệ bắt đầu bằng http:// hoặc https://.",
+    date: "Vui lòng chọn ngày hợp lệ.",
     pattern: "Giá trị không đúng định dạng.",
     min: (n) => `Vui lòng nhập tối thiểu ${n} ký tự.`,
     max: (n) => `Vui lòng nhập tối đa ${n} ký tự.`,
@@ -52,11 +58,13 @@ const MESSAGES: Record<string, Dict> = {
     sending: "Đang gửi…",
     ok: "Cảm ơn bạn! Chúng tôi đã nhận được thông tin.",
     error: "Rất tiếc, chưa gửi được. Vui lòng kiểm tra lại các trường và thử lại.",
+    choose: "— Vui lòng chọn —",
   },
   ja: {
     required: "この項目は必須です。",
     email: "有効なメールアドレスを入力してください（例: name@example.com）。",
     url: "http:// または https:// で始まる有効なURLを入力してください。",
+    date: "有効な日付を選択してください。",
     pattern: "形式が正しくありません。",
     min: (n) => `${n}文字以上で入力してください。`,
     max: (n) => `${n}文字以内で入力してください。`,
@@ -64,6 +72,7 @@ const MESSAGES: Record<string, Dict> = {
     sending: "送信中…",
     ok: "ありがとうございます。送信を受け付けました。",
     error: "申し訳ありません。送信できませんでした。項目を確認して再度お試しください。",
+    choose: "— 選択してください —",
   },
 };
 
@@ -75,6 +84,11 @@ function validate(field: PublicFormField, raw: string, d: Dict): string {
   if (!value) return field.required ? d.required : "";
   if (field.type === "email" && !EMAIL_RE.test(value)) return d.email;
   if (field.type === "url" && !URL_RE.test(value)) return d.url;
+  // The same check the server runs (`isRealCalendarDate`): a native date input
+  // cannot produce an impossible day, but a typed-in or autofilled value can.
+  if (field.type === "date" && !(DATE_RE.test(value) && isRealCalendarDate(value))) {
+    return d.date;
+  }
   if (field.pattern) {
     try {
       if (!new RegExp(field.pattern).test(value)) return d.pattern;
@@ -147,7 +161,7 @@ export function FormIsland({ def, locale }: { def: PublicFormDef; locale: string
             {field.label || field.name}
             {field.required ? <span aria-hidden="true"> *</span> : null}
           </label>
-          <Control def={def} field={field} value={values[field.name] ?? ""} onChange={set} />
+          <Control def={def} field={field} value={values[field.name] ?? ""} onChange={set} d={d} />
           {errors[field.name] ? (
             <span className="zcms-form__error" role="alert" style={ERR}>{errors[field.name]}</span>
           ) : null}
@@ -168,11 +182,13 @@ function Control({
   field,
   value,
   onChange,
+  d,
 }: {
   def: PublicFormDef;
   field: PublicFormField;
   value: string;
   onChange: (name: string, value: string) => void;
+  d: Dict;
 }) {
   const id = `zf-${def.id}-${field.name}`;
   const common = {
@@ -187,15 +203,31 @@ function Control({
   if (field.type === "select") {
     return (
       <select {...common}>
-        <option value="" />
+        {/* A named empty choice, not a blank line: an unlabelled first option reads
+            as a value the visitor might have already picked. */}
+        <option value="">{d.choose}</option>
         {(field.options ?? []).map((opt) => (
-          <option key={opt} value={opt}>{opt}</option>
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
         ))}
       </select>
     );
   }
+  // `date` maps to the native date input — a real calendar picker, in the visitor's
+  // own locale, which is the point of the type existing.
   const inputType =
-    field.type === "email" ? "email" : field.type === "url" ? "url" : field.type === "tel" ? "tel" : field.type === "number" ? "number" : "text";
+    field.type === "email"
+      ? "email"
+      : field.type === "url"
+        ? "url"
+        : field.type === "tel"
+          ? "tel"
+          : field.type === "number"
+            ? "number"
+            : field.type === "date"
+              ? "date"
+              : "text";
   return <input {...common} type={inputType} />;
 }
 

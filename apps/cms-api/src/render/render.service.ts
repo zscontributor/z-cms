@@ -323,7 +323,9 @@ export class RenderService {
     // Public forms declared by active plugins — what a `core/form` block renders.
     // Keyed by id, browser-safe field data only (the plugin's handler never leaves
     // cms-api). Same active-plugins scan as the contributions above.
-    const forms = await this.plugins.publicFormsFor(site.tenantId, site.id);
+    // In the locale being rendered: a plugin's labels may be declared per-locale,
+    // and this is where they become the one language this page speaks.
+    const forms = await this.plugins.publicFormsFor(site.tenantId, site.id, locale);
 
     const base = {
       site: {
