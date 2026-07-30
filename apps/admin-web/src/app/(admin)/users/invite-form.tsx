@@ -2,7 +2,11 @@
 
 import { useActionState, useState } from "react";
 import { ROLES, type SiteDto } from "@zcmsorg/schemas";
-import { createUserAction, type CreateUserState } from "@/app/actions/user";
+import {
+  createUserAction,
+  type CreateUserState,
+  type CreateUserValues,
+} from "@/app/actions/user";
 import { Button } from "@/components/ui/button";
 import { Drawer } from "@/components/ui/drawer";
 import { Field, Input, Select } from "@/components/ui/field";
@@ -72,7 +76,12 @@ export function InviteForm({ sites }: { sites: SiteDto[] }) {
         {created ? (
           <CreatedAccount created={created} />
         ) : (
-          <InviteFields sites={sites} action={formAction} error={state.error} />
+          <InviteFields
+            sites={sites}
+            action={formAction}
+            error={state.error}
+            values={state.values}
+          />
         )}
       </Drawer>
     </>
@@ -86,15 +95,23 @@ export function InviteForm({ sites }: { sites: SiteDto[] }) {
  * membership exist before the message leaves the queue. The temporary password is
  * shown once as a fallback for the ordinary reason mail fails: SMTP settings are
  * not always ready on day one.
+ *
+ * Every field is defaulted from `values` — what the last attempt was submitted
+ * with — rather than left blank. React resets an uncontrolled form when its
+ * action resolves, and it resets fields to the defaults rendered at that moment;
+ * echoing them back is what turns "your address is already taken" from a blank
+ * drawer into a one-word correction.
  */
 function InviteFields({
   sites,
   action,
   error,
+  values,
 }: {
   sites: SiteDto[];
   action: (formData: FormData) => void;
   error?: string;
+  values?: CreateUserValues;
 }) {
   const t = useT();
   return (
@@ -110,6 +127,7 @@ function InviteFields({
           type="text"
           required
           autoComplete="off"
+          defaultValue={values?.name ?? ""}
           placeholder={t("admin.users.invite.namePlaceholder")}
         />
       </Field>
@@ -126,6 +144,7 @@ function InviteFields({
           required
           autoComplete="off"
           spellCheck={false}
+          defaultValue={values?.email ?? ""}
           placeholder={t("admin.users.invite.emailPlaceholder")}
         />
       </Field>
@@ -141,6 +160,7 @@ function InviteFields({
           type="text"
           autoComplete="off"
           spellCheck={false}
+          defaultValue={values?.password ?? ""}
           placeholder={t("admin.users.invite.passwordPlaceholder")}
         />
       </Field>
@@ -150,7 +170,7 @@ function InviteFields({
         hint={t("admin.users.role.scopeHint")}
         htmlFor="invite-scope"
       >
-        <Select id="invite-scope" name="siteId" defaultValue="">
+        <Select id="invite-scope" name="siteId" defaultValue={values?.siteId ?? ""}>
           <option value="">{t("admin.users.tenantWide")}</option>
           {sites.map((site) => (
             <option key={site.id} value={site.id}>
@@ -161,7 +181,7 @@ function InviteFields({
       </Field>
 
       <Field label={t("admin.users.invite.role")} htmlFor="invite-role">
-        <Select id="invite-role" name="role" defaultValue="VIEWER">
+        <Select id="invite-role" name="role" defaultValue={values?.role ?? "VIEWER"}>
           {ROLES.map((role) => (
             <option key={role} value={role}>
               {t(`admin.roles.${role}`)}

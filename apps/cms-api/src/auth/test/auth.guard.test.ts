@@ -381,6 +381,50 @@ describe("AuthGuard", () => {
       await expect(guard.canActivate(contextFor(req))).resolves.toBe(true);
       expect((req as any).actor.siteId).toBe(SITE_UUID);
     });
+
+    it("leaves siteIds undefined for a tenant-wide member — every site is theirs", async () => {
+      const { guard } = makeGuard();
+      const token = await accessTokenFor(BASE_CLAIMS);
+      const req = contextRequest({ authorization: `Bearer ${token}` });
+
+      await guard.canActivate(contextFor(req));
+
+      expect((req as any).actor.siteIds).toBeUndefined();
+    });
+
+    it("lists exactly the sites a per-site member holds a role on", async () => {
+      // The reach a route with no X-Site-Id to check (GET /sites) scopes itself by.
+      // Without it, a user granted one site sees every site in the tenant listed.
+      const { guard, db } = makeGuard();
+      db.memberships = [
+        { id: "m1", userId: "user-1", tenantId: "tenant-1", siteId: SITE_UUID, role: "EDITOR" },
+        { id: "m2", userId: "user-1", tenantId: "tenant-1", siteId: "site-b", role: "VIEWER" },
+      ];
+      const token = await accessTokenFor(BASE_CLAIMS);
+      const req = contextRequest({ authorization: `Bearer ${token}` });
+
+      await guard.canActivate(contextFor(req));
+
+      expect((req as any).actor.siteIds).toEqual([SITE_UUID, "site-b"]);
+    });
+
+    it("still resolves the header's site for a member of that site only", async () => {
+      // The per-site membership is the one that matters; there is no tenant-wide row
+      // to fall back on, and the request must still be admitted on its own site.
+      const { guard, db } = makeGuard({ [SITE_SCOPED_KEY]: true });
+      db.memberships = [
+        { id: "m1", userId: "user-1", tenantId: "tenant-1", siteId: SITE_UUID, role: "ADMIN" },
+      ];
+      const token = await accessTokenFor(BASE_CLAIMS);
+      const req = contextRequest({
+        authorization: `Bearer ${token}`,
+        "x-site-id": SITE_UUID,
+      });
+
+      await expect(guard.canActivate(contextFor(req))).resolves.toBe(true);
+      expect((req as any).actor.siteId).toBe(SITE_UUID);
+      expect((req as any).actor.role).toBe("ADMIN");
+    });
   });
 
   describe("internal routes", () => {

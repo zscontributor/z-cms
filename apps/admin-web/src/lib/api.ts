@@ -288,17 +288,27 @@ export const listSites = cache(
  * The active site id. Falls back to the first site the user can see when the
  * cookie is missing or points at a site that no longer exists, so a stale
  * cookie never bricks the admin.
+ *
+ * "No longer exists" includes "is no longer yours": the cookie outlives a
+ * membership change, and a user whose access was narrowed to one site would
+ * otherwise keep sending X-Site-Id for a site the API now refuses — every screen
+ * a 403, with no way back except clearing cookies. So the cookie is checked
+ * against the sites the API actually returns, not merely read.
  */
 export const getCurrentSiteId = cache(async (): Promise<string | null> => {
   const fromCookie = await readCookie(SITE_COOKIE);
-  if (fromCookie) return fromCookie;
 
+  let sites: SiteDto[];
   try {
-    const sites = await listSites();
-    return sites[0]?.id ?? null;
+    sites = await listSites();
   } catch {
-    return null;
+    // The list is unavailable (no session yet, API down). The cookie is the best
+    // guess there is, and sending it is what lets a refresh-and-retry succeed.
+    return fromCookie ?? null;
   }
+
+  if (fromCookie && sites.some((site) => site.id === fromCookie)) return fromCookie;
+  return sites[0]?.id ?? null;
 });
 
 export const getCurrentSite = cache(async (): Promise<SiteDto | null> => {

@@ -40,9 +40,27 @@ export interface InviteState {
   created?: InvitationCreatedDto;
 }
 
+/** What the create-user form had in it, as typed. */
+export interface CreateUserValues {
+  name: string;
+  email: string;
+  password: string;
+  siteId: string;
+  role: string;
+}
+
 export interface CreateUserState {
   error?: string;
   created?: UserCreatedDto;
+  /**
+   * Echoed back on every failure, and only on failure.
+   *
+   * React resets an uncontrolled form once its action resolves, so a rejected
+   * create — a taken address, a short password — used to hand back an empty
+   * drawer and make the person type all five fields again to fix one of them.
+   * The form renders these as its defaults, so the reset restores what was typed.
+   */
+  values?: CreateUserValues;
 }
 
 export interface ProfileState {
@@ -82,17 +100,23 @@ export async function createUserAction(
 ): Promise<CreateUserState> {
   const t = await getT();
 
-  const denied = await guard("user:invite");
-  if (denied) return { error: denied };
-
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const name = String(formData.get("name") ?? "").trim();
   const password = String(formData.get("password") ?? "").trim();
+  const role = String(formData.get("role") ?? "VIEWER");
+  const siteId = String(formData.get("siteId") ?? "");
 
-  if (!email.includes("@")) return { error: t("admin.users.invite.emailInvalid") };
-  if (!name) return { error: t("auth.acceptInvite.nameRequired") };
+  // Read before anything can fail, so every `return` below can carry it back.
+  const values: CreateUserValues = { name, email, password, siteId, role };
+  const failed = (error: string): CreateUserState => ({ error, values });
+
+  const denied = await guard("user:invite");
+  if (denied) return failed(denied);
+
+  if (!email.includes("@")) return failed(t("admin.users.invite.emailInvalid"));
+  if (!name) return failed(t("auth.acceptInvite.nameRequired"));
   if (password && password.length < PASSWORD_MIN) {
-    return { error: t("auth.acceptInvite.passwordHint", { min: PASSWORD_MIN }) };
+    return failed(t("auth.acceptInvite.passwordHint", { min: PASSWORD_MIN }));
   }
 
   try {
@@ -103,15 +127,15 @@ export async function createUserAction(
         email,
         name,
         ...(password ? { password } : {}),
-        role: String(formData.get("role") ?? "VIEWER") as Role,
-        siteId: toSiteId(formData.get("siteId")),
+        role: role as Role,
+        siteId: toSiteId(siteId),
       },
     });
 
     revalidatePath("/users");
     return { created };
   } catch (error) {
-    return { error: toMessage(error, t("admin.users.invite.failed")) };
+    return failed(toMessage(error, t("admin.users.invite.failed")));
   }
 }
 

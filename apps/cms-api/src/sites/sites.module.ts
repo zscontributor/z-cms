@@ -133,6 +133,28 @@ async function seedStarterContent(
   });
 }
 
+/**
+ * The membership filter for the list, as a `where` fragment.
+ *
+ * Empty for a tenant-wide member — RLS has already narrowed the query to their
+ * tenant and there is nothing further to say. For a member of specific sites it
+ * is an `id IN (...)`.
+ */
+function siteWhere(actor: RequestActor): { id?: { in: string[] } } {
+  return actor.siteIds ? { id: { in: actor.siteIds } } : {};
+}
+
+/**
+ * Whether this actor may see one site at all — the single-row form of the above.
+ *
+ * Routes call it before the lookup and answer a "no" with the same 404 a missing
+ * row gets: "not one of yours" and "does not exist" are deliberately the same
+ * answer, so ids cannot be probed for existence.
+ */
+function mayUseSite(actor: RequestActor, id: string): boolean {
+  return !actor.siteIds || actor.siteIds.includes(id);
+}
+
 @ApiTags("Sites")
 @Controller("sites")
 export class SitesController {
@@ -145,6 +167,12 @@ export class SitesController {
   /**
    * No tenant filter in the where clause, and none is needed: this query runs
    * inside withTenant(), so RLS restricts it to the caller's own sites.
+   *
+   * RLS is the tenant boundary, not the membership one. A user granted a role on
+   * ONE site is still in the tenant, so without `siteWhere` every other site in
+   * it comes back here — and the admin's site switcher, which is built from this
+   * list, hands them a menu of sites they cannot open. Per-site members see
+   * their own sites; a tenant-wide member (`siteIds` undefined) sees all.
    */
   @Get()
   @ApiOperation({
@@ -157,8 +185,9 @@ export class SitesController {
   @ApiAuthed("site:read")
   @ApiZodResponse("SiteDto", { isArray: true })
   @RequirePermissions("site:read")
-  async list(): Promise<SiteDto[]> {
+  async list(@Actor() actor: RequestActor): Promise<SiteDto[]> {
     const sites = await db().site.findMany({
+      where: siteWhere(actor),
       include: SITE_INCLUDE,
       orderBy: { createdAt: "asc" },
     });
@@ -171,8 +200,10 @@ export class SitesController {
   @ApiZodResponse("SiteDto")
   @ApiNotFound("No such site — or not one of yours. The two are the same answer on purpose.")
   @RequirePermissions("site:read")
-  async findOne(@Param("id") id: string): Promise<SiteDto> {
-    const site = await db().site.findUnique({ where: { id }, include: SITE_INCLUDE });
+  async findOne(@Actor() actor: RequestActor, @Param("id") id: string): Promise<SiteDto> {
+    const site = mayUseSite(actor, id)
+      ? await db().site.findUnique({ where: { id }, include: SITE_INCLUDE })
+      : null;
     if (!site) throw new NotFoundException(t()("errors.sites.notFound"));
     return toSiteDto(site);
   }
@@ -275,6 +306,22 @@ export class SitesController {
       // sees the three hosts it reaches.
       await installCorePlugins(db(), actor.tenantId, created.id);
 
+      // A creator whose own access is per-site would otherwise lose the site the
+      // moment they made it: they hold no tenant-wide membership, the new id is
+      // not in the list their token resolves to, and the very next request — the
+      // redirect to the new site — 404s. A tenant-wide creator needs nothing;
+      // their membership already covers every site including this one.
+      if (actor.siteIds) {
+        await db().membership.create({
+          data: {
+            tenantId: actor.tenantId,
+            userId: actor.userId,
+            siteId: created.id,
+            role: actor.role,
+          },
+        });
+      }
+
       const site = await db().site.findUniqueOrThrow({
         where: { id: created.id },
         include: SITE_INCLUDE,
@@ -321,10 +368,16 @@ export class SitesController {
   @ApiNotFound("No such site — or not one of yours.")
   @RequirePermissions("site:update")
   async update(
+    @Actor() actor: RequestActor,
     @Param("id") id: string,
     @Body(new ZodValidationPipe(UpdateSiteSchema)) body: z.infer<typeof UpdateSiteSchema>,
   ): Promise<SiteDto> {
-    const existing = await db().site.findUnique({ where: { id }, include: SITE_INCLUDE });
+    // Membership-scoped, exactly like the reads above: an ADMIN of one site holds
+    // `site:update` and could otherwise rename, unpublish or re-domain any other
+    // site in the tenant by id — the permission says what they may do, not where.
+    const existing = mayUseSite(actor, id)
+      ? await db().site.findUnique({ where: { id }, include: SITE_INCLUDE })
+      : null;
     if (!existing) throw new NotFoundException(t()("errors.sites.notFound"));
 
     // Checked against the RESULT of the patch, not against what was sent: dropping
@@ -452,9 +505,12 @@ export class SitesController {
     @Actor() actor: RequestActor,
     @Param("id") id: string,
   ): Promise<{ status: "queued" }> {
-    // RLS scopes this to the caller's tenant, so a missing row means "not yours"
-    // just as much as "does not exist" — the same answer, on purpose.
-    const site = await db().site.findUnique({ where: { id }, select: { id: true } });
+    // RLS scopes this to the caller's tenant and `mayUseSite` to the sites they
+    // hold a role on, so a missing row means "not yours" just as much as "does
+    // not exist" — the same answer, on purpose.
+    const site = mayUseSite(actor, id)
+      ? await db().site.findUnique({ where: { id }, select: { id: true } })
+      : null;
     if (!site) throw new NotFoundException(t()("errors.sites.notFound"));
 
     // Awaited, unlike the fire-and-forget publish path: a manual action should tell

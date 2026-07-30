@@ -185,7 +185,7 @@ export class UsersService {
     });
 
     const user = await this.findOne(created.id);
-    const loginPageUrl = accountLoginUrl();
+    const loginPageUrl = await accountLoginUrl(input.siteId);
     const emailQueued = await this.queueAccountCreatedMail(actor, input.siteId, {
       email,
       name: input.name,
@@ -579,9 +579,67 @@ function randomPassword(): string {
   return password.length >= PASSWORD_MIN ? password : `${password}x`.padEnd(PASSWORD_MIN, "x");
 }
 
-function accountLoginUrl(): string {
-  const base = process.env.ADMIN_WEB_URL ?? process.env.NEXT_PUBLIC_ADMIN_URL ?? "http://localhost:3300";
-  return `${base.replace(/\/+$/, "")}/login`;
+/**
+ * The admin's base path, resolved the same way admin-web resolves its own.
+ *
+ * admin-web sets `basePath: "/admin"` in production (next.config.ts), so the sign-in
+ * page is at `/admin/login` and `/login` is a 404 there. Anything that hands a
+ * person a link to it has to agree with that or it hands them a dead one — which
+ * is exactly what this used to do.
+ */
+function adminBasePath(): string {
+  const value =
+    process.env.ADMIN_BASE_PATH ?? (process.env.NODE_ENV === "production" ? "/admin" : "");
+  const trimmed = value.trim().replace(/\/+$/, "");
+  if (!trimmed) return "";
+  return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+}
+
+/**
+ * Where the new account signs in.
+ *
+ * Three sources, in order:
+ *
+ *   1. `ADMIN_PUBLIC_URL`, for a deployment that knows its own answer. Taken as
+ *      written — base path included — because an operator who sets this is
+ *      telling us the URL, not the ingredients.
+ *   2. The site's own hostname + the base path. `/admin` is routed on EVERY
+ *      tenant hostname, and that is the canonical shape: z-cms.org/admin,
+ *      z-soft.com/admin. It is also the one the recipient recognises, which a
+ *      separate admin.* host is not.
+ *   3. `ADMIN_WEB_URL`, the CORS origin, as a last resort.
+ *
+ * (2) is skipped when there is no base path — a development install, where the
+ * admin runs on its own port and the site hostname would point at site-runtime.
+ */
+async function accountLoginUrl(siteId: string | null): Promise<string> {
+  const basePath = adminBasePath();
+
+  const override = process.env.ADMIN_PUBLIC_URL?.trim();
+  if (override) return `${override.replace(/\/+$/, "")}/login`;
+
+  if (basePath) {
+    const host = await primaryHostname(siteId);
+    if (host) return `https://${host}${basePath}/login`;
+  }
+
+  const base =
+    process.env.ADMIN_WEB_URL ?? process.env.NEXT_PUBLIC_ADMIN_URL ?? "http://localhost:3300";
+  return `${base.replace(/\/+$/, "")}${basePath}/login`;
+}
+
+/**
+ * The hostname the new user's site answers on: its primary domain, or the first
+ * one it has. A tenant-wide account has no site of its own, so it gets the
+ * tenant's oldest site — the one whose domain is, in practice, the main one.
+ */
+async function primaryHostname(siteId: string | null): Promise<string | null> {
+  const domain = await db().domain.findFirst({
+    where: siteId ? { siteId } : {},
+    orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+    select: { hostname: true },
+  });
+  return domain?.hostname ?? null;
 }
 
 function escapeHtml(value: string): string {

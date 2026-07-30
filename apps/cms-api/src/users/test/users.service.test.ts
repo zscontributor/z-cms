@@ -44,6 +44,9 @@ function makeDb() {
       findFirst: vi.fn().mockResolvedValue({ id: "s1" }),
       findUnique: vi.fn().mockResolvedValue({ id: "s1" }),
     },
+    domain: {
+      findFirst: vi.fn().mockResolvedValue({ hostname: "z-cms.org" }),
+    },
   };
   return database;
 }
@@ -149,6 +152,72 @@ describe("UsersService", () => {
 
       expect(res.password.length).toBeGreaterThanOrEqual(12);
       expect(res.emailQueued).toBe(false);
+    });
+
+    /**
+     * The link the new user is handed — in the drawer and in the email — has to be
+     * one that actually loads. admin-web mounts at basePath /admin in production,
+     * so a bare `<origin>/login` is a 404, and `/admin` is routed on the tenant's
+     * own hostname rather than on a separate admin host.
+     */
+    describe("the login URL it hands out", () => {
+      beforeEach(() => {
+        holder.db.user.create.mockResolvedValue({ id: "u1" });
+        holder.db.user.findUnique.mockResolvedValue({
+          id: "u1",
+          email: "new@x.com",
+          name: "New User",
+          avatarUrl: null,
+          lastLoginAt: null,
+          totpEnabledAt: null,
+          createdAt: new Date(),
+          memberships: [{ id: "m1", role: "EDITOR", siteId: "s1", site: { name: "Main" } }],
+        });
+      });
+
+      const input = { email: "new@x.com", name: "New User", role: "EDITOR", siteId: "s1" };
+
+      it("uses the site's own hostname and the admin base path", async () => {
+        vi.stubEnv("NODE_ENV", "production");
+        vi.stubEnv("ADMIN_WEB_URL", "https://admin.z-cms.org");
+
+        const res = await makeService().create(ownerActor(), input as any);
+
+        expect(res.loginUrl).toBe("https://z-cms.org/admin/login");
+        vi.unstubAllEnvs();
+      });
+
+      it("falls back to ADMIN_WEB_URL — with the base path — when the site has no domain", async () => {
+        vi.stubEnv("NODE_ENV", "production");
+        vi.stubEnv("ADMIN_WEB_URL", "https://admin.z-cms.org");
+        holder.db.domain.findFirst.mockResolvedValue(null);
+
+        const res = await makeService().create(ownerActor(), input as any);
+
+        expect(res.loginUrl).toBe("https://admin.z-cms.org/admin/login");
+        vi.unstubAllEnvs();
+      });
+
+      it("takes ADMIN_PUBLIC_URL exactly as written when one is set", async () => {
+        vi.stubEnv("NODE_ENV", "production");
+        vi.stubEnv("ADMIN_PUBLIC_URL", "https://studio.example.test/manage");
+
+        const res = await makeService().create(ownerActor(), input as any);
+
+        expect(res.loginUrl).toBe("https://studio.example.test/manage/login");
+        vi.unstubAllEnvs();
+      });
+
+      it("stays on the admin's own port in development, where there is no base path", async () => {
+        // The site hostname would point at site-runtime, not the admin, so the
+        // hostname branch is skipped entirely when the base path is empty.
+        vi.stubEnv("ADMIN_WEB_URL", "http://localhost:3101");
+
+        const res = await makeService().create(ownerActor(), input as any);
+
+        expect(res.loginUrl).toBe("http://localhost:3101/login");
+        vi.unstubAllEnvs();
+      });
     });
   });
 

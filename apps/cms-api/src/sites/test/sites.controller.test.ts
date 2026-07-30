@@ -16,10 +16,11 @@ const domain = {
 };
 const contentType = { create: vi.fn() };
 const content = { create: vi.fn() };
+const membership = { create: vi.fn() };
 
 const installCorePlugins = vi.fn().mockResolvedValue([]);
 vi.mock("@zcmsorg/database", () => ({
-  db: () => ({ site, domain, contentType, content }),
+  db: () => ({ site, domain, contentType, content, membership }),
   installCorePlugins: (...args: unknown[]) => installCorePlugins(...args),
 }));
 
@@ -83,6 +84,7 @@ beforeEach(() => {
   domain.updateMany.mockResolvedValue({ count: 1 });
   contentType.create.mockResolvedValue({ id: "ct1" });
   content.create.mockResolvedValue({ id: "c1" });
+  membership.create.mockResolvedValue({ id: "m1" });
 });
 
 describe("create", () => {
@@ -331,7 +333,7 @@ describe("update", () => {
     );
     site.update.mockResolvedValue(row());
 
-    await controller().update("s1", {
+    await controller().update(actor, "s1", {
       brand: { primaryColor: "#FFFFFF", logo: "/new.png" },
     } as never);
 
@@ -345,7 +347,7 @@ describe("update", () => {
     site.findUnique.mockResolvedValue(row());
     site.update.mockResolvedValue(row());
 
-    await controller().update("s1", { name: "Renamed" } as never);
+    await controller().update(actor, "s1", { name: "Renamed" } as never);
 
     const data = site.update.mock.calls[0][0].data;
     expect(data).toEqual({ name: "Renamed" });
@@ -365,7 +367,7 @@ describe("update", () => {
     );
     site.update.mockResolvedValue(row({ slug: "renamed" }));
 
-    await controller().update("s1", {
+    await controller().update(actor, "s1", {
       slug: "renamed",
       hostnames: ["renamed.test"],
     } as never);
@@ -402,7 +404,7 @@ describe("update", () => {
     );
     site.update.mockResolvedValue(row());
 
-    await controller().update("s1", {
+    await controller().update(actor, "s1", {
       hostnames: ["acme.test", "acme.vn"],
     } as never);
 
@@ -427,7 +429,7 @@ describe("update", () => {
     site.findUnique.mockResolvedValue(row());
     site.update.mockResolvedValue(row());
 
-    await controller().update("s1", {
+    await controller().update(actor, "s1", {
       brand: { primaryColor: "#FFFFFF", logo: "" },
     } as never);
 
@@ -441,7 +443,7 @@ describe("update", () => {
     site.findUnique.mockResolvedValue(row({ defaultLocale: "vi", locales: ["vi", "en"] }));
 
     await expect(
-      controller().update("s1", { locales: ["en"] } as never),
+      controller().update(actor, "s1", { locales: ["en"] } as never),
     ).rejects.toBeInstanceOf(ConflictException);
 
     expect(site.update).not.toHaveBeenCalled();
@@ -451,8 +453,85 @@ describe("update", () => {
     site.findUnique.mockResolvedValue(null);
 
     await expect(
-      controller().update("nope", { name: "x" } as never),
+      controller().update(actor, "nope", { name: "x" } as never),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+});
+
+/**
+ * A site-scoped member sees their sites and nothing else.
+ *
+ * RLS is the tenant boundary, not the membership one, so every one of these would
+ * have returned the whole tenant's sites before the actor's reach was checked.
+ * `siteIds: undefined` — the tenant-wide member — must keep seeing everything.
+ */
+describe("membership scoping", () => {
+  const scoped: RequestActor = { ...actor, siteIds: ["s1"], role: "ADMIN" };
+
+  it("lists only the sites the member holds a role on", async () => {
+    site.findMany.mockResolvedValue([row()]);
+
+    await controller().list(scoped);
+
+    expect(site.findMany.mock.calls[0][0].where).toEqual({ id: { in: ["s1"] } });
+  });
+
+  it("does not filter the list for a tenant-wide member", async () => {
+    site.findMany.mockResolvedValue([row()]);
+
+    await controller().list(actor);
+
+    expect(site.findMany.mock.calls[0][0].where).toEqual({});
+  });
+
+  it("404s reading another site in the same tenant, without querying for it", async () => {
+    // Not queried at all: the id is outside their reach, so there is nothing to
+    // confirm or deny — which is also what stops the 404/200 split from being used
+    // to probe which ids exist.
+    await expect(controller().findOne(scoped, "s2")).rejects.toBeInstanceOf(NotFoundException);
+    expect(site.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("404s updating another site in the same tenant", async () => {
+    // `site:update` says an ADMIN may change a site, not WHICH site. Without this
+    // an ADMIN of one site could rename, unpublish or re-domain any other.
+    await expect(
+      controller().update(scoped, "s2", { name: "hijacked" } as never),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(site.update).not.toHaveBeenCalled();
+  });
+
+  it("404s rebuilding another site's sitemap, and queues nothing", async () => {
+    await expect(controller().rebuildSitemap(scoped, "s2")).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(queue.enqueue).not.toHaveBeenCalled();
+  });
+
+  it("gives a site-scoped creator a membership on the site they just made", async () => {
+    // Otherwise they lose it the moment it exists: no tenant-wide row, and the new
+    // id is not in the list their next token resolves to.
+    await controller().create(scoped, {
+      name: "Acme",
+      slug: "acme",
+      hostnames: ["acme.test"],
+      defaultLocale: "vi",
+    } as never);
+
+    expect(membership.create).toHaveBeenCalledWith({
+      data: { tenantId: "t1", userId: "u1", siteId: "s1", role: "ADMIN" },
+    });
+  });
+
+  it("adds no membership for a tenant-wide creator — theirs already covers it", async () => {
+    await controller().create(actor, {
+      name: "Acme",
+      slug: "acme",
+      hostnames: ["acme.test"],
+      defaultLocale: "vi",
+    } as never);
+
+    expect(membership.create).not.toHaveBeenCalled();
   });
 });
 

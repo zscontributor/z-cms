@@ -39,12 +39,28 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 let fetchMock: ReturnType<typeof vi.fn>;
 
+/**
+ * `GET /sites` — the call `getCurrentSiteId` makes to check the site cookie
+ * against the sites the user may actually use.
+ *
+ * It is answered by the stub rather than by `fetchMock`, so it consumes none of
+ * the queued responses a test sets up and leaves `fetchMock.mock.calls` holding
+ * exactly the request under test.
+ */
+function isSiteList(url: string, init?: RequestInit): boolean {
+  return url.endsWith("/sites") && (init?.method ?? "GET") === "GET";
+}
+
 beforeEach(() => {
   cookieJar.clear();
-  // A site is pre-selected so site-scoped calls do not fan out into listSites().
+  // The cookie names a site the list below also contains, so it survives the check.
   cookieJar.set(SITE_COOKIE, "site-1");
   fetchMock = vi.fn();
-  vi.stubGlobal("fetch", fetchMock);
+  vi.stubGlobal("fetch", (url: string, init?: RequestInit) =>
+    isSiteList(url, init)
+      ? Promise.resolve(jsonResponse([{ id: "site-1" }]))
+      : fetchMock(url, init),
+  );
 });
 
 describe("apiFetch", () => {
@@ -61,6 +77,20 @@ describe("apiFetch", () => {
     expect(headers.get("authorization")).toBe("Bearer access-123");
     expect(headers.get("x-site-id")).toBe("site-1");
     expect(headers.get("accept-language")).toBe("vi");
+  });
+
+  it("ignores a site cookie the user may no longer use, and sends one they may", async () => {
+    // A membership can be narrowed after the cookie was written — the person who
+    // could see three sites now holds a role on one. Sending the old id would make
+    // every site-scoped call a 403 with no way out but clearing cookies by hand.
+    cookieJar.set(ACCESS_TOKEN_COOKIE, "access-123");
+    cookieJar.set(SITE_COOKIE, "site-they-lost");
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: "c1" }));
+
+    await apiFetch("/contents/c1");
+
+    const [, init] = fetchMock.mock.calls[0]!;
+    expect(new Headers(init.headers as HeadersInit).get("x-site-id")).toBe("site-1");
   });
 
   it("omits the Authorization header for an anonymous request", async () => {

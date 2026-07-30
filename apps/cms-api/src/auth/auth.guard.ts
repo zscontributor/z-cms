@@ -128,31 +128,37 @@ export class AuthGuard implements CanActivate {
     // Tenant-wide memberships (siteId NULL) apply to every site; a per-site
     // membership only to its own. Filtering on tenantId here is what stops a
     // header from pointing at another tenant's site.
+    //
+    // All of them, not just the ones matching this request's site: the actor's
+    // reach — `siteIds` below — is what routes with no X-Site-Id to check
+    // against (GET /sites) use to scope themselves, and it cannot be derived
+    // from a list that was pre-filtered to the site being asked about.
     const memberships = await db.membership.findMany({
-      where: {
-        userId: user.id,
-        tenantId: user.tenantId,
-        ...(requestedSiteId
-          ? { OR: [{ siteId: requestedSiteId }, { siteId: null }] }
-          : {}),
-      },
+      where: { userId: user.id, tenantId: user.tenantId },
     });
+
+    const tenantWide = memberships.find((m) => m.siteId === null);
+    // undefined = every site in the tenant. See RequestActor.siteIds.
+    const siteIds = tenantWide
+      ? undefined
+      : [...new Set(memberships.map((m) => m.siteId).filter((id): id is string => id !== null))];
 
     let role: Role | undefined;
     let siteId: string | undefined;
 
     if (requestedSiteId) {
-      const site = await db.site.findFirst({
-        where: { id: requestedSiteId, tenantId: user.tenantId },
-        select: { id: true },
-      });
+      // A role granted directly on the site beats the tenant-wide fallback.
+      const granted = memberships.find((m) => m.siteId === requestedSiteId) ?? tenantWide;
 
-      if (site && memberships.length > 0) {
-        // A role granted directly on the site beats the tenant-wide fallback.
-        const specific = memberships.find((m) => m.siteId === requestedSiteId);
-        const wide = memberships.find((m) => m.siteId === null);
-        role = (specific ?? wide)?.role as Role | undefined;
-        siteId = site.id;
+      if (granted) {
+        const site = await db.site.findFirst({
+          where: { id: requestedSiteId, tenantId: user.tenantId },
+          select: { id: true },
+        });
+        if (site) {
+          role = granted.role as Role;
+          siteId = site.id;
+        }
       }
     }
 
@@ -161,14 +167,9 @@ export class AuthGuard implements CanActivate {
     }
 
     // Routes that are not site-scoped (e.g. GET /sites) still need a role for
-    // permission checks; fall back to the tenant-wide one.
-    role ??= memberships.find((m) => m.siteId === null)?.role as Role | undefined;
-    if (!role) {
-      const anyMembership = await db.membership.findFirst({
-        where: { userId: user.id, tenantId: user.tenantId },
-      });
-      role = anyMembership?.role as Role | undefined;
-    }
+    // permission checks; fall back to the tenant-wide one, then to any role they
+    // hold at all — the permission it buys is still bounded by `siteIds`.
+    role ??= (tenantWide ?? memberships[0])?.role as Role | undefined;
     if (!role) throw new ForbiddenException(t()("errors.auth.noRole"));
 
     // The role's core grants, plus any provided-permission the site's active
@@ -191,6 +192,7 @@ export class AuthGuard implements CanActivate {
       role,
       permissions,
       siteId,
+      siteIds,
     };
 
     const required =
