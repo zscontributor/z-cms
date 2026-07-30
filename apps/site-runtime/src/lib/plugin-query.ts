@@ -17,13 +17,22 @@
  *     types (debounced); `data-zc-initial` fetches once on load.
  *   - inside the container, a `<template data-zc-query-item>` holding one row. Any
  *     element with `data-zc-field="col"` gets that row value as TEXT (never HTML —
- *     plugin data is untrusted); any `data-zc-href="col"` gets a safe href.
+ *     plugin data is untrusted); any `data-zc-href="col"` gets a safe href, and any
+ *     `data-zc-src="col"` gets a safe src (a product photo, a store front).
  *   - optional `[data-zc-query-empty]` (shown when no rows) and
  *     `[data-zc-query-error]` (shown when the fetch fails).
  *
  * It is bounded: it only ever touches elements inside a `[data-zc-query]` the theme
- * marked, writes values as text, and refuses any non-http(s), non-relative href — a
+ * marked, writes values as text, and refuses any non-http(s), non-relative URL — a
  * row from a plugin cannot inject markup or a `javascript:` link.
+ *
+ * `src` goes through the SAME filter as `href` rather than a looser one, because
+ * the dangerous shapes are the same: `javascript:` is inert in an `<img src>` but
+ * not in every element that takes one, and a protocol-relative "//evil/x.png"
+ * silently leaves the site's origin either way. A row whose column is empty has
+ * the attribute REMOVED, so a themed `img:not([src])` rule can hide the slot
+ * instead of the browser drawing a broken-image glyph — the same contract
+ * `data-zc-href` already has for a link with no destination.
  */
 export function queryScript(): string {
   // Static, no interpolation — safe to inline verbatim under the CSP nonce.
@@ -70,6 +79,11 @@ export function queryScript(): string {
       for(var k=0;k<links.length;k++){
         var href=safeHref(item[links[k].getAttribute("data-zc-href")]);
         if(href)links[k].setAttribute("href",href);else links[k].removeAttribute("href");
+      }
+      var media=node.querySelectorAll("[data-zc-src]");
+      for(var m=0;m<media.length;m++){
+        var src=safeHref(item[media[m].getAttribute("data-zc-src")]);
+        if(src)media[m].setAttribute("src",src);else media[m].removeAttribute("src");
       }
       frag.appendChild(node);
     }

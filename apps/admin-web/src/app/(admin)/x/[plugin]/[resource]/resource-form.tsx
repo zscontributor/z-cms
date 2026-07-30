@@ -8,7 +8,7 @@ import { Checkbox, Field, Input, Select, Textarea } from "@/components/ui/field"
 import { MediaPickerField } from "@/components/editor/media-picker";
 import { RichTextEditor } from "@/components/editor/rich-text-editor";
 import { useLocale } from "@/lib/i18n-provider";
-import { formatCell } from "./format-cell";
+import { formatCell, fromDateTimeLocal, toDateTimeLocal } from "./format-cell";
 import { ReferenceField } from "./reference-field";
 
 export interface ResourceFormLabels {
@@ -137,7 +137,11 @@ export function ResourceForm({
             ) : (
               <Input
                 type={f.input === "number" ? "number" : f.input === "date" ? "datetime-local" : "text"}
-                value={String(values[f.column] ?? "")}
+                value={
+                  f.input === "date"
+                    ? toDateTimeLocal(values[f.column])
+                    : String(values[f.column] ?? "")
+                }
                 disabled={pending}
                 onChange={(e) =>
                   set(
@@ -145,7 +149,9 @@ export function ResourceForm({
                       ? e.target.value === ""
                         ? null
                         : Number(e.target.value)
-                      : e.target.value,
+                      : f.input === "date"
+                        ? fromDateTimeLocal(e.target.value)
+                        : e.target.value,
                   )
                 }
               />

@@ -776,6 +776,8 @@ export async function getPluginRow(
   resource: PluginResourceDescriptor;
   row: PluginRow;
   children?: PluginChildRows[];
+  /** Reference columns resolved to what they are called, by column. */
+  references?: Record<string, string>;
 }> {
   return apiFetch(
     `/plugin-admin/${encodeURIComponent(pluginKey)}/${encodeURIComponent(resourceKey)}/${encodeURIComponent(id)}`,

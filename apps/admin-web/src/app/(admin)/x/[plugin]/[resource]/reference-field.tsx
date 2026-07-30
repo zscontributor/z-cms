@@ -45,6 +45,16 @@ export function ReferenceField({
   const [options, setOptions] = useState<Option[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  /**
+   * What the STORED value is called.
+   *
+   * Kept apart from the search results because it has to survive them: the list is
+   * replaced on every keystroke, and the row being edited already points at
+   * something whose name must not blink out while somebody looks for a different
+   * one. Without this the form showed the uuid it had stored — which is exactly
+   * the thing this control exists to stop anyone having to read.
+   */
+  const [chosenLabel, setChosenLabel] = useState<string | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
 
   const endpoint = useMemo(
@@ -54,6 +64,30 @@ export function ReferenceField({
       )}/options/${encodeURIComponent(column)}`,
     [pluginKey, resourceKey, column],
   );
+
+  // One lookup, when the form opens on a row that already has a reference.
+  useEffect(() => {
+    if (!value) {
+      setChosenLabel(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${endpoint}?value=${encodeURIComponent(value)}`, {
+          cache: "no-store",
+        });
+        const data = res.ok ? ((await res.json()) as { options?: Option[] }) : { options: [] };
+        const found = data.options?.[0];
+        if (!cancelled && found) setChosenLabel(found.label);
+      } catch {
+        // The raw value is shown instead — worse to read, never wrong.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [endpoint, value]);
 
   // Debounced: a keystroke is not a query. 250ms is under the threshold where a
   // list feels like it lags behind the typing.
@@ -91,17 +125,11 @@ export function ReferenceField({
     return () => document.removeEventListener("mousedown", onDocClick);
   }, [open]);
 
-  /**
-   * What the box shows when it is not being searched.
-   *
-   * The row holds a stored value (a uuid, a code) and the label lives in another
-   * table. Rather than a second request per field on load, the current value is
-   * shown as-is until the visitor opens the list, at which point the fetched
-   * options can name it. A code (`CF-02`) is already readable; a uuid is not, and
-   * is why the label is looked up as soon as there is a list to look it up in.
-   */
-  const chosen = options.find((option) => option.value === value);
-  const display = open ? term : (chosen?.label ?? value);
+  // While searching, the box holds the search. Otherwise it holds the name of what
+  // is chosen, falling back to the stored value only if the lookup found nothing.
+  const display = open
+    ? term
+    : (chosenLabel ?? options.find((option) => option.value === value)?.label ?? value);
 
   return (
     <div className="relative" ref={boxRef}>
@@ -129,7 +157,11 @@ export function ReferenceField({
       ) : null}
 
       {open ? (
-        <ul className="absolute z-30 mt-1 max-h-64 w-full overflow-auto rounded-md border border-[var(--z-border)] bg-[var(--z-surface)] py-1 shadow-lg">
+        // `z-card` carries the admin's own raised surface, border and shadow. The
+        // hand-written variables this used to name (`--z-surface`) do not exist, so
+        // the panel had NO background: the next field's label showed straight
+        // through it.
+        <ul className="z-card absolute z-30 mt-1 max-h-64 w-full overflow-auto py-1">
           {loading && options.length === 0 ? (
             <li className="px-3 py-2 text-sm z-muted">{t("common.loading")}</li>
           ) : options.length === 0 ? (
@@ -139,7 +171,7 @@ export function ReferenceField({
               <li key={option.value}>
                 <button
                   type="button"
-                  className="block w-full px-3 py-2 text-left text-sm hover:bg-[var(--z-surface-2)]"
+                  className="block w-full px-3 py-2 text-left text-sm hover:bg-[var(--surface-sunken)]"
                   onClick={() => {
                     onChange(option.value);
                     setOpen(false);

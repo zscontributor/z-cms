@@ -347,10 +347,14 @@ calls: {
 
 A theme renders a filter `<form data-zc-query="catalog.search">` and a row
 `<template>`; a runtime enhancer turns a submit into the fetch and writes each returned
-value in as **text**, never HTML, so plugin data cannot inject markup. Return only
-public fields — this is a door to the open internet, and the handler is the last place
-that decides what walks through it. `plugins/catalog` is the worked example, with the
-cost price deliberately absent from what `query` returns.
+value in as **text**, never HTML, so plugin data cannot inject markup. A row can also
+carry a URL: `data-zc-href="col"` becomes a link's `href` and `data-zc-src="col"`
+becomes an image's `src`, both filtered to http(s) or same-origin paths, and both
+*removed* when the column is empty so the theme can hide the slot rather than draw a
+dead link or a broken image. Return only public fields — this is a door to the open
+internet, and the handler is the last place that decides what walks through it.
+`plugins/catalog` is the worked example, with the cost price deliberately absent from
+what `query` returns.
 
 ### Admin screens, without shipping admin code
 

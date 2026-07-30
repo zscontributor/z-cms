@@ -90,3 +90,34 @@ export function formatCell(value: unknown, locale: string, type?: PluginColumnTy
   // No declared type: recognise, and pass anything unrecognised through.
   return formatTimestamp(s, locale) ?? formatNumberLike(s, locale) ?? s;
 }
+
+/**
+ * A stored timestamp, in the only shape `<input type="datetime-local">` accepts:
+ * `YYYY-MM-DDTHH:mm`, in LOCAL time.
+ *
+ * A `timestamptz` comes back as `2026-07-31T07:56:12.000Z`. The control refuses
+ * that — seconds, milliseconds and the zone are all outside its grammar — and a
+ * refused value renders as an empty box. So editing a shift showed no date at all,
+ * on a record whose whole subject is when somebody works.
+ */
+export function toDateTimeLocal(value: unknown): string {
+  if (value == null || value === "") return "";
+  const date = new Date(String(value));
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return (
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+    `T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  );
+}
+
+/**
+ * Back the other way: what the control gives (local wall-clock, no zone) becomes
+ * the instant the database stores. Reading it as local time is what makes 14:56
+ * typed in Ho Chi Minh City still say 14:56 there tomorrow.
+ */
+export function fromDateTimeLocal(value: string): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}

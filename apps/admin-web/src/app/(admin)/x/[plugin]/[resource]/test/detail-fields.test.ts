@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { PluginResourceDescriptor } from "@/lib/api";
 import { SYSTEM_COLUMNS, detailFields } from "../detail-fields";
-import { formatCell } from "../format-cell";
+import { formatCell, fromDateTimeLocal, toDateTimeLocal } from "../format-cell";
 import { filterableColumns } from "../filterable";
 import { sortHref } from "../list-url";
 
@@ -314,5 +314,29 @@ describe("filterableColumns", () => {
 
   it("offers nothing at all for a resource with no form", () => {
     expect(filterableColumns(descriptor({ form: undefined }))).toEqual([]);
+  });
+});
+
+/**
+ * `<input type="datetime-local">` has a grammar of its own, and a `timestamptz`
+ * does not speak it. A refused value renders as an empty box, so editing a shift
+ * showed no date on a record whose whole subject is when somebody works.
+ */
+describe("timestamps a datetime-local input will accept", () => {
+  it("drops the seconds, milliseconds and zone the control refuses", () => {
+    const local = toDateTimeLocal("2026-07-31T07:56:12.000Z");
+    expect(local).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
+    // Round-trips to the same instant, whatever zone this machine is in.
+    expect(new Date(fromDateTimeLocal(local)!).getTime()).toBe(
+      new Date("2026-07-31T07:56:00.000Z").getTime(),
+    );
+  });
+
+  it("treats an absent or unparsable value as empty rather than as a date", () => {
+    for (const value of [null, undefined, "", "not a date"]) {
+      expect(toDateTimeLocal(value)).toBe("");
+    }
+    expect(fromDateTimeLocal("")).toBeNull();
+    expect(fromDateTimeLocal("nonsense")).toBeNull();
   });
 });

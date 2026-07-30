@@ -41,6 +41,7 @@ export default async function PluginRecordPage({ params, searchParams }: PagePro
     resource: PluginResourceDescriptor;
     row: PluginRow;
     children?: PluginChildRows[];
+    references?: Record<string, string>;
   };
   try {
     data = await getPluginRow(plugin, resource, id);
@@ -103,7 +104,17 @@ export default async function PluginRecordPage({ params, searchParams }: PagePro
               <div key={field.column} className="grid gap-1 py-3 sm:grid-cols-[minmax(0,14rem)_1fr] sm:gap-4">
                 <dt className="text-[13px] z-muted">{field.label}</dt>
                 <dd className="min-w-0 text-sm">
-                  <Value value={row[field.column]} input={field.input} type={types[field.column]} locale={locale} empty={t("plugins.resource.emptyValue")} markupLabel={t("plugins.resource.markup")} />
+                  <Value
+                    // A reference stores an id and MEANS a name. The server
+                    // resolved it; showing the id here would be showing our
+                    // bookkeeping to someone who asked who is on shift.
+                    value={data.references?.[field.column] ?? row[field.column]}
+                    input={field.input}
+                    type={data.references?.[field.column] ? "text" : types[field.column]}
+                    locale={locale}
+                    empty={t("plugins.resource.emptyValue")}
+                    markupLabel={t("plugins.resource.markup")}
+                  />
                 </dd>
               </div>
             ))}

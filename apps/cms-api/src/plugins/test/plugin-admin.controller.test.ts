@@ -815,7 +815,9 @@ describe("PluginAdminController: references and children", () => {
   }
 
   beforeEach(() => {
-    holder.db = makeDb([{ id: ROW_ID, full_name: "Nguyễn Thảo Vy" }]);
+    // `phone` is this fixture's reference column, so the row has to point at
+    // something for there to be anything to name.
+    holder.db = makeDb([{ id: ROW_ID, full_name: "Nguyễn Thảo Vy", phone: ROW_ID }]);
   });
 
   it("answers a reference with {value,label} from the table it points at", async () => {
@@ -835,6 +837,56 @@ describe("PluginAdminController: references and children", () => {
     const [text] = holder.db.$queryRawUnsafe.mock.calls[0];
     expect(text).toContain(`FROM "${STAFF_TABLE.name}"`);
     expect(text).toContain("ILIKE");
+  });
+
+  it("resolves ONE stored value to its label, for a form opening on a saved row", async () => {
+    const { controller } = withSiblings();
+
+    const result = await controller.options(
+      actor("x:p:shifts:read", "x:p:staff:read"),
+      "s1",
+      "vn.zsoft.plugin.medical",
+      "shifts",
+      "phone",
+      undefined,
+      ROW_ID,
+    );
+
+    expect(result.options).toEqual([{ value: ROW_ID, label: "Nguyễn Thảo Vy" }]);
+    // A lookup, not a search: an equality on the stored column, not an ILIKE.
+    const [text, ...values] = holder.db.$queryRawUnsafe.mock.calls[0];
+    expect(text).not.toContain("ILIKE");
+    expect(values).toContain(ROW_ID);
+  });
+
+  it("names a record's references, so a read screen shows a person not a uuid", async () => {
+    const { controller } = withSiblings();
+
+    const result = await controller.detail(
+      actor("x:p:shifts:read", "x:p:staff:read"),
+      "s1",
+      "vn.zsoft.plugin.medical",
+      "shifts",
+      ROW_ID,
+    );
+
+    expect(result.references).toEqual({ phone: "Nguyễn Thảo Vy" });
+  });
+
+  it("leaves a reference unnamed for a reader who may not read its table", async () => {
+    const { controller } = withSiblings();
+
+    const result = await controller.detail(
+      actor("x:p:shifts:read"),
+      "s1",
+      "vn.zsoft.plugin.medical",
+      "shifts",
+      ROW_ID,
+    );
+
+    // The record still opens; the name simply is not theirs to be told.
+    expect(result.references).toEqual({});
+    expect(result.row).toMatchObject({ id: ROW_ID });
   });
 
   it("refuses the picker to someone who may not read the referenced resource", async () => {

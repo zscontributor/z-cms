@@ -230,6 +230,13 @@ export class PluginAdminController {
       "column. Requires the READ permission of the RESOURCE BEING REFERENCED.",
   })
   @ApiQuery({ name: "q", required: false, description: "Case-insensitive substring." })
+  @ApiQuery({
+    name: "value",
+    required: false,
+    description:
+      "Resolve ONE stored value to its label, for a form showing a row that " +
+      "already has a reference. Takes precedence over `q`.",
+  })
   async options(
     @Actor() actor: RequestActor,
     @SiteId() siteId: string,
@@ -237,6 +244,7 @@ export class PluginAdminController {
     @Param("resource") resourceKey: string,
     @Param("column") column: string,
     @Query("q") q?: string,
+    @Query("value") value?: string,
   ): Promise<{ options: { value: string; label: string }[] }> {
     const all = await this.plugins.adminResourcesFor(actor.tenantId, siteId, pluginKey);
     const own = all.find((entry) => entry.resource.key === resourceKey);
@@ -263,15 +271,25 @@ export class PluginAdminController {
     const labelColumn = field.refLabel ?? target.resource.list.columns[0]?.column ?? valueColumn;
     const term = typeof q === "string" ? q.trim().slice(0, 200) : "";
 
+    /**
+     * Two questions, one door.
+     *
+     * "What may I pick?" is a search. "What is the thing already picked CALLED?"
+     * is a lookup — and a form that could not ask it showed the visitor the uuid
+     * it had stored, which is the answer to a question nobody asked.
+     */
+    const lookup = typeof value === "string" ? value.trim().slice(0, 200) : "";
     const rows = await this.run(target.table, () =>
       buildPluginSelect(
         target.table,
         { tenantId: actor.tenantId, siteId },
-        {
-          ...(term ? { search: { columns: [labelColumn], term } } : {}),
-          orderBy: { column: labelColumn, direction: "asc" },
-          limit: 20,
-        },
+        lookup
+          ? { where: { [valueColumn]: lookup }, limit: 1 }
+          : {
+              ...(term ? { search: { columns: [labelColumn], term } } : {}),
+              orderBy: { column: labelColumn, direction: "asc" },
+              limit: 20,
+            },
       ),
     );
 
@@ -300,6 +318,8 @@ export class PluginAdminController {
     row: Record<string, unknown>;
     /** The rows of other resources that name this record. See `children`. */
     children: PluginChildRows[];
+    /** Reference columns resolved to what they are called, by column. */
+    references: Record<string, string>;
   }> {
     const { resource, table } = await this.resolve(actor, siteId, pluginKey, resourceKey);
     this.require(actor, resource.permissions.read);
@@ -317,7 +337,57 @@ export class PluginAdminController {
       throw new NotFoundException(t()("errors.plugins.rowNotFound", { id }));
     }
 
-    return { resource, row, children: await this.childrenOf(actor, siteId, pluginKey, resource, row) };
+    const [children, references] = await Promise.all([
+      this.childrenOf(actor, siteId, pluginKey, resource, row),
+      this.referenceLabelsOf(actor, siteId, pluginKey, resource, row),
+    ]);
+    return { resource, row, children, references };
+  }
+
+  /**
+   * What this record's `reference` columns are CALLED — `{ staff_id: "Lê Minh Thư" }`.
+   *
+   * The row stores an id because that is what a join needs; a person reading the
+   * record needs the name. Resolved here rather than in the browser so the read
+   * screen has it before it paints, and gated per reference by the target's own
+   * read permission — a name is a listing of the table it lives in.
+   */
+  private async referenceLabelsOf(
+    actor: RequestActor,
+    siteId: string,
+    pluginKey: string,
+    resource: ResolvedPluginAdminResource,
+    row: Record<string, unknown>,
+  ): Promise<Record<string, string>> {
+    const fields = (resource.form?.fields ?? []).filter(
+      (field) => field.input === "reference" && field.refTable && row[field.column],
+    );
+    if (fields.length === 0) return {};
+
+    const all = await this.plugins.adminResourcesFor(actor.tenantId, siteId, pluginKey);
+    const labels: Record<string, string> = {};
+
+    for (const field of fields) {
+      const target = all.find((entry) => entry.resource.table === field.refTable);
+      if (!target) continue;
+      if (!actor.permissions.includes(target.resource.permissions.read)) continue;
+
+      const valueColumn = field.refValue ?? "id";
+      const labelColumn =
+        field.refLabel ?? target.resource.list.columns[0]?.column ?? valueColumn;
+
+      const rows = await this.run(target.table, () =>
+        buildPluginSelect(
+          target.table,
+          { tenantId: actor.tenantId, siteId },
+          { where: { [valueColumn]: row[field.column] }, limit: 1 },
+        ),
+      );
+      const label = rows[0]?.[labelColumn];
+      if (label != null && String(label) !== "") labels[field.column] = String(label);
+    }
+
+    return labels;
   }
 
   /**
