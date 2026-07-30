@@ -48,6 +48,24 @@ const DENIED = [
 
   // Secrets, VCS, dependencies.
   /(^|\/)node_modules(\/|$)/,
+  /**
+   * The workspace's own bookkeeping, which a package is not.
+   *
+   * A theme or plugin is described by `theme.json` / `plugin.json`; `package.json`
+   * is how it was BUILT, and shipping it hands a downloader the internal package
+   * name, the scripts and the dev dependencies for no benefit — nothing in the
+   * loader has ever read one out of a payload.
+   *
+   * The lockfile matters more, and for a reason this repository already acted on
+   * once: private products are excluded from the workspace precisely so the public
+   * lockfile stops "publishing the name and full dependency list of every private
+   * product" (pnpm-workspace.yaml). A lockfile travelling INSIDE the signed package
+   * gives that away again to anyone who downloads it.
+   */
+  /(^|\/)package\.json$/,
+  /(^|\/)(?:pnpm-lock\.yaml|package-lock\.json|yarn\.lock|bun\.lockb)$/,
+  /** A marker for this repo's build scripts, meaningless once packed. */
+  /(^|\/)\.not-builtin$/,
   /(^|\/)\.git(\/|$)/,
   /(^|\/)\.env/,
   /(^|\/)\.npmrc$/,

@@ -116,6 +116,23 @@ describe("packDirectory", () => {
     expect(unpacked.sort()).toEqual(["assets/logo.svg", "dist/index.js", "theme.json"]);
   });
 
+  it("leaves the workspace's own bookkeeping out of the archive", async () => {
+    // Packing a source directory directly — which is what `zcms pack <dir>` does,
+    // and what lets the CLI advance the manifest's version — used to sweep these
+    // in. The lockfile is the one that matters: private products are kept out of
+    // the public workspace so its lockfile stops naming them and their whole
+    // dependency tree, and shipping one INSIDE the package gives that back.
+    const dir = themeDir();
+    write(dir, "package.json", '{"name":"@zcmsorg/theme-private"}');
+    write(dir, "pnpm-lock.yaml", "lockfileVersion: '9.0'");
+    write(dir, "package-lock.json", "{}");
+    write(dir, ".not-builtin", "private, marketplace-distributed");
+
+    const unpacked = await unpackTo(await packDirectory(dir), path.join(tmp, "out"));
+
+    expect(unpacked.sort()).toEqual(["assets/logo.svg", "dist/index.js", "theme.json"]);
+  });
+
   it("leaves dev-only source and tooling out of the archive", async () => {
     // The runtime loads dist/, never src/. A build script that imports `fs` would
     // otherwise be signed and scanned as if it were shipped code.
