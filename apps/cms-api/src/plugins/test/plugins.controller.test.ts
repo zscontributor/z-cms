@@ -65,6 +65,8 @@ describe("PluginsController", () => {
     holder.db = makeDb();
     holder.systemDb = makeSystemDb();
     plugins.runSetup.mockReset().mockResolvedValue(undefined);
+    plugins.ensurePluginTables.mockReset().mockResolvedValue(undefined);
+    plugins.bustProvidedPermissions.mockClear();
     cache.invalidateSite.mockClear();
   });
 
@@ -134,6 +136,88 @@ describe("PluginsController", () => {
         "content:read",
       ]);
       expect(holder.db.sitePlugin.create.mock.calls[0][0].data.siteId).toBe("s1");
+    });
+
+    /**
+     * Upgrading a RUNNING plugin.
+     *
+     * The DDL and `setup()` run on activation, and nobody activates a plugin that
+     * is already active — so before this, a new version's table simply never came
+     * into being and the screen over it answered "no such thing". An upgrade that
+     * installed cleanly and then did not work.
+     */
+    it("runs the new version's tables and setup when the plugin was already active", async () => {
+      holder.systemDb.plugin.findUnique.mockResolvedValue(pluginWith(["content:read"]));
+      holder.db.sitePlugin.findFirst.mockResolvedValue({
+        id: "sp-1",
+        status: "ACTIVE",
+        versionId: "ver-0",
+      });
+
+      await makeController().install(actor, "s1", "zsoft-seo", {
+        grantedPermissions: ["content:read"],
+      });
+
+      expect(plugins.ensurePluginTables).toHaveBeenCalledWith("zsoft-seo");
+      expect(plugins.runSetup).toHaveBeenCalledWith("t1", "s1", "zsoft-seo");
+      expect(holder.db.sitePlugin.update.mock.calls[0][0].data.versionId).toBe("ver-1");
+      // A new version may declare new capabilities and new permissions, and both
+      // are read from caches keyed on the ACTIVE manifest.
+      expect(cache.invalidateSite).toHaveBeenCalledWith("s1");
+      expect(plugins.bustProvidedPermissions).toHaveBeenCalledWith("t1");
+    });
+
+    it("leaves an inactive install alone — activation is still where it starts", async () => {
+      holder.systemDb.plugin.findUnique.mockResolvedValue(pluginWith(["content:read"]));
+      holder.db.sitePlugin.findFirst.mockResolvedValue({
+        id: "sp-1",
+        status: "INACTIVE",
+        versionId: "ver-0",
+      });
+
+      await makeController().install(actor, "s1", "zsoft-seo", {
+        grantedPermissions: ["content:read"],
+      });
+
+      expect(plugins.ensurePluginTables).not.toHaveBeenCalled();
+      expect(plugins.runSetup).not.toHaveBeenCalled();
+    });
+
+    it("does not re-run anything when the installed version did not change", async () => {
+      holder.systemDb.plugin.findUnique.mockResolvedValue(pluginWith(["content:read"]));
+      // Re-consenting to the same version is a permission change, not an upgrade.
+      holder.db.sitePlugin.findFirst.mockResolvedValue({
+        id: "sp-1",
+        status: "ACTIVE",
+        versionId: "ver-1",
+      });
+
+      await makeController().install(actor, "s1", "zsoft-seo", {
+        grantedPermissions: ["content:read"],
+      });
+
+      expect(plugins.ensurePluginTables).not.toHaveBeenCalled();
+      expect(plugins.runSetup).not.toHaveBeenCalled();
+    });
+
+    it("marks the plugin FAILED and reports when the upgraded version cannot start", async () => {
+      holder.systemDb.plugin.findUnique.mockResolvedValue(pluginWith(["content:read"]));
+      holder.db.sitePlugin.findFirst.mockResolvedValue({
+        id: "sp-1",
+        status: "ACTIVE",
+        versionId: "ver-0",
+      });
+      plugins.runSetup.mockRejectedValue(new Error("setup() blew up"));
+
+      const res = await makeController().install(actor, "s1", "zsoft-seo", {
+        grantedPermissions: ["content:read"],
+      });
+
+      // The version installed; it is the plugin that could not start on it. Saying
+      // "ok" and nothing else would hide a broken plugin behind a clean upgrade.
+      expect(res).toMatchObject({ ok: true, error: "setup() blew up" });
+      const failed = holder.db.sitePlugin.update.mock.calls.at(-1)![0].data;
+      expect(failed).toMatchObject({ status: "FAILED", lastError: "setup() blew up" });
     });
   });
 

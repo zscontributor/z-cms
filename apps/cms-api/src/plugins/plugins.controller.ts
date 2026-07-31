@@ -237,7 +237,7 @@ export class PluginsController {
     @SiteId() siteId: string,
     @Param("key") key: string,
     @Body() body: { grantedPermissions?: string[] },
-  ): Promise<{ ok: true; granted: Permission[] }> {
+  ): Promise<{ ok: true; granted: Permission[]; error?: string }> {
     const plugin = await getSystemDb().plugin.findUnique({
       where: { key },
       include: { versions: { orderBy: { createdAt: "desc" }, take: 1 } },
@@ -354,11 +354,52 @@ export class PluginsController {
       where: { siteId, pluginId: plugin.id },
     });
 
+    /**
+     * An UPGRADE of a running plugin has to land its new schema.
+     *
+     * Installing over an existing row swaps `versionId` and nothing else — which
+     * is right for a plugin that is switched off, and silently wrong for one that
+     * is not: the DDL and `setup()` run on ACTIVATION, and nobody activates a
+     * plugin that is already active. So a new version's table, or a new column on
+     * an old table, never came into being, and the first screen to read it
+     * answered "no such thing" — an upgrade that installed cleanly and then did
+     * not work.
+     *
+     * So the same two steps activation runs, run here too. Both are idempotent
+     * (`CREATE TABLE IF NOT EXISTS`, `ADD COLUMN IF NOT EXISTS`, and a `setup()`
+     * that seeds only what is missing) — this is WordPress re-running `dbDelta`
+     * on upgrade, and for the same reason.
+     */
+    let upgradeError: string | undefined;
+
     if (existing) {
+      const wasActive = existing.status === "ACTIVE";
+      const versionChanged = existing.versionId !== latest.id;
+
       await db().sitePlugin.update({
         where: { id: existing.id },
         data: { grantedPermissions: granted, versionId: latest.id },
       });
+
+      if (wasActive && versionChanged) {
+        try {
+          await this.plugins.ensurePluginTables(key);
+          await this.plugins.runSetup(actor.tenantId, siteId, key);
+        } catch (err) {
+          // The version installed; it is the plugin that could not start on it.
+          // FAILED is the honest status, and the message is the plugin's own —
+          // exactly what activation does with the same failure.
+          upgradeError = (err as Error).message;
+          await db().sitePlugin.update({
+            where: { id: existing.id },
+            data: { status: "FAILED", lastError: upgradeError },
+          });
+        }
+        // A new version may declare new capabilities, new permissions and new
+        // forms; every one of those is read from the ACTIVE manifest elsewhere.
+        await this.cache.invalidateSite(siteId);
+        this.plugins.bustProvidedPermissions(actor.tenantId);
+      }
     } else {
       await db().sitePlugin.create({
         data: {
@@ -381,11 +422,11 @@ export class PluginsController {
         action: "plugin.installed",
         resourceType: "plugin",
         resourceId: key,
-        metadata: { requested, granted } as never,
+        metadata: { requested, granted, ...(upgradeError ? { upgradeError } : {}) } as never,
       },
     });
 
-    return { ok: true, granted };
+    return { ok: true, granted, ...(upgradeError ? { error: upgradeError } : {}) };
   }
 
   @Post(":key/activate")

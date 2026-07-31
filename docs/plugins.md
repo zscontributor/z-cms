@@ -356,6 +356,18 @@ internet, and the handler is the last place that decides what walks through it.
 `plugins/catalog` is the worked example, with the cost price deliberately absent from
 what `query` returns.
 
+A row can also BE a choice rather than a card: `data-zc-value="col"` writes a row
+value into the element's `value`, which is what turns a query into the `<option>`s of
+a real `<select>` — the list of shops, warehouses or clinics a plugin owns and a theme
+cannot know. Pair it with `data-zc-scope="branch"` on that select and the choice
+becomes the page's, not the form's: the runtime appends `branch=<value>` to every
+*other* query form on the page, keeps it in `localStorage` so it survives a
+navigation, and re-runs those lists when it changes. The form holding the control is
+never filtered by it — the list of branches is not itself per-branch — and a stored
+choice the control no longer offers (a shop that closed) is dropped rather than
+filtering forever by something that is gone. `plugins/cafe` + `themes/cafe` are the
+worked example: one picker in the header, and the menu is that branch's menu.
+
 ### Admin screens, without shipping admin code
 
 A plugin that owns tables usually needs somewhere to look at them.

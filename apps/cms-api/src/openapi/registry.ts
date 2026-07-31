@@ -874,6 +874,14 @@ const PluginInstalledSchema = z.object({
   granted: z
     .array(PermissionSchema)
     .describe("What the plugin may actually do — never more than it requested."),
+  error: z
+    .string()
+    .optional()
+    .describe(
+      "Present only when this install UPGRADED a running plugin and the new " +
+        "version's tables or `setup()` then failed. The version is installed; the " +
+        "plugin is FAILED and this is its own message.",
+    ),
 });
 
 /**
