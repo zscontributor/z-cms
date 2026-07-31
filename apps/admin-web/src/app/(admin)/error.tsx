@@ -22,14 +22,38 @@ export default function AdminError({
   // too; middleware will bounce the next navigation, so offer the login link.
   const expired = error.message === t("auth.session.expired") || /401/.test(error.message);
 
+  /**
+   * The tab is older than the server.
+   *
+   * A Server Action is addressed by an id baked into the page at BUILD time, so a
+   * tab left open across a deploy asks the new build to run an action it has never
+   * heard of. Next's own message ("Server Action … was not found on the server")
+   * is accurate and reads like a fault in the software; it is neither, and it is
+   * NOT retryable — `reset()` re-runs the same dead id from the same stale
+   * JavaScript. Only a fresh page has ids this server knows.
+   *
+   * The other half of it, and the reason this says "may already have happened":
+   * the action often DID run. The uninstall this was first seen on completed on
+   * the server and failed only on the way back, which is exactly the state where
+   * "Retry" is the most damaging button on the screen.
+   */
+  const stale = /server action .*(was not found|not found on the server)/i.test(error.message);
+
+  const title = expired
+    ? t("auth.session.expiredTitle")
+    : stale
+      ? t("admin.error.staleTitle")
+      : t("admin.error.title");
+  const hint = expired
+    ? t("auth.session.expiredHint")
+    : stale
+      ? t("admin.error.staleHint")
+      : error.message;
+
   return (
     <div className="z-card mx-auto max-w-md p-8 text-center">
-      <h1 className="text-sm font-semibold">
-        {expired ? t("auth.session.expiredTitle") : t("admin.error.title")}
-      </h1>
-      <p className="mt-1 text-xs z-muted">
-        {expired ? t("auth.session.expiredHint") : error.message}
-      </p>
+      <h1 className="text-sm font-semibold">{title}</h1>
+      <p className="mt-1 text-xs z-muted">{hint}</p>
       {error.digest ? (
         <p className="mt-2 font-mono text-[10px] z-muted">#{error.digest}</p>
       ) : null}
@@ -42,6 +66,12 @@ export default function AdminError({
           >
             {t("auth.session.signInAgain")}
           </Link>
+        ) : stale ? (
+          // A full load, not `reset()`: the fix is new JavaScript, and `reset()`
+          // keeps the old.
+          <Button variant="primary" onClick={() => window.location.reload()}>
+            {t("admin.error.reload")}
+          </Button>
         ) : (
           <Button variant="primary" onClick={reset}>
             {t("common.retry")}

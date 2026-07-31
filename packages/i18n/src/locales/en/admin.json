@@ -290,7 +290,10 @@
     "truncated": "Showing {shown} of {total} failed jobs. Retrying everything on this page will not empty the queue."
   },
   "error": {
-    "title": "Something went wrong"
+    "title": "Something went wrong",
+    "staleTitle": "The admin was updated",
+    "staleHint": "This page was loaded from an older build, so the button you pressed no longer exists on the server. Whatever you asked for may already have happened — reload to see where things stand.",
+    "reload": "Reload the page"
   },
   "notFound": {
     "title": "Page not found",

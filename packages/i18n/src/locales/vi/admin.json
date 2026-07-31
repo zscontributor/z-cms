@@ -290,7 +290,10 @@
     "truncated": "Đang hiện {shown} trong tổng số {total} job lỗi. Thử lại hết trang này vẫn chưa làm rỗng hàng đợi."
   },
   "error": {
-    "title": "Đã xảy ra lỗi"
+    "title": "Đã xảy ra lỗi",
+    "staleTitle": "Trang quản trị vừa được cập nhật",
+    "staleHint": "Trang này được tải từ bản build cũ nên thao tác bạn vừa bấm không còn tồn tại trên máy chủ. Việc bạn yêu cầu có thể đã chạy xong — hãy tải lại để xem trạng thái hiện tại.",
+    "reload": "Tải lại trang"
   },
   "notFound": {
     "title": "Không tìm thấy trang",

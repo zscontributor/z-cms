@@ -39,9 +39,9 @@ function makeSystemDb() {
     site: { findFirst: vi.fn().mockResolvedValue({ id: "s1", name: "Main", defaultLocale: "en" }) },
     pluginData: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
     $executeRawUnsafe: vi.fn().mockResolvedValue(0),
-    // `to_regclass` — the existence probe purge runs before each DELETE. The
-    // default is "the table is there", which is the normal case.
-    $queryRawUnsafe: vi.fn().mockResolvedValue([{ oid: "p_vn_zsoft_testdb__notes" }]),
+    // The existence probe purge runs before each DELETE. The default is "the table
+    // is there", which is the normal case.
+    $queryRawUnsafe: vi.fn().mockResolvedValue([{ present: true }]),
   };
 }
 
@@ -341,13 +341,28 @@ describe("PluginsService", () => {
       // error" — and uninstall is the way OUT of a broken install, so the one
       // action that could fix it was the one that could not run.
       holder.systemDb.plugin.findUnique.mockResolvedValue(tableOwningPlugin());
-      holder.systemDb.$queryRawUnsafe.mockResolvedValue([{ oid: null }]);
+      holder.systemDb.$queryRawUnsafe.mockResolvedValue([{ present: false }]);
 
       await expect(
         makeService().purgePluginSiteData("t1", "s1", "vn.zsoft.testdb"),
       ).resolves.toBeUndefined();
 
       expect(holder.systemDb.$executeRawUnsafe).not.toHaveBeenCalled();
+    });
+
+    it("asks Postgres for a BOOLEAN, never for an oid", async () => {
+      // Prisma's pg adapter cannot deserialize `regclass`: selecting `to_regclass(…)`
+      // itself answers UnsupportedNativeDataType, which is a 500 raised BY the guard
+      // against a 500. The NULL test belongs in the query, not in JavaScript.
+      holder.systemDb.plugin.findUnique.mockResolvedValue(tableOwningPlugin());
+
+      await makeService().purgePluginSiteData("t1", "s1", "vn.zsoft.testdb");
+
+      const [sql, name] = holder.systemDb.$queryRawUnsafe.mock.calls[0]!;
+      expect(sql).toMatch(/IS NOT NULL/i);
+      expect(sql).not.toMatch(/SELECT\s+to_regclass\(\$1\)\s+AS/i);
+      // The table name is bound, never interpolated.
+      expect(name).toBe("public.p_vn_zsoft_testdb__notes");
     });
   });
 

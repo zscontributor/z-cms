@@ -829,13 +829,18 @@ export class PluginsService {
    * one form of "does this exist" that does not depend on catching an error. The
    * name is a bound parameter, and it only ever reaches here after
    * `validatePluginTableSchemas` has confirmed it is the plugin's own prefix.
+   *
+   * The comparison to NULL happens in POSTGRES, and the column is a boolean, so
+   * an `oid`/`regclass` never crosses the wire: Prisma's pg adapter cannot
+   * deserialize that type and answers `UnsupportedNativeDataType` — which turned
+   * a guard against a 500 into a 500 of its own the first time this shipped.
    */
   private async tableExists(name: string): Promise<boolean> {
-    const rows = await getSystemDb().$queryRawUnsafe<{ oid: unknown }[]>(
-      `SELECT to_regclass($1) AS oid`,
+    const rows = await getSystemDb().$queryRawUnsafe<{ present: boolean }[]>(
+      `SELECT to_regclass($1) IS NOT NULL AS present`,
       `public.${name}`,
     );
-    return rows[0]?.oid != null;
+    return rows[0]?.present === true;
   }
 
   /**
