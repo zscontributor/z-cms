@@ -138,3 +138,159 @@ describe("form pick enhancer", () => {
     expect(readPicks("cafe-order")).toEqual([{ value: "CF-01", qty: 1 }]);
   });
 });
+
+/**
+ * The drawer half of the contract. The cafe theme's basket button used to scroll
+ * to the pre-order form; these are about it opening a drawer over the page instead
+ * — one the runtime never renders, only fills in.
+ */
+describe("form pick drawer", () => {
+  function drawer(formId: string, values: string[]): HTMLElement {
+    const root = document.createElement("div");
+    root.setAttribute("data-zc-pick-drawer", formId);
+    root.setAttribute("aria-hidden", "true");
+    root.innerHTML =
+      `<p data-zc-pick-empty="${formId}">empty</p>` +
+      `<ul>${values
+        .map(
+          (value) =>
+            `<li data-zc-pick-line="${formId}" data-zc-pick-value="${value}" hidden>` +
+            `<b data-zc-pick-line-qty>1</b>` +
+            `<button type="button" data-zc-pick-step="-1">-</button>` +
+            `<button type="button" data-zc-pick-step="1">+</button>` +
+            `<button type="button" data-zc-pick-drop>x</button>` +
+            `</li>`,
+        )
+        .join("")}</ul>` +
+      `<div data-zc-pick-filled="${formId}" hidden>` +
+      `<b data-zc-pick-count="${formId}" hidden>0</b>` +
+      `<a href="/#order" data-zc-pick-close>order</a>` +
+      `</div>` +
+      `<button type="button" data-zc-pick-close>close</button>`;
+    document.body.appendChild(root);
+    return root;
+  }
+
+  function opener(formId: string): HTMLAnchorElement {
+    const el = document.createElement("a");
+    el.setAttribute("href", "/#order");
+    el.setAttribute("data-zc-pick-open", formId);
+    document.body.appendChild(el);
+    return el;
+  }
+
+  function line(root: HTMLElement, value: string): HTMLElement {
+    return root.querySelector<HTMLElement>(`[data-zc-pick-value="${value}"]`)!;
+  }
+
+  it("opens over the page instead of following the link to the form", () => {
+    const root = drawer("cafe-order", ["CF-01"]);
+    const button = opener("cafe-order");
+    boot();
+
+    const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+    button.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(root.hasAttribute("data-zc-open")).toBe(true);
+    expect(root.hasAttribute("aria-hidden")).toBe(false);
+  });
+
+  it("stays a link to the form on a page that renders no drawer", () => {
+    // The basket button is in the header of every page; the drawer need not be.
+    const button = opener("cafe-order");
+    boot();
+
+    const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+    button.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it("shows only the lines the basket holds, with their numbers", () => {
+    writePicks("cafe-order", [{ value: "CF-01", qty: 2 }]);
+    const root = drawer("cafe-order", ["CF-01", "CF-02"]);
+    boot();
+
+    expect(line(root, "CF-01").hasAttribute("hidden")).toBe(false);
+    expect(line(root, "CF-01").querySelector("[data-zc-pick-line-qty]")?.textContent).toBe("2");
+    expect(line(root, "CF-02").hasAttribute("hidden")).toBe(true);
+    // Empty notice out, footer in.
+    expect(root.querySelector("[data-zc-pick-empty]")?.hasAttribute("hidden")).toBe(true);
+    expect(root.querySelector("[data-zc-pick-filled]")?.hasAttribute("hidden")).toBe(false);
+  });
+
+  it("steps a line up and down, and drops it when the last one goes", () => {
+    writePicks("cafe-order", [{ value: "CF-01", qty: 1 }]);
+    const root = drawer("cafe-order", ["CF-01"]);
+    boot();
+    const row = line(root, "CF-01");
+
+    row.querySelector<HTMLElement>('[data-zc-pick-step="1"]')!.click();
+    expect(readPicks("cafe-order")).toEqual([{ value: "CF-01", qty: 2 }]);
+
+    row.querySelector<HTMLElement>('[data-zc-pick-step="-1"]')!.click();
+    row.querySelector<HTMLElement>('[data-zc-pick-step="-1"]')!.click();
+
+    // A line of zero is not a line: it leaves the basket, and the form gets its
+    // slot back rather than holding an entry nobody ordered.
+    expect(readPicks("cafe-order")).toEqual([]);
+    expect(row.hasAttribute("hidden")).toBe(true);
+    expect(root.querySelector("[data-zc-pick-empty]")?.hasAttribute("hidden")).toBe(false);
+  });
+
+  it("removes a line outright", () => {
+    writePicks("cafe-order", [
+      { value: "CF-01", qty: 3 },
+      { value: "CF-02", qty: 1 },
+    ]);
+    const root = drawer("cafe-order", ["CF-01", "CF-02"]);
+    boot();
+
+    line(root, "CF-01").querySelector<HTMLElement>("[data-zc-pick-drop]")!.click();
+
+    expect(readPicks("cafe-order")).toEqual([{ value: "CF-02", qty: 1 }]);
+  });
+
+  it("closes on the ✕ and on Escape, and lets the order link through", () => {
+    const root = drawer("cafe-order", ["CF-01"]);
+    const button = opener("cafe-order");
+    boot();
+
+    button.click();
+    const close = [...root.querySelectorAll<HTMLElement>("[data-zc-pick-close]")].find(
+      (el) => el.tagName === "BUTTON",
+    )!;
+    const closeEvent = new MouseEvent("click", { bubbles: true, cancelable: true });
+    close.dispatchEvent(closeEvent);
+    expect(closeEvent.defaultPrevented).toBe(true);
+    expect(root.hasAttribute("data-zc-open")).toBe(false);
+    expect(root.getAttribute("aria-hidden")).toBe("true");
+
+    button.click();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(root.hasAttribute("data-zc-open")).toBe(false);
+
+    // The link on to the form closes the drawer AND navigates — swallowing it
+    // would leave the visitor looking at a shut drawer and nothing else.
+    button.click();
+    const link = root.querySelector<HTMLElement>("a[data-zc-pick-close]")!;
+    const linkEvent = new MouseEvent("click", { bubbles: true, cancelable: true });
+    link.dispatchEvent(linkEvent);
+    expect(linkEvent.defaultPrevented).toBe(false);
+    expect(root.hasAttribute("data-zc-open")).toBe(false);
+  });
+
+  it("empties the drawer when the island empties the basket after an order", () => {
+    writePicks("cafe-order", [{ value: "CF-01", qty: 2 }]);
+    const root = drawer("cafe-order", ["CF-01"]);
+    boot();
+    expect(line(root, "CF-01").hasAttribute("hidden")).toBe(false);
+
+    // What FormIsland does on a successful submit.
+    writePicks("cafe-order", []);
+
+    expect(line(root, "CF-01").hasAttribute("hidden")).toBe(true);
+    expect(root.querySelector("[data-zc-pick-filled]")?.hasAttribute("hidden")).toBe(true);
+  });
+});

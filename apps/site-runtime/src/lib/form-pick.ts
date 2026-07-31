@@ -27,6 +27,24 @@
  *     theme derives from the form definition it was handed.
  *   - `[data-zc-pick-count="<formId>"]` — a badge; gets the total quantity as
  *     text and is `hidden` while the basket is empty.
+ *
+ * HYDRATION — the one rule a theme must not get wrong. This is an inline
+ * `<script>`: it runs while the HTML is still being parsed, long before React's
+ * bundle has downloaded, so every element it writes into is one React later
+ * hydrates against markup that has already changed underneath it. That is a
+ * hydration failure (React #418 — the whole tree is thrown away and re-rendered on
+ * the client), and it is not hypothetical: it shipped, and it fired on every page
+ * of coffee.z-cms.org because an empty basket wrote "0" into a badge the server had
+ * rendered empty. So EVERY element this script paints must:
+ *
+ *   1. be rendered by the theme WITH its number already in it (`<b …>0</b>`, never
+ *      `<b …/>`) — React treats a text node appearing inside an element it rendered
+ *      childless as a structural mismatch, which nothing can suppress; and
+ *   2. carry `suppressHydrationWarning`, which is how React is told an element's
+ *      content and attributes belong to a script rather than to the tree.
+ *
+ * Both, or neither works. `form-pick-hydration.test.tsx` hydrates the real markup
+ * after running the real script and holds this.
  *   - `[data-zc-pick-allow="a|b|c"]` on any ancestor — the values the form will
  *     actually accept. Optional, and the theme reads them off the form definition
  *     it was handed: a live list can offer a row the form's own options do not
@@ -39,6 +57,39 @@
  * Feedback is left to the theme: the clicked control gets `data-zc-picked="added"`
  * (or `"full"` when the form has no slot left) for a moment, and the theme styles
  * what that looks like.
+ *
+ * THE DRAWER (optional, the second half of the contract).
+ *
+ * Counting a basket into a badge and then sending the visitor to a form to see
+ * what is in it is half a shop. Core commerce answers this with a drawer the
+ * runtime renders itself (`Storefront`), but that drawer prices catalogue products
+ * and a form-driven shop has none — so here the runtime renders NOTHING. The theme
+ * renders the drawer, in its own markup and its own words, listing every value the
+ * form accepts once; this script decides which of those lines the basket currently
+ * holds, what number sits on each, and whether the drawer is open. Markup is the
+ * theme's, state is the runtime's — the same split as the badge, and the reason a
+ * server-rendered theme can have a live cart without shipping a line of JavaScript.
+ *
+ *   - `[data-zc-pick-drawer="<formId>"]` — the drawer root. Carries `data-zc-open`
+ *     and loses `aria-hidden` while open; the theme decides what open looks like.
+ *   - `[data-zc-pick-open="<formId>"]` — opens it. Keeps its `href`, so with no
+ *     JavaScript the button still goes to the form.
+ *   - `[data-zc-pick-close]` — closes the drawer it is in (scrim, ✕, or the link on
+ *     to the form, which closes as it navigates).
+ *   - `[data-zc-pick-line="<formId>"][data-zc-pick-value="<value>"]` — one line,
+ *     rendered for every value the form takes and `hidden` unless the basket holds
+ *     it. `[data-zc-pick-line-qty]` inside it gets the number.
+ *   - `[data-zc-pick-step="1|-1"]` / `[data-zc-pick-drop]` inside a line — more,
+ *     fewer, gone. Stepping the last one off a line removes it, because a line of
+ *     zero is not a line.
+ *   - `[data-zc-pick-empty="<formId>"]` / `[data-zc-pick-filled="<formId>"]` — the
+ *     two halves of an empty basket, one `hidden` at a time.
+ *
+ * The hydration rule above applies to every one of these too.
+ *
+ * The drawer stays shut on a page with no JavaScript, where it is also unreachable:
+ * the theme hides it in CSS, the opener is still a link, and the form is still the
+ * place the basket is filled in.
  */
 
 /** One chosen line: an option value and how many of it. */
@@ -86,7 +137,7 @@ export function readPicks(formId: string): FormPick[] {
   }
 }
 
-/** Writes the basket, repaints every badge, and tells the page it changed. */
+/** Writes the basket, repaints what shows it, and tells the page it changed. */
 export function writePicks(formId: string, picks: FormPick[]): void {
   try {
     window.localStorage.setItem(pickKey(formId), JSON.stringify(picks));
@@ -94,7 +145,7 @@ export function writePicks(formId: string, picks: FormPick[]): void {
     // A browser with no storage still gets a working page; the basket just does
     // not survive the next navigation.
   }
-  paintBadges(formId, picks);
+  paintPicks(formId, picks);
   try {
     document.dispatchEvent(new CustomEvent(PICK_EVENT, { detail: { formId } }));
   } catch {
@@ -102,15 +153,44 @@ export function writePicks(formId: string, picks: FormPick[]): void {
   }
 }
 
-function paintBadges(formId: string, picks: FormPick[]): void {
+/**
+ * The basket as the page shows it: the badge, and the theme's drawer lines.
+ *
+ * The island writes picks too (it prunes what the form refused, and empties the
+ * basket on a successful order), so painting lives here rather than only in the
+ * inline script — otherwise a submitted order would leave the drawer still
+ * listing what was just bought.
+ */
+export function paintPicks(formId: string, picks: FormPick[]): void {
   const total = picks.reduce((sum, pick) => sum + pick.qty, 0);
+  const quantities = new Map(picks.map((pick) => [pick.value, pick.qty]));
+
   // Read by attribute rather than by an interpolated selector: a form id is a
   // plugin's string, and it has no business inside a CSS selector.
-  document.querySelectorAll<HTMLElement>("[data-zc-pick-count]").forEach((el) => {
-    if (el.getAttribute("data-zc-pick-count") !== formId) return;
+  const forThisForm = (selector: string, attribute: string): HTMLElement[] =>
+    [...document.querySelectorAll<HTMLElement>(selector)].filter(
+      (el) => el.getAttribute(attribute) === formId,
+    );
+
+  forThisForm("[data-zc-pick-count]", "data-zc-pick-count").forEach((el) => {
     el.textContent = String(total);
     el.toggleAttribute("hidden", total === 0);
   });
+
+  forThisForm("[data-zc-pick-line]", "data-zc-pick-line").forEach((line) => {
+    const qty = quantities.get(line.getAttribute("data-zc-pick-value") ?? "") ?? 0;
+    line.toggleAttribute("hidden", qty === 0);
+    line
+      .querySelectorAll<HTMLElement>("[data-zc-pick-line-qty]")
+      .forEach((el) => (el.textContent = String(qty)));
+  });
+
+  forThisForm("[data-zc-pick-empty]", "data-zc-pick-empty").forEach((el) =>
+    el.toggleAttribute("hidden", total > 0),
+  );
+  forThisForm("[data-zc-pick-filled]", "data-zc-pick-filled").forEach((el) =>
+    el.toggleAttribute("hidden", total === 0),
+  );
 }
 
 export function formPickScript(): string {
@@ -135,13 +215,30 @@ export function formPickScript(): string {
     }catch(err){return [];}
   }
   function total(items){var n=0;for(var i=0;i<items.length;i++)n+=items[i].qty;return n;}
+  function mine(selector,attr,id){
+    var all=document.querySelectorAll(selector),out=[];
+    for(var i=0;i<all.length;i++)if(all[i].getAttribute(attr)===id)out.push(all[i]);
+    return out;
+  }
+  function show(el,on){if(on)el.removeAttribute("hidden");else el.setAttribute("hidden","");}
   function paint(id,items){
-    var n=total(items),els=document.querySelectorAll("[data-zc-pick-count]");
-    for(var i=0;i<els.length;i++){
-      if(els[i].getAttribute("data-zc-pick-count")!==id)continue;
-      els[i].textContent=""+n;
-      if(n===0)els[i].setAttribute("hidden","");else els[i].removeAttribute("hidden");
+    var n=total(items),i,j;
+    var els=mine("[data-zc-pick-count]","data-zc-pick-count",id);
+    for(i=0;i<els.length;i++){els[i].textContent=""+n;show(els[i],n>0);}
+    /* The theme's drawer lists every value the form takes; the basket decides
+       which of those lines exist right now and what number sits on each. */
+    var lines=mine("[data-zc-pick-line]","data-zc-pick-line",id);
+    for(i=0;i<lines.length;i++){
+      var value=lines[i].getAttribute("data-zc-pick-value"),qty=0;
+      for(j=0;j<items.length;j++)if(items[j].value===value)qty=items[j].qty;
+      show(lines[i],qty>0);
+      var qs=lines[i].querySelectorAll("[data-zc-pick-line-qty]");
+      for(j=0;j<qs.length;j++)qs[j].textContent=""+qty;
     }
+    var empty=mine("[data-zc-pick-empty]","data-zc-pick-empty",id);
+    for(i=0;i<empty.length;i++)show(empty[i],n===0);
+    var filled=mine("[data-zc-pick-filled]","data-zc-pick-filled",id);
+    for(i=0;i<filled.length;i++)show(filled[i],n>0);
   }
   function write(id,items){
     try{window.localStorage.setItem(PREFIX+id,JSON.stringify(items));}catch(err){}
@@ -155,9 +252,74 @@ export function formPickScript(): string {
     el.__zcPickT=setTimeout(function(){el.removeAttribute("data-zc-picked");el.__zcPickT=null;},1600);
   }
   function num(el,name){var n=Math.round(Number(el.getAttribute(name)));return n>0?n:0;}
+  /* ---- the theme's drawer: the runtime opens it, the theme draws it ---- */
+  function openDrawer(id){
+    var drawers=mine("[data-zc-pick-drawer]","data-zc-pick-drawer",id);
+    if(!drawers.length)return false;
+    /* Repainted on the way open: another tab may have moved the basket since. */
+    paint(id,read(id));
+    for(var i=0;i<drawers.length;i++){
+      drawers[i].setAttribute("data-zc-open","");
+      drawers[i].removeAttribute("aria-hidden");
+      var panel=drawers[i].querySelector("[data-zc-pick-panel]")||drawers[i];
+      try{panel.focus();}catch(err){}
+    }
+    return true;
+  }
+  function closeDrawer(el){
+    var drawers=el?[el]:document.querySelectorAll("[data-zc-pick-drawer][data-zc-open]");
+    for(var i=0;i<drawers.length;i++){
+      drawers[i].removeAttribute("data-zc-open");
+      drawers[i].setAttribute("aria-hidden","true");
+    }
+  }
+  /* One line, more or fewer. Stepping the last one off removes the line: a
+     basket entry of zero is not an entry, and the form has a slot back. */
+  function step(line,delta){
+    var id=line.getAttribute("data-zc-pick-line"),value=line.getAttribute("data-zc-pick-value");
+    if(!id||!value)return;
+    var items=read(id),out=[];
+    for(var i=0;i<items.length;i++){
+      if(items[i].value!==value){out.push(items[i]);continue;}
+      var qty=delta===0?0:Math.min(MAXQ,items[i].qty+delta);
+      if(qty>0)out.push({value:value,qty:qty});
+    }
+    write(id,out);
+  }
   function onClick(ev){
     var t=ev.target;
     if(!t||!t.closest)return;
+
+    var opener=t.closest("[data-zc-pick-open]");
+    if(opener){
+      /* Only swallow the click if there IS a drawer to open; otherwise the
+         opener stays the link to the form it is without JavaScript. */
+      if(openDrawer(opener.getAttribute("data-zc-pick-open")))ev.preventDefault();
+      return;
+    }
+    var closer=t.closest("[data-zc-pick-close]");
+    if(closer){
+      closeDrawer(closer.closest("[data-zc-pick-drawer]"));
+      /* A link out of the drawer (on to the form) closes AND goes; a button
+         that only closes must not follow an empty href. */
+      if(!closer.getAttribute("href"))ev.preventDefault();
+      return;
+    }
+    var stepper=t.closest("[data-zc-pick-step]");
+    if(stepper){
+      ev.preventDefault();
+      var line=stepper.closest("[data-zc-pick-line]");
+      if(line)step(line,Math.round(Number(stepper.getAttribute("data-zc-pick-step")))||0);
+      return;
+    }
+    var dropper=t.closest("[data-zc-pick-drop]");
+    if(dropper){
+      ev.preventDefault();
+      var dropLine=dropper.closest("[data-zc-pick-line]");
+      if(dropLine)step(dropLine,0);
+      return;
+    }
+
     var el=t.closest("[data-zc-pick]");
     if(!el)return;
     var id=el.getAttribute("data-zc-pick"),value=el.getAttribute("data-zc-pick-value");
@@ -179,13 +341,23 @@ export function formPickScript(): string {
     write(id,items);
     flash(el,"added");
   }
+  function onKey(ev){
+    if(ev.key!=="Escape"&&ev.key!=="Esc")return;
+    if(!document.querySelector("[data-zc-pick-drawer][data-zc-open]"))return;
+    closeDrawer(null);
+  }
   function boot(){
-    /* Every badge on the page starts from the store, so a basket filled on the
-       menu page is already counted in the header of the next one. */
-    var els=document.querySelectorAll("[data-zc-pick-count]");
+    /* Every badge and every drawer on the page starts from the store, so a basket
+       filled on the menu page is already counted in the header of the next one —
+       and already listed in a drawer that has never been opened. */
+    var seen={},els=document.querySelectorAll("[data-zc-pick-count],[data-zc-pick-drawer]");
     for(var i=0;i<els.length;i++){
-      var id=els[i].getAttribute("data-zc-pick-count");
-      if(id)paint(id,read(id));
+      var id=els[i].getAttribute("data-zc-pick-count")||els[i].getAttribute("data-zc-pick-drawer");
+      /* Prefixed, because a form id is free text and "constructor" is a key an
+         empty object already answers to. */
+      if(!id||seen["#"+id])continue;
+      seen["#"+id]=1;
+      paint(id,read(id));
     }
   }
   /* Evaluated twice, still ONE listener: a second copy of this script would
@@ -193,6 +365,9 @@ export function formPickScript(): string {
   if(window.__zcPick)document.removeEventListener("click",window.__zcPick);
   window.__zcPick=onClick;
   document.addEventListener("click",onClick);
+  if(window.__zcPickKey)document.removeEventListener("keydown",window.__zcPickKey);
+  window.__zcPickKey=onKey;
+  document.addEventListener("keydown",onKey);
   if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",boot);}
   else{boot();}
 })();`;
