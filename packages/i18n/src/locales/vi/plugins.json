@@ -63,7 +63,8 @@
     "summaryDeclined": "Bạn từ chối {count} quyền: {list}.",
     "networkHeading": "Plugin sẽ gọi tới",
     "networkHint": "Danh sách host này lấy từ manifest của plugin và là những nơi duy nhất nó có thể gọi tới. Cấp quyền ở trên tức là cấp đúng danh sách này — không rộng hơn.",
-    "networkOnlyThese": "và không host nào khác"
+    "networkOnlyThese": "và không host nào khác",
+    "installing": "Đang cài đặt…"
   },
   "status": {
     "NOT_INSTALLED": "Chưa cài",

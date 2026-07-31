@@ -45,6 +45,18 @@ export function buttonClasses(
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
+  /**
+   * Work is running that this button started, and it is not over yet.
+   *
+   * Disabling alone says "you cannot press this", which a reader can equally read
+   * as "this is not for you" — the two look identical, and the difference matters
+   * most exactly when the wait is long. Installing a plugin runs its `setup()`
+   * against the database; the honest signal is a moving one.
+   *
+   * `aria-busy` carries the same fact to a screen reader, and the spinner is
+   * marked `aria-hidden` so it is not announced twice.
+   */
+  busy?: boolean;
 }
 
 export function Button({
@@ -52,9 +64,48 @@ export function Button({
   size = "md",
   className,
   type = "button",
+  busy = false,
+  disabled,
+  children,
   ...props
 }: ButtonProps) {
-  return <button type={type} className={buttonClasses(variant, size, className)} {...props} />;
+  return (
+    <button
+      type={type}
+      className={buttonClasses(variant, size, className)}
+      disabled={disabled || busy}
+      aria-busy={busy || undefined}
+      {...props}
+    >
+      {busy ? <Spinner /> : null}
+      {children}
+    </button>
+  );
+}
+
+/**
+ * The one spinner. Sized in `em` so it follows whatever text it sits beside, and
+ * still — reduced motion or not — a shape that is obviously "waiting": the arc is
+ * visible when the animation is off, which a spinner that relies solely on
+ * rotation is not.
+ */
+export function Spinner({ className }: { className?: string }) {
+  return (
+    <svg
+      className={cn("h-[1em] w-[1em] shrink-0 animate-spin motion-reduce:animate-none", className)}
+      viewBox="0 0 16 16"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeOpacity="0.25" strokeWidth="2" />
+      <path
+        d="M14.5 8A6.5 6.5 0 0 0 8 1.5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
 }
 
 export interface LinkButtonProps extends AnchorHTMLAttributes<HTMLAnchorElement> {

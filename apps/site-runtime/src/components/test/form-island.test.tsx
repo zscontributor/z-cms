@@ -505,3 +505,34 @@ describe("FormIsland basket — a plugin that declares its own shape", () => {
     expect(body.get("soLuongQua")).toBe("1");
   });
 });
+
+/**
+ * The same form, twice on one page.
+ *
+ * The cafe theme's basket drawer renders the pre-order form as its second step, on
+ * every page — including the page that already shows that form. Two of these now
+ * exist side by side, and everything a label points at has to point INSIDE its own
+ * copy: a "Tên người đặt" in the drawer that focused the box on the page behind it
+ * is a form the visitor cannot fill in.
+ */
+describe("FormIsland rendered twice on one page", () => {
+  it("gives each copy its own field ids, so a label reaches its own box", () => {
+    render(
+      <>
+        <FormIsland def={DEF} messages={VI} />
+        <FormIsland def={DEF} messages={VI} />
+      </>,
+    );
+
+    const inputs = document.querySelectorAll<HTMLInputElement>('input[name="customerName"]');
+    expect(inputs).toHaveLength(2);
+    expect(inputs[0]!.id).not.toBe(inputs[1]!.id);
+
+    const labels = [...document.querySelectorAll<HTMLLabelElement>("label")].filter((label) =>
+      label.textContent?.startsWith("Tên người đặt"),
+    );
+    expect(labels).toHaveLength(2);
+    expect(labels[0]!.htmlFor).toBe(inputs[0]!.id);
+    expect(labels[1]!.htmlFor).toBe(inputs[1]!.id);
+  });
+});

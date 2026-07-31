@@ -42,6 +42,15 @@ export function UpdateBadge({ latestVersion }: { latestVersion: string }) {
  * success collapses to a confirmation; on failure surfaces the error inline. The
  * page revalidates on success (the server action does), so the version shown next
  * to the package refreshes on its own.
+ *
+ * The button shows a spinner rather than only greying out: this fetches a signed
+ * bundle from a remote marketplace and verifies it, which is a wait long enough
+ * that "nothing is happening" is a reasonable thing for the admin to conclude.
+ *
+ * It does NOT refresh the shell, and should not: pulling a version into this
+ * instance's catalogue puts it on no site and adds no screen. The site's install
+ * still points at the old version until someone goes through the consent flow on
+ * the Plugins screen — which is where the sidebar is brought up to date.
  */
 export function UpdateButton({
   kind,
@@ -80,8 +89,8 @@ export function UpdateButton({
 
   return (
     <div className="flex flex-col gap-2">
-      <Button size="sm" variant="primary" onClick={update} disabled={pending}>
-        <Icon name="install" className="mr-1 h-3.5 w-3.5" />
+      <Button size="sm" variant="primary" onClick={update} busy={pending}>
+        {pending ? null : <Icon name="install" className="mr-1 h-3.5 w-3.5" />}
         {pending ? t("admin.marketplace.browse.installing") : t("admin.marketplace.browse.update")}
       </Button>
       {error ? (

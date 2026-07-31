@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { checkFormField, formPickSlots } from "@zcmsorg/schemas";
 import type { FormFieldErrorCode, PublicFormDef, PublicFormField } from "@zcmsorg/schemas";
 import { PICK_EVENT, readPicks, writePicks, type FormPick } from "@/lib/form-pick";
@@ -193,6 +193,17 @@ export function FormIsland({
   const [open, setOpen] = useState<string[]>([]);
   const [status, setStatus] = useState<"idle" | "sending" | "ok" | "error">("idle");
   const formRef = useRef<HTMLFormElement>(null);
+  /**
+   * What this form's boxes are called in the DOM.
+   *
+   * The form id was enough while a form appeared once per page. It is not: a theme
+   * that puts the same form in its basket drawer AND on the page it links to now
+   * renders two of these, and two boxes sharing an `id` means every label points at
+   * the first one — clicking "Phone" in the drawer would put the cursor in the form
+   * behind it. `useId` is per instance and stable across hydration, which is what
+   * this needs and what a counter of our own could not promise.
+   */
+  const uid = useId();
   /**
    * The basket as this form currently stands: the lines it shows and the boxes it
    * is therefore not asking for. Kept in state because it decides what renders,
@@ -414,12 +425,12 @@ export function FormIsland({
 
   const renderField = (field: PublicFormField) => (
     <div className="zcms-form__field" key={field.name} style={FIELD}>
-      <label className="zcms-form__label" htmlFor={`zf-${def.id}-${field.name}`} style={LABEL}>
+      <label className="zcms-form__label" htmlFor={`zf-${uid}-${field.name}`} style={LABEL}>
         {field.label || field.name}
         {field.required ? <span aria-hidden="true"> *</span> : null}
       </label>
       <Control
-        def={def}
+        uid={uid}
         field={field}
         value={values[field.name] ?? ""}
         onChange={set}
@@ -429,7 +440,7 @@ export function FormIsland({
       {errors[field.name] ? (
         <span
           className="zcms-form__error"
-          id={`zf-${def.id}-${field.name}-error`}
+          id={`zf-${uid}-${field.name}-error`}
           role="alert"
           style={ERR}
         >
@@ -572,21 +583,21 @@ export function FormIsland({
 }
 
 function Control({
-  def,
+  uid,
   field,
   value,
   onChange,
   d,
   invalid,
 }: {
-  def: PublicFormDef;
+  uid: string;
   field: PublicFormField;
   value: string;
   onChange: (name: string, value: string) => void;
   d: Dict;
   invalid: boolean;
 }) {
-  const id = `zf-${def.id}-${field.name}`;
+  const id = `zf-${uid}-${field.name}`;
   const common = {
     id,
     name: field.name,

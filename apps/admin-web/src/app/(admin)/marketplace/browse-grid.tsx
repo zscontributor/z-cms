@@ -391,8 +391,8 @@ function PackageCard({
             {t("admin.marketplace.browse.installedBadge")}
           </span>
         ) : canInstall ? (
-          <Button size="sm" variant="primary" onClick={install} disabled={pending}>
-            <Icon name="install" className="mr-1 h-3.5 w-3.5" />
+          <Button size="sm" variant="primary" onClick={install} busy={pending}>
+            {pending ? null : <Icon name="install" className="mr-1 h-3.5 w-3.5" />}
             {pending
               ? t("admin.marketplace.browse.installing")
               : updatable

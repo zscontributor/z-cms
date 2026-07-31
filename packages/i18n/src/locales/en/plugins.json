@@ -63,7 +63,8 @@
     "summaryDeclined": "You declined {count} permissions: {list}.",
     "networkHeading": "The plugin will reach",
     "networkHint": "These hosts come from the plugin's manifest and are the only ones it can ever reach. Granting the permission above grants exactly this list — nothing wider.",
-    "networkOnlyThese": "and no other host"
+    "networkOnlyThese": "and no other host",
+    "installing": "Installing…"
   },
   "status": {
     "NOT_INSTALLED": "Not installed",

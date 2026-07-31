@@ -93,10 +93,11 @@ export function PluginDetail({
             <Button
               size="sm"
               variant="primary"
-              disabled={!canInstall || life.pending}
+              disabled={!canInstall}
+              busy={life.pending}
               onClick={life.openConsent}
             >
-              {t("plugins.card.install")}
+              {life.pending ? t("plugins.consent.installing") : t("plugins.card.install")}
             </Button>
           ) : (
             <>
@@ -104,7 +105,7 @@ export function PluginDetail({
                 <Button
                   size="sm"
                   variant={life.isActive ? "secondary" : "primary"}
-                  disabled={life.pending}
+                  busy={life.pending}
                   onClick={life.toggleActivation}
                 >
                   {life.pending
