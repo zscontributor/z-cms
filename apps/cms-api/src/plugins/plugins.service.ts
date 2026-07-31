@@ -809,9 +809,33 @@ export class PluginsService {
     // pins `tenant_id`/`site_id` into the WHERE from the authenticated actor, so it
     // removes exactly this site's rows and only from a table the plugin owns.
     for (const table of tables) {
+      // A DECLARED table is not necessarily a table that EXISTS. A version can
+      // introduce one and be installed over a running plugin (the DDL runs on
+      // activation), or an activation can fail after the manifest is stored — and
+      // then uninstall, which is the way OUT of a broken install, was the one thing
+      // that could not run: `DELETE FROM <missing>` is a 42P01, and the admin saw
+      // "Internal server error" with the plugin still there. Nothing to delete is
+      // not a failure; it is the answer.
+      if (!(await this.tableExists(table.name))) continue;
       const q = buildPluginDelete(table, { tenantId, siteId }, {});
       await getSystemDb().$executeRawUnsafe(q.text, ...q.values);
     }
+  }
+
+  /**
+   * Whether one of a plugin's own tables is really there.
+   *
+   * `to_regclass` answers with the table's oid or NULL and raises nothing — the
+   * one form of "does this exist" that does not depend on catching an error. The
+   * name is a bound parameter, and it only ever reaches here after
+   * `validatePluginTableSchemas` has confirmed it is the plugin's own prefix.
+   */
+  private async tableExists(name: string): Promise<boolean> {
+    const rows = await getSystemDb().$queryRawUnsafe<{ oid: unknown }[]>(
+      `SELECT to_regclass($1) AS oid`,
+      `public.${name}`,
+    );
+    return rows[0]?.oid != null;
   }
 
   /**

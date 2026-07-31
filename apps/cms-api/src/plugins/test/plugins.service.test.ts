@@ -37,7 +37,11 @@ function makeSystemDb() {
     },
     plugin: { findUnique: vi.fn().mockResolvedValue(null) },
     site: { findFirst: vi.fn().mockResolvedValue({ id: "s1", name: "Main", defaultLocale: "en" }) },
+    pluginData: { deleteMany: vi.fn().mockResolvedValue({ count: 0 }) },
     $executeRawUnsafe: vi.fn().mockResolvedValue(0),
+    // `to_regclass` — the existence probe purge runs before each DELETE. The
+    // default is "the table is there", which is the normal case.
+    $queryRawUnsafe: vi.fn().mockResolvedValue([{ oid: "p_vn_zsoft_testdb__notes" }]),
   };
 }
 
@@ -316,6 +320,34 @@ describe("PluginsService", () => {
         provider: { pluginKey: "core", version: "1.0.0" },
         data: { currency: "USD" },
       });
+    });
+  });
+
+  describe("purgePluginSiteData", () => {
+    it("deletes only this site's rows from the plugin's own table", async () => {
+      holder.systemDb.plugin.findUnique.mockResolvedValue(tableOwningPlugin());
+
+      await makeService().purgePluginSiteData("t1", "s1", "vn.zsoft.testdb");
+
+      const [sql, ...values] = holder.systemDb.$executeRawUnsafe.mock.calls[0]!;
+      expect(sql).toContain('DELETE FROM "p_vn_zsoft_testdb__notes"');
+      expect(values).toEqual(expect.arrayContaining(["t1", "s1"]));
+    });
+
+    it("skips a declared table that was never created, so uninstall still works", async () => {
+      // How a site gets here: a new version declares a table and is installed over
+      // a RUNNING plugin, so the DDL (which runs on activation) never ran. Before
+      // this, `DELETE FROM <missing>` was a 42P01 the admin saw as "Internal server
+      // error" — and uninstall is the way OUT of a broken install, so the one
+      // action that could fix it was the one that could not run.
+      holder.systemDb.plugin.findUnique.mockResolvedValue(tableOwningPlugin());
+      holder.systemDb.$queryRawUnsafe.mockResolvedValue([{ oid: null }]);
+
+      await expect(
+        makeService().purgePluginSiteData("t1", "s1", "vn.zsoft.testdb"),
+      ).resolves.toBeUndefined();
+
+      expect(holder.systemDb.$executeRawUnsafe).not.toHaveBeenCalled();
     });
   });
 
