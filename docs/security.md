@@ -46,7 +46,7 @@ acknowledgement and a fix timeline rather than a lawyer.
 | Republishing a version with different bytes | A published version is immutable: a checksum mismatch on the same version is a 400 | — |
 | Obvious malware in an uploaded package | Static scan **before** the marketplace signs: `reject`→400 (nothing stored), `flag`→QUARANTINED (a human clears it first) | `verify:scan` |
 | A quarantined package being loaded anyway | The bundle endpoint serves only `APPROVED` versions | — |
-| A **stolen refresh token** | Refresh tokens rotate. Replaying a consumed one is treated as theft and **revokes the whole family** — thief and victim are both signed out, and only the victim can sign back in | `verify:auth` #1 |
+| A **stolen refresh token** | Refresh tokens rotate. Replaying a consumed one is treated as theft and **revokes the whole family** — thief and victim are both signed out, and only the victim can sign back in. The exception is a replay within seconds from the issuing address, which is one client racing itself, not two holders ([below](#the-one-replay-that-is-not-theft)) | `verify:auth` #1, unit |
 | A refresh token that cannot be revoked | Tokens are stored (SHA-256, never raw); logout revokes the family | `verify:auth` #2 |
 | Brute-forcing a password | Redis rate limit: **5 attempts / 15 min per email**, 30 per IP — two independent budgets, because one host spraying many accounts and one account sprayed from many hosts are different attacks | `verify:auth` #4 |
 | A database leak handing out live sessions | Only the token **hash** is stored, like a password | `verify:auth` (inspected) |
@@ -94,6 +94,34 @@ refresh(A)     → A consumed, token B issued   (same family F)
 refresh(A)     → A was already consumed  →  REVOKE ALL OF F
 refresh(B)     → 401. B is dead too.
 ```
+
+### The one replay that is not theft
+
+A browser does not make one request at a time. A navigation, its RSC prefetch and
+a server action all leave carrying the cookie pair that was current when they
+left — so when the access token expires, they all arrive at `/auth/refresh`
+holding the **same** refresh token. One rotates it; under the strict rule the rest
+are thieves, and the session dies mid-click. In production this fired hundreds of
+`auth.session_theft_detected` alerts from the admin's own middleware, at one
+internal address, and logged real users out.
+
+So a consumed token is forgiven for a short window — `AUTH_REFRESH_REUSE_GRACE_SECONDS`,
+10 seconds by default, `0` to disable — under conditions that a racing client meets
+and a thief generally does not:
+
+| Condition | Why |
+|---|---|
+| Consumed, **not revoked** | A revoked family was ended on purpose (logout, or a theft already detected). Nothing is forgiven after that, or logout would not be logout. |
+| Consumed **within the window** | Parallel requests race by milliseconds. A stolen token is used minutes or hours later, and is treated exactly as before. |
+| Replayed **from the address it was issued to** | A thief on another network is refused inside the window too. When either address is unknown, the time window is left to decide alone rather than signing a real user out over a missing header. |
+
+A forgiven replay gets its own pair in the same family — the family is never
+revoked — and is recorded as `auth.refresh_replay_tolerated`. That event is not
+an alert, but a flood of it means something is refreshing in a loop.
+
+The window is the cost side of a trade: for those seconds, a token stolen *and*
+replayed from the same address is honoured. It is bounded to two minutes for that
+reason, and the strict behaviour is one env var away.
 
 Only the SHA-256 of a token is stored, for the same reason passwords are hashed:
 a database leak must not hand out working sessions.
