@@ -50,9 +50,16 @@ import { UsersService } from "./users.service";
 /**
  * People, and what they may do.
  *
- * Not site-scoped. A person is a member of a *tenant* — possibly with different
- * roles on different sites — so a screen that could only ever show you the users
- * of whichever site you last clicked would be lying about who has access.
+ * Not `@SiteScoped`, and that is a different thing from unscoped. A person is a
+ * member of a *tenant* — possibly with different roles on different sites — so a
+ * screen that could only ever show you the users of whichever site you last
+ * clicked would be lying about who has access, and none of these routes reads
+ * X-Site-Id.
+ *
+ * They are scoped all the same, to the caller's *reach*: every site they hold a
+ * role on, which for a tenant-wide member is all of them and for a site
+ * administrator is theirs. That cut lives in the service (see rule 5 there),
+ * where the target is known, not in the guard, which only ever sees the caller.
  *
  * Route order matters: `me` is declared before `:id`, or Express would happily
  * route GET /users/me into `findOne("me")` and answer 404 for the one user who
@@ -69,16 +76,21 @@ export class UsersController {
 
   @Get()
   @ApiOperation({
-    summary: "Everyone in your tenant",
+    summary: "Everyone you administer",
     description:
       "With every role they hold and where. A membership with a null `siteId` " +
-      "applies across the whole tenant.",
+      "applies across the whole tenant.\n\n" +
+      "Cut to the sites you hold a role on: a tenant-wide member (the OWNER of " +
+      "the installation) gets everyone, while an administrator of one site gets " +
+      "the people who hold a role on it, plus the tenant-wide members — who " +
+      "hold one on it too. Roles on sites you have no standing on are not " +
+      "listed, and neither are the people whose only roles are there.",
   })
   @ApiAuthed("user:read")
   @ApiZodResponse("UserDto", { isArray: true })
   @RequirePermissions("user:read")
-  list(): Promise<UserDto[]> {
-    return this.users.list();
+  list(@Actor() actor: RequestActor): Promise<UserDto[]> {
+    return this.users.list(actor);
   }
 
   @Post()
@@ -236,13 +248,16 @@ export class UsersController {
   @Get("invitations")
   @ApiOperation({
     summary: "Invitations still awaiting an answer",
-    description: "Accepted, withdrawn and expired ones are history, not work, and are not listed.",
+    description:
+      "Accepted, withdrawn and expired ones are history, not work, and are not " +
+      "listed. Scoped like `GET /users`: invitations onto sites you hold no " +
+      "role on are not yours to see.",
   })
   @ApiAuthed("user:read")
   @ApiZodResponse("InvitationDto", { isArray: true })
   @RequirePermissions("user:read")
-  listInvitations(): Promise<InvitationDto[]> {
-    return this.users.listPendingInvitations();
+  listInvitations(@Actor() actor: RequestActor): Promise<InvitationDto[]> {
+    return this.users.listPendingInvitations(actor);
   }
 
   @Post("invitations")
@@ -293,10 +308,10 @@ export class UsersController {
   @ApiOperation({ summary: "One user" })
   @ApiAuthed("user:read")
   @ApiZodResponse("UserDto")
-  @ApiNotFound("No such user in this tenant.")
+  @ApiNotFound("No such user in this tenant, or none on any site you administer.")
   @RequirePermissions("user:read")
-  findOne(@Param("id") id: string): Promise<UserDto> {
-    return this.users.findOne(id);
+  findOne(@Actor() actor: RequestActor, @Param("id") id: string): Promise<UserDto> {
+    return this.users.findOne(actor, id);
   }
 
   @Patch(":id")

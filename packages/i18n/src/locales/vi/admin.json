@@ -302,7 +302,7 @@
   "users": {
     "metaTitle": "Người dùng",
     "title": "Người dùng",
-    "description": "Ai có quyền truy cập tenant này, và với vai trò gì. Một vai trò có thể được cấp cho một site, hoặc cho toàn bộ các site.",
+    "description": "Ai có quyền truy cập, và với vai trò gì. Một vai trò có thể được cấp cho một site, hoặc cho toàn bộ các site — bạn chỉ thấy những người có vai trò trên site mà bạn quản trị.",
     "columns": {
       "user": "Người dùng",
       "roles": "Vai trò",

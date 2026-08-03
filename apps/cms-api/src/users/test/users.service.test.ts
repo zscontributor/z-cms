@@ -21,6 +21,7 @@ function makeDb() {
     $transaction: vi.fn((fn: any) => fn(database)),
     user: {
       findMany: vi.fn().mockResolvedValue([]),
+      findFirst: vi.fn().mockResolvedValue(null),
       findUnique: vi.fn().mockResolvedValue(null),
       create: vi.fn(),
       update: vi.fn(),
@@ -73,6 +74,17 @@ function ownerActor(): RequestActor {
 
 function adminActor(): RequestActor {
   return { ...ownerActor(), userId: "admin", role: "ADMIN" };
+}
+
+/**
+ * An administrator of one site and nothing else.
+ *
+ * `siteIds` is the whole difference: AuthGuard leaves it undefined for a
+ * tenant-wide member (the two actors above) and fills it in for anyone whose
+ * memberships are all per-site. Rule 5 reads exactly that field.
+ */
+function siteAdminActor(): RequestActor {
+  return { ...ownerActor(), userId: "site-admin", role: "ADMIN", siteIds: ["s1"] };
 }
 
 describe("UsersService", () => {
@@ -310,12 +322,145 @@ describe("UsersService", () => {
     it("lists only invitations that are unanswered, unrevoked and unexpired", async () => {
       // A spent or expired token must not appear as outstanding work — and, more
       // to the point, must not look reusable.
-      await makeService().listPendingInvitations();
+      await makeService().listPendingInvitations(ownerActor());
 
       const where = holder.db.invitation.findMany.mock.calls[0][0].where;
       expect(where.acceptedAt).toBeNull();
       expect(where.revokedAt).toBeNull();
       expect(where.expiresAt).toEqual({ gt: expect.any(Date) });
+    });
+
+    it("does not narrow by site for a tenant-wide caller", async () => {
+      await makeService().listPendingInvitations(ownerActor());
+
+      expect(holder.db.invitation.findMany.mock.calls[0][0].where.OR).toBeUndefined();
+    });
+
+    it("hides invitations onto sites the caller has no role on", async () => {
+      // The email address in an invitation to another site is not the caller's
+      // business, and neither is the fact that the site is hiring.
+      await makeService().listPendingInvitations(siteAdminActor());
+
+      expect(holder.db.invitation.findMany.mock.calls[0][0].where.OR).toEqual([
+        { siteId: null },
+        { siteId: { in: ["s1"] } },
+      ]);
+    });
+  });
+
+  describe("rule 5 — you only see the people on your own sites", () => {
+    const userRow = (memberships: any[]) => ({
+      id: "u1",
+      email: "u1@x.com",
+      name: "U1",
+      avatarUrl: null,
+      lastLoginAt: null,
+      totpEnabledAt: null,
+      createdAt: new Date("2024-01-01T00:00:00.000Z"),
+      memberships,
+    });
+
+    it("lists everyone for a tenant-wide caller", async () => {
+      await makeService().list(ownerActor());
+
+      expect(holder.db.user.findMany.mock.calls[0][0].where).toBeUndefined();
+    });
+
+    it("lists only users holding a role on the caller's sites", async () => {
+      await makeService().list(siteAdminActor());
+
+      // Tenant-wide members are in: their role applies to s1 too, so leaving
+      // them out would misreport who can reach the caller's own site.
+      expect(holder.db.user.findMany.mock.calls[0][0].where).toEqual({
+        memberships: { some: { OR: [{ siteId: null }, { siteId: { in: ["s1"] } }] } },
+      });
+    });
+
+    it("strips roles on other sites from the users it does return", async () => {
+      // Otherwise the screen answers a question the caller may not ask — which
+      // other sites this colleague works on — and answers it with site names.
+      holder.db.user.findMany.mockResolvedValue([
+        userRow([
+          { id: "m1", role: "EDITOR", siteId: "s1", site: { name: "Shop" } },
+          { id: "m2", role: "ADMIN", siteId: "s2", site: { name: "Magazine" } },
+          { id: "m3", role: "OWNER", siteId: null, site: null },
+        ]),
+      ]);
+
+      const [user] = await makeService().list(siteAdminActor());
+
+      expect(user.memberships.map((m) => m.id)).toEqual(["m1", "m3"]);
+      expect(JSON.stringify(user)).not.toContain("Magazine");
+    });
+
+    it("404s on a user whose roles are all on other sites", async () => {
+      holder.db.user.findFirst.mockResolvedValue(null); // the where clause found nothing
+
+      await expect(makeService().findOne(siteAdminActor(), "u1")).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+
+    it("refuses to act on a user from another site, with the same 404 a ghost gets", async () => {
+      // A 403 here would confirm the account exists — enumeration by error code.
+      holder.db.user.findUnique.mockResolvedValue({
+        id: "u1",
+        email: "u1@x.com",
+        memberships: [{ id: "m2", role: "EDITOR", siteId: "s2" }],
+      });
+
+      await expect(makeService().remove(siteAdminActor(), "u1")).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(holder.db.user.delete).not.toHaveBeenCalled();
+    });
+
+    it("still lets a site admin act on someone who holds a role on their site", async () => {
+      holder.db.user.findUnique.mockResolvedValue(
+        userRow([{ id: "m1", role: "EDITOR", siteId: "s1", site: { name: "Shop" } }]),
+      );
+      // A site admin holds only s1, so assertMayActOnSite must see that, not the
+      // tenant-wide default the other tests run with.
+      holder.db.membership.findMany.mockResolvedValue([{ siteId: "s1" }]);
+
+      await makeService().setMembership(siteAdminActor(), "u1", {
+        role: "AUTHOR",
+        siteId: "s1",
+      } as any);
+
+      expect(holder.db.membership.update).toHaveBeenCalled();
+    });
+
+    it("refuses to revoke a membership on a site the caller has no standing on", async () => {
+      // The one membership-mutating route that used to skip assertMayActOnSite.
+      holder.db.user.findUnique.mockResolvedValue(
+        userRow([
+          { id: "m1", role: "EDITOR", siteId: "s1", site: { name: "Shop" } },
+          { id: "m2", role: "EDITOR", siteId: "s2", site: { name: "Magazine" } },
+        ]),
+      );
+      holder.db.membership.findMany.mockResolvedValue([{ siteId: "s1" }]);
+
+      await expect(
+        makeService().removeMembership(siteAdminActor(), "u1", "m2"),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(holder.db.membership.delete).not.toHaveBeenCalled();
+    });
+
+    it("hides an invitation onto another site behind the not-found answer", async () => {
+      holder.db.invitation.findUnique.mockResolvedValue({
+        id: "i1",
+        siteId: "s2",
+        acceptedAt: null,
+        revokedAt: null,
+        email: "x@x.com",
+        role: "EDITOR",
+      });
+
+      await expect(
+        makeService().revokeInvitation(siteAdminActor(), "i1"),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(holder.db.invitation.update).not.toHaveBeenCalled();
     });
   });
 

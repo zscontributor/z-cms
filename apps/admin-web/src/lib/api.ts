@@ -321,9 +321,13 @@ export const getCurrentSite = cache(async (): Promise<SiteDto | null> => {
 // ---------------------------------------------------------------------------
 // Users
 //
-// Not site-scoped: a person belongs to the tenant and may hold a different role
-// on each site, so a list filtered to "the site you last clicked" would be a
-// lie about who has access.
+// Sent without X-Site-Id, and deliberately: a person belongs to the tenant and
+// may hold a different role on each site, so a list filtered to "the site you
+// last clicked" would be a lie about who has access.
+//
+// The API still narrows it — to every site the caller holds a role on, so a
+// tenant-wide OWNER gets everyone and the administrator of one site gets their
+// own people. That cut is the API's to make, not ours; nothing here filters.
 // ---------------------------------------------------------------------------
 
 export const listUsers = cache(

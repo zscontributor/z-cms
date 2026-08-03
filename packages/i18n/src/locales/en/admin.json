@@ -302,7 +302,7 @@
   "users": {
     "metaTitle": "Users",
     "title": "Users",
-    "description": "Who has access to this tenant, and as what. A role can be granted on one site or across every site.",
+    "description": "Who has access, and as what. A role can be granted on one site or across every site — you see the people who hold one on a site you administer.",
     "columns": {
       "user": "User",
       "roles": "Roles",
