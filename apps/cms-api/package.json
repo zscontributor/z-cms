@@ -37,7 +37,7 @@
     "nodemailer": "^9.0.3",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2",
-    "sanitize-html": "2.17.0",
+    "sanitize-html": "2.17.6",
     "undici": "7.28.0",
     "zod": "4.4.3"
   },
