@@ -646,13 +646,14 @@ describe("RenderService", () => {
 
       const payload = await makeService().resolve("example.com", "/blog/hello");
 
-      // The default locale carries its prefix like every other: "en" is "/en/blog/…",
-      // not a bare "/blog/…". site-runtime uses the `current` alternate's path as the
-      // canonical URL, so this is the address "/en" gets indexed under.
+      // The default locale is addressed bare ("/blog/hello") and every other under its
+      // code ("/vi/blog/…"). site-runtime uses the `current` alternate's path as the
+      // canonical URL, so this is the address the page gets indexed under — and it is
+      // why the site root stays indexable instead of canonicalising onto "/en".
       expect(payload.alternates).toEqual([
         expect.objectContaining({
           locale: "en",
-          path: "/en/blog/hello",
+          path: "/blog/hello",
           current: true,
           flagUrl: "/z-flags/gb.svg",
         }),
@@ -663,6 +664,23 @@ describe("RenderService", () => {
           flagUrl: "/z-flags/vn.svg",
         }),
       ]);
+    });
+
+    it("gives the default locale's home page the site root as its address", async () => {
+      // The one URL that must stay indexable: a canonical pointing from "/" at "/en"
+      // is what made Search Console drop the domain root as "Alternate page with
+      // proper canonical tag".
+      cacheReturns({ host: bilingual, render: null });
+      holder.db.content.findMany
+        .mockResolvedValueOnce([publishedRow({ locale: "en", slug: "" })]) // findContent
+        .mockResolvedValueOnce([
+          { locale: "en", path: "/", contentType: { isRoutable: true } },
+          { locale: "vi", path: "/", contentType: { isRoutable: true } },
+        ]);
+
+      const payload = await makeService().resolve("example.com", "/");
+
+      expect(payload.alternates.map((a) => a.path)).toEqual(["/", "/vi"]);
     });
 
     it("sends null rather than a broken URL for a language with no flag", async () => {

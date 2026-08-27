@@ -850,11 +850,12 @@ export interface RenderPayload {
     /** The locale this URL was resolved in — not the site's default. */
     locale: string;
     /**
-     * The locale served when a URL carries no prefix. Every locale — the default
-     * included — is addressed under its own code ("/en/blog", "/vi/blog"); an
-     * unprefixed URL resolves to this locale and serves a 200, but the runtime
-     * marks the prefixed form as canonical, so each page has one indexable address
-     * per language.
+     * The locale served when a URL carries no prefix — and the locale addressed
+     * WITHOUT one. This locale's pages are advertised bare ("/", "/blog"), every
+     * other locale under its code ("/vi/blog"); the default's prefixed spelling
+     * ("/en/blog") still resolves and serves a 200, but the runtime marks the bare
+     * form canonical, so each page has one indexable address per language and the
+     * site root is indexable rather than canonicalised away.
      */
     defaultLocale: string;
     /** Every locale this site publishes in. */

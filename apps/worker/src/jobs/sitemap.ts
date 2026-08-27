@@ -42,13 +42,15 @@ export async function runSitemap(
 
   /**
    * The public URL of a row. Its materialized `path` already carries the route
-   * prefix and any parent hierarchy ("/en"'s "/about", "/blog/hello", the nested
-   * "/product/zpets"); only the locale code is added in front. Every locale carries
-   * it, the default included: the unprefixed spelling also serves the page, but
-   * "/en/about" is its canonical URL and a sitemap must advertise the canonical.
+   * prefix and any parent hierarchy ("/about", "/blog/hello", the nested
+   * "/product/zpets"); only the locale code is added in front, and only for a
+   * non-default locale. The default locale is addressed unprefixed — that is its
+   * canonical URL (see RenderService.localePath), and a sitemap must advertise the
+   * canonical, never the spelling that canonicalises away.
    */
   const locate = (r: (typeof routable)[number]): string => {
-    const joined = `/${r.locale}${r.path}`.replace(/\/{2,}/g, "/");
+    const prefix = r.locale === site.defaultLocale ? "" : `/${r.locale}`;
+    const joined = `${prefix}${r.path}`.replace(/\/{2,}/g, "/");
     return joined.length > 1 ? joined.replace(/\/$/, "") : joined || "/";
   };
 

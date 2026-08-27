@@ -739,13 +739,11 @@ export class RenderService {
   /**
    * "/vi/blog/hello" -> { locale: "vi", path: "/blog/hello" }.
    *
-   * Every locale is addressed under its own prefix — the default included:
-   * "/en/about" is English, "/vi/about" Vietnamese, and "/en/about" is the one
-   * canonical URL for its page. The unprefixed spelling ("/about") resolves to the
-   * default locale here too — both spellings serve a 200, and site-runtime marks
-   * "/en/about" as canonical so only it is indexed. (This used to reject the
-   * default prefix and serve the default unprefixed instead; the prefix is now
-   * kept so "/en" is a real, indexable URL.)
+   * Every locale is addressed under its own prefix — the default included, so
+   * "/en/about" resolves and serves a 200 rather than 404ing. What it is NOT is the
+   * page's advertised address: the default locale's canonical URL is the unprefixed
+   * one ("/", "/about"), which `localePath` builds and site-runtime marks canonical,
+   * so the two spellings never compete and the domain root stays indexable.
    *
    * A first segment that merely looks like a language ("/vi") is only treated as
    * one when the site actually publishes in it. A site with a page slugged "vi"
@@ -938,12 +936,22 @@ export class RenderService {
   /**
    * The site-root-relative URL of `path` in `locale`. The inverse of splitLocale.
    *
-   * Every locale carries its prefix, the default included: the switcher, hreflang
-   * and the sitemap all name "/en/about" rather than a bare "/about", so each page
-   * has exactly one indexable address per language.
+   * The DEFAULT locale is addressed unprefixed — "/" and "/about" — and every other
+   * locale under its own code: "/vi/about", "/ja/about". The prefixed spelling of
+   * the default locale ("/en/about") still resolves and still serves a 200, but it
+   * is not the address anything advertises: the switcher, hreflang, `x-default` and
+   * the sitemap all name the bare form, and the canonical <link> the runtime emits
+   * points there too.
+   *
+   * That direction matters for indexing. When the default locale was advertised as
+   * "/en", the site's own home page — the bare domain, the URL every inbound link
+   * and every brand search lands on — carried `<link rel="canonical" href="…/en">`
+   * and Search Console dropped it as "Alternate page with proper canonical tag".
+   * A domain root that cannot be indexed is the worst possible URL to give away.
    */
-  private localePath(_site: ResolvedSite, locale: string, path: string): string {
-    const joined = `/${locale}${path}`.replace(/\/{2,}/g, "/");
+  private localePath(site: ResolvedSite, locale: string, path: string): string {
+    const prefix = locale === site.defaultLocale ? "" : `/${locale}`;
+    const joined = `${prefix}${path}`.replace(/\/{2,}/g, "/");
     return joined.length > 1 ? joined.replace(/\/$/, "") : joined || "/";
   }
 
