@@ -546,6 +546,8 @@ describe("RenderService", () => {
         { id: "2", label: "Contact", labels: null, url: "/contact", target: "_self", order: 1, parentId: null },
         // External link WITH a vi override -> URL untouched, label relabelled.
         { id: "3", label: "GitHub", labels: { vi: "Kho mã" }, url: "https://github.com/z", target: "_self", order: 2, parentId: null },
+        // Anchor into a page, no override -> keeps its own label and its fragment.
+        { id: "4", label: "Price", labels: null, url: "/about#pricing", target: "_self", order: 3, parentId: null },
       ],
     };
 
@@ -592,11 +594,43 @@ describe("RenderService", () => {
         expect.objectContaining({ label: "Giới thiệu", url: "/ve-chung-toi" }),
         expect.objectContaining({ label: "Liên hệ", url: "/lien-he" }),
         expect.objectContaining({ label: "Kho mã", url: "https://github.com/z" }),
+        expect.objectContaining({ label: "Price", url: "/ve-chung-toi#pricing" }),
       ]);
       // The admin-only overrides must not ride along in the public payload.
       for (const item of payload.menus.primary!.items) {
         expect(item).not.toHaveProperty("labels");
       }
+    });
+
+    /**
+     * An anchor names a section, not a page. Two anchors into the same page —
+     * "/#features" and "/#pricing" — borrowing that page's title gave a header
+     * two identical links, each as long as the page title, which wrapped the top
+     * menu onto a second row; and the fragment was dropped on the way through, so
+     * both landed on the top of the page anyway.
+     */
+    it("keeps an anchor item's own label and fragment", async () => {
+      cacheReturns({ host: bilingual, render: null });
+      holder.db.menu.findMany.mockResolvedValue([
+        {
+          key: "primary",
+          name: "Primary",
+          demoThemeKey: null,
+          items: [
+            { id: "1", label: "Features", labels: null, url: "/about#features", target: "_self", order: 0, parentId: null },
+            { id: "2", label: "Price", labels: { vi: "Giá" }, url: "/about#pricing", target: "_self", order: 1, parentId: null },
+          ],
+        },
+      ]);
+      menuAwareContent();
+
+      const payload = await makeService().resolve("example.com", "/vi/blog/hello");
+
+      expect(payload.menus.primary!.items).toEqual([
+        expect.objectContaining({ label: "Features", url: "/ve-chung-toi#features" }),
+        // An explicit override still wins over the base label.
+        expect.objectContaining({ label: "Giá", url: "/ve-chung-toi#pricing" }),
+      ]);
     });
 
     it("keeps base labels and strips overrides on the default locale", async () => {
@@ -610,6 +644,7 @@ describe("RenderService", () => {
         expect.objectContaining({ label: "About", url: "/about" }),
         expect.objectContaining({ label: "Contact", url: "/contact" }),
         expect.objectContaining({ label: "GitHub", url: "https://github.com/z" }),
+        expect.objectContaining({ label: "Price", url: "/about#pricing" }),
       ]);
       for (const item of payload.menus.primary!.items) {
         expect(item).not.toHaveProperty("labels");

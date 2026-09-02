@@ -89,3 +89,6 @@ plugins/zmaps-ads/
 
 # Private theme — the z-fnb.com product site only.
 themes/z-fnb/
+
+# Private theme — the backhere.z-cloud.com.vn product site only.
+themes/backhere/

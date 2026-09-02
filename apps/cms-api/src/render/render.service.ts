@@ -910,11 +910,21 @@ export class RenderService {
       // that vanishes must not leave its submenu behind, orphaned under nothing.
       if (!translated) continue;
 
+      // The query and fragment were stripped to find the page; they belong to the
+      // item, not to the lookup, and have to survive the swap. Without this a
+      // "/#pricing" item lands on the top of the home page in every non-default
+      // locale — the section it names is dropped on the way through.
+      const suffix = this.urlSuffixOf(rest.url);
+
       out.push({
         ...rest,
-        // An explicit override wins; otherwise borrow the translated page title.
-        label: override ?? translated.title,
-        url: translated.path,
+        // An explicit override wins. Then: a fragment means the item names a
+        // *section* of the page, so its own label is the only one that describes
+        // it — borrowing the page title turns "Features" and "Price", two anchors
+        // into the same home page, into two copies of that page's title. Only a
+        // link to the page as a whole borrows it.
+        label: override ?? (suffix.includes("#") ? rest.label : translated.title),
+        url: `${translated.path}${suffix}`,
         children,
       });
     }
@@ -931,6 +941,15 @@ export class RenderService {
     if (!url.startsWith("/") || url.startsWith("//")) return null;
     const clean = (url.split(/[?#]/)[0] ?? "").replace(/\/+$/, "");
     return clean === "" ? "/" : clean;
+  }
+
+  /**
+   * The `?query#fragment` tail `internalPathOf` throws away, so a rewritten item
+   * keeps the anchor it was authored with. Empty when the URL has neither.
+   */
+  private urlSuffixOf(url: string): string {
+    const at = url.search(/[?#]/);
+    return at === -1 ? "" : url.slice(at);
   }
 
   /**
