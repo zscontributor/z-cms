@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -90,6 +91,45 @@ describe("packDirectory", () => {
     const b = themeDir("b");
 
     expect((await packDirectory(a)).equals(await packDirectory(b))).toBe(true);
+  });
+
+  it("keeps every byte of a payload large enough to fill gzip's output buffer", async () => {
+    // Guards the property a real bug broke: `pipeline(tar, gzip)` used to resolve
+    // when gzip's WRITABLE side finished and then destroy the stream, discarding
+    // compressed bytes still buffered on the readable side. A ~1MB payload lost
+    // its last ~25KB and became a gzip stream with no end, which `zcms pack`
+    // reported as success — checksum, signature and all — and `zcms verify` then
+    // refused as "unexpected end of file".
+    //
+    // Whether the tail was dropped depended on scheduling, and under vitest this
+    // case drains in time even on the broken code, so this test did NOT reproduce
+    // it; the reproduction was `zcms pack` on a real 1MB theme, every run. What
+    // this keeps is the invariant that made the bug visible — a big archive still
+    // round-trips — at the shape a .zcms actually has: an incompressible payload
+    // next to a large, highly compressible JSON envelope.
+    const dir = themeDir();
+    // Chained SHA-256, not crypto randomness: the bytes are incompressible (gzip
+    // cannot shrink a hash chain, so its output buffer really does fill) and the
+    // same on every run, so a failure here is reproducible rather than a dice roll.
+    const parts: Buffer[] = [];
+    let block = createHash("sha256").update("zcms-archive-regression").digest();
+    for (let i = 0; i < 880 * 32; i += 1) {
+      parts.push(block);
+      block = createHash("sha256").update(block).digest();
+    }
+    const blob = Buffer.concat(parts);
+    write(dir, "payload.tgz", blob);
+    write(dir, "zcms-package.json", JSON.stringify({ envelope: "x".repeat(140 * 1024) }));
+
+    const archive = await packDirectory(dir);
+
+    // gunzipSync throws "unexpected end of file" on a truncated stream, which is
+    // what `zcms verify` was reporting on a package `zcms pack` had just made.
+    const dest = path.join(tmp, "out");
+    const written = await unpackTo(archive, dest);
+
+    expect(written).toContain("payload.tgz");
+    expect(fs.readFileSync(path.join(dest, "payload.tgz")).equals(blob)).toBe(true);
   });
 
   it("changes the archive when a single packed byte changes", async () => {

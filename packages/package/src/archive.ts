@@ -129,8 +129,25 @@ export async function packDirectory(dir: string): Promise<Buffer> {
   const chunks: Buffer[] = [];
   const gzip = createGzip({ level: 9 });
 
-  gzip.on("data", (c: Buffer) => chunks.push(c));
-  const done = pipeline(tarball, gzip);
+  /*
+   * The gzip output is read by a SINK inside the pipeline, not by a `data`
+   * listener beside it.
+   *
+   * With a listener, `pipeline(tarball, gzip)` resolved as soon as the writable
+   * side of gzip had finished — and then destroyed it, throwing away whatever
+   * compressed bytes were still sitting in its readable buffer. The loss was
+   * silent and input-dependent: small archives happened to be fully drained by
+   * the time the promise resolved, while a ~1MB payload lost its last ~25KB.
+   * What came out was a gzip stream with no end, which `zcms verify` rejected as
+   * "unexpected end of file" AFTER pack had already printed a checksum and a
+   * "Packed." — a signing tool reporting success over a truncated artifact.
+   *
+   * A pipeline whose last stage consumes the stream cannot resolve early: the
+   * `for await` ends only at `end`, which gzip emits only after its final block.
+   */
+  const done = pipeline(tarball, gzip, async function (source) {
+    for await (const chunk of source) chunks.push(chunk as Buffer);
+  });
 
   for (const rel of files) {
     const body = fs.readFileSync(path.join(dir, rel));
