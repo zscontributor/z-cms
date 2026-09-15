@@ -45,7 +45,7 @@
     "prisma": "7.8.0",
     "tsx": "4.20.6",
     "typescript": "5.9.3",
-    "vitest": "4.1.10",
-    "@vitest/coverage-v8": "4.1.10"
+    "vitest": "4.1.11",
+    "@vitest/coverage-v8": "4.1.11"
   }
 }

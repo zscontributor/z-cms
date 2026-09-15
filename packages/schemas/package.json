@@ -25,9 +25,9 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "4.1.10",
+    "@vitest/coverage-v8": "4.1.11",
     "typescript": "5.9.3",
-    "vitest": "4.1.10"
+    "vitest": "4.1.11"
   },
   "description": "Shared Zod contracts between the Z-CMS API and its front ends.",
   "license": "MIT",
