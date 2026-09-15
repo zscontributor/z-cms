@@ -3,6 +3,7 @@ import {
   Body,
   ConflictException,
   Controller,
+  Delete,
   Get,
   HttpCode,
   Module,
@@ -13,7 +14,7 @@ import {
   Query,
   UseGuards,
 } from "@nestjs/common";
-import { ApiOperation, ApiQuery, ApiTags } from "@nestjs/swagger";
+import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { db, getSystemDb, installCorePlugins, type Prisma } from "@zcmsorg/database";
 import {
   hostnameVariants,
@@ -39,7 +40,7 @@ import {
   ApiZodBody,
   ApiZodResponse,
 } from "../openapi/decorators";
-import { CreateSiteSchema, UpdateSiteSchema } from "../openapi/registry";
+import { CreateSiteSchema, DeleteSiteSchema, UpdateSiteSchema } from "../openapi/registry";
 import { QueueService } from "../queue/queue.module";
 import { CacheService } from "../redis/cache.service";
 
@@ -532,6 +533,113 @@ export class SitesController {
     await this.audit.record(actor, "site.sitemap.rebuilt", "site", id);
 
     return { status: "queued" };
+  }
+
+  /**
+   * Deletes a site and everything it owns.
+   *
+   * Everything: its pages, media, menus, taxonomies, theme and plugin installs,
+   * plugin data, orders, mail settings, members' site roles, its audit trail and
+   * its backups. The rows go here, in this request's transaction, so the site is
+   * either wholly gone or wholly there. The objects in the bucket — media,
+   * sitemap, backup parts — go in a `site.purge` job afterwards, because a bucket
+   * has no transaction to join and a thousand deletes are not a thing to do
+   * inside one.
+   *
+   * The slug in the body is the confirmation. It is checked against the row, not
+   * against the id in the URL: an admin who has the wrong site open types the
+   * slug of the one they MEANT and is refused, which is the whole point of asking.
+   *
+   * There is no undo. The one recovery is a backup the owner downloaded first,
+   * and the admin says so before it lets anyone this far.
+   */
+  @Delete(":id")
+  @HttpCode(200)
+  @ApiOperation({
+    summary: "Delete a site and all of its data",
+    description:
+      "Irreversible. Removes the site, its domains, content, media, menus, " +
+      "taxonomies, theme and plugin installs, plugin data, orders, mail settings, " +
+      "memberships, audit log and backups. The body must carry the site's slug as " +
+      "confirmation. Stored files are purged by a background job. Take a backup " +
+      "(`POST /sites/{id}/backups`) and download it first — nothing is kept.",
+  })
+  @ApiAuthed("site:delete")
+  @ApiZodBody("DeleteSiteInput")
+  @ApiZodResponse("SiteDeleted")
+  @ApiResponse({ status: 409, description: "The slug did not match, or a backup is still being built." })
+  @ApiNotFound("No such site — or not one of yours.")
+  @RequirePermissions("site:delete")
+  async remove(
+    @Actor() actor: RequestActor,
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(DeleteSiteSchema)) body: z.infer<typeof DeleteSiteSchema>,
+  ): Promise<{ ok: true; id: string; slug: string; purgeQueued: boolean }> {
+    const site = mayUseSite(actor, id)
+      ? await db().site.findUnique({
+          where: { id },
+          select: { id: true, slug: true, name: true, domains: { select: { hostname: true } } },
+        })
+      : null;
+    if (!site) throw new NotFoundException(t()("errors.sites.notFound"));
+
+    if (body.slug.trim().toLowerCase() !== site.slug.toLowerCase()) {
+      throw new ConflictException(t()("errors.sites.deleteConfirmMismatch"));
+    }
+
+    // A backup mid-build would keep writing parts under a prefix the purge is
+    // about to clear, and would finish READY for a site that no longer exists.
+    const building = await db().siteBackup.findFirst({
+      where: { siteId: id, status: { in: ["PENDING", "RUNNING"] } },
+      select: { id: true },
+    });
+    if (building) throw new ConflictException(t()("errors.backups.inProgress"));
+
+    // Counted before the cascade so the audit entry can say what went. These are
+    // the two tables with no foreign key to `sites` — the cascade cannot reach
+    // them, so they are deleted by hand, first.
+    const [pluginData, auditRows] = await Promise.all([
+      db().pluginData.deleteMany({ where: { siteId: id } }),
+      db().auditLog.deleteMany({ where: { siteId: id } }),
+    ]);
+
+    const counts = {
+      contents: await db().content.count({ where: { siteId: id } }),
+      media: await db().media.count({ where: { siteId: id } }),
+      backups: await db().siteBackup.count({ where: { siteId: id } }),
+      pluginData: pluginData.count,
+      auditLog: auditRows.count,
+    };
+
+    // Everything else hangs off `sites` with ON DELETE CASCADE.
+    await db().site.delete({ where: { id } });
+
+    // The deletion's own record belongs to the tenant, not to a site that no
+    // longer exists — and not under the header's site id, which is this one.
+    await this.audit.record({ ...actor, siteId: undefined }, "site.deleted", "site", id, {
+      slug: site.slug,
+      name: site.name,
+      hostnames: site.domains.map((d) => d.hostname),
+      ...counts,
+    });
+
+    await this.cache.invalidateSite(id);
+
+    // Best effort: the rows are gone either way. A purge that could not be
+    // queued is logged, and the nightly media sweep reclaims the media objects
+    // regardless (no row claims them any more); only backup parts would wait.
+    let purgeQueued = true;
+    try {
+      await this.queue.enqueue(
+        "site.purge",
+        { tenantId: actor.tenantId, siteId: id },
+        { jobId: `site.purge:${id}`, delayMs: 2000 },
+      );
+    } catch {
+      purgeQueued = false;
+    }
+
+    return { ok: true, id, slug: site.slug, purgeQueued };
   }
 }
 

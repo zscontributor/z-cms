@@ -528,7 +528,60 @@
       "slugRequired": "Cần nhập slug.",
       "hostnameRequired": "Cần nhập tên miền."
     },
-    "hostnameDnsHint": "Lưu ý: hãy trỏ bản ghi DNS của tên miền về địa chỉ IP máy chủ đang chạy z-cms của bạn TRƯỚC, rồi mới lưu tên miền ở đây — nếu chưa trỏ DNS, tên miền sẽ không truy cập được site."
+    "hostnameDnsHint": "Lưu ý: hãy trỏ bản ghi DNS của tên miền về địa chỉ IP máy chủ đang chạy z-cms của bạn TRƯỚC, rồi mới lưu tên miền ở đây — nếu chưa trỏ DNS, tên miền sẽ không truy cập được site.",
+    "backup": {
+      "title": "Sao lưu",
+      "help": "Đóng gói toàn bộ dữ liệu của site — trang, tệp media, menu, cài đặt, đơn hàng, thành viên — thành một tệp zip để tải về máy và lưu giữ. Site lớn được chia thành nhiều phần cùng kích thước; ghép lại bằng một lệnh. Bản sao lưu được giữ trên máy chủ 7 ngày.",
+      "create": "Tạo bản sao lưu",
+      "building": "Đang tạo…",
+      "queued": "Đã xếp hàng tạo bản sao lưu. Khi xong, bản sao lưu hiện bên dưới với trạng thái Sẵn sàng — thường trong vòng một phút, lâu hơn nếu thư viện media lớn.",
+      "empty": "Chưa có bản sao lưu nào.",
+      "status": {
+        "PENDING": "Đang chờ",
+        "RUNNING": "Đang tạo",
+        "READY": "Sẵn sàng",
+        "FAILED": "Thất bại"
+      },
+      "summary": "{size}, {parts} phần · {contents} dòng nội dung · {media} tệp media · tải được đến {expires}",
+      "join": {
+        "title": "Bản sao lưu này được chia thành nhiều phần",
+        "help": "Tải tất cả các phần về cùng một thư mục, rồi ghép theo thứ tự để có tệp zip. Một phần riêng lẻ không mở được.",
+        "verify": "Để kiểm tra tệp đã tải, so SHA-256 của nó (shasum -a 256 <tệp> trên macOS/Linux, certutil -hashfile <tệp> SHA256 trên Windows) với giá trị ghi cạnh từng phần."
+      },
+      "delete": "Xoá bản sao lưu",
+      "deleted": "Đã xoá bản sao lưu.",
+      "deleteConfirm": "Xoá bản sao lưu này? Các tệp của nó sẽ bị xoá khỏi kho lưu trữ.",
+      "listFailed": "Không tải được danh sách sao lưu.",
+      "createFailed": "Không bắt đầu được việc sao lưu.",
+      "deleteFailed": "Không xoá được bản sao lưu.",
+      "downloadFailed": "Không tải được phần này."
+    },
+    "delete": {
+      "title": "Xoá site",
+      "help": "Xoá site này cùng toàn bộ dữ liệu của nó. Không thể hoàn tác và không giữ lại gì — hãy tạo bản sao lưu ở trên và tải về máy trước.",
+      "button": "Xoá site này…",
+      "dialogTitle": "Xoá “{name}”?",
+      "dialogDescription": "Thao tác này xoá vĩnh viễn site và toàn bộ dữ liệu của nó.",
+      "whatGoesTitle": "Những gì sẽ bị xoá:",
+      "whatGoes": {
+        "content": "Mọi trang, bài viết và loại nội dung, ở mọi ngôn ngữ, kể cả bản nháp và lịch sử phiên bản",
+        "media": "Mọi tệp đã tải lên thư viện media và các bản thu nhỏ của chúng",
+        "menus": "Menu, phân loại, thẻ, cùng cài đặt, thương hiệu và tên miền của site",
+        "themes": "Giao diện và plugin đã cài, cài đặt của chúng và dữ liệu plugin đã lưu",
+        "orders": "Đơn hàng, cài đặt thương mại và cài đặt email",
+        "members": "Vai trò của thành viên trên site này và lời mời đang chờ",
+        "backups": "Mọi bản sao lưu của site này còn trên máy chủ"
+      },
+      "backupReady": "Có bản sao lưu lúc {when} sẵn sàng để tải ({file}). Hãy chắc chắn nó đã nằm trên máy của bạn trước khi tiếp tục.",
+      "backupMissing": "Site này chưa có bản sao lưu hoàn chỉnh nào. Nếu tiếp tục, dữ liệu sẽ không thể khôi phục.",
+      "acknowledge": "Tôi đã tải bản sao lưu về máy, hoặc chấp nhận mất toàn bộ dữ liệu của site này.",
+      "typeSlug": "Nhập slug của site ({slug}) để xác nhận",
+      "confirm": "Xoá vĩnh viễn site",
+      "deleting": "Đang xoá…",
+      "done": "Đã xoá site và toàn bộ dữ liệu của nó.",
+      "denied": "Bạn không có quyền xoá site.",
+      "failed": "Không xoá được site."
+    }
   },
   "menus": {
     "title": "Menu",

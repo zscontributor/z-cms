@@ -52,7 +52,13 @@
     "defaultLocaleNotPublished": "The default locale must be one of the site's locales.",
     "hostnameTaken": "That hostname is already in use.",
     "notFound": "Site not found.",
-    "slugTaken": "A site with that slug already exists."
+    "slugTaken": "A site with that slug already exists.",
+    "deleteConfirmMismatch": "The slug you typed does not match this site. Nothing was deleted."
+  },
+  "backups": {
+    "notFound": "Backup not found, or not ready yet.",
+    "partNotFound": "No such part.",
+    "inProgress": "A backup of this site is still being built. Wait for it to finish."
   },
   "themes": {
     "notFound": "The theme \"{key}\" does not exist.",

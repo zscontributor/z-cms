@@ -528,7 +528,60 @@
       "slugRequired": "A slug is required.",
       "hostnameRequired": "A hostname is required."
     },
-    "hostnameDnsHint": "Note: point the domain's DNS record to the IP of the server running your z-cms FIRST, then save the hostname here — until DNS resolves, the domain will not reach the site."
+    "hostnameDnsHint": "Note: point the domain's DNS record to the IP of the server running your z-cms FIRST, then save the hostname here — until DNS resolves, the domain will not reach the site.",
+    "backup": {
+      "title": "Backup",
+      "help": "Archive everything this site owns — pages, media files, menus, settings, orders, members — into one zip you download and keep. Large sites are split into parts of a fixed size; join them with one command. Backups are kept for 7 days.",
+      "create": "Create backup",
+      "building": "Building…",
+      "queued": "Backup queued. It will appear below as READY when the archive is built — usually within a minute, longer for a large media library.",
+      "empty": "No backups yet.",
+      "status": {
+        "PENDING": "Queued",
+        "RUNNING": "Building",
+        "READY": "Ready",
+        "FAILED": "Failed"
+      },
+      "summary": "{size} in {parts} part(s) · {contents} content rows · {media} media files · available until {expires}",
+      "join": {
+        "title": "This backup is split into parts",
+        "help": "Download every part into one folder, then join them in order to get the zip. Nothing is inside a single part on its own.",
+        "verify": "To check a download, compare its SHA-256 (shasum -a 256 <file> on macOS/Linux, certutil -hashfile <file> SHA256 on Windows) with the value shown next to each part."
+      },
+      "delete": "Delete backup",
+      "deleted": "Backup deleted.",
+      "deleteConfirm": "Delete this backup? Its files are removed from storage.",
+      "listFailed": "Could not load the backups.",
+      "createFailed": "Could not start the backup.",
+      "deleteFailed": "Could not delete the backup.",
+      "downloadFailed": "Could not download this part."
+    },
+    "delete": {
+      "title": "Delete site",
+      "help": "Deletes this site and every piece of data it holds. There is no undo and nothing is kept — create a backup above and download it first.",
+      "button": "Delete this site…",
+      "dialogTitle": "Delete “{name}”?",
+      "dialogDescription": "This removes the site and all of its data permanently.",
+      "whatGoesTitle": "What will be deleted:",
+      "whatGoes": {
+        "content": "Every page, post and content type, in every language, including drafts and version history",
+        "media": "Every uploaded file in the media library, and its derivatives",
+        "menus": "Menus, taxonomies, terms and the site's settings, brand and domains",
+        "themes": "Theme and plugin installs, their settings and the data plugins stored",
+        "orders": "Orders, commerce and mail settings",
+        "members": "Members' roles on this site and pending invitations",
+        "backups": "Every backup of this site still on the server"
+      },
+      "backupReady": "A backup from {when} is ready to download ({file}). Make sure it is on your computer before continuing.",
+      "backupMissing": "There is no finished backup of this site. If you continue, its data cannot be recovered.",
+      "acknowledge": "I have downloaded the backup to my computer, or I accept losing all of this site's data.",
+      "typeSlug": "Type the site's slug ({slug}) to confirm",
+      "confirm": "Delete site permanently",
+      "deleting": "Deleting…",
+      "done": "The site and all of its data have been deleted.",
+      "denied": "You do not have permission to delete a site.",
+      "failed": "Could not delete the site."
+    }
   },
   "menus": {
     "title": "Menus",

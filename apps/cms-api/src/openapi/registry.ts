@@ -10,6 +10,7 @@ import {
   ChangePasswordSchema,
   ContentStatusSchema,
   ContentTypeFieldSchema,
+  DeleteSiteSchema,
   CreateUserSchema,
   CreateContentSchema,
   BulkDeleteMediaSchema,
@@ -52,6 +53,7 @@ import {
   type MenuItemDto,
   type RecoveryCodesDto,
   type RenderPayload,
+  type SiteBackupDto,
   type SiteDto,
   type TotpSetupDto,
   type TranslationDto,
@@ -381,6 +383,8 @@ requests.add(CreateMediaFolderSchema, { id: "CreateMediaFolderInput" });
 requests.add(UpdateMediaFolderSchema, { id: "UpdateMediaFolderInput" });
 requests.add(CreateSiteSchema, { id: "CreateSiteInput" });
 requests.add(UpdateSiteSchema, { id: "UpdateSiteInput" });
+requests.add(DeleteSiteSchema, { id: "DeleteSiteInput" });
+export { DeleteSiteSchema };
 requests.add(PutMenuSchema, { id: "PutMenuInput" });
 requests.add(InstallPluginSchema, { id: "InstallPluginInput" });
 requests.add(SettingsSchema, { id: "SettingsInput" });
@@ -416,6 +420,42 @@ const SiteDtoSchema = z.object({
   activeTheme: z
     .object({ key: z.string(), name: z.string(), version: z.string() })
     .nullable(),
+});
+
+/** A site backup as the admin sees it. See `SiteBackupDto`. */
+const SiteBackupDtoSchema = z.object({
+  id: z.uuid(),
+  siteId: z.uuid(),
+  status: z.enum(["PENDING", "RUNNING", "READY", "FAILED"]),
+  filename: z.string(),
+  partBytes: z.number().int(),
+  totalBytes: z.number().int().nullable(),
+  parts: z.array(
+    z.object({
+      index: z.number().int(),
+      filename: z.string(),
+      size: z.number().int(),
+      sha256: z.string(),
+    }),
+  ),
+  summary: z
+    .object({ counts: z.record(z.string(), z.number().int()), mediaBytes: z.number().int() })
+    .nullable(),
+  error: z.string().nullable(),
+  createdAt: z.string(),
+  startedAt: z.string().nullable(),
+  finishedAt: z.string().nullable(),
+  expiresAt: z.string(),
+});
+
+/** What `DELETE /sites/{id}` answers once the rows are gone. */
+const SiteDeletedSchema = z.object({
+  ok: z.literal(true),
+  id: z.uuid(),
+  slug: z.string(),
+  purgeQueued: z
+    .boolean()
+    .describe("Whether the job that removes the site's stored files was queued. The rows are gone either way."),
 });
 
 /**
@@ -971,6 +1011,8 @@ responses.add(AuthResultSchema, { id: "AuthResult" });
 responses.add(BlockSchema, { id: "Block" });
 responses.add(SiteDtoSchema, { id: "SiteDto" });
 responses.add(SiteBrandingDtoSchema, { id: "SiteBrandingDto" });
+responses.add(SiteBackupDtoSchema, { id: "SiteBackupDto" });
+responses.add(SiteDeletedSchema, { id: "SiteDeleted" });
 responses.add(ContentTypeDtoSchema, { id: "ContentTypeDto" });
 responses.add(ContentDtoSchema, { id: "ContentDto" });
 responses.add(TranslationDtoSchema, { id: "TranslationDto" });
@@ -1010,6 +1052,7 @@ responses.add(ErrorSchema, { id: "Error" });
 export type RequestSchemaId =
   | "CreateSiteInput"
   | "UpdateSiteInput"
+  | "DeleteSiteInput"
   | "LoginInput"
   | "RefreshTokenInput"
   | "AcceptInviteInput"
@@ -1057,6 +1100,8 @@ export type ResponseSchemaId =
   | "UserCreated"
   | "SiteDto"
   | "SiteBrandingDto"
+  | "SiteBackupDto"
+  | "SiteDeleted"
   | "ContentTypeDto"
   | "ContentDto"
   | "TranslationDto"
@@ -1146,6 +1191,7 @@ const _noDrift: [
   Exact<z.infer<typeof InvitationCreatedSchema>, InvitationCreatedDto>,
   Exact<z.infer<typeof UserCreatedSchema>, UserCreatedDto>,
   Exact<z.infer<typeof SiteDtoSchema>, SiteDto>,
+  Exact<z.infer<typeof SiteBackupDtoSchema>, SiteBackupDto>,
   Exact<z.infer<typeof ContentTypeDtoSchema>, ContentTypeDto>,
   Exact<z.infer<typeof ContentDtoSchema>, ContentDto>,
   Exact<z.infer<typeof TranslationDtoSchema>, TranslationDto>,
@@ -1168,5 +1214,5 @@ const _noDrift: [
   Exact<z.infer<typeof ThemeDraftDtoSchema>, ThemeDraftDto>,
   Exact<z.infer<typeof ThemeDraftSummaryDtoSchema>, ThemeDraftSummaryDto>,
   Exact<z.infer<typeof PublisherKeyDtoSchema>, PublisherKeyDto>,
-] = [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true];
+] = [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true];
 void _noDrift;

@@ -66,6 +66,7 @@ model Tenant {
   orders           Order[]
   orderItems       OrderItem[]
   commerceSettings CommerceSettings[]
+  siteBackups      SiteBackup[]
 
   @@map("tenants")
 }
@@ -100,10 +101,65 @@ model Site {
   orders           Order[]
   orderItems       OrderItem[]
   commerceSettings CommerceSettings?
+  backups          SiteBackup[]
 
   @@unique([tenantId, slug])
   @@index([tenantId])
   @@map("sites")
+}
+
+/**
+ * One archive of everything a site owns, built by the worker and kept in object
+ * storage until the owner downloads it or it expires.
+ *
+ * A table rather than a directory listing, because the admin needs to know about
+ * a backup BEFORE it exists — "building, 40 %" is a row with a status, not an
+ * object in a bucket — and because the parts list is what makes a split archive
+ * usable: which pieces there are, how big each is and its checksum, so a download
+ * that was cut short can be caught before someone tries to join it.
+ *
+ * The archive is ONE zip stream cut into fixed-size parts (`partBytes` each,
+ * except the last), never several independent zips: the owner joins the parts
+ * with `cat` and gets the original file, with nothing to reconcile between
+ * pieces. A site whose archive fits in one part has a single `.zip`.
+ *
+ * Cascades with the site. The whole point of a backup is to survive the site's
+ * deletion — so the delete route refuses until the owner has confirmed the
+ * download, and the objects under `backups/<siteId>/` are purged with the rest
+ * of the site's storage. A backup is a transfer to the owner's machine, not a
+ * copy the platform keeps on their behalf.
+ */
+model SiteBackup {
+  id          String           @id @default(uuid()) @db.Uuid
+  tenantId    String           @map("tenant_id") @db.Uuid
+  siteId      String           @map("site_id") @db.Uuid
+  status      SiteBackupStatus @default(PENDING)
+  /** The archive's base file name, e.g. `my-site-20260915-1732.zip`. */
+  filename    String
+  /** Bytes per part, fixed when the backup is requested. */
+  partBytes   Int              @map("part_bytes")
+  /** Total bytes of the archive once built; null until then. */
+  totalBytes  BigInt?          @map("total_bytes")
+  /** `[{ index, storageKey, size, sha256 }]`, in order. Empty until READY. */
+  parts       Json             @default("[]")
+  /** Row counts per section and the media byte total, for the admin's summary. */
+  summary     Json             @default("{}")
+  error       String?
+  createdById String?          @map("created_by_id") @db.Uuid
+  createdAt   DateTime         @default(now()) @map("created_at")
+  startedAt   DateTime?        @map("started_at")
+  finishedAt  DateTime?        @map("finished_at")
+  /** After this the nightly sweep deletes the objects and the row. */
+  expiresAt   DateTime         @map("expires_at")
+
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  site      Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  createdBy User?  @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([siteId, createdAt])
+  @@index([expiresAt])
+  @@map("site_backups")
 }
 
 /**
@@ -387,6 +443,7 @@ model User {
   invitesSent   Invitation[]
   recoveryCodes RecoveryCode[]
   themeDrafts   ThemeDraft[]
+  siteBackups   SiteBackup[]
   publisherKey  PublisherKeyVault?
 
   @@index([tenantId])
@@ -1469,6 +1526,13 @@ enum SiteStatus {
   PUBLISHED
   SUSPENDED
   ARCHIVED
+}
+
+enum SiteBackupStatus {
+  PENDING
+  RUNNING
+  READY
+  FAILED
 }
 
 enum ContentStatus {

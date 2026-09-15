@@ -567,6 +567,46 @@ export interface SiteDto {
 }
 
 /**
+ * One backup of a site: an archive the worker built (or is building) of every
+ * row and file the site owns, cut into parts the owner downloads and joins.
+ *
+ * `parts` is empty until `status` is READY. A single-part archive is named
+ * `filename` as is; a split one has `filename.001`, `.002`, … and the owner
+ * concatenates them in order to get `filename` back. `sha256` per part is what
+ * lets a cut-short download be caught before it is joined.
+ */
+export interface SiteBackupDto {
+  id: string;
+  siteId: string;
+  status: "PENDING" | "RUNNING" | "READY" | "FAILED";
+  /** The archive's base name, e.g. `my-site-20260915-1732.zip`. */
+  filename: string;
+  /** Bytes per part (the last one is shorter). */
+  partBytes: number;
+  /** Whole-archive size once built. */
+  totalBytes: number | null;
+  parts: { index: number; filename: string; size: number; sha256: string }[];
+  /** Row counts per section and the media byte total, once built. */
+  summary: { counts: Record<string, number>; mediaBytes: number } | null;
+  error: string | null;
+  createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  /** After this the platform deletes the archive. */
+  expiresAt: string;
+}
+
+/**
+ * The confirmation a site's deletion demands: its slug, typed by the person
+ * deleting it. A body rather than a query flag so the confirmation is something
+ * a person had to produce, not something a client can default to.
+ */
+export const DeleteSiteSchema = z.object({
+  slug: z.string().trim().min(1),
+});
+export type DeleteSiteInput = z.infer<typeof DeleteSiteSchema>;
+
+/**
  * Who a hostname belongs to, as much of it as an anonymous caller may know.
  *
  * The admin is served at `/admin` on EVERY tenant hostname, so the sign-in screen

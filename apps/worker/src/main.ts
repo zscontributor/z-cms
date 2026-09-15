@@ -18,6 +18,7 @@ import { reportMailDeadLetter, runMailSend } from "./jobs/mail-send";
 import { runMarketplaceSync } from "./jobs/marketplace-sync";
 import { runMediaVariants } from "./jobs/media-variants";
 import { runPluginDeferred } from "./jobs/plugin-deferred";
+import { runBackupsExpire, runSiteBackup, runSitePurge } from "./jobs/site-backup";
 import { runSitemap } from "./jobs/sitemap";
 import { runThemeBuild } from "./jobs/theme-build";
 
@@ -44,11 +45,14 @@ const handlers: Handlers = {
   "media.variants": runMediaVariants,
   "plugin.deferred": runPluginDeferred,
   "site.sitemap": runSitemap,
+  "site.backup": runSiteBackup,
+  "site.purge": runSitePurge,
   "theme.build": runThemeBuild,
   "mail.send": runMailSend,
   "sessions.prune": runSessionsPrune,
   "media.sweep": runMediaSweep,
   "marketplace.sync": runMarketplaceSync,
+  "backups.expire": runBackupsExpire,
 };
 
 /**
