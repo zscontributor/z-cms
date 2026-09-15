@@ -330,6 +330,10 @@ function PackageCard({
       {/* The publisher, because the same package means different things from a
           verified author and an anonymous one. */}
       <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+        {/* Only ever true on an instance the marketplace let into its private
+            catalogue — the flag tells the operator which of their packages the
+            public never sees. */}
+        {pkg.internal ? <Badge tone="warning">{t("admin.marketplace.internal")}</Badge> : null}
         {pkg.publisher ? (
           <>
             <Badge tone={pkg.publisher.verified ? "success" : "neutral"}>

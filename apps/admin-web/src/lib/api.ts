@@ -924,6 +924,11 @@ export interface BrowsePackageDto {
   screenshots: string[];
   /** External video URL (YouTube, Vimeo, …), or null. Never a file in the package. */
   video: string | null;
+  /**
+   * Served only to instances holding a marketplace access token; the public
+   * catalogue never lists it. True here means THIS instance is one of those.
+   */
+  internal: boolean;
   updatedAt: string;
   installed: boolean;
   installedVersion: string | null;
@@ -944,6 +949,8 @@ export interface MarketplaceStatusDto {
   lastError: string | null;
   revokedCount: number;
   stale: boolean;
+  /** MARKETPLACE_ACCESS_TOKEN is set: this instance may see the internal catalogue. */
+  accessToken: boolean;
 }
 
 export const browseMarketplace = cache(

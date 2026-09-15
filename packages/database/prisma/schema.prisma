@@ -1447,6 +1447,14 @@ model MarketplaceSync {
    * How many revocations the last accepted list carried.
    */
   revokedCount  Int       @default(0) @map("revoked_count")
+  /**
+   * How this instance introduces itself to the marketplace (`X-ZCMS-Instance`).
+   * Minted once, on first contact, and never rotated: the marketplace's "connected
+   * sites" screen counts one instance per id, so a fresh id per restart would make
+   * a single site look like a crowd. Random, not derived from anything — it names
+   * this database and nothing else.
+   */
+  instanceId    String?   @unique @map("instance_id") @db.Uuid
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
   @@map("marketplace_sync")

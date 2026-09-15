@@ -21,10 +21,13 @@ packages:
   - "!plugins/medical"
   - "!themes/cafe"
   - "!plugins/cafe"
-  - "!themes/z-maps-car"
-  - "!plugins/zmaps-ads"
+  - "!themes/mapcar"
+  - "!plugins/mapcar-ads"
+  - "!plugins/mapcar-maps"
   - "!themes/z-fnb"
   - "!themes/backhere"
+  - "!themes/paynote"
+  - "!themes/fruitquest"
 
 # Keep a single copy of these across the workspace so that themes/plugins
 # never bundle their own React against the site-runtime's React.

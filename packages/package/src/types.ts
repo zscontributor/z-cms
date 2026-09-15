@@ -60,6 +60,17 @@ export interface PackageManifest {
    * Read from the SIGNED manifest at seed/install and stored on the catalogue row.
    */
   scope?: "site" | "org";
+  /**
+   * True for a package its publisher runs for ITSELF and does not offer to the
+   * public — a company's own site theme, a plugin written for one product.
+   *
+   * The marketplace still scans, reviews and counter-signs it exactly like any
+   * other package; what changes is who can see it. The public catalogue omits it,
+   * and the bundle is served only to an instance presenting a marketplace access
+   * token. Absent means false: a package is public unless it says otherwise.
+   * Read from the SIGNED manifest at intake, so it cannot be flipped in transit.
+   */
+  internal?: boolean;
   [key: string]: unknown;
 }
 

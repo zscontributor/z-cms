@@ -82,13 +82,20 @@ plugins/medical/
 themes/cafe/
 plugins/cafe/
 
-# Private theme and ad plugin — the z-maps.z-cloud.com.vn product site only;
+# Private theme and ad plugin — the mapcar.z-cloud.com.vn product site only;
 # same arrangement as the products above.
-themes/z-maps-car/
-plugins/zmaps-ads/
+themes/mapcar/
+plugins/mapcar-ads/
+plugins/mapcar-maps/
 
 # Private theme — the z-fnb.com product site only.
 themes/z-fnb/
 
 # Private theme — the backhere.z-cloud.com.vn product site only.
 themes/backhere/
+
+# Private theme — the paynote.z-cloud.com.vn product site only.
+themes/paynote/
+
+# Private theme — the fruitquest.z-cloud.com.vn product site (kids game) only.
+themes/fruitquest/

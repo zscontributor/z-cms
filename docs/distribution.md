@@ -590,6 +590,31 @@ installs from. Browsing is gated on `theme:read` (harmless); each install button
 on its own `*:install` scope. The operator's counterpart — `/review`, where code
 is let in and pulled back out — lives in the private operator service, not here.
 
+### Internal packages
+
+A manifest may say `"internal": true`. The marketplace reviews and counter-signs
+such a package exactly like any other, but the **public catalogue omits it** and
+its bundle is served only to an instance presenting a marketplace **access
+token** (`MARKETPLACE_ACCESS_TOKEN`, issued by the operator from their console).
+That is how a company keeps the themes and plugins it runs for its own products
+out of the community's view without running a second marketplace. Absent means
+`false`. It is a visibility switch, not a trust switch: a bundle pulled with a
+token is verified against the pinned key like every other, and a revoked or
+mistyped token is refused with 401 — loudly — rather than silently narrowed to
+the public view, so a Z-SOFT instance cannot quietly lose sight of its own
+packages (or, worse, their revocations).
+
+### The instance introduces itself
+
+Every registry call carries four headers — `X-ZCMS-Instance` (a random id minted
+once and stored on `marketplace_sync`), `X-ZCMS-Site` (`ROOT_DOMAIN`, else the
+oldest primary domain), `X-ZCMS-Version` and `X-ZCMS-Sites` (a count). That is
+the entire disclosure: no content, no users, no tenant data. It lets the
+marketplace operator see which sites are connected and on which version, which
+is what "we revoked it, did everyone get the memo?" needs. `MARKETPLACE_IDENTIFY=false`
+switches it off, and nothing depends on it — the identity is computed fail-soft,
+so a database hiccup while introducing ourselves never delays a revocation sync.
+
 ## The kill switch reaches across instances
 
 On the operator service, rejecting or revoking a version pulls it there. Neither

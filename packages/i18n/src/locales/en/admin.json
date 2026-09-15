@@ -161,6 +161,7 @@
     "publisherUnknown": "Unknown publisher",
     "publisherVerified": "Verified publisher",
     "publisherUnverified": "Unverified publisher",
+    "internal": "Internal — not in the public catalogue",
     "browse": {
       "metaTitle": "Marketplace",
       "title": "Marketplace",

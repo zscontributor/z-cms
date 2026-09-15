@@ -776,6 +776,12 @@ const RegistryPackageSchema = z.object({
     .string()
     .nullable()
     .describe("An external video URL (YouTube, Vimeo, …). Never a file inside the package."),
+  internal: z
+    .boolean()
+    .describe(
+      "Served only to instances presenting MARKETPLACE_ACCESS_TOKEN; the public catalogue " +
+        "never lists it. Always false on an instance without a token.",
+    ),
   updatedAt: z.iso.datetime(),
 });
 
@@ -795,6 +801,9 @@ const MarketplaceStatusSchema = z.object({
   stale: z
     .boolean()
     .describe("The last accepted revocation list is old. The whole fail-open design rests on this being visible."),
+  accessToken: z
+    .boolean()
+    .describe("MARKETPLACE_ACCESS_TOKEN is set. Says nothing about whether the marketplace still accepts it."),
 });
 
 const RevocationSchema = z.object({

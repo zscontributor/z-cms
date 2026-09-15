@@ -159,6 +159,7 @@
     "publisherUnknown": "不明な発行元",
     "publisherVerified": "検証済みの発行者",
     "publisherUnverified": "未確認の発行者",
+    "internal": "内部 — 公開カタログには載りません",
     "browse": {
       "metaTitle": "市場",
       "title": "市場",
