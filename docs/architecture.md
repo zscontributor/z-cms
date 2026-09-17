@@ -235,6 +235,34 @@ The current render still invokes the loaded theme in `site-runtime`. The
 `theme-runner` worker-thread path is not imported from the app and therefore does
 not yet provide timeout, memory or per-theme thread isolation in production.
 
+#### Maintenance mode
+
+A site can be closed to visitors from the admin (`Sites → <site> → Maintenance
+mode`). The setting lives in `Site.settings.maintenance` beside the brand — a fact
+about the site, not the theme — and `PATCH /sites/{id}` writes it.
+
+The gate is in `site-runtime`'s middleware, not in the page: only a response the
+middleware writes can carry the **503 + `Retry-After`** that tells crawlers to keep
+what they have indexed and come back later (a 200 notice, even with `noindex`, is
+what gets the real pages dropped). Before any page request the middleware asks
+`GET /render/maintenance?hostname=` (internal token; the same cached host lookup
+`render/resolve` starts with), memoises the answer per hostname for ~10 s, and
+answers the notice itself — a self-contained HTML document with the owner's
+title/message per locale, logo (falling back to the brand logo), background image
+and colours. `/api/*` is exempt so the cache-purge hook and probes keep working;
+an unreachable cms-api opens the gate rather than closing every site.
+
+The same switch has two modes. **Maintenance** is an outage: 503 + `Retry-After`,
+`noindex`. **Coming soon** is a pre-launch page: the notice answers 200 and is
+indexable, and with a launch date it carries a live countdown (a nonce'd inline
+script, since the page is otherwise script-free). `mode` rides in the same
+`Site.settings.maintenance` object.
+
+The owner's way in is a bypass key: `/?zc-bypass=<key>` stores it in an
+`httpOnly` cookie and redirects to the clean URL; the middleware then serves the
+real site to that browser. `/?zc-maintenance-preview=<key>` draws the notice with
+a 200 while the site is still open.
+
 ### 2. Administrative request and session rotation
 
 ```text

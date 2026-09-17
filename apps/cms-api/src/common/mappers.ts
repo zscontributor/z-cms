@@ -1,4 +1,4 @@
-import { parseSiteBrand } from "@zcmsorg/schemas";
+import { parseSiteBrand, parseSiteMaintenance } from "@zcmsorg/schemas";
 import type {
   ContentDto,
   ContentTypeDto,
@@ -133,6 +133,7 @@ export function toSiteDto(row: {
     locales: row.locales,
     // `settings` is a JSON column; `parseSiteBrand` is what makes reading it safe.
     brand: parseSiteBrand(row.settings),
+    maintenance: parseSiteMaintenance(row.settings),
     domains: row.domains,
     activeTheme: active
       ? {

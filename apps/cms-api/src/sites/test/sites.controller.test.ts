@@ -355,6 +355,65 @@ describe("update", () => {
     });
   });
 
+  it("merges the maintenance notice into settings beside the brand", async () => {
+    // Same column, same rule: a maintenance save must not erase the brand, and a
+    // brand save must not reopen a closed site.
+    const brand = { primaryColor: "#000000", logo: "/logo.png" };
+    site.findUnique.mockResolvedValue(row({ settings: { brand, somethingElse: 42 } }));
+    site.update.mockResolvedValue(row());
+    const maintenance = {
+      enabled: true,
+      mode: "maintenance",
+      title: { vi: "Sắp quay lại" },
+      message: {},
+      logo: "",
+      backgroundImage: "",
+      backgroundColor: "#0F172A",
+      textColor: "#FFFFFF",
+      expectedBackAt: null,
+      bypassKey: "letmein-12345678",
+    };
+
+    await controller().update(actor, "s1", { maintenance } as never);
+
+    expect(site.update.mock.calls[0][0].data.settings).toEqual({
+      brand,
+      maintenance,
+      somethingElse: 42,
+    });
+  });
+
+  it("keeps a closed site closed when only the brand is saved", async () => {
+    const maintenance = { enabled: true, bypassKey: "letmein-12345678" };
+    site.findUnique.mockResolvedValue(row({ settings: { maintenance } }));
+    site.update.mockResolvedValue(row());
+
+    await controller().update(actor, "s1", {
+      brand: { primaryColor: "#FFFFFF", logo: "" },
+    } as never);
+
+    expect(site.update.mock.calls[0][0].data.settings).toEqual({
+      brand: { primaryColor: "#FFFFFF", logo: "" },
+      maintenance,
+    });
+  });
+
+  it("purges the host lookup on a maintenance change so the gate sees it", async () => {
+    // site-runtime asks `render/maintenance`, which answers from the cached host
+    // lookup. Left in place, a closed site would stay open for its ten-minute TTL.
+    site.findUnique.mockResolvedValue(row());
+    site.update.mockResolvedValue(row());
+    cache.forgetHosts.mockClear();
+    cache.invalidateSite.mockClear();
+
+    await controller().update(actor, "s1", {
+      maintenance: { enabled: true },
+    } as never);
+
+    expect(cache.forgetHosts).toHaveBeenCalledWith(["acme.test"]);
+    expect(cache.invalidateSite).toHaveBeenCalledWith("s1");
+  });
+
   it("touches only the fields that were sent", async () => {
     site.findUnique.mockResolvedValue(row());
     site.update.mockResolvedValue(row());

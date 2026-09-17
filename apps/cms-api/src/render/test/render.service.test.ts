@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NotFoundException } from "@nestjs/common";
-import { COLLECTION_MAX_LIMIT, CONTENT_LIST_BLOCK } from "@zcmsorg/schemas";
+import { COLLECTION_MAX_LIMIT, CONTENT_LIST_BLOCK, DEFAULT_SITE_MAINTENANCE } from "@zcmsorg/schemas";
 
 const holder = vi.hoisted(() => ({ db: null as any, systemDb: null as any }));
 vi.mock("@zcmsorg/database", () => ({
@@ -79,6 +79,8 @@ const publishedSite = {
   domains: ["example.com"],
   defaultLocale: "en",
   locales: ["en"],
+  // Same story for `maintenance`: a cached entry without it is stale by shape.
+  maintenance: DEFAULT_SITE_MAINTENANCE,
 };
 
 const cache = {
@@ -1194,5 +1196,70 @@ describe("previewCollections (Theme Editor real data)", () => {
     expect(Object.keys(out)).toEqual(["post_6_newest"]);
     // Deduplicated: two identical bindings are one database round trip.
     expect(holder.db.content.findMany).toHaveBeenCalledTimes(1);
+  });
+  describe("maintenanceState", () => {
+    it("answers from the cached host lookup with the notice and the site's identity", async () => {
+      const closed = {
+        ...publishedSite,
+        maintenance: {
+          ...DEFAULT_SITE_MAINTENANCE,
+          enabled: true,
+          title: { en: "Back soon" },
+          bypassKey: "letmein-12345678",
+        },
+        brand: { primaryColor: "#123456", logo: "/logo.png" },
+      };
+      cacheReturns({ host: closed });
+
+      const out = await makeService().maintenanceState("example.com");
+
+      expect(out.enabled).toBe(true);
+      expect(out.title).toEqual({ en: "Back soon" });
+      // The bypass key rides along: the endpoint is internal-token guarded and
+      // site-runtime compares it against the visitor's cookie.
+      expect(out.bypassKey).toBe("letmein-12345678");
+      expect(out.site).toEqual({
+        name: "Main",
+        defaultLocale: "en",
+        locales: ["en"],
+        brand: { primaryColor: "#123456", logo: "/logo.png" },
+      });
+      expect(holder.systemDb.domain.findMany).not.toHaveBeenCalled();
+    });
+
+    it("reads the notice out of Site.settings and re-resolves a cache entry that predates it", async () => {
+      // A host entry cached before maintenance mode existed has no `maintenance`
+      // key. Served as-is, the middleware would read `enabled` as undefined and
+      // never close a site an owner had closed.
+      const { maintenance: _dropped, ...legacy } = publishedSite;
+      cacheReturns({ host: legacy });
+      holder.systemDb.domain.findMany.mockResolvedValue([
+        {
+          hostname: "example.com",
+          site: {
+            ...publishedSite,
+            domains: [{ hostname: "example.com", isPrimary: true }],
+            settings: { maintenance: { enabled: true, message: { en: "Upgrading" } } },
+          },
+        },
+      ]);
+
+      const out = await makeService().maintenanceState("example.com");
+
+      expect(out.enabled).toBe(true);
+      expect(out.message).toEqual({ en: "Upgrading" });
+      // Fields the row never had come back as the platform's defaults, not holes.
+      expect(out.backgroundColor).toBe(DEFAULT_SITE_MAINTENANCE.backgroundColor);
+      expect(out.bypassKey).toBe("");
+    });
+
+    it("404s like resolve for a hostname that serves no published site", async () => {
+      cacheReturns({ host: null });
+      holder.systemDb.domain.findMany.mockResolvedValue([]);
+
+      await expect(makeService().maintenanceState("nope.com")).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
   });
 });

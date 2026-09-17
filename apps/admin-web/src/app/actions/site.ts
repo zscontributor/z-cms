@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
-import type { SiteBackupDto, SiteBrand, SiteDto } from "@zcmsorg/schemas";
+import type { SiteBackupDto, SiteBrand, SiteDto, SiteMaintenance } from "@zcmsorg/schemas";
 import { ApiError, apiFetch, can, getSession, listSites } from "@/lib/api";
 import { SITE_COOKIE, siteCookieOptions } from "@/lib/cookies";
 import { getT } from "@/lib/locale";
@@ -88,11 +88,13 @@ export async function createSiteAction(input: {
 }
 
 /**
- * Updates a site: its name, whether it is published, and its brand.
+ * Updates a site: its name, whether it is published, its brand, and whether it
+ * is closed for maintenance.
  *
  * Only the fields passed are touched — the API patches. The brand is the reason
  * this exists: colour and logo belong to the site, so they are set once here and
- * every theme picks them up, instead of being re-entered for each theme.
+ * every theme picks them up, instead of being re-entered for each theme. The
+ * maintenance notice lives here for the same reason.
  */
 export async function updateSiteAction(
   id: string,
@@ -103,6 +105,7 @@ export async function updateSiteAction(
     status?: SiteDto["status"];
     defaultLocale?: string;
     brand?: SiteBrand;
+    maintenance?: SiteMaintenance;
   },
 ): Promise<SiteActionResult> {
   const t = await getT();

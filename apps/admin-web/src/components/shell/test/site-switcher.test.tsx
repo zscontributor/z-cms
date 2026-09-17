@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { SiteDto } from "@zcmsorg/schemas";
+import { DEFAULT_SITE_MAINTENANCE, type SiteDto } from "@zcmsorg/schemas";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SiteSwitcher } from "../site-switcher";
 
@@ -32,6 +32,7 @@ const sites: SiteDto[] = [
     defaultLocale: "vi",
     locales: ["vi"],
     brand: { primaryColor: "#111111", logo: "" },
+    maintenance: DEFAULT_SITE_MAINTENANCE,
     activeTheme: null,
   },
   {
@@ -43,6 +44,7 @@ const sites: SiteDto[] = [
     defaultLocale: "vi",
     locales: ["vi"],
     brand: { primaryColor: "#222222", logo: "" },
+    maintenance: DEFAULT_SITE_MAINTENANCE,
     activeTheme: null,
   },
 ];

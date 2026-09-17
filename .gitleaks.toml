@@ -38,4 +38,8 @@ regexes = [
   # request and then redacts it out of every error — see plugin-egress.test.ts. The
   # value is sequential ("abcdef123456") precisely so it cannot be a real one.
   '''sk-live-abcdef123456''',
+  # The maintenance-mode bypass key used by the test fixtures (schemas, cms-api,
+  # site-runtime). It only has to be SHAPED like a key — 8+ URL-safe chars — for
+  # the gate to compare it; "letmein" followed by a count is nobody's secret.
+  '''letmein-12345678''',
 ]

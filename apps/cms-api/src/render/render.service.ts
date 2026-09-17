@@ -8,6 +8,7 @@ import {
   hostnameVariants,
   normaliseCollectionSort,
   parseSiteBrand,
+  parseSiteMaintenance,
   stripPrivateData,
 } from "@zcmsorg/schemas";
 import type {
@@ -19,6 +20,8 @@ import type {
   MenuDto,
   RenderPayload,
   SiteBrand,
+  SiteMaintenance,
+  SiteMaintenanceStateDto,
 } from "@zcmsorg/schemas";
 import { t } from "../common/i18n";
 import { toContentDto, toMenuDto } from "../common/mappers";
@@ -100,6 +103,12 @@ interface ResolvedSite {
    * that buys nothing.
    */
   brand: SiteBrand;
+  /**
+   * Whether the site is closed to visitors, and the notice to show. Read here for
+   * the same reason as the brand: site-runtime asks before EVERY page, and the
+   * answer only changes when an owner flips it — which drops this key.
+   */
+  maintenance: SiteMaintenance;
 }
 
 interface SearchableThemeManifest {
@@ -214,9 +223,10 @@ export class RenderService {
   private async resolveHost(hostname: string): Promise<ResolvedSite> {
     const key = CacheService.hostKey(hostname);
     const cached = await this.cache.get<ResolvedSite>(key);
-    // Same reason as in `resolve`: an entry without `domains` is stale by shape, not
-    // by age, and re-resolving is cheaper than serving it.
-    if (cached?.domains?.length) return cached;
+    // Same reason as in `resolve`: an entry without `domains` (or, from before
+    // maintenance mode, without `maintenance`) is stale by shape, not by age, and
+    // re-resolving is cheaper than serving it.
+    if (cached?.domains?.length && cached.maintenance) return cached;
 
     // Both spellings of the host, because "www.z-cms.org" is not a different site
     // from "z-cms.org" — it is the same site, reached by the other name for it.
@@ -246,6 +256,7 @@ export class RenderService {
       defaultLocale: domain.site.defaultLocale,
       locales: domain.site.locales,
       brand: parseSiteBrand(domain.site.settings),
+      maintenance: parseSiteMaintenance(domain.site.settings),
     };
 
     // Ten minutes, and NOT keyed by the site's cache version — so a brand change
@@ -254,6 +265,27 @@ export class RenderService {
     // site's name or brand, it has to do the same.
     await this.cache.set(key, site, 600);
     return site;
+  }
+
+  /**
+   * Is this hostname's site closed, and with what notice.
+   *
+   * site-runtime's middleware asks this before serving any page, so it has to be
+   * cheap: it is the same cached host lookup `resolve` starts with and nothing
+   * more. A hostname that resolves to no published site 404s exactly as `resolve`
+   * would — the runtime then treats it as "no gate" and lets its normal 404 draw.
+   */
+  async maintenanceState(hostname: string): Promise<SiteMaintenanceStateDto> {
+    const site = await this.resolveHost(hostname);
+    return {
+      ...site.maintenance,
+      site: {
+        name: site.name,
+        defaultLocale: site.defaultLocale,
+        locales: site.locales,
+        brand: site.brand,
+      },
+    };
   }
 
   private async build(
