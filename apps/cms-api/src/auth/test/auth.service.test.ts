@@ -155,13 +155,14 @@ function fakeDb() {
   };
 }
 
-function makeService() {
+function makeService(envOverrides: Record<string, string> = {}) {
   state.db = fakeDb();
 
   const env: Record<string, string> = {
     JWT_SECRET,
     JWT_ACCESS_TTL: "15m",
     JWT_REFRESH_TTL: "30d",
+    ...envOverrides,
   };
   const config = {
     get: (key: string) => env[key],
@@ -197,8 +198,8 @@ function makeService() {
    * loudly: a fixture that quietly grew a second factor would fail with a
    * sentence rather than an undefined.
    */
-  async function signIn(input: unknown) {
-    const result = await service.login(input as any);
+  async function signIn(input: unknown, sessionCtx?: { ip?: string; userAgent?: string }) {
+    const result = await service.login(input as any, sessionCtx);
     if (isMfaChallenge(result)) {
       throw new Error("Expected a token pair, got an MFA challenge.");
     }
@@ -360,11 +361,28 @@ describe("AuthService", () => {
   });
 
   describe("refresh", () => {
-    async function loggedIn() {
-      return ctx.signIn({
-        email: "owner@example.test",
-        password: PASSWORD,
-      } as any);
+    async function loggedIn(sessionCtx?: { ip?: string; userAgent?: string }) {
+      return ctx.signIn(
+        { email: "owner@example.test", password: PASSWORD } as any,
+        sessionCtx,
+      );
+    }
+
+    /**
+     * Backdates a token's rotation, so that replaying it next is a REPLAY and not
+     * a race.
+     *
+     * A spent token is forgiven for a few seconds after it is spent — that window
+     * is what stops one browser's parallel requests from looking like a theft (see
+     * the "concurrency" tests below). Every test about theft therefore has to put
+     * its replay outside the window, or it is asserting the wrong branch. Moving
+     * the clock is not an option here: the code reads Date.now() several times per
+     * call, and the fixture's own bcrypt work happens in between. Ageing the row
+     * says exactly what is meant — this token was rotated a while ago.
+     */
+    function rotatedLongAgo(token: string): void {
+      const row = ctx.db.tokens.find((r) => r.tokenHash === sha256(token))!;
+      if (row.consumedAt) row.consumedAt = new Date(row.consumedAt.getTime() - 60_000);
     }
 
     it("exchanges a refresh token for a new pair", async () => {
@@ -402,6 +420,7 @@ describe("AuthService", () => {
       // ride forever alongside the real user.
       const { refreshToken } = await loggedIn();
       await ctx.service.refresh(refreshToken);
+      rotatedLongAgo(refreshToken);
 
       await expect(ctx.service.refresh(refreshToken)).rejects.toThrow();
     });
@@ -414,6 +433,7 @@ describe("AuthService", () => {
       // user signs in again, the thief is left with nothing.
       const { refreshToken: stolen } = await loggedIn();
       const rotated = await ctx.service.refresh(stolen); // the real user rotates
+      rotatedLongAgo(stolen);
 
       await expect(ctx.service.refresh(stolen)).rejects.toThrow(); // the thief replays
 
@@ -429,6 +449,7 @@ describe("AuthService", () => {
       const { refreshToken } = await loggedIn();
       const familyId = ctx.db.tokens[0].familyId;
       await ctx.service.refresh(refreshToken);
+      rotatedLongAgo(refreshToken);
 
       await expect(ctx.service.refresh(refreshToken)).rejects.toThrow();
 
@@ -440,6 +461,7 @@ describe("AuthService", () => {
       // If it stops firing, the theft happens in silence.
       const { refreshToken } = await loggedIn();
       await ctx.service.refresh(refreshToken);
+      rotatedLongAgo(refreshToken);
 
       await expect(
         ctx.service.refresh(refreshToken, { ip: "9.9.9.9", userAgent: "thief" }),
@@ -449,6 +471,115 @@ describe("AuthService", () => {
         "auth.session_theft_detected",
         expect.objectContaining({ userId: "user-1", ip: "9.9.9.9" }),
       );
+    });
+
+    /**
+     * The other half of theft detection: NOT firing it at the legitimate client.
+     *
+     * A browser does not make one request at a time. A navigation, its prefetch and
+     * a server action all leave carrying the cookie pair that was current when they
+     * left; when the access token has expired they all arrive at /auth/refresh with
+     * the same refresh token. One of them rotates it and the rest are, by the strict
+     * rule, thieves — so the admin is logged out mid-click, reliably, whenever the
+     * session is busy. That was a real incident, not a hypothetical: hundreds of
+     * session_theft_detected rows from one internal address, all from the app's own
+     * middleware. These tests hold the line at both ends: a raced replay is
+     * forgiven, everything else about theft detection is untouched.
+     */
+    describe("concurrency, not theft", () => {
+      it("issues a fresh pair when the same client replays a token it just spent", async () => {
+        const { refreshToken } = await loggedIn({ ip: "10.0.0.1" });
+        await ctx.service.refresh(refreshToken, { ip: "10.0.0.1" });
+
+        const raced = await ctx.service.refresh(refreshToken, { ip: "10.0.0.1" });
+
+        expect(raced.refreshToken).not.toBe(refreshToken);
+        await expect(
+          ctx.jwt.verifyAsync(raced.accessToken, { secret: JWT_SECRET }),
+        ).resolves.toMatchObject({ sub: "user-1" });
+      });
+
+      it("keeps the raced pair in the same family, so it is still one session", async () => {
+        const { refreshToken } = await loggedIn({ ip: "10.0.0.1" });
+        const familyId = ctx.db.tokens[0].familyId;
+        await ctx.service.refresh(refreshToken, { ip: "10.0.0.1" });
+
+        await ctx.service.refresh(refreshToken, { ip: "10.0.0.1" });
+
+        expect(ctx.db.tokens.every((row) => row.familyId === familyId)).toBe(true);
+      });
+
+      it("leaves the family alive, so the pair the browser kept still works", async () => {
+        // The point of the whole change. Revoking here is what logged the user out:
+        // the winner's tokens died a moment after being issued, and the next request
+        // — carrying a perfectly legitimate access token — was refused as revoked.
+        const { refreshToken } = await loggedIn({ ip: "10.0.0.1" });
+        const winner = await ctx.service.refresh(refreshToken, { ip: "10.0.0.1" });
+
+        await ctx.service.refresh(refreshToken, { ip: "10.0.0.1" });
+
+        expect(ctx.revocations.revoke).not.toHaveBeenCalled();
+        expect(ctx.db.tokens.every((row) => row.revokedAt === null)).toBe(true);
+        await expect(
+          ctx.service.refresh(winner.refreshToken, { ip: "10.0.0.1" }),
+        ).resolves.toMatchObject({ user: { id: "user-1" } });
+      });
+
+      it("records the tolerated replay as its own event, never as theft", async () => {
+        // It is still worth seeing. A quiet forgiveness is indistinguishable from a
+        // bug, and a sudden flood of these means something is refreshing in a loop.
+        const { refreshToken } = await loggedIn({ ip: "10.0.0.1" });
+        await ctx.service.refresh(refreshToken, { ip: "10.0.0.1" });
+
+        await ctx.service.refresh(refreshToken, { ip: "10.0.0.1" });
+
+        expect(ctx.events.record).toHaveBeenCalledWith(
+          "auth.refresh_replay_tolerated",
+          expect.objectContaining({ userId: "user-1", ip: "10.0.0.1" }),
+        );
+        expect(ctx.events.record).not.toHaveBeenCalledWith(
+          "auth.session_theft_detected",
+          expect.anything(),
+        );
+      });
+
+      it("still calls it theft when the racing replay comes from another address", async () => {
+        // Same millisecond, different network: that is not one browser racing
+        // itself, that is two holders of one token.
+        const { refreshToken } = await loggedIn({ ip: "10.0.0.1" });
+        await ctx.service.refresh(refreshToken, { ip: "10.0.0.1" });
+
+        await expect(
+          ctx.service.refresh(refreshToken, { ip: "203.0.113.9" }),
+        ).rejects.toThrow();
+
+        expect(ctx.revocations.revoke).toHaveBeenCalled();
+      });
+
+      it("never forgives a replay of a REVOKED token, however fresh", async () => {
+        // Logout has to mean logout. The window forgives a token that was rotated
+        // seconds ago; it must not forgive one that was deliberately killed
+        // seconds ago, or signing out would be a suggestion.
+        const { refreshToken } = await loggedIn({ ip: "10.0.0.1" });
+        const rotated = await ctx.service.refresh(refreshToken, { ip: "10.0.0.1" });
+        await ctx.service.logout(rotated.refreshToken);
+
+        await expect(
+          ctx.service.refresh(refreshToken, { ip: "10.0.0.1" }),
+        ).rejects.toThrow();
+      });
+
+      it("restores strict single-use when the window is configured to zero", async () => {
+        // An operator who would rather log people out than tolerate any replay
+        // gets the old behaviour back with one env var, and no code change.
+        ctx = makeService({ AUTH_REFRESH_REUSE_GRACE_SECONDS: "0" });
+        const { refreshToken } = await loggedIn({ ip: "10.0.0.1" });
+        await ctx.service.refresh(refreshToken, { ip: "10.0.0.1" });
+
+        await expect(
+          ctx.service.refresh(refreshToken, { ip: "10.0.0.1" }),
+        ).rejects.toThrow();
+      });
     });
 
     it("refuses a refresh token signed with a secret we do not use", async () => {

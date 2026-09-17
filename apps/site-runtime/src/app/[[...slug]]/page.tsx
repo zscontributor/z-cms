@@ -64,6 +64,8 @@ async function resolveRoute(props: RouteProps): Promise<{
  *   - the URLs must be absolute. A relative hreflang is ignored.
  *   - `x-default` must exist, and point at the default locale — it is what a
  *     search engine serves to a reader whose language the site does not publish.
+ *     Because the default locale is now addressed unprefixed, that is the site
+ *     root itself, which is where an untargeted searcher should land anyway.
  *
  * A page with no translations gets no `languages` block at all: hreflang that
  * names only the page itself is noise, and hreflang naming a page that does not
@@ -132,12 +134,16 @@ export async function generateMetadata(props: RouteProps): Promise<Metadata> {
 
   const languages = isNotFound ? undefined : localeAlternates(payload, hostname);
 
-  // The canonical URL is always the LOCALE-PREFIXED address of this page ("/en",
-  // "/en/about"), even when the visitor reached it unprefixed ("/", "/about").
-  // Both spellings serve a 200 — neither redirects — so this <link rel="canonical">
-  // is what tells a search engine the two are one page and "/en" is the copy to
-  // index. The `current` alternate carries that prefixed path (cms-api built it);
-  // a page's own `content.seo.canonical`, if set, still wins.
+  // The canonical URL is this page's ADVERTISED address: unprefixed in the site's
+  // default locale ("/", "/about"), prefixed in every other ("/vi/about"). The
+  // prefixed spelling of the default locale ("/en", "/en/about") also serves a 200 —
+  // neither spelling redirects — so this <link rel="canonical"> is what tells a
+  // search engine the two are one page and the bare form is the copy to index. That
+  // direction is deliberate: pointing it the other way left the domain root itself
+  // unindexable ("Alternate page with proper canonical tag"), and the root is the
+  // URL brand searches and inbound links actually hit. The `current` alternate
+  // carries the path (cms-api built it); a page's own `content.seo.canonical`, if
+  // set, still wins.
   const selfPath = payload.alternates.find((a) => a.current)?.path;
   const canonical = isNotFound
     ? undefined
@@ -211,12 +217,11 @@ export default async function CatchAllPage(props: RouteProps) {
     permanentRedirect(await canonicalUrl(canonicalHost));
   }
 
-  // Every locale is addressed under its own prefix — the default included, so
-  // "/en" is a real, indexable English URL. The unprefixed spelling ("/", "/about")
-  // ALSO serves a 200 here rather than redirecting: cms-api resolves it to the same
-  // default-locale page. The two are kept from competing in search by the canonical
-  // <link> generateMetadata emits, which always names the "/en/…" form — so "/en"
-  // is the copy that gets indexed while "/" stays a working entry point.
+  // The default locale is addressed unprefixed ("/", "/about") and every other locale
+  // under its code ("/vi/about"). The default locale's prefixed spelling ("/en") is
+  // still resolved here and still serves a 200 rather than 404ing — old links and
+  // bookmarks keep working — but the canonical <link> generateMetadata emits names
+  // the bare form, so that is the copy search engines index.
 
   // The theme is fetched, signature-verified and imported on demand — a theme
   // installed a minute ago renders here without this app being rebuilt.

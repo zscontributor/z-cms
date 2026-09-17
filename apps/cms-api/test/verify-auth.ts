@@ -52,32 +52,44 @@ async function login() {
 async function main() {
   console.log("\nAuth verification — attacking the session flow\n");
 
-  // 1. A rotated (already-used) refresh token is dead, and using it kills the
-  //    whole family — the token-theft response.
+  // 1. A token replayed the instant after it rotated is one browser racing itself
+  //    — a navigation and its prefetch both carrying the cookie pair they left
+  //    with. It is answered with a fresh pair, and the session SURVIVES. Killing
+  //    the family here is what logged working admins out mid-click.
+  //
+  //    The theft half of this behaviour — the same replay once the grace window has
+  //    passed — is asserted in auth.service.test.ts, which can age the token
+  //    instead of sleeping through a window whose length this script cannot know.
   {
     const { refresh: r1 } = await login();
     const rotate = await post("/auth/refresh", { refreshToken: r1 });
     const r2 = rotate.json.refreshToken as string;
 
-    const replay = await post("/auth/refresh", { refreshToken: r1 });
-    const familyDead = await post("/auth/refresh", { refreshToken: r2 });
+    const raced = await post("/auth/refresh", { refreshToken: r1 });
+    const stillAlive = await post("/auth/refresh", { refreshToken: r2 });
 
     check(
-      "reusing a rotated refresh token revokes the whole family",
-      rotate.status === 200 && replay.status === 401 && familyDead.status === 401,
-      `rotate=${rotate.status}, replay-old=${replay.status}, then new-token=${familyDead.status} (all descendants dead)`,
+      "a refresh token replayed within the race window keeps the session alive",
+      rotate.status === 200 && raced.status === 200 && stillAlive.status === 200,
+      `rotate=${rotate.status}, raced-replay=${raced.status}, winner's token after=${stillAlive.status} (family intact)`,
     );
   }
 
-  // 2. Logout revokes; the token cannot refresh afterwards.
+  // 2. Logout revokes; the token cannot refresh afterwards. Nor can the token it
+  //    was rotated from — a revoked family is never forgiven, race window or not.
   {
-    const { refresh } = await login();
-    const out = await post("/auth/logout", { refreshToken: refresh });
-    const after = await post("/auth/refresh", { refreshToken: refresh });
+    const { refresh: r1 } = await login();
+    const rotate = await post("/auth/refresh", { refreshToken: r1 });
+    const r2 = rotate.json.refreshToken as string;
+
+    const out = await post("/auth/logout", { refreshToken: r2 });
+    const after = await post("/auth/refresh", { refreshToken: r2 });
+    const ancestor = await post("/auth/refresh", { refreshToken: r1 });
+
     check(
-      "logout revokes the refresh token",
-      out.status === 204 && after.status === 401,
-      `logout=${out.status}, refresh-after=${after.status}`,
+      "logout revokes the refresh token, and its whole family with it",
+      out.status === 204 && after.status === 401 && ancestor.status === 401,
+      `logout=${out.status}, refresh-after=${after.status}, ancestor-after=${ancestor.status}`,
     );
   }
 

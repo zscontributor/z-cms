@@ -18,16 +18,18 @@
     "@zcmsorg/queue": "workspace:*",
     "@zcmsorg/scanner": "workspace:*",
     "@zcmsorg/theme-codegen": "workspace:*",
+    "archiver": "7.0.1",
     "bullmq": "5.80.2",
     "dotenv": "17.2.3",
     "ioredis": "5.11.1",
-    "sharp": "0.35.3"
+    "sharp": "0.35.4"
   },
   "devDependencies": {
+    "@types/archiver": "6.0.3",
     "@types/node": "24.10.1",
-    "@vitest/coverage-v8": "4.1.10",
+    "@vitest/coverage-v8": "4.1.11",
     "tsx": "4.20.6",
     "typescript": "5.9.3",
-    "vitest": "4.1.10"
+    "vitest": "4.1.11"
   }
 }

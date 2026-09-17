@@ -50,7 +50,22 @@ export function toMembershipDto(row: MembershipRow): MembershipDto {
   };
 }
 
-export function toUserDto(row: UserRow): UserDto {
+/**
+ * @param visibleSiteIds Sites the *caller* may see, or `null` for all of them.
+ *
+ * A caller whose reach is a list of sites is shown only the roles this person
+ * holds inside it. Without that, the users screen would answer a question the
+ * caller is not allowed to ask — "which other sites does this colleague work
+ * on?" — and would answer it with site *names*, which is the same leak that
+ * GET /sites exists to prevent. Tenant-wide memberships (siteId null) survive
+ * the filter: they apply to the caller's own site, so hiding them would
+ * misreport who has access to it.
+ */
+export function toUserDto(row: UserRow, visibleSiteIds: string[] | null = null): UserDto {
+  const memberships = visibleSiteIds
+    ? row.memberships.filter((m) => m.siteId === null || visibleSiteIds.includes(m.siteId))
+    : row.memberships;
+
   return {
     id: row.id,
     email: row.email,
@@ -62,7 +77,7 @@ export function toUserDto(row: UserRow): UserDto {
     // exactly the kind of column a mapper exists to keep out of a response.
     twoFactorEnabled: row.totpEnabledAt !== null,
     createdAt: row.createdAt.toISOString(),
-    memberships: row.memberships.map(toMembershipDto),
+    memberships: memberships.map(toMembershipDto),
   };
 }
 

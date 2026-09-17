@@ -2,6 +2,7 @@ import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 import { CMS_INTERNAL_TOKEN, SITE_RUNTIME_INTERNAL_TOKEN } from "@/lib/env";
 import { pageTag, siteTag } from "@/lib/cache-tags";
+import { forgetMaintenanceState } from "@/lib/maintenance";
 
 /**
  * Cache purge hook: how publishing in the admin becomes visible on the site.
@@ -59,6 +60,11 @@ export async function POST(request: Request) {
   const tags = new Set<string>(body.tags ?? []);
 
   if (body.hostname) {
+    // A site-wide purge is also what a maintenance toggle sends. The middleware's
+    // memo of that hostname's state is dropped here where the two share a
+    // process; where they do not, its own short TTL is the bound.
+    forgetMaintenanceState(body.hostname);
+
     const paths = [
       ...(body.path ? [body.path] : []),
       ...(Array.isArray(body.paths) ? body.paths : []),

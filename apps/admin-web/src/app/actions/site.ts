@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
-import type { SiteBrand, SiteDto } from "@zcmsorg/schemas";
+import type { SiteBackupDto, SiteBrand, SiteDto, SiteMaintenance } from "@zcmsorg/schemas";
 import { ApiError, apiFetch, can, getSession, listSites } from "@/lib/api";
 import { SITE_COOKIE, siteCookieOptions } from "@/lib/cookies";
 import { getT } from "@/lib/locale";
@@ -88,11 +88,13 @@ export async function createSiteAction(input: {
 }
 
 /**
- * Updates a site: its name, whether it is published, and its brand.
+ * Updates a site: its name, whether it is published, its brand, and whether it
+ * is closed for maintenance.
  *
  * Only the fields passed are touched — the API patches. The brand is the reason
  * this exists: colour and logo belong to the site, so they are set once here and
- * every theme picks them up, instead of being re-entered for each theme.
+ * every theme picks them up, instead of being re-entered for each theme. The
+ * maintenance notice lives here for the same reason.
  */
 export async function updateSiteAction(
   id: string,
@@ -103,6 +105,7 @@ export async function updateSiteAction(
     status?: SiteDto["status"];
     defaultLocale?: string;
     brand?: SiteBrand;
+    maintenance?: SiteMaintenance;
   },
 ): Promise<SiteActionResult> {
   const t = await getT();
@@ -162,4 +165,120 @@ export async function rebuildSitemapAction(id: string): Promise<SitemapActionRes
   } catch (error) {
     return { ok: false, error: toMessage(error, t("admin.sites.sitemap.failed")) };
   }
+}
+
+// ---------------------------------------------------------------------------
+// Backups and deletion
+// ---------------------------------------------------------------------------
+
+export type BackupListResult =
+  | { ok: true; backups: SiteBackupDto[] }
+  | { ok: false; error: string };
+
+export type BackupActionResult =
+  | { ok: true; message: string; backup: SiteBackupDto }
+  | { ok: false; error: string };
+
+/**
+ * The site's backups, newest first. Called by the client while a backup builds,
+ * so it is an action rather than page data: the row changes every few seconds
+ * and a full navigation per poll would be absurd.
+ */
+export async function listBackupsAction(id: string): Promise<BackupListResult> {
+  const t = await getT();
+  const user = await getSession();
+  if (!user) return { ok: false, error: t("auth.session.expired") };
+  if (!can(user, "site:update")) return { ok: false, error: t("admin.sites.errors.updateDenied") };
+
+  try {
+    const backups = await apiFetch<SiteBackupDto[]>(`/sites/${encodeURIComponent(id)}/backups`, {
+      siteScoped: false,
+    });
+    return { ok: true, backups };
+  } catch (error) {
+    return { ok: false, error: toMessage(error, t("admin.sites.backup.listFailed")) };
+  }
+}
+
+/**
+ * Asks for a backup. The API answers 202 with a PENDING row; the worker builds
+ * the archive and the row turns READY (or FAILED) — `listBackupsAction` is how
+ * the screen finds out.
+ */
+export async function createBackupAction(id: string): Promise<BackupActionResult> {
+  const t = await getT();
+  const user = await getSession();
+  if (!user) return { ok: false, error: t("auth.session.expired") };
+  if (!can(user, "site:update")) return { ok: false, error: t("admin.sites.errors.updateDenied") };
+
+  try {
+    const backup = await apiFetch<SiteBackupDto>(`/sites/${encodeURIComponent(id)}/backups`, {
+      method: "POST",
+      siteScoped: false,
+    });
+    return { ok: true, message: t("admin.sites.backup.queued"), backup };
+  } catch (error) {
+    return { ok: false, error: toMessage(error, t("admin.sites.backup.createFailed")) };
+  }
+}
+
+export async function deleteBackupAction(
+  id: string,
+  backupId: string,
+): Promise<SitemapActionResult> {
+  const t = await getT();
+  const user = await getSession();
+  if (!user) return { ok: false, error: t("auth.session.expired") };
+  if (!can(user, "site:update")) return { ok: false, error: t("admin.sites.errors.updateDenied") };
+
+  try {
+    await apiFetch<void>(
+      `/sites/${encodeURIComponent(id)}/backups/${encodeURIComponent(backupId)}`,
+      { method: "DELETE", siteScoped: false },
+    );
+    return { ok: true, message: t("admin.sites.backup.deleted") };
+  } catch (error) {
+    return { ok: false, error: toMessage(error, t("admin.sites.backup.deleteFailed")) };
+  }
+}
+
+export type DeleteSiteResult =
+  | { ok: true; message: string; nextSiteId: string | null }
+  | { ok: false; error: string };
+
+/**
+ * Deletes a site and everything in it. Irreversible — the dialog that calls
+ * this has already made the person type the slug and acknowledge the backup.
+ *
+ * Afterwards the selected-site cookie may name a site that no longer exists;
+ * it is moved to another of the tenant's sites (or cleared) so the next
+ * site-scoped request does not 404 on a ghost. The client navigates.
+ */
+export async function deleteSiteAction(id: string, slug: string): Promise<DeleteSiteResult> {
+  const t = await getT();
+  const user = await getSession();
+  if (!user) return { ok: false, error: t("auth.session.expired") };
+  if (!can(user, "site:delete")) return { ok: false, error: t("admin.sites.delete.denied") };
+
+  try {
+    await apiFetch<{ ok: true }>(`/sites/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      body: { slug },
+      siteScoped: false,
+    });
+  } catch (error) {
+    return { ok: false, error: toMessage(error, t("admin.sites.delete.failed")) };
+  }
+
+  const remaining = (await listSites()).filter((site) => site.id !== id);
+  const nextSiteId = remaining[0]?.id ?? null;
+
+  const store = await cookies();
+  if (nextSiteId) store.set(SITE_COOKIE, nextSiteId, siteCookieOptions);
+  else store.delete(SITE_COOKIE);
+
+  revalidatePath("/sites");
+  revalidatePath("/", "layout");
+
+  return { ok: true, message: t("admin.sites.delete.done"), nextSiteId };
 }

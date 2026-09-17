@@ -81,3 +81,21 @@ plugins/medical/
 # distributed through the marketplace, never public as source.
 themes/cafe/
 plugins/cafe/
+
+# Private theme and ad plugin — the mapcar.z-cloud.com.vn product site only;
+# same arrangement as the products above.
+themes/mapcar/
+plugins/mapcar-ads/
+plugins/mapcar-maps/
+
+# Private theme — the z-fnb.com product site only.
+themes/z-fnb/
+
+# Private theme — the backhere.z-cloud.com.vn product site only.
+themes/backhere/
+
+# Private theme — the paynote.z-cloud.com.vn product site only.
+themes/paynote/
+
+# Private theme — the fruitquest.z-cloud.com.vn product site (kids game) only.
+themes/fruitquest/

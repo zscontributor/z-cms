@@ -182,8 +182,8 @@ function UnknownBlock({ type }: { type: string }) {
 /**
  * Site-root-relative URL builder handed to themes as `ctx.url`.
  *
- * A multi-locale site serves every locale under a prefix ("/en/blog", "/vi/blog"),
- * and a theme must never have to know that. Query strings and fragments survive,
+ * A multi-locale site serves its default locale unprefixed ("/blog") and every other
+ * locale under a prefix ("/vi/blog"), and a theme must never have to know that. Query strings and fragments survive,
  * and an absolute URL (an external menu item) passes through untouched.
  */
 export function buildUrl(site: RenderPayload["site"], path: string): string {
@@ -192,10 +192,14 @@ export function buildUrl(site: RenderPayload["site"], path: string): string {
   const [pathname = "", suffix = ""] = splitSuffix(path);
   const clean = pathname.startsWith("/") ? pathname : `/${pathname}`;
 
-  // Every locale carries its code, the default included: an internal link on an
-  // English page points at "/en/about" — the canonical, indexable form — not a
-  // bare "/about". `site.locale` is the locale being rendered.
-  const prefix = site.locale ? `/${site.locale}` : "";
+  // The default locale is addressed unprefixed and every other locale under its
+  // code: an internal link on the English page of an English-default site points at
+  // "/about", the same address hreflang and the sitemap advertise, while the
+  // Vietnamese one points at "/vi/about". Linking the default locale at "/en/about"
+  // instead would fill the site with links to a page whose canonical is elsewhere.
+  // `site.locale` is the locale being rendered.
+  const prefix =
+    !site.locale || site.locale === site.defaultLocale ? "" : `/${site.locale}`;
 
   const joined = `${prefix}${clean}`.replace(/\/{2,}/g, "/");
   const normalised = joined.length > 1 ? joined.replace(/\/$/, "") : joined;

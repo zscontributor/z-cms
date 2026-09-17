@@ -52,7 +52,13 @@
     "defaultLocaleNotPublished": "既定のロケールはサイトのロケールのいずれかである必要があります。",
     "hostnameTaken": "そのホスト名は既に使用されています。",
     "notFound": "サイトが見つかりません。",
-    "slugTaken": "そのスラッグのサイトは既に存在します。"
+    "slugTaken": "そのスラッグのサイトは既に存在します。",
+    "deleteConfirmMismatch": "入力したスラッグがこのサイトと一致しません。何も削除されていません。"
+  },
+  "backups": {
+    "notFound": "バックアップが見つからないか、まだ準備できていません。",
+    "partNotFound": "そのパートは存在しません。",
+    "inProgress": "このサイトのバックアップを作成中です。完了までお待ちください。"
   },
   "themes": {
     "notFound": "テーマ「{key}」は存在しません。",

@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SWITCHER_LOCALES } from "@zcmsorg/i18n";
-import { can, getSession, listSites } from "@/lib/api";
+import type { SiteBackupDto } from "@zcmsorg/schemas";
+import { apiFetch, can, getSession, listSites } from "@/lib/api";
 import { getT } from "@/lib/locale";
+import { SiteDangerZone } from "./site-danger-zone";
 import { SiteForm } from "./site-form";
+import { SiteMaintenanceForm } from "./site-maintenance";
 
 /**
  * One site: its name, its brand, and whether it is published.
@@ -22,6 +25,15 @@ export default async function SitePage({ params }: { params: Promise<{ id: strin
   if (!site) notFound();
 
   const canUpdate = user ? can(user, "site:update") : false;
+  const canDelete = user ? can(user, "site:delete") : false;
+
+  // The backups panel is for those who may make one; a viewer gets no list and
+  // no request to the API for it.
+  const backups = canUpdate
+    ? await apiFetch<SiteBackupDto[]>(`/sites/${encodeURIComponent(id)}/backups`, {
+        siteScoped: false,
+      }).catch(() => [] as SiteBackupDto[])
+    : [];
 
   return (
     <div className="space-y-6">
@@ -35,7 +47,26 @@ export default async function SitePage({ params }: { params: Promise<{ id: strin
         </p>
       </div>
 
+      {site.maintenance.enabled ? (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+          {site.maintenance.mode === "coming-soon"
+            ? t("admin.sites.maintenance.bannerComingSoon")
+            : t("admin.sites.maintenance.banner")}
+        </div>
+      ) : null}
+
       <SiteForm site={site} canUpdate={canUpdate} locales={SWITCHER_LOCALES} />
+
+      <SiteMaintenanceForm site={site} canUpdate={canUpdate} locales={SWITCHER_LOCALES} />
+
+      {canUpdate ? (
+        <SiteDangerZone
+          site={site}
+          initialBackups={backups}
+          canManage={canUpdate}
+          canDelete={canDelete}
+        />
+      ) : null}
     </div>
   );
 }

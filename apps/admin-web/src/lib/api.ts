@@ -250,6 +250,54 @@ function safeJson(text: string): unknown {
 // ---------------------------------------------------------------------------
 
 /** null when there is no usable session — callers decide whether to redirect. */
+/**
+ * A raw, streaming GET — for the one kind of response `apiFetch` cannot carry:
+ * a file. Returns the upstream `Response` untouched on success so a route
+ * handler can hand its body straight to the browser without buffering a
+ * backup part in memory. Same token handling as `apiFetch`, including the one
+ * refresh retry; non-2xx is thrown as the same typed errors.
+ *
+ * `Range` is forwarded when given, so a resumed download resumes upstream too.
+ */
+export async function apiStream(
+  path: string,
+  options: { range?: string; siteScoped?: boolean } = {},
+): Promise<Response> {
+  const url = buildUrl(path, undefined);
+  const locale = await getLocale();
+  const siteId = options.siteScoped === false ? undefined : ((await getCurrentSiteId()) ?? undefined);
+
+  const request = (accessToken: string | undefined) => {
+    const headers = new Headers();
+    headers.set("Accept", "application/octet-stream");
+    headers.set("Accept-Language", locale);
+    if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
+    if (siteId) headers.set("X-Site-Id", siteId);
+    if (options.range) headers.set("Range", options.range);
+    return fetch(url, { method: "GET", headers, cache: "no-store" });
+  };
+
+  let res = await request(await readCookie(ACCESS_TOKEN_COOKIE));
+  if (res.status === 401) {
+    const refreshToken = await readCookie(REFRESH_TOKEN_COOKIE);
+    if (!refreshToken) throw await sessionExpired();
+    const refreshed = await refreshOnce(refreshToken);
+    if (!refreshed) throw await sessionExpired();
+    await tryPersistTokens(refreshed);
+    res = await request(refreshed.accessToken);
+    if (res.status === 401) throw await sessionExpired();
+  }
+
+  if (!res.ok) {
+    const text = await res.text();
+    const parsed: unknown = text ? safeJson(text) : undefined;
+    const message = messageFromBody(parsed, `${res.status} ${res.statusText}`);
+    if (res.status === 403) throw new ForbiddenError(message);
+    throw new ApiError(res.status, message, parsed);
+  }
+  return res;
+}
+
 export const getSession = cache(async (): Promise<SessionUser | null> => {
   const token = await readCookie(ACCESS_TOKEN_COOKIE);
   const refresh = await readCookie(REFRESH_TOKEN_COOKIE);
@@ -321,9 +369,13 @@ export const getCurrentSite = cache(async (): Promise<SiteDto | null> => {
 // ---------------------------------------------------------------------------
 // Users
 //
-// Not site-scoped: a person belongs to the tenant and may hold a different role
-// on each site, so a list filtered to "the site you last clicked" would be a
-// lie about who has access.
+// Sent without X-Site-Id, and deliberately: a person belongs to the tenant and
+// may hold a different role on each site, so a list filtered to "the site you
+// last clicked" would be a lie about who has access.
+//
+// The API still narrows it — to every site the caller holds a role on, so a
+// tenant-wide OWNER gets everyone and the administrator of one site gets their
+// own people. That cut is the API's to make, not ours; nothing here filters.
 // ---------------------------------------------------------------------------
 
 export const listUsers = cache(
@@ -920,6 +972,11 @@ export interface BrowsePackageDto {
   screenshots: string[];
   /** External video URL (YouTube, Vimeo, …), or null. Never a file in the package. */
   video: string | null;
+  /**
+   * Served only to instances holding a marketplace access token; the public
+   * catalogue never lists it. True here means THIS instance is one of those.
+   */
+  internal: boolean;
   updatedAt: string;
   installed: boolean;
   installedVersion: string | null;
@@ -940,6 +997,8 @@ export interface MarketplaceStatusDto {
   lastError: string | null;
   revokedCount: number;
   stale: boolean;
+  /** MARKETPLACE_ACCESS_TOKEN is set: this instance may see the internal catalogue. */
+  accessToken: boolean;
 }
 
 export const browseMarketplace = cache(

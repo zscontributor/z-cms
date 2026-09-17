@@ -125,7 +125,10 @@ export class AuthController {
     description:
       "Returns a new access *and* refresh token; the one you sent is spent. " +
       "Presenting a spent token is how a stolen one announces itself, so it " +
-      "revokes the entire rotation family rather than issuing a pair.",
+      "revokes the entire rotation family rather than issuing a pair. The one " +
+      "exception is a replay that arrives within seconds, from the address the " +
+      "token was issued to: that is a client racing itself — parallel requests " +
+      "that left holding the same pair — and it is answered with a fresh pair.",
   })
   @ApiZodBody("RefreshTokenInput")
   @ApiZodResponse("AuthResult", { description: "A fresh pair. Store both." })

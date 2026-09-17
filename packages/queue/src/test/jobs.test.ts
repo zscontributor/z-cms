@@ -50,11 +50,14 @@ describe("JOB_NAMES", () => {
       "media.variants",
       "plugin.deferred",
       "site.sitemap",
+      "site.backup",
+      "site.purge",
       "theme.build",
       "mail.send",
       "sessions.prune",
       "media.sweep",
       "marketplace.sync",
+      "backups.expire",
     ]);
   });
 
@@ -186,6 +189,6 @@ describe("SCHEDULED_JOBS", () => {
     // this fails.
     const daily = SCHEDULED_JOBS.filter((job) => job.cron.split(" ")[1] !== "*");
 
-    expect(daily.map((job) => job.name).sort()).toEqual(["media.sweep", "sessions.prune"]);
+    expect(daily.map((job) => job.name).sort()).toEqual(["backups.expire", "media.sweep", "sessions.prune"]);
   });
 });

@@ -13,6 +13,7 @@ import {
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { ApiOperation, ApiParam, ApiQuery, ApiTags } from "@nestjs/swagger";
+import { randomUUID } from "node:crypto";
 import { getSystemDb } from "@zcmsorg/database";
 import { verifyRevocationList, RevocationError } from "@zcmsorg/package";
 import { Actor, Internal, RequirePermissions } from "../auth/decorators";
@@ -65,6 +66,13 @@ export interface RegistryPackage {
   screenshots: string[];
   /** External video URL (YouTube, Vimeo, …), or null. Never a packaged file. */
   video: string | null;
+  /**
+   * The marketplace serves this package only to instances holding an access token
+   * (MARKETPLACE_ACCESS_TOKEN). The public catalogue never lists it, so a community
+   * instance never sees `true` here — it is shown so an operator browsing their own
+   * private packages can tell them from the public ones.
+   */
+  internal: boolean;
   updatedAt: string;
 }
 
@@ -86,6 +94,13 @@ export interface MarketplaceStatus {
    * This is the field the whole fail-open design rests on. See `sync()`.
    */
   stale: boolean;
+  /**
+   * Whether MARKETPLACE_ACCESS_TOKEN is set — i.e. whether this instance is one the
+   * marketplace operator has let into the internal catalogue. Whether the token is
+   * still VALID is not known here: the marketplace answers 401 to a revoked one,
+   * which surfaces as `lastError` on the next sync and as an error on browse.
+   */
+  accessToken: boolean;
 }
 
 @Injectable()
@@ -102,6 +117,117 @@ export class MarketplaceService {
   private remote(): string | null {
     const url = (this.config.get<string>("MARKETPLACE_URL") ?? "").trim().replace(/\/$/, "");
     return url.length > 0 ? url : null;
+  }
+
+  /** The operator-issued token that opens the marketplace's internal catalogue, if any. */
+  private accessToken(): string | null {
+    const token = (this.config.get<string>("MARKETPLACE_ACCESS_TOKEN") ?? "").trim();
+    return token.length > 0 ? token : null;
+  }
+
+  /**
+   * The headers every registry call carries: the access token, and who we are.
+   *
+   * The identity part is how the marketplace's operator learns which sites are
+   * connected to it — a stable per-instance id, the instance's public hostname, its
+   * version and how many sites it hosts. Nothing about content, users or tenants
+   * crosses the wire; it is the same information a User-Agent and a Host header
+   * already give away, made explicit and honest. `MARKETPLACE_IDENTIFY=false`
+   * switches it off for an operator who would rather browse anonymously, and every
+   * registry call still works without it.
+   *
+   * Fail-soft by design: the identity is a courtesy to the marketplace, so a
+   * database hiccup while computing it must not stop a browse or, worse, a
+   * revocation sync. Any failure here means "send no identity", never "send nothing".
+   */
+  private async registryHeaders(): Promise<Record<string, string>> {
+    const headers: Record<string, string> = {};
+    const token = this.accessToken();
+    if (token) headers.authorization = `Bearer ${token}`;
+
+    const identify = (this.config.get<string>("MARKETPLACE_IDENTIFY") ?? "true").trim().toLowerCase();
+    if (identify === "false" || identify === "0" || identify === "off") return headers;
+
+    try {
+      const identity = await this.identity();
+      headers["x-zcms-instance"] = identity.instanceId;
+      if (identity.site) headers["x-zcms-site"] = identity.site;
+      headers["x-zcms-version"] = identity.version;
+      headers["x-zcms-sites"] = String(identity.sites);
+    } catch (err) {
+      this.logger.warn(`Could not compute the instance identity: ${(err as Error).message}`);
+    }
+    return headers;
+  }
+
+  /**
+   * Who this instance says it is. The id is minted once, on the singleton sync row,
+   * and never changes for the life of the database — so the marketplace sees one
+   * instance across restarts, redeploys and hostname changes, rather than a new
+   * stranger every hour.
+   *
+   * The hostname is ROOT_DOMAIN when the operator set one (the deploy already
+   * relies on it naming the main site), else the oldest primary domain on record.
+   * A localhost value is not a site anyone can visit, so it is left out.
+   */
+  private async identity(): Promise<{
+    instanceId: string;
+    site: string | null;
+    version: string;
+    sites: number;
+  }> {
+    const db = getSystemDb();
+
+    let row = await db.marketplaceSync.findUnique({
+      where: { id: "singleton" },
+      select: { instanceId: true },
+    });
+    let instanceId = row?.instanceId ?? null;
+    if (!instanceId) {
+      instanceId = randomUUID();
+      if (row) {
+        // Only ever fills an EMPTY id: a concurrent first call that already minted
+        // one is not overwritten, and the read-back below returns whichever won.
+        await db.marketplaceSync.updateMany({
+          where: { id: "singleton", instanceId: null },
+          data: { instanceId },
+        });
+      } else {
+        await db.marketplaceSync
+          .create({ data: { id: "singleton", instanceId } })
+          // Lost a race with sync() creating the row: fine, read what it wrote.
+          .catch(() => undefined);
+      }
+      row = await db.marketplaceSync.findUnique({
+        where: { id: "singleton" },
+        select: { instanceId: true },
+      });
+      if (row?.instanceId) {
+        instanceId = row.instanceId;
+      } else {
+        await db.marketplaceSync.update({ where: { id: "singleton" }, data: { instanceId } });
+      }
+    }
+
+    let site: string | null = (this.config.get<string>("ROOT_DOMAIN") ?? "").trim() || null;
+    if (!site) {
+      const primary = await db.domain.findFirst({
+        where: { isPrimary: true },
+        orderBy: { createdAt: "asc" },
+        select: { hostname: true },
+      });
+      site = primary?.hostname ?? null;
+    }
+    if (site && /^(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?$/i.test(site)) site = null;
+
+    const sites = await db.site.count();
+
+    return {
+      instanceId,
+      site,
+      version: (this.config.get<string>("CMS_API_VERSION") ?? "0.1.0").trim() || "0.1.0",
+      sites,
+    };
   }
 
   // -------------------------------------------------------------------------
@@ -169,7 +295,7 @@ export class MarketplaceService {
 
     let res: globalThis.Response;
     try {
-      res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+      res = await fetch(url, { headers: await this.registryHeaders(), signal: AbortSignal.timeout(10_000) });
     } catch (err) {
       throw new BadRequestException(
         t()("errors.marketplace.unreachable", { url: remote, reason: (err as Error).message }),
@@ -193,6 +319,9 @@ export class MarketplaceService {
         .filter((path) => typeof path === "string" && path.startsWith("/"))
         .map((path) => `${remote}${path}`),
       video: typeof pkg.video === "string" ? pkg.video : null,
+      // Absent from an older marketplace — and "not stated" is "public", exactly
+      // as it is in the manifest.
+      internal: pkg.internal === true,
     }));
   }
 
@@ -227,7 +356,7 @@ export class MarketplaceService {
 
     let res: globalThis.Response;
     try {
-      res = await fetch(source, { signal: AbortSignal.timeout(30_000) });
+      res = await fetch(source, { headers: await this.registryHeaders(), signal: AbortSignal.timeout(30_000) });
     } catch (err) {
       throw new BadRequestException(
         t()("errors.marketplace.unreachable", { url: remote, reason: (err as Error).message }),
@@ -289,6 +418,7 @@ export class MarketplaceService {
       // An instance that has never synced is stale, not fresh. "I have never
       // asked" must never render as "there is nothing to report".
       stale: Boolean(this.remote()) && stale,
+      accessToken: this.accessToken() !== null,
     };
   }
 
@@ -333,6 +463,7 @@ export class MarketplaceService {
     let doc: unknown;
     try {
       const res = await fetch(`${remote}/api/v1/registry/revocations`, {
+        headers: await this.registryHeaders(),
         signal: AbortSignal.timeout(15_000),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);

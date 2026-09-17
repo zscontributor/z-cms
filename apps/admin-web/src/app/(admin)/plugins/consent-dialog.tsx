@@ -105,11 +105,11 @@ export function ConsentDialog({
           <Button
             type="button"
             variant="primary"
-            disabled={pending}
+            busy={pending}
             onClick={() => onConfirm(granted)}
           >
             {pending
-              ? t("common.working")
+              ? t("plugins.consent.installing")
               : mode === "install"
                 ? t("plugins.consent.confirmInstall")
                 : t("plugins.consent.confirmUpdate")}

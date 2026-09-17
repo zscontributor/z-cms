@@ -163,9 +163,10 @@ function renderBlocks(blocks: BlockLike[], theme: ThemeLike, ctx: unknown): Reac
  * duplicates: once the render lives here, ctx is built here, and site-runtime's
  * copy goes away with the rest of `lib/theme-context.tsx`.
  *
- * A multi-locale site serves every locale under a prefix ("/en/blog", "/vi/blog"),
- * and a theme must never have to know that. Query strings and fragments survive,
- * and an absolute URL (an external menu item) passes through untouched.
+ * A multi-locale site serves its default locale unprefixed ("/blog") and every other
+ * locale under a prefix ("/vi/blog"), and a theme must never have to know that. Query
+ * strings and fragments survive, and an absolute URL (an external menu item) passes
+ * through untouched.
  */
 export function buildUrl(site: SiteLike, path: string): string {
   if (/^[a-z][a-z0-9+.-]*:/i.test(path) || path.startsWith("//")) return path;
@@ -174,10 +175,13 @@ export function buildUrl(site: SiteLike, path: string): string {
   const [pathname, suffix] = index === -1 ? [path, ""] : [path.slice(0, index), path.slice(index)];
   const clean = pathname.startsWith("/") ? pathname : `/${pathname}`;
 
-  // Every locale carries its code, the default included: an internal link on an
-  // English page points at "/en/about" — the canonical, indexable form — not a
-  // bare "/about". `site.locale` is the locale being rendered.
-  const prefix = site.locale ? `/${site.locale}` : "";
+  // The default locale is addressed unprefixed and every other locale under its code:
+  // an internal link on the default-locale page points at "/about" — the canonical,
+  // indexable form — while the Vietnamese one points at "/vi/about". `site.locale` is
+  // the locale being rendered; a payload from an older cms-api carries no
+  // `defaultLocale`, and keeping the prefix there is the safe way to be wrong.
+  const prefix =
+    !site.locale || site.locale === site.defaultLocale ? "" : `/${site.locale}`;
 
   const joined = `${prefix}${clean}`.replace(/\/{2,}/g, "/");
   const normalised = joined.length > 1 ? joined.replace(/\/$/, "") : joined;

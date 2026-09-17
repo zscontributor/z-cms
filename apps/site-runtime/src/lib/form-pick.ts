@@ -84,6 +84,14 @@
  *     zero is not a line.
  *   - `[data-zc-pick-empty="<formId>"]` / `[data-zc-pick-filled="<formId>"]` — the
  *     two halves of an empty basket, one `hidden` at a time.
+ *   - `[data-zc-pick-go="<step>"]` — inside a drawer, moves it to a named step: the
+ *     root gets `data-zc-step="<step>"` (`data-zc-pick-go=""` takes it back to the
+ *     first step) and the theme's CSS decides what each step shows. This is how a
+ *     basket becomes a CHECKOUT without leaving the drawer: the theme renders the
+ *     `core/form` block as its second step, so "order now" opens the boxes the
+ *     visitor still has to fill in rather than scrolling the page behind to a form.
+ *     Opening the drawer always returns it to the first step — a basket reopened
+ *     after an order was placed must not still be showing that order's receipt.
  *
  * The hydration rule above applies to every one of these too.
  *
@@ -261,9 +269,28 @@ export function formPickScript(): string {
     for(var i=0;i<drawers.length;i++){
       drawers[i].setAttribute("data-zc-open","");
       drawers[i].removeAttribute("aria-hidden");
+      /* Always back to the first step: the drawer is reached from a badge that
+         says how many things are in the basket, so that is what opening it has
+         to show — not the checkout boxes, and not the receipt of the last order. */
+      drawers[i].removeAttribute("data-zc-step");
       var panel=drawers[i].querySelector("[data-zc-pick-panel]")||drawers[i];
       try{panel.focus();}catch(err){}
     }
+    return true;
+  }
+  /* Basket, then the boxes the visitor still has to fill in — the theme draws both
+     and names the steps; this only records which one the drawer is showing. */
+  function goStep(el,step){
+    var drawer=el.closest("[data-zc-pick-drawer]");
+    if(!drawer)return false;
+    if(step)drawer.setAttribute("data-zc-step",step);
+    else drawer.removeAttribute("data-zc-step");
+    var panel=drawer.querySelector("[data-zc-pick-panel]")||drawer;
+    /* A step is a new screen: it starts at the top, and the panel takes focus so
+       a keyboard is inside the step it just asked for rather than half a screen
+       above it. */
+    try{panel.scrollTop=0;}catch(err){}
+    try{panel.focus();}catch(err){}
     return true;
   }
   function closeDrawer(el){
@@ -295,6 +322,14 @@ export function formPickScript(): string {
       /* Only swallow the click if there IS a drawer to open; otherwise the
          opener stays the link to the form it is without JavaScript. */
       if(openDrawer(opener.getAttribute("data-zc-pick-open")))ev.preventDefault();
+      return;
+    }
+    var goer=t.closest("[data-zc-pick-go]");
+    if(goer){
+      /* Same rule as the opener: only swallow the click if the control is really
+         in a drawer. Outside one it is whatever the theme made it — normally the
+         link to the form, which is where a page with no JavaScript orders. */
+      if(goStep(goer,goer.getAttribute("data-zc-pick-go")))ev.preventDefault();
       return;
     }
     var closer=t.closest("[data-zc-pick-close]");

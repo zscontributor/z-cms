@@ -102,11 +102,11 @@ describe("buildUrl", () => {
     ({ locale: "en", defaultLocale: "en", ...over }) as RenderPayload["site"];
 
   it("adds a leading slash to a relative path", () => {
-    expect(buildUrl(site(), "blog")).toBe("/en/blog");
+    expect(buildUrl(site(), "blog")).toBe("/blog");
   });
 
-  it("prefixes the default locale with its code too", () => {
-    expect(buildUrl(site({ locale: "en", defaultLocale: "en" }), "/blog")).toBe("/en/blog");
+  it("leaves the default locale unprefixed — that is its canonical address", () => {
+    expect(buildUrl(site({ locale: "en", defaultLocale: "en" }), "/blog")).toBe("/blog");
   });
 
   it("prefixes a non-default locale with its code", () => {
@@ -131,8 +131,9 @@ describe("buildUrl", () => {
   });
 
   it("strips a trailing slash and maps the root to the locale prefix", () => {
-    expect(buildUrl(site(), "/blog/")).toBe("/en/blog");
-    expect(buildUrl(site(), "/")).toBe("/en");
+    expect(buildUrl(site(), "/blog/")).toBe("/blog");
+    expect(buildUrl(site(), "/")).toBe("/");
+    expect(buildUrl(site({ locale: "vi", defaultLocale: "en" }), "/")).toBe("/vi");
   });
 });
 

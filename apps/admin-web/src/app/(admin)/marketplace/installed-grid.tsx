@@ -181,8 +181,8 @@ function InstalledCard({ item, canInstall }: { item: InstalledPackage; canInstal
 
         <div className="flex items-center gap-2">
           {updatable && canInstall && !notice ? (
-            <Button size="sm" variant="primary" onClick={update} disabled={pending}>
-              <Icon name="install" className="mr-1 h-3.5 w-3.5" />
+            <Button size="sm" variant="primary" onClick={update} busy={pending}>
+              {pending ? null : <Icon name="install" className="mr-1 h-3.5 w-3.5" />}
               {pending
                 ? t("admin.marketplace.browse.installing")
                 : t("admin.marketplace.browse.update")}

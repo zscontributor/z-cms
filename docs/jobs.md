@@ -42,12 +42,15 @@ three the worker schedules for itself.
 | --- | --- | --- |
 | `media.variants` | media upload | thumb (200²), medium (800w), large (1600w), all WebP; writes them to S3 and records them on the media row |
 | `site.sitemap` | publish / unpublish / delete | rebuilds `sitemap.xml` from published content |
+| `site.backup` | **Create backup** on the site screen (`POST /sites/{id}/backups`) | archives every row and every media original the site owns into ONE zip, cut into parts of `SITE_BACKUP_PART_MB` (default 256) and written to `backups/<siteId>/<backupId>/`; the owner downloads the parts and joins them with `cat`. Streams everything — rows by page, objects straight from the bucket, each part spooled to a temp file and uploaded as it closes — so memory is flat whatever the site's size |
+| `site.purge` | `DELETE /sites/{id}`, after the rows are gone | deletes the site's objects: `sites/<id>/` (media, sitemap) and `backups/<id>/`. Refuses to touch anything while the site row still exists, because the delete that enqueued it may have rolled back |
 | `mail.send` | a plugin's `ctx.mail.send()`, or the CMS itself | delivers one email through the site's SMTP server, with retries |
 | `plugin.deferred` | a plugin's `ctx.jobs.enqueue()` | re-invokes the plugin in the sandbox, later |
 | `theme.build` | **Build** on a Theme Editor draft | turns the draft's `LayoutDocument` into source, CSS and a signed bundle (codegen → esbuild → sign), then installs it through cms-api's sideload gate. Carries the actor and their locale, so the audit entry has a name on it and a refusal — "this version already exists, bump it" — reaches the author in their own language |
 | `marketplace.sync` | the worker's clock, hourly at `:07` | pulls the signed revocation list and quarantines anything that was pulled — **the kill switch**, not housekeeping |
 | `media.sweep` | nightly, `03:45` | deletes storage objects no media row points at, and only if they are over 24 hours old |
 | `sessions.prune` | nightly, `03:15` | drops expired and revoked refresh tokens after a 30-day grace |
+| `backups.expire` | nightly, `04:15` | deletes site backups past their 7-day expiry — the parts, then the row |
 
 Retries are one policy, set once in `@zcmsorg/queue`: **3 attempts, exponential backoff
 from 2 seconds.** Completed jobs are dropped after an hour, failed ones after a day —
@@ -138,7 +141,8 @@ pnpm --filter @zcmsorg/worker dev
 | Variable | Needed for |
 | --- | --- |
 | `REDIS_URL` | everything — it is the queue |
-| `DATABASE_URL`, `S3_*` | `media.variants`, `media.sweep`, `sessions.prune`, `site.sitemap` |
+| `DATABASE_URL`, `S3_*` | `media.variants`, `media.sweep`, `sessions.prune`, `site.sitemap`, `site.backup`, `site.purge`, `backups.expire` |
+| `SITE_BACKUP_PART_MB` | size of one backup part (optional, default 256; cms-api reads it too, and fixes it on the row when the backup is requested) |
 | `CMS_API_URL` + `CMS_INTERNAL_TOKEN` | every job that calls back into the API: `plugin.deferred`, `mail.send`, `marketplace.sync` |
 | `SECURITY_ALERT_WEBHOOK` | dead-letter alerts (optional, but a dead letter with nobody listening is a dead letter that lies) |
 | `WORKER_CONCURRENCY` | how many jobs run at once (optional) |
@@ -160,6 +164,8 @@ the job is still pending. So:
 | `plugin.deferred` | `plugin-deferred-{sha256 of plugin, site, name, payload}` | a plugin enqueuing the same work in a loop |
 | `mail.send` | `mail-{fingerprint of the message}` | the same email enqueued twice |
 | `theme.build` | `theme-build-{draftId}` | two Builds of one draft |
+| `site.backup` | `site.backup:{backupId}` (+1.5s delay) | a retried request; the delay lets the row's transaction commit first |
+| `site.purge` | `site.purge:{siteId}` (+2s delay) | a retried delete |
 
 `theme.build` is the one that also *discards* the prior job under that id before
 enqueuing. The others want the pending job kept — a second identical upload has
@@ -198,6 +204,7 @@ second copy of it.
 | `marketplace.sync` | hourly, at `:07` | pulls the signed revocation list and quarantines revoked packages — see [distribution.md](./distribution.md) |
 | `sessions.prune` | 03:15 daily | deletes refresh tokens that can no longer authenticate anything |
 | `media.sweep` | 03:45 daily | deletes stored objects no media row points at |
+| `backups.expire` | 04:15 daily | deletes site backups older than their expiry, objects first |
 
 `marketplace.sync` is the one scheduled job that is not housekeeping. It is how a
 compromised theme or plugin stops running on your site within the hour, without you

@@ -69,6 +69,34 @@ export interface JobPayloads {
   };
 
   /**
+   * Build a downloadable archive of everything a site owns.
+   *
+   * A job because it is the slowest thing the platform does on purpose: every
+   * row of every site-scoped table, plus every media object streamed out of the
+   * bucket, zipped and written back as fixed-size parts. The payload is the id of
+   * the `SiteBackup` row cms-api created — the worker reads the site from the
+   * database, never from the job, so it archives what the site holds NOW.
+   */
+  "site.backup": {
+    tenantId: string;
+    siteId: string;
+    backupId: string;
+  };
+
+  /**
+   * Remove a deleted site's objects from the bucket.
+   *
+   * The database rows go inside the delete request — one transaction, all or
+   * nothing. The bucket has no transactions and thousands of objects, so that
+   * half is a job: retried if the bucket is unreachable, and never able to leave
+   * the site half-deleted, because by the time it runs the site is already gone.
+   */
+  "site.purge": {
+    tenantId: string;
+    siteId: string;
+  };
+
+  /**
    * Turn a drawing from the GUI Theme Editor into a built, signed theme package.
    *
    * A job rather than a request, because it is the one thing in this system that
@@ -166,6 +194,16 @@ export interface JobPayloads {
    * stops executing on a customer's site" is exactly this interval.
    */
   "marketplace.sync": Record<string, never>;
+
+  /**
+   * Deletes site backups past their expiry: the parts in the bucket, then the row.
+   *
+   * A backup is a transfer to the owner's machine, not storage the platform
+   * offers. Keeping every archive a site ever made would double the bucket for
+   * no one's benefit — the row says how long it is downloadable, and this job
+   * enforces it.
+   */
+  "backups.expire": Record<string, never>;
 }
 
 export type JobName = keyof JobPayloads;
@@ -174,11 +212,14 @@ export const JOB_NAMES = [
   "media.variants",
   "plugin.deferred",
   "site.sitemap",
+  "site.backup",
+  "site.purge",
   "theme.build",
   "mail.send",
   "sessions.prune",
   "media.sweep",
   "marketplace.sync",
+  "backups.expire",
 ] as const satisfies readonly JobName[];
 
 /**
@@ -192,6 +233,8 @@ export const SCHEDULED_JOBS = [
   { name: "sessions.prune" as const, cron: "15 3 * * *" },
   // 03:45 daily. Deliberately AFTER the prune, so the two never contend.
   { name: "media.sweep" as const, cron: "45 3 * * *" },
+  // 04:15 daily, after the media sweep — both delete from the same bucket.
+  { name: "backups.expire" as const, cron: "15 4 * * *" },
   // Hourly, at :07 — off the hour, so ten thousand self-hosted instances do not
   // all ask the marketplace the same question at the same second.
   //

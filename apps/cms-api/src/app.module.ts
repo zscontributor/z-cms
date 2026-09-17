@@ -34,6 +34,7 @@ import { QueueModule } from "./queue/queue.module";
 import { RedisModule } from "./redis/redis.module";
 import { RenderModule } from "./render/render.module";
 import { CommerceModule } from "./commerce/commerce.module";
+import { SiteBackupsModule } from "./site-backups/site-backups.module";
 import { SitesModule } from "./sites/sites.module";
 import { PublisherKeysModule } from "./publisher-keys/publisher-keys.module";
 import { ThemeDraftsModule } from "./theme-drafts/theme-drafts.module";
@@ -76,6 +77,7 @@ class HealthController {
     AiModule,
     QueueModule,
     SitesModule,
+    SiteBackupsModule,
     UsersModule,
     ContentTypesModule,
     ContentsModule,

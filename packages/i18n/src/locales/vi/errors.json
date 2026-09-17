@@ -52,7 +52,13 @@
     "defaultLocaleNotPublished": "Ngôn ngữ mặc định phải nằm trong danh sách ngôn ngữ của site.",
     "hostnameTaken": "Tên miền này đã được sử dụng.",
     "notFound": "Không tìm thấy site.",
-    "slugTaken": "Đã có site dùng slug này."
+    "slugTaken": "Đã có site dùng slug này.",
+    "deleteConfirmMismatch": "Slug bạn nhập không khớp với site này. Chưa xoá gì cả."
+  },
+  "backups": {
+    "notFound": "Không tìm thấy bản sao lưu, hoặc bản sao lưu chưa sẵn sàng.",
+    "partNotFound": "Không có phần này.",
+    "inProgress": "Một bản sao lưu của site này đang được tạo. Hãy chờ nó hoàn tất."
   },
   "themes": {
     "notFound": "Theme \"{key}\" không tồn tại.",

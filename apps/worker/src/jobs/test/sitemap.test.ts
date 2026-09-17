@@ -144,11 +144,11 @@ describe("runSitemap", () => {
     await runSitemap({ tenantId: "tenant-1", siteId: "site-1" });
 
     const xml = writtenXml();
-    expect(xml).toContain("https://example.com/en/visible");
+    expect(xml).toContain("https://example.com/visible");
     expect(xml).not.toContain("hidden");
   });
 
-  it("prefixes every locale's URL with its code, the default included", async () => {
+  it("prefixes a non-default locale and leaves the default locale bare", async () => {
     tenantDb.content.findMany.mockResolvedValue([
       contentRow({ slug: "about", locale: "en", translationGroupId: "g1" }),
       contentRow({ slug: "gioi-thieu", locale: "vi", translationGroupId: "g1" }),
@@ -157,7 +157,7 @@ describe("runSitemap", () => {
     await runSitemap({ tenantId: "tenant-1", siteId: "site-1" });
 
     const xml = writtenXml();
-    expect(xml).toContain("<loc>https://example.com/en/about</loc>");
+    expect(xml).toContain("<loc>https://example.com/about</loc>");
     expect(xml).toContain("<loc>https://example.com/vi/gioi-thieu</loc>");
   });
 
@@ -182,7 +182,7 @@ describe("runSitemap", () => {
 
     await runSitemap({ tenantId: "tenant-1", siteId: "site-1" });
 
-    expect(writtenXml()).toContain("<loc>http://localhost:3000/en/about</loc>");
+    expect(writtenXml()).toContain("<loc>http://localhost:3000/about</loc>");
   });
 
   it("still writes a sitemap when the site has no primary domain configured", async () => {
@@ -194,12 +194,22 @@ describe("runSitemap", () => {
     expect(result.urls).toBe(1);
   });
 
-  it("maps the empty-slug homepage to its locale root", async () => {
+  it("maps the empty-slug homepage to the site root, which is what search engines index", async () => {
+    // The default locale's home page IS the domain root. Listing it as "/en" instead
+    // left the one URL every brand search and inbound link hits out of the sitemap.
     tenantDb.content.findMany.mockResolvedValue([contentRow({ slug: "" })]);
 
     await runSitemap({ tenantId: "tenant-1", siteId: "site-1" });
 
-    expect(writtenXml()).toContain("<loc>https://example.com/en</loc>");
+    expect(writtenXml()).toContain("<loc>https://example.com/</loc>");
+  });
+
+  it("maps a non-default locale's empty-slug homepage to its locale root", async () => {
+    tenantDb.content.findMany.mockResolvedValue([contentRow({ slug: "", locale: "vi" })]);
+
+    await runSitemap({ tenantId: "tenant-1", siteId: "site-1" });
+
+    expect(writtenXml()).toContain("<loc>https://example.com/vi</loc>");
   });
 
   it("prefixes a content type's route and uses updatedAt for lastmod when never published-stamped", async () => {
@@ -217,7 +227,7 @@ describe("runSitemap", () => {
     await runSitemap({ tenantId: "tenant-1", siteId: "site-1" });
 
     const xml = writtenXml();
-    expect(xml).toContain("<loc>https://example.com/en/blog/hello-world</loc>");
+    expect(xml).toContain("<loc>https://example.com/blog/hello-world</loc>");
     expect(xml).toContain("<lastmod>2026-02-02T00:00:00.000Z</lastmod>");
   });
 
@@ -244,7 +254,7 @@ describe("runSitemap", () => {
     await runSitemap({ tenantId: "tenant-1", siteId: "site-1" });
 
     const xml = writtenXml();
-    expect(xml).toContain('hreflang="en" href="https://example.com/en/about"');
+    expect(xml).toContain('hreflang="en" href="https://example.com/about"');
     expect(xml).toContain('hreflang="vi" href="https://example.com/vi/gioi-thieu"');
   });
 

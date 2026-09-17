@@ -306,6 +306,18 @@ describe("the manifest as a whole", () => {
   });
 
   /**
+   * `internal` is read as `=== true` downstream, so a string "true" would be a
+   * package the author believes is hidden and the catalogue shows to everyone.
+   */
+  it("accepts internal as a boolean and refuses it as anything else", () => {
+    expect(validateManifestIdentity({ ...ok, internal: true })).toEqual([]);
+    expect(validateManifestIdentity({ ...ok, internal: false })).toEqual([]);
+    expect(validateManifestIdentity({ ...ok, internal: "true" }).join(" ")).toMatch(
+      /internal must be true or false/,
+    );
+  });
+
+  /**
    * Every problem at once. An author fixing a manifest should learn everything
    * wrong with it in one go — not one field per `zcms pack`.
    */

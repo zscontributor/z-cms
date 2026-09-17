@@ -52,6 +52,14 @@ const INVITE_TTL_DAYS = 7;
  *      the sideways version of rule 1: promoting yourself)
  *   4. The last OWNER cannot be demoted or removed.  (a tenant nobody can
  *      administer is unrecoverable without database access)
+ *   5. You may not see, or act on, someone who holds no role on any of your
+ *      sites.  (a tenant running five sites under five administrators is not
+ *      one staff list)
+ *
+ * Rule 5 is the odd one out: on the reading routes it is a `where` clause rather
+ * than a throw, because the answer to "show me the users" is a shorter list, not
+ * an error. On the acting routes it is a 404 from `loadTarget`, matching what a
+ * caller would get for a user who genuinely is not there.
  */
 @Injectable()
 export class UsersService {
@@ -67,30 +75,65 @@ export class UsersService {
   // -------------------------------------------------------------------------
 
   /**
-   * Everyone in the tenant. No `where: { tenantId }` and none needed — this runs
-   * inside withTenant(), so RLS has already drawn the boundary.
+   * The people the caller may see.
+   *
+   * RLS has already drawn the tenant boundary — this runs inside withTenant(),
+   * which is why there is no `where: { tenantId }`. What RLS cannot draw is the
+   * boundary *inside* a tenant: a tenant that runs five sites and gives each one
+   * its own administrator does not want the administrator of the shop reading
+   * the staff list of the magazine.
+   *
+   * So the list is cut to the caller's reach (`actor.siteIds`, the same value
+   * GET /sites scopes itself with). Only a tenant-wide member — in practice the
+   * OWNER of the installation — has no reach limit, and only they get everyone.
+   * A per-site admin sees the people who hold a role on one of *their* sites,
+   * plus the tenant-wide members, who hold a role on their sites too.
    */
-  async list(): Promise<UserDto[]> {
+  async list(actor: RequestActor): Promise<UserDto[]> {
+    const scope = visibleSiteIds(actor);
     const users = await db().user.findMany({
+      where: scope ? { memberships: { some: membershipScope(scope) } } : undefined,
       include: { memberships: { include: { site: { select: { name: true } } } } },
       orderBy: { createdAt: "asc" },
     });
-    return users.map(toUserDto);
+    return users.map((user) => toUserDto(user, scope));
   }
 
-  async findOne(id: string): Promise<UserDto> {
-    const user = await db().user.findUnique({
-      where: { id },
+  /**
+   * One user — 404 for anyone outside the caller's reach.
+   *
+   * Not 403: "you may not look at this person" and "this person does not exist"
+   * have to be the same answer, or the endpoint becomes a way to enumerate the
+   * staff of sites you were never given.
+   */
+  async findOne(actor: RequestActor, id: string): Promise<UserDto> {
+    const scope = visibleSiteIds(actor);
+    const user = await db().user.findFirst({
+      where: {
+        id,
+        ...(scope ? { memberships: { some: membershipScope(scope) } } : {}),
+      },
       include: { memberships: { include: { site: { select: { name: true } } } } },
     });
     if (!user) throw new NotFoundException(t()("errors.users.notFound"));
-    return toUserDto(user);
+    return toUserDto(user, scope);
   }
 
-  /** Invitations still awaiting an answer. Spent and withdrawn ones are history, not work. */
-  async listPendingInvitations(): Promise<InvitationDto[]> {
+  /**
+   * Invitations still awaiting an answer. Spent and withdrawn ones are history,
+   * not work. Scoped like the user list: an invitation names the site it grants
+   * a role on, and one for a site the caller has nothing to do with is not their
+   * business — nor is the email address in it.
+   */
+  async listPendingInvitations(actor: RequestActor): Promise<InvitationDto[]> {
+    const scope = visibleSiteIds(actor);
     const invitations = await db().invitation.findMany({
-      where: { acceptedAt: null, revokedAt: null, expiresAt: { gt: new Date() } },
+      where: {
+        acceptedAt: null,
+        revokedAt: null,
+        expiresAt: { gt: new Date() },
+        ...(scope ? { OR: [{ siteId: null }, { siteId: { in: scope } }] } : {}),
+      },
       include: {
         site: { select: { name: true } },
         invitedBy: { select: { name: true } },
@@ -184,7 +227,7 @@ export class UsersService {
       siteId: input.siteId,
     });
 
-    const user = await this.findOne(created.id);
+    const user = await this.readUser(actor, created.id);
     const loginPageUrl = await accountLoginUrl(input.siteId);
     const emailQueued = await this.queueAccountCreatedMail(actor, input.siteId, {
       email,
@@ -262,6 +305,14 @@ export class UsersService {
   async revokeInvitation(actor: RequestActor, id: string): Promise<void> {
     const invitation = await db().invitation.findUnique({ where: { id } });
     if (!invitation) throw new NotFoundException(t()("errors.users.inviteNotFound"));
+
+    // Same 404 as a missing row, and for the same reason `findOne` gives one:
+    // an invitation the caller cannot see must not become visible by the act of
+    // trying to withdraw it.
+    const scope = visibleSiteIds(actor);
+    if (scope && invitation.siteId !== null && !scope.includes(invitation.siteId)) {
+      throw new NotFoundException(t()("errors.users.inviteNotFound"));
+    }
 
     if (invitation.acceptedAt) {
       throw new BadRequestException(t()("errors.users.inviteAlreadyAccepted"));
@@ -348,7 +399,7 @@ export class UsersService {
       await this.auth.revokeAllSessions(userId);
     }
 
-    return this.findOne(userId);
+    return this.readUser(actor, userId);
   }
 
   /**
@@ -360,6 +411,12 @@ export class UsersService {
 
     const membership = target.memberships.find((m) => m.id === membershipId);
     if (!membership) throw new NotFoundException(t()("errors.users.membershipNotFound"));
+
+    // Granting a role on a site demands standing there; taking one away demands
+    // no less. This was the one membership-mutating route that skipped the
+    // check, which left "revoke this person's role on a site I have never been
+    // given" resting on `user:manage` happening to be OWNER-only today.
+    await this.assertMayActOnSite(actor, membership.siteId);
 
     if (membership.role === "OWNER") await this.assertNotLastOwner(userId);
 
@@ -373,7 +430,10 @@ export class UsersService {
 
     await this.auth.revokeAllSessions(userId);
 
-    return this.findOne(userId);
+    // Deliberately the unscoped read: the membership that made this person
+    // visible to the caller may be the one just deleted, and answering a
+    // successful revocation with a 404 would read as a failure.
+    return this.readUser(actor, userId);
   }
 
   /**
@@ -437,6 +497,24 @@ export class UsersService {
   // -------------------------------------------------------------------------
 
   /**
+   * Reads a user the caller has *already* been proven entitled to act on.
+   *
+   * Unscoped on purpose, unlike `findOne`: the mutation that precedes every call
+   * has been through `loadTarget` and `assertMayActOnSite`, and one of them —
+   * removing a membership — can end with the person no longer sharing a site
+   * with the caller. Memberships are still mapped through the caller's reach, so
+   * this reads no further than the list would.
+   */
+  private async readUser(actor: RequestActor, userId: string): Promise<UserDto> {
+    const user = await db().user.findUnique({
+      where: { id: userId },
+      include: { memberships: { include: { site: { select: { name: true } } } } },
+    });
+    if (!user) throw new NotFoundException(t()("errors.users.notFound"));
+    return toUserDto(user, visibleSiteIds(actor));
+  }
+
+  /**
    * Loads the user being acted on, and applies rules 2 and 3 while doing it —
    * every caller needs both, so neither can be forgotten by omission.
    */
@@ -450,6 +528,16 @@ export class UsersService {
       include: { memberships: true },
     });
     if (!target) throw new NotFoundException(t()("errors.users.notFound"));
+
+    // Rule 5: you cannot act on someone you are not allowed to see. Checked here
+    // in memory rather than as a `where` clause because the memberships are
+    // already loaded for the rank check below — and answered with the same 404 a
+    // missing row gets, for the reason `findOne` gives: a 403 would confirm the
+    // account exists on a site the caller was never given.
+    const scope = visibleSiteIds(actor);
+    if (scope && !target.memberships.some((m) => m.siteId === null || scope.includes(m.siteId))) {
+      throw new NotFoundException(t()("errors.users.notFound"));
+    }
 
     // Their strongest role anywhere in the tenant, not their role on the site the
     // actor happens to be looking at. An ADMIN on the marketing site must not be
@@ -563,6 +651,31 @@ export class UsersService {
     const site = await db().site.findFirst({ select: { id: true }, orderBy: { createdAt: "asc" } });
     return site?.id ?? null;
   }
+}
+
+/**
+ * How far into the tenant this actor can see, as a site-id list — or `null` for
+ * "all of it".
+ *
+ * A straight read of `actor.siteIds`, which AuthGuard computes from the actor's
+ * memberships and documents on RequestActor: `undefined` there means the actor
+ * holds a tenant-wide membership (siteId NULL), which is what the OWNER of an
+ * installation has. Renamed rather than inlined because `undefined` reading as
+ * "unrestricted" is the kind of inversion that gets an `if` backwards once.
+ */
+function visibleSiteIds(actor: RequestActor): string[] | null {
+  return actor.siteIds ?? null;
+}
+
+/**
+ * "Holds a role on one of these sites."
+ *
+ * Tenant-wide memberships match too, and must: someone with a NULL siteId holds
+ * their role on every site including the caller's, so a staff list that left
+ * them out would be telling the caller they do not have access when they do.
+ */
+function membershipScope(siteIds: string[]) {
+  return { OR: [{ siteId: null }, { siteId: { in: siteIds } }] };
 }
 
 /** The same SHA-256 AuthService matches on redemption. The raw token is never stored. */

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NotFoundException } from "@nestjs/common";
-import { COLLECTION_MAX_LIMIT, CONTENT_LIST_BLOCK } from "@zcmsorg/schemas";
+import { COLLECTION_MAX_LIMIT, CONTENT_LIST_BLOCK, DEFAULT_SITE_MAINTENANCE } from "@zcmsorg/schemas";
 
 const holder = vi.hoisted(() => ({ db: null as any, systemDb: null as any }));
 vi.mock("@zcmsorg/database", () => ({
@@ -79,6 +79,8 @@ const publishedSite = {
   domains: ["example.com"],
   defaultLocale: "en",
   locales: ["en"],
+  // Same story for `maintenance`: a cached entry without it is stale by shape.
+  maintenance: DEFAULT_SITE_MAINTENANCE,
 };
 
 const cache = {
@@ -546,6 +548,8 @@ describe("RenderService", () => {
         { id: "2", label: "Contact", labels: null, url: "/contact", target: "_self", order: 1, parentId: null },
         // External link WITH a vi override -> URL untouched, label relabelled.
         { id: "3", label: "GitHub", labels: { vi: "Kho mã" }, url: "https://github.com/z", target: "_self", order: 2, parentId: null },
+        // Anchor into a page, no override -> keeps its own label and its fragment.
+        { id: "4", label: "Price", labels: null, url: "/about#pricing", target: "_self", order: 3, parentId: null },
       ],
     };
 
@@ -592,11 +596,43 @@ describe("RenderService", () => {
         expect.objectContaining({ label: "Giới thiệu", url: "/ve-chung-toi" }),
         expect.objectContaining({ label: "Liên hệ", url: "/lien-he" }),
         expect.objectContaining({ label: "Kho mã", url: "https://github.com/z" }),
+        expect.objectContaining({ label: "Price", url: "/ve-chung-toi#pricing" }),
       ]);
       // The admin-only overrides must not ride along in the public payload.
       for (const item of payload.menus.primary!.items) {
         expect(item).not.toHaveProperty("labels");
       }
+    });
+
+    /**
+     * An anchor names a section, not a page. Two anchors into the same page —
+     * "/#features" and "/#pricing" — borrowing that page's title gave a header
+     * two identical links, each as long as the page title, which wrapped the top
+     * menu onto a second row; and the fragment was dropped on the way through, so
+     * both landed on the top of the page anyway.
+     */
+    it("keeps an anchor item's own label and fragment", async () => {
+      cacheReturns({ host: bilingual, render: null });
+      holder.db.menu.findMany.mockResolvedValue([
+        {
+          key: "primary",
+          name: "Primary",
+          demoThemeKey: null,
+          items: [
+            { id: "1", label: "Features", labels: null, url: "/about#features", target: "_self", order: 0, parentId: null },
+            { id: "2", label: "Price", labels: { vi: "Giá" }, url: "/about#pricing", target: "_self", order: 1, parentId: null },
+          ],
+        },
+      ]);
+      menuAwareContent();
+
+      const payload = await makeService().resolve("example.com", "/vi/blog/hello");
+
+      expect(payload.menus.primary!.items).toEqual([
+        expect.objectContaining({ label: "Features", url: "/ve-chung-toi#features" }),
+        // An explicit override still wins over the base label.
+        expect.objectContaining({ label: "Giá", url: "/ve-chung-toi#pricing" }),
+      ]);
     });
 
     it("keeps base labels and strips overrides on the default locale", async () => {
@@ -610,6 +646,7 @@ describe("RenderService", () => {
         expect.objectContaining({ label: "About", url: "/about" }),
         expect.objectContaining({ label: "Contact", url: "/contact" }),
         expect.objectContaining({ label: "GitHub", url: "https://github.com/z" }),
+        expect.objectContaining({ label: "Price", url: "/about#pricing" }),
       ]);
       for (const item of payload.menus.primary!.items) {
         expect(item).not.toHaveProperty("labels");
@@ -646,13 +683,14 @@ describe("RenderService", () => {
 
       const payload = await makeService().resolve("example.com", "/blog/hello");
 
-      // The default locale carries its prefix like every other: "en" is "/en/blog/…",
-      // not a bare "/blog/…". site-runtime uses the `current` alternate's path as the
-      // canonical URL, so this is the address "/en" gets indexed under.
+      // The default locale is addressed bare ("/blog/hello") and every other under its
+      // code ("/vi/blog/…"). site-runtime uses the `current` alternate's path as the
+      // canonical URL, so this is the address the page gets indexed under — and it is
+      // why the site root stays indexable instead of canonicalising onto "/en".
       expect(payload.alternates).toEqual([
         expect.objectContaining({
           locale: "en",
-          path: "/en/blog/hello",
+          path: "/blog/hello",
           current: true,
           flagUrl: "/z-flags/gb.svg",
         }),
@@ -663,6 +701,23 @@ describe("RenderService", () => {
           flagUrl: "/z-flags/vn.svg",
         }),
       ]);
+    });
+
+    it("gives the default locale's home page the site root as its address", async () => {
+      // The one URL that must stay indexable: a canonical pointing from "/" at "/en"
+      // is what made Search Console drop the domain root as "Alternate page with
+      // proper canonical tag".
+      cacheReturns({ host: bilingual, render: null });
+      holder.db.content.findMany
+        .mockResolvedValueOnce([publishedRow({ locale: "en", slug: "" })]) // findContent
+        .mockResolvedValueOnce([
+          { locale: "en", path: "/", contentType: { isRoutable: true } },
+          { locale: "vi", path: "/", contentType: { isRoutable: true } },
+        ]);
+
+      const payload = await makeService().resolve("example.com", "/");
+
+      expect(payload.alternates.map((a) => a.path)).toEqual(["/", "/vi"]);
     });
 
     it("sends null rather than a broken URL for a language with no flag", async () => {
@@ -1141,5 +1196,70 @@ describe("previewCollections (Theme Editor real data)", () => {
     expect(Object.keys(out)).toEqual(["post_6_newest"]);
     // Deduplicated: two identical bindings are one database round trip.
     expect(holder.db.content.findMany).toHaveBeenCalledTimes(1);
+  });
+  describe("maintenanceState", () => {
+    it("answers from the cached host lookup with the notice and the site's identity", async () => {
+      const closed = {
+        ...publishedSite,
+        maintenance: {
+          ...DEFAULT_SITE_MAINTENANCE,
+          enabled: true,
+          title: { en: "Back soon" },
+          bypassKey: "letmein-12345678",
+        },
+        brand: { primaryColor: "#123456", logo: "/logo.png" },
+      };
+      cacheReturns({ host: closed });
+
+      const out = await makeService().maintenanceState("example.com");
+
+      expect(out.enabled).toBe(true);
+      expect(out.title).toEqual({ en: "Back soon" });
+      // The bypass key rides along: the endpoint is internal-token guarded and
+      // site-runtime compares it against the visitor's cookie.
+      expect(out.bypassKey).toBe("letmein-12345678");
+      expect(out.site).toEqual({
+        name: "Main",
+        defaultLocale: "en",
+        locales: ["en"],
+        brand: { primaryColor: "#123456", logo: "/logo.png" },
+      });
+      expect(holder.systemDb.domain.findMany).not.toHaveBeenCalled();
+    });
+
+    it("reads the notice out of Site.settings and re-resolves a cache entry that predates it", async () => {
+      // A host entry cached before maintenance mode existed has no `maintenance`
+      // key. Served as-is, the middleware would read `enabled` as undefined and
+      // never close a site an owner had closed.
+      const { maintenance: _dropped, ...legacy } = publishedSite;
+      cacheReturns({ host: legacy });
+      holder.systemDb.domain.findMany.mockResolvedValue([
+        {
+          hostname: "example.com",
+          site: {
+            ...publishedSite,
+            domains: [{ hostname: "example.com", isPrimary: true }],
+            settings: { maintenance: { enabled: true, message: { en: "Upgrading" } } },
+          },
+        },
+      ]);
+
+      const out = await makeService().maintenanceState("example.com");
+
+      expect(out.enabled).toBe(true);
+      expect(out.message).toEqual({ en: "Upgrading" });
+      // Fields the row never had come back as the platform's defaults, not holes.
+      expect(out.backgroundColor).toBe(DEFAULT_SITE_MAINTENANCE.backgroundColor);
+      expect(out.bypassKey).toBe("");
+    });
+
+    it("404s like resolve for a hostname that serves no published site", async () => {
+      cacheReturns({ host: null });
+      holder.systemDb.domain.findMany.mockResolvedValue([]);
+
+      await expect(makeService().maintenanceState("nope.com")).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
   });
 });

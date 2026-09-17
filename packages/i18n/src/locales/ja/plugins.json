@@ -63,7 +63,8 @@
     "summaryDeclined": "{count} 権限を拒否しました: {list}。",
     "networkHeading": "接続先",
     "networkHint": "これらのホストはプラグインのマニフェストに由来し、プラグインが到達できる唯一の宛先です。上の権限を許可することは、この一覧をそのまま許可することを意味します。",
-    "networkOnlyThese": "他のホストには接続しません"
+    "networkOnlyThese": "他のホストには接続しません",
+    "installing": "インストール中…"
   },
   "status": {
     "NOT_INSTALLED": "インストールされていません",

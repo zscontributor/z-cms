@@ -168,11 +168,13 @@ export class AuthService {
    *
    *   1. verify the JWT (signature + expiry) — a cheap gate before any DB hit
    *   2. look it up by hash. Unknown → reject.
-   *   3. already REVOKED, or already CONSUMED → someone is replaying a token that
-   *      was retired. We cannot tell the legitimate client from a thief, so we
-   *      kill the entire family. Both are logged out; the real user logs back in,
-   *      the thief is left holding dead tokens.
-   *   4. otherwise: mark it consumed, issue a new pair in the same family.
+   *   3. already CONSUMED seconds ago, by the same client, family still alive →
+   *      concurrency, not theft. See the grace window below.
+   *   4. already REVOKED, or consumed longer ago than that → someone is replaying
+   *      a token that was retired. We cannot tell the legitimate client from a
+   *      thief, so we kill the entire family. Both are logged out; the real user
+   *      logs back in, the thief is left holding dead tokens.
+   *   5. otherwise: mark it consumed, issue a new pair in the same family.
    */
   async refresh(refreshToken: string, ctx: SessionContext = {}): Promise<AuthResult> {
     let claims: AccessTokenClaims;
@@ -190,6 +192,28 @@ export class AuthService {
 
     if (!stored) {
       throw new UnauthorizedException(t()("errors.auth.invalidRefreshToken"));
+    }
+
+    if (this.isConcurrentReplay(stored, ctx)) {
+      // Not theft: the same client spending the same token twice within seconds.
+      // A browser fires several requests at once — a navigation, its RSC prefetch,
+      // a server action — and every one of them carries the cookie pair that was
+      // current when it left. The first rotates; the rest arrive holding a token
+      // that went stale in flight. Treating that as a stolen credential logs a
+      // working admin out mid-click, and does it precisely when the session is
+      // busiest. So inside the window we issue a fresh pair in the SAME family
+      // instead. The losers' pairs are simply never stored by the browser and
+      // expire unused; the family, and therefore the session, survives.
+      this.events.record("auth.refresh_replay_tolerated", {
+        userId: stored.userId,
+        tenantId: stored.tenantId,
+        familyId: stored.familyId,
+        ip: ctx.ip,
+        userAgent: ctx.userAgent,
+        consumedMsAgo: Date.now() - (stored.consumedAt?.getTime() ?? 0),
+      });
+
+      return this.issueTokens(claims.sub, claims.tid, stored.familyId, ctx);
     }
 
     if (stored.revokedAt || stored.consumedAt) {
@@ -228,6 +252,64 @@ export class AuthService {
     });
 
     return this.issueTokens(claims.sub, claims.tid, stored.familyId, ctx);
+  }
+
+  /**
+   * Is this replay the same client racing itself, rather than a second holder?
+   *
+   * Rotation's theft signal is "a spent token was spent again", and that signal is
+   * genuinely strong — but only once the legitimate client has had time to notice
+   * the rotation. Requests that were already in flight when the token rotated have
+   * had no such chance. Every condition below has to hold:
+   *
+   *   - the token was CONSUMED, not revoked. A revoked token means the family was
+   *     already killed (logout, or a theft we detected). Nothing is forgiven after
+   *     that, or a logout would not be a logout.
+   *   - it was consumed within the grace window. Requests race by milliseconds;
+   *     a thief with a stolen token turns up minutes or hours later, and after the
+   *     window they are treated exactly as before.
+   *   - the row has not expired, so the window can never resurrect a dead token.
+   *   - it is being replayed from the address it was ISSUED to. A thief on another
+   *     network fails this even inside the window. When either side of the
+   *     comparison is unknown we cannot distinguish anything, so the time window
+   *     is left to do the work alone rather than logging a real user out on a
+   *     missing header.
+   */
+  private isConcurrentReplay(
+    stored: { consumedAt: Date | null; revokedAt: Date | null; expiresAt: Date; ip: string | null },
+    ctx: SessionContext,
+  ): boolean {
+    if (stored.revokedAt || !stored.consumedAt) return false;
+
+    const graceMs = this.reuseGraceMs();
+    if (graceMs <= 0) return false;
+
+    const now = Date.now();
+    if (now - stored.consumedAt.getTime() > graceMs) return false;
+    if (stored.expiresAt.getTime() < now) return false;
+
+    return !stored.ip || !ctx.ip || stored.ip === ctx.ip;
+  }
+
+  /**
+   * How long a just-rotated refresh token stays forgivable, in milliseconds.
+   *
+   * Ten seconds by default: comfortably longer than a page's worth of parallel
+   * requests, far shorter than any realistic gap between a token leaking and
+   * being used. `AUTH_REFRESH_REUSE_GRACE_SECONDS=0` turns the window off and
+   * restores strict single-use, which is the right setting for an instance that
+   * would rather log people out than tolerate any replay at all. Capped at two
+   * minutes, because a window long enough to matter to an attacker is not a race
+   * condition fix any more.
+   */
+  private reuseGraceMs(): number {
+    const raw = this.config.get<string>("AUTH_REFRESH_REUSE_GRACE_SECONDS");
+    if (raw === undefined || raw === null || raw === "") return 10_000;
+
+    const seconds = Number(raw);
+    if (!Number.isFinite(seconds) || seconds < 0) return 10_000;
+
+    return Math.min(seconds, 120) * 1000;
   }
 
   /** Revokes the family a refresh token belongs to. Logout, everywhere. */

@@ -165,7 +165,9 @@ describe("form pick drawer", () => {
       `<div data-zc-pick-filled="${formId}" hidden>` +
       `<b data-zc-pick-count="${formId}" hidden>0</b>` +
       `<a href="/#order" data-zc-pick-close>order</a>` +
+      `<a href="/#order" data-zc-pick-go="details">checkout</a>` +
       `</div>` +
+      `<button type="button" data-zc-pick-go="">back</button>` +
       `<button type="button" data-zc-pick-close>close</button>`;
     document.body.appendChild(root);
     return root;
@@ -279,6 +281,63 @@ describe("form pick drawer", () => {
     link.dispatchEvent(linkEvent);
     expect(linkEvent.defaultPrevented).toBe(false);
     expect(root.hasAttribute("data-zc-open")).toBe(false);
+  });
+
+  it("turns over to the checkout step instead of navigating to the form", () => {
+    // The bug: "order now" closed the basket and scrolled the page behind it to a
+    // form. The visitor was looking at their basket; pressing the button on it
+    // should hand them the boxes to fill in, not take the basket away.
+    writePicks("cafe-order", [{ value: "CF-01", qty: 1 }]);
+    const root = drawer("cafe-order", ["CF-01"]);
+    const button = opener("cafe-order");
+    boot();
+    button.click();
+
+    const go = root.querySelector<HTMLElement>('[data-zc-pick-go="details"]')!;
+    const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+    go.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(root.getAttribute("data-zc-step")).toBe("details");
+    // Still open: the step is a swap inside the drawer, not a way out of it.
+    expect(root.hasAttribute("data-zc-open")).toBe(true);
+
+    // And back, with the basket exactly as it was.
+    root.querySelector<HTMLElement>('[data-zc-pick-go=""]')!.click();
+    expect(root.hasAttribute("data-zc-step")).toBe(false);
+    expect(readPicks("cafe-order")).toEqual([{ value: "CF-01", qty: 1 }]);
+  });
+
+  it("reopens on the basket, never on the step the visitor left behind", () => {
+    // A drawer reopened from the badge has to show what the badge counted. Left as
+    // it was, an order placed on the second step would greet the next visit with
+    // its receipt.
+    const root = drawer("cafe-order", ["CF-01"]);
+    const button = opener("cafe-order");
+    boot();
+    button.click();
+    root.querySelector<HTMLElement>('[data-zc-pick-go="details"]')!.click();
+    expect(root.getAttribute("data-zc-step")).toBe("details");
+
+    root.querySelector<HTMLElement>("button[data-zc-pick-close]")!.click();
+    button.click();
+
+    expect(root.hasAttribute("data-zc-step")).toBe(false);
+  });
+
+  it("leaves a step control that is not in a drawer as the link it is", () => {
+    // The same attribute on a page that renders no drawer must not swallow the
+    // click — there is nothing to turn over, and the anchor is the no-JS path.
+    const link = document.createElement("a");
+    link.setAttribute("href", "/#order");
+    link.setAttribute("data-zc-pick-go", "details");
+    document.body.appendChild(link);
+    boot();
+
+    const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+    link.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(false);
   });
 
   it("empties the drawer when the island empties the basket after an order", () => {

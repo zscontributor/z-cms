@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const site = {
   create: vi.fn(),
   update: vi.fn(),
+  delete: vi.fn(),
   findUnique: vi.fn(),
   findUniqueOrThrow: vi.fn(),
   findMany: vi.fn(),
@@ -15,12 +16,16 @@ const domain = {
   updateMany: vi.fn(),
 };
 const contentType = { create: vi.fn() };
-const content = { create: vi.fn() };
+const content = { create: vi.fn(), count: vi.fn() };
 const membership = { create: vi.fn() };
+const media = { count: vi.fn() };
+const siteBackup = { findFirst: vi.fn(), count: vi.fn() };
+const pluginData = { deleteMany: vi.fn() };
+const auditLog = { deleteMany: vi.fn() };
 
 const installCorePlugins = vi.fn().mockResolvedValue([]);
 vi.mock("@zcmsorg/database", () => ({
-  db: () => ({ site, domain, contentType, content, membership }),
+  db: () => ({ site, domain, contentType, content, membership, media, siteBackup, pluginData, auditLog }),
   installCorePlugins: (...args: unknown[]) => installCorePlugins(...args),
 }));
 
@@ -85,6 +90,13 @@ beforeEach(() => {
   contentType.create.mockResolvedValue({ id: "ct1" });
   content.create.mockResolvedValue({ id: "c1" });
   membership.create.mockResolvedValue({ id: "m1" });
+  site.delete.mockResolvedValue({ id: "s1" });
+  content.count.mockResolvedValue(12);
+  media.count.mockResolvedValue(3);
+  siteBackup.count.mockResolvedValue(1);
+  siteBackup.findFirst.mockResolvedValue(null);
+  pluginData.deleteMany.mockResolvedValue({ count: 2 });
+  auditLog.deleteMany.mockResolvedValue({ count: 40 });
 });
 
 describe("create", () => {
@@ -341,6 +353,65 @@ describe("update", () => {
       brand: { primaryColor: "#FFFFFF", logo: "/new.png" },
       somethingElse: 42,
     });
+  });
+
+  it("merges the maintenance notice into settings beside the brand", async () => {
+    // Same column, same rule: a maintenance save must not erase the brand, and a
+    // brand save must not reopen a closed site.
+    const brand = { primaryColor: "#000000", logo: "/logo.png" };
+    site.findUnique.mockResolvedValue(row({ settings: { brand, somethingElse: 42 } }));
+    site.update.mockResolvedValue(row());
+    const maintenance = {
+      enabled: true,
+      mode: "maintenance",
+      title: { vi: "Sắp quay lại" },
+      message: {},
+      logo: "",
+      backgroundImage: "",
+      backgroundColor: "#0F172A",
+      textColor: "#FFFFFF",
+      expectedBackAt: null,
+      bypassKey: "letmein-12345678",
+    };
+
+    await controller().update(actor, "s1", { maintenance } as never);
+
+    expect(site.update.mock.calls[0][0].data.settings).toEqual({
+      brand,
+      maintenance,
+      somethingElse: 42,
+    });
+  });
+
+  it("keeps a closed site closed when only the brand is saved", async () => {
+    const maintenance = { enabled: true, bypassKey: "letmein-12345678" };
+    site.findUnique.mockResolvedValue(row({ settings: { maintenance } }));
+    site.update.mockResolvedValue(row());
+
+    await controller().update(actor, "s1", {
+      brand: { primaryColor: "#FFFFFF", logo: "" },
+    } as never);
+
+    expect(site.update.mock.calls[0][0].data.settings).toEqual({
+      brand: { primaryColor: "#FFFFFF", logo: "" },
+      maintenance,
+    });
+  });
+
+  it("purges the host lookup on a maintenance change so the gate sees it", async () => {
+    // site-runtime asks `render/maintenance`, which answers from the cached host
+    // lookup. Left in place, a closed site would stay open for its ten-minute TTL.
+    site.findUnique.mockResolvedValue(row());
+    site.update.mockResolvedValue(row());
+    cache.forgetHosts.mockClear();
+    cache.invalidateSite.mockClear();
+
+    await controller().update(actor, "s1", {
+      maintenance: { enabled: true },
+    } as never);
+
+    expect(cache.forgetHosts).toHaveBeenCalledWith(["acme.test"]);
+    expect(cache.invalidateSite).toHaveBeenCalledWith("s1");
   });
 
   it("touches only the fields that were sent", async () => {
@@ -636,5 +707,115 @@ describe("rebuildSitemap", () => {
     );
     expect(queue.enqueue).not.toHaveBeenCalled();
     expect(audit.record).not.toHaveBeenCalled();
+  });
+});
+
+describe("remove", () => {
+  const doomed = {
+    id: "s1",
+    slug: "acme",
+    name: "Acme",
+    domains: [{ hostname: "acme.test" }, { hostname: "www.acme.test" }],
+  };
+
+  it("deletes the site row (the cascade does the rest) and the two tables the cascade cannot reach", async () => {
+    site.findUnique.mockResolvedValue(doomed);
+
+    const result = await controller().remove(actor, "s1", { slug: "acme" });
+
+    expect(result).toEqual({ ok: true, id: "s1", slug: "acme", purgeQueued: true });
+    expect(pluginData.deleteMany).toHaveBeenCalledWith({ where: { siteId: "s1" } });
+    expect(auditLog.deleteMany).toHaveBeenCalledWith({ where: { siteId: "s1" } });
+    expect(site.delete).toHaveBeenCalledWith({ where: { id: "s1" } });
+  });
+
+  it("queues the storage purge for AFTER the request commits, keyed by site so a retry cannot double up", async () => {
+    site.findUnique.mockResolvedValue(doomed);
+
+    await controller().remove(actor, "s1", { slug: "acme" });
+
+    expect(queue.enqueue).toHaveBeenCalledWith(
+      "site.purge",
+      { tenantId: "t1", siteId: "s1" },
+      expect.objectContaining({ jobId: "site.purge:s1", delayMs: expect.any(Number) }),
+    );
+    expect(cache.invalidateSite).toHaveBeenCalledWith("s1");
+  });
+
+  it("writes the audit entry at tenant level, with what went, not under the dead site's id", async () => {
+    site.findUnique.mockResolvedValue(doomed);
+
+    await controller().remove(actor, "s1", { slug: "acme" });
+
+    const [who, action, type, id, meta] = audit.record.mock.calls[0]!;
+    expect(who.siteId).toBeUndefined();
+    expect(who.tenantId).toBe("t1");
+    expect([action, type, id]).toEqual(["site.deleted", "site", "s1"]);
+    expect(meta).toMatchObject({
+      slug: "acme",
+      name: "Acme",
+      hostnames: ["acme.test", "www.acme.test"],
+      contents: 12,
+      media: 3,
+      backups: 1,
+      pluginData: 2,
+      auditLog: 40,
+    });
+  });
+
+  it("refuses when the typed slug is not this site's — the wrong site is open", async () => {
+    site.findUnique.mockResolvedValue(doomed);
+
+    await expect(controller().remove(actor, "s1", { slug: "other-site" })).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect(site.delete).not.toHaveBeenCalled();
+    expect(pluginData.deleteMany).not.toHaveBeenCalled();
+    expect(queue.enqueue).not.toHaveBeenCalled();
+  });
+
+  it("matches the slug case-insensitively and ignores surrounding whitespace", async () => {
+    site.findUnique.mockResolvedValue(doomed);
+
+    await expect(controller().remove(actor, "s1", { slug: "  ACME " })).resolves.toMatchObject({ ok: true });
+  });
+
+  it("refuses while a backup of the site is still being built", async () => {
+    site.findUnique.mockResolvedValue(doomed);
+    siteBackup.findFirst.mockResolvedValue({ id: "b1" });
+
+    await expect(controller().remove(actor, "s1", { slug: "acme" })).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect(site.delete).not.toHaveBeenCalled();
+  });
+
+  it("404s an unknown or foreign site, and deletes nothing", async () => {
+    site.findUnique.mockResolvedValue(null);
+
+    await expect(controller().remove(actor, "nope", { slug: "nope" })).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(site.delete).not.toHaveBeenCalled();
+    expect(queue.enqueue).not.toHaveBeenCalled();
+  });
+
+  it("404s a site outside the actor's membership without looking it up", async () => {
+    const limited: RequestActor = { ...actor, siteIds: ["s2"] };
+
+    await expect(controller().remove(limited, "s1", { slug: "acme" })).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(site.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("still answers ok when the purge cannot be queued — the rows are gone regardless", async () => {
+    site.findUnique.mockResolvedValue(doomed);
+    queue.enqueue.mockRejectedValueOnce(new Error("redis down"));
+
+    const result = await controller().remove(actor, "s1", { slug: "acme" });
+
+    expect(result.purgeQueued).toBe(false);
+    expect(site.delete).toHaveBeenCalled();
   });
 });

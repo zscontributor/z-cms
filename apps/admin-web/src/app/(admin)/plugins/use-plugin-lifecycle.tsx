@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import {
   activatePluginAction,
   deactivatePluginAction,
@@ -58,6 +59,7 @@ export function usePluginLifecycle(
   canConfigure: boolean,
 ): PluginLifecycle {
   const t = useT();
+  const router = useRouter();
 
   // On the per-site screen, a plugin the tenant turned on org-wide runs here but is
   // owned by the organization screen: show it, but let no site-level button touch it.
@@ -91,6 +93,25 @@ export function usePluginLifecycle(
   const needsConsent =
     plugin.permissions.length > 0 && (granted === null || granted.length === 0);
 
+  /**
+   * Re-render the SHELL, not just this screen.
+   *
+   * A plugin that goes active brings admin screens with it, and those are drawn by
+   * the `(admin)` layout — the sidebar, above this page. The actions revalidate the
+   * plugins page, which is why the card updates; nothing told the layout, which is
+   * why the new menu only appeared after a manual reload. `router.refresh()` asks
+   * the server for the whole current route again, layouts included, so the entry
+   * arrives with the same click that created it.
+   *
+   * Called INSIDE the transition on purpose: `pending` then stays true until that
+   * re-render lands, so the spinner covers the real end of the job — the plugin's
+   * `setup()` has run, its tables exist, and its menu is on screen — rather than
+   * the moment the request came back.
+   */
+  function refreshShell() {
+    router.refresh();
+  }
+
   function confirmConsent(next: string[]) {
     setConsentError(null);
     startTransition(async () => {
@@ -99,7 +120,6 @@ export function usePluginLifecycle(
         setConsentError(result.error);
         return;
       }
-      setConsentOpen(false);
       setRuntimeError(null);
       setNotice(result.message);
 
@@ -111,6 +131,13 @@ export function usePluginLifecycle(
         if (!activated.ok) setRuntimeError(activated.error);
         else setNotice(activated.message);
       }
+      // The dialog is the last thing to go, and it goes with the refresh rather
+      // than before it: closing on the install response would hand the admin a
+      // finished-looking screen while `setup()` is still creating the plugin's
+      // tables, and the menu it adds would arrive seconds later out of nowhere.
+      // Both state changes belong to this transition, so they commit together.
+      refreshShell();
+      setConsentOpen(false);
     });
   }
 
@@ -138,6 +165,9 @@ export function usePluginLifecycle(
       // a lie the admin discovers on the live site.
       if (!result.ok) setRuntimeError(result.error);
       else setNotice(result.message);
+      // Both directions move the sidebar: switching a plugin off has to take its
+      // menu away as promptly as switching it on puts one there.
+      refreshShell();
     });
   }
 
@@ -154,6 +184,7 @@ export function usePluginLifecycle(
       // The plugin drops back to "not installed" after revalidation; leave the
       // panel open on its new state and say what happened.
       setNotice(result.message);
+      refreshShell();
     });
   }
 

@@ -8,6 +8,7 @@ import {
   hostnameVariants,
   normaliseCollectionSort,
   parseSiteBrand,
+  parseSiteMaintenance,
   stripPrivateData,
 } from "@zcmsorg/schemas";
 import type {
@@ -19,6 +20,8 @@ import type {
   MenuDto,
   RenderPayload,
   SiteBrand,
+  SiteMaintenance,
+  SiteMaintenanceStateDto,
 } from "@zcmsorg/schemas";
 import { t } from "../common/i18n";
 import { toContentDto, toMenuDto } from "../common/mappers";
@@ -100,6 +103,12 @@ interface ResolvedSite {
    * that buys nothing.
    */
   brand: SiteBrand;
+  /**
+   * Whether the site is closed to visitors, and the notice to show. Read here for
+   * the same reason as the brand: site-runtime asks before EVERY page, and the
+   * answer only changes when an owner flips it — which drops this key.
+   */
+  maintenance: SiteMaintenance;
 }
 
 interface SearchableThemeManifest {
@@ -214,9 +223,10 @@ export class RenderService {
   private async resolveHost(hostname: string): Promise<ResolvedSite> {
     const key = CacheService.hostKey(hostname);
     const cached = await this.cache.get<ResolvedSite>(key);
-    // Same reason as in `resolve`: an entry without `domains` is stale by shape, not
-    // by age, and re-resolving is cheaper than serving it.
-    if (cached?.domains?.length) return cached;
+    // Same reason as in `resolve`: an entry without `domains` (or, from before
+    // maintenance mode, without `maintenance`) is stale by shape, not by age, and
+    // re-resolving is cheaper than serving it.
+    if (cached?.domains?.length && cached.maintenance) return cached;
 
     // Both spellings of the host, because "www.z-cms.org" is not a different site
     // from "z-cms.org" — it is the same site, reached by the other name for it.
@@ -246,6 +256,7 @@ export class RenderService {
       defaultLocale: domain.site.defaultLocale,
       locales: domain.site.locales,
       brand: parseSiteBrand(domain.site.settings),
+      maintenance: parseSiteMaintenance(domain.site.settings),
     };
 
     // Ten minutes, and NOT keyed by the site's cache version — so a brand change
@@ -254,6 +265,27 @@ export class RenderService {
     // site's name or brand, it has to do the same.
     await this.cache.set(key, site, 600);
     return site;
+  }
+
+  /**
+   * Is this hostname's site closed, and with what notice.
+   *
+   * site-runtime's middleware asks this before serving any page, so it has to be
+   * cheap: it is the same cached host lookup `resolve` starts with and nothing
+   * more. A hostname that resolves to no published site 404s exactly as `resolve`
+   * would — the runtime then treats it as "no gate" and lets its normal 404 draw.
+   */
+  async maintenanceState(hostname: string): Promise<SiteMaintenanceStateDto> {
+    const site = await this.resolveHost(hostname);
+    return {
+      ...site.maintenance,
+      site: {
+        name: site.name,
+        defaultLocale: site.defaultLocale,
+        locales: site.locales,
+        brand: site.brand,
+      },
+    };
   }
 
   private async build(
@@ -739,13 +771,11 @@ export class RenderService {
   /**
    * "/vi/blog/hello" -> { locale: "vi", path: "/blog/hello" }.
    *
-   * Every locale is addressed under its own prefix — the default included:
-   * "/en/about" is English, "/vi/about" Vietnamese, and "/en/about" is the one
-   * canonical URL for its page. The unprefixed spelling ("/about") resolves to the
-   * default locale here too — both spellings serve a 200, and site-runtime marks
-   * "/en/about" as canonical so only it is indexed. (This used to reject the
-   * default prefix and serve the default unprefixed instead; the prefix is now
-   * kept so "/en" is a real, indexable URL.)
+   * Every locale is addressed under its own prefix — the default included, so
+   * "/en/about" resolves and serves a 200 rather than 404ing. What it is NOT is the
+   * page's advertised address: the default locale's canonical URL is the unprefixed
+   * one ("/", "/about"), which `localePath` builds and site-runtime marks canonical,
+   * so the two spellings never compete and the domain root stays indexable.
    *
    * A first segment that merely looks like a language ("/vi") is only treated as
    * one when the site actually publishes in it. A site with a page slugged "vi"
@@ -912,11 +942,21 @@ export class RenderService {
       // that vanishes must not leave its submenu behind, orphaned under nothing.
       if (!translated) continue;
 
+      // The query and fragment were stripped to find the page; they belong to the
+      // item, not to the lookup, and have to survive the swap. Without this a
+      // "/#pricing" item lands on the top of the home page in every non-default
+      // locale — the section it names is dropped on the way through.
+      const suffix = this.urlSuffixOf(rest.url);
+
       out.push({
         ...rest,
-        // An explicit override wins; otherwise borrow the translated page title.
-        label: override ?? translated.title,
-        url: translated.path,
+        // An explicit override wins. Then: a fragment means the item names a
+        // *section* of the page, so its own label is the only one that describes
+        // it — borrowing the page title turns "Features" and "Price", two anchors
+        // into the same home page, into two copies of that page's title. Only a
+        // link to the page as a whole borrows it.
+        label: override ?? (suffix.includes("#") ? rest.label : translated.title),
+        url: `${translated.path}${suffix}`,
         children,
       });
     }
@@ -936,14 +976,33 @@ export class RenderService {
   }
 
   /**
+   * The `?query#fragment` tail `internalPathOf` throws away, so a rewritten item
+   * keeps the anchor it was authored with. Empty when the URL has neither.
+   */
+  private urlSuffixOf(url: string): string {
+    const at = url.search(/[?#]/);
+    return at === -1 ? "" : url.slice(at);
+  }
+
+  /**
    * The site-root-relative URL of `path` in `locale`. The inverse of splitLocale.
    *
-   * Every locale carries its prefix, the default included: the switcher, hreflang
-   * and the sitemap all name "/en/about" rather than a bare "/about", so each page
-   * has exactly one indexable address per language.
+   * The DEFAULT locale is addressed unprefixed — "/" and "/about" — and every other
+   * locale under its own code: "/vi/about", "/ja/about". The prefixed spelling of
+   * the default locale ("/en/about") still resolves and still serves a 200, but it
+   * is not the address anything advertises: the switcher, hreflang, `x-default` and
+   * the sitemap all name the bare form, and the canonical <link> the runtime emits
+   * points there too.
+   *
+   * That direction matters for indexing. When the default locale was advertised as
+   * "/en", the site's own home page — the bare domain, the URL every inbound link
+   * and every brand search lands on — carried `<link rel="canonical" href="…/en">`
+   * and Search Console dropped it as "Alternate page with proper canonical tag".
+   * A domain root that cannot be indexed is the worst possible URL to give away.
    */
-  private localePath(_site: ResolvedSite, locale: string, path: string): string {
-    const joined = `/${locale}${path}`.replace(/\/{2,}/g, "/");
+  private localePath(site: ResolvedSite, locale: string, path: string): string {
+    const prefix = locale === site.defaultLocale ? "" : `/${locale}`;
+    const joined = `${prefix}${path}`.replace(/\/{2,}/g, "/");
     return joined.length > 1 ? joined.replace(/\/$/, "") : joined || "/";
   }
 

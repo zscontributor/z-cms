@@ -379,6 +379,13 @@ export function validateManifestIdentity(raw: Record<string, unknown>): string[]
     errors.push("author must be an object with a name, e.g. { \"name\": \"Acme\" }.");
   }
 
+  // A visibility switch, not text: it is only ever read as `=== true`, so a
+  // string "false" would quietly mean "public". Refuse anything but a boolean
+  // rather than let an author believe they hid a package they did not.
+  if (raw.internal !== undefined && typeof raw.internal !== "boolean") {
+    errors.push("internal must be true or false when present.");
+  }
+
   return errors;
 }
 

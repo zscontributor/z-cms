@@ -1,4 +1,4 @@
-import type { SessionUser, SiteDto } from "@zcmsorg/schemas";
+import { DEFAULT_SITE_MAINTENANCE, type SessionUser, type SiteDto } from "@zcmsorg/schemas";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SITE_COOKIE } from "@/lib/cookies";
 
@@ -58,6 +58,7 @@ function site(overrides: Partial<SiteDto> = {}): SiteDto {
     defaultLocale: "vi",
     locales: ["vi", "en", "ja"],
     brand: { primaryColor: "#111111", logo: "" },
+    maintenance: DEFAULT_SITE_MAINTENANCE,
     domains: [{ id: "d1", hostname: "shop.z-cms.org", isPrimary: true }],
     activeTheme: null,
     ...overrides,

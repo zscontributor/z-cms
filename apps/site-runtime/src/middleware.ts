@@ -1,4 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
+import {
+  BYPASS_KEY_RE,
+  MAINTENANCE_BYPASS_COOKIE,
+  MAINTENANCE_BYPASS_PARAM,
+  MAINTENANCE_PREVIEW_PARAM,
+  maintenanceLocaleFor,
+  maintenanceStateFor,
+  maintenanceVerdict,
+  retryAfterSeconds,
+} from "@/lib/maintenance";
+import { renderMaintenanceHtml } from "@/lib/maintenance-page";
 
 /**
  * Security headers for the public site, with a per-request CSP nonce.
@@ -19,7 +30,7 @@ import { NextResponse, type NextRequest } from "next/server";
  * The nonce must reach Next: it is set on the *request* header the framework
  * reads (`x-nonce`) and in the CSP on both the request and the response.
  */
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
 
   const s3 = cspOrigin(process.env.S3_PUBLIC_URL);
@@ -51,6 +62,16 @@ export function middleware(request: NextRequest) {
     ...(dev ? [] : ["upgrade-insecure-requests"]),
   ].join("; ");
 
+  // Maintenance mode is decided HERE, before any page: only a response written
+  // by the middleware can carry the 503 that tells crawlers to come back later
+  // rather than index (or de-index) a notice. `/api/*` is exempt — the cache-purge
+  // hook, the readiness probe and the form endpoints are not pages, and the purge
+  // hook in particular is how the admin's "open the site again" reaches us.
+  if (!request.nextUrl.pathname.startsWith("/api/")) {
+    const gate = await maintenanceGate(request, csp, dev, nonce);
+    if (gate) return gate;
+  }
+
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);
   requestHeaders.set("content-security-policy", csp);
@@ -70,21 +91,7 @@ export function middleware(request: NextRequest) {
   requestHeaders.set("x-search", request.nextUrl.search);
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
-
-  response.headers.set("content-security-policy", csp);
-  response.headers.set("x-content-type-options", "nosniff");
-  response.headers.set("x-frame-options", "DENY");
-  response.headers.set("referrer-policy", "strict-origin-when-cross-origin");
-  response.headers.set(
-    "permissions-policy",
-    "camera=(), microphone=(), geolocation=()",
-  );
-  if (!dev) {
-    response.headers.set(
-      "strict-transport-security",
-      "max-age=31536000; includeSubDomains",
-    );
-  }
+  applySecurityHeaders(response, csp, dev);
 
   // `/sitemap.xml` and `/robots.txt` are fetched directly by crawlers and SEO
   // tools, never navigated to by Next's client router — so the `Vary: RSC,
@@ -101,6 +108,102 @@ export function middleware(request: NextRequest) {
     response.headers.set("vary", "Accept-Encoding");
   }
 
+  return response;
+}
+
+/** The same headers on every response this middleware writes, gate or page. */
+function applySecurityHeaders(response: NextResponse, csp: string, dev: boolean): void {
+  response.headers.set("content-security-policy", csp);
+  response.headers.set("x-content-type-options", "nosniff");
+  response.headers.set("x-frame-options", "DENY");
+  response.headers.set("referrer-policy", "strict-origin-when-cross-origin");
+  response.headers.set(
+    "permissions-policy",
+    "camera=(), microphone=(), geolocation=()",
+  );
+  if (!dev) {
+    response.headers.set(
+      "strict-transport-security",
+      "max-age=31536000; includeSubDomains",
+    );
+  }
+}
+
+/**
+ * The maintenance gate: the notice, the bypass, or nothing.
+ *
+ * Returns a response when this request must not reach the site — the notice
+ * itself (503 while the site is closed, 200 for an owner's preview), or the
+ * redirect that turns `?zc-bypass=<key>` into the cookie the gate then honours.
+ * Returns null to let the request through. See lib/maintenance.ts for why the
+ * answer is memoised and why an unreachable cms-api opens rather than closes.
+ */
+async function maintenanceGate(
+  request: NextRequest,
+  csp: string,
+  dev: boolean,
+  nonce: string,
+): Promise<NextResponse | null> {
+  const url = request.nextUrl;
+
+  // `/?zc-bypass=<key>` is the link the admin hands the owner. The key moves
+  // from the URL into a cookie and the visitor is sent to the same page without
+  // it — so the key is not in their history, their referrer, or the URL they
+  // paste to a colleague. An empty value clears the cookie. The value is only
+  // ever stored if it is SHAPED like a key; cms-api decides whether it is one.
+  const bypassParam = url.searchParams.get(MAINTENANCE_BYPASS_PARAM);
+  if (bypassParam !== null) {
+    const clean = new URLSearchParams(url.searchParams);
+    clean.delete(MAINTENANCE_BYPASS_PARAM);
+    const query = clean.toString();
+    const response = new NextResponse(null, {
+      status: 302,
+      headers: { location: `${url.pathname}${query ? `?${query}` : ""}` },
+    });
+    if (BYPASS_KEY_RE.test(bypassParam)) {
+      response.cookies.set(MAINTENANCE_BYPASS_COOKIE, bypassParam, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: !dev,
+        path: "/",
+        maxAge: 60 * 60 * 24 * 7,
+      });
+    } else {
+      response.cookies.delete(MAINTENANCE_BYPASS_COOKIE);
+    }
+    applySecurityHeaders(response, csp, dev);
+    return response;
+  }
+
+  // The same hostname resolution the page uses: the proxy's, when there is one.
+  const hostname = (request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? "")
+    .trim()
+    .toLowerCase();
+  const state = await maintenanceStateFor(hostname);
+  const verdict = maintenanceVerdict(state, {
+    cookie: request.cookies.get(MAINTENANCE_BYPASS_COOKIE)?.value,
+    previewParam: url.searchParams.get(MAINTENANCE_PREVIEW_PARAM),
+  });
+  if (!state || !verdict) return null;
+
+  const html = renderMaintenanceHtml(state, maintenanceLocaleFor(url.pathname, state.site), {
+    nonce,
+  });
+  // Maintenance is an outage: 503 + Retry-After, so crawlers wait it out. Coming
+  // soon is the site's launch page: a 200, indexable, no Retry-After — there is
+  // nothing to come back FOR yet, and a 503 held for weeks reads as a dead site.
+  const outage = verdict === "closed" && state.mode !== "coming-soon";
+  const response = new NextResponse(html, {
+    status: outage ? 503 : 200,
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      // Never cached by a CDN: the moment the owner opens the site, the next
+      // request must see it, not a copy of the notice with minutes left on it.
+      "cache-control": "no-store",
+      ...(outage ? { "retry-after": String(retryAfterSeconds(state)) } : {}),
+    },
+  });
+  applySecurityHeaders(response, csp, dev);
   return response;
 }
 

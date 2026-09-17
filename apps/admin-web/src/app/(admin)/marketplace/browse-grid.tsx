@@ -330,6 +330,10 @@ function PackageCard({
       {/* The publisher, because the same package means different things from a
           verified author and an anonymous one. */}
       <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+        {/* Only ever true on an instance the marketplace let into its private
+            catalogue — the flag tells the operator which of their packages the
+            public never sees. */}
+        {pkg.internal ? <Badge tone="warning">{t("admin.marketplace.internal")}</Badge> : null}
         {pkg.publisher ? (
           <>
             <Badge tone={pkg.publisher.verified ? "success" : "neutral"}>
@@ -391,8 +395,8 @@ function PackageCard({
             {t("admin.marketplace.browse.installedBadge")}
           </span>
         ) : canInstall ? (
-          <Button size="sm" variant="primary" onClick={install} disabled={pending}>
-            <Icon name="install" className="mr-1 h-3.5 w-3.5" />
+          <Button size="sm" variant="primary" onClick={install} busy={pending}>
+            {pending ? null : <Icon name="install" className="mr-1 h-3.5 w-3.5" />}
             {pending
               ? t("admin.marketplace.browse.installing")
               : updatable
