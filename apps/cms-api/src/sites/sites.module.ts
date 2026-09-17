@@ -23,6 +23,7 @@ import {
   type SiteBrand,
   type SiteBrandingDto,
   type SiteDto,
+  type SiteMaintenance,
 } from "@zcmsorg/schemas";
 import type { z } from "zod";
 import { Actor, Public, RequirePermissions } from "../auth/decorators";
@@ -79,6 +80,19 @@ const DEFAULT_SITE_LOCALES = ["vi", "en", "ja"] as const;
 function settingsWithBrand(existing: unknown, brand: SiteBrand): Record<string, unknown> {
   const base = (existing ?? {}) as Record<string, unknown>;
   return { ...base, brand };
+}
+
+/**
+ * The site's maintenance notice lives beside the brand, under `maintenance`, and
+ * for the same reason: it is a fact about the site, not about the theme drawing
+ * it. Merged the same way — nothing else in `settings` is touched.
+ */
+function settingsWithMaintenance(
+  existing: unknown,
+  maintenance: SiteMaintenance,
+): Record<string, unknown> {
+  const base = (existing ?? {}) as Record<string, unknown>;
+  return { ...base, maintenance };
 }
 
 /**
@@ -373,8 +387,10 @@ export class SitesController {
   @ApiOperation({
     summary: "Update a site",
     description:
-      "Name, status, locales and brand — colour and logo. Publishing (status: " +
-      "PUBLISHED) is what makes a site serve; a DRAFT site answers nothing.",
+      "Name, status, locales, brand — colour and logo — and maintenance mode. " +
+      "Publishing (status: PUBLISHED) is what makes a site serve; a DRAFT site " +
+      "answers nothing. With `maintenance.enabled` the published site answers " +
+      "every page with the maintenance notice and a 503 instead.",
   })
   @ApiAuthed("site:update")
   @ApiZodBody("UpdateSiteInput")
@@ -403,6 +419,17 @@ export class SitesController {
       throw new ConflictException(t()("errors.sites.defaultLocaleNotPublished"));
     }
 
+    // `settings` is one JSON column shared by the brand and the maintenance
+    // notice; each PATCH rewrites only the key(s) it was sent and leaves the rest
+    // exactly as stored. Untouched when neither was sent.
+    let nextSettings: Record<string, unknown> | undefined;
+    if (body.brand !== undefined) {
+      nextSettings = settingsWithBrand(existing.settings, body.brand);
+    }
+    if (body.maintenance !== undefined) {
+      nextSettings = settingsWithMaintenance(nextSettings ?? existing.settings, body.maintenance);
+    }
+
     let site: Parameters<typeof toSiteDto>[0];
     try {
       site = await db().site.update({
@@ -413,13 +440,8 @@ export class SitesController {
           ...(body.status !== undefined ? { status: body.status } : {}),
           ...(body.defaultLocale !== undefined ? { defaultLocale } : {}),
           ...(body.locales !== undefined ? { locales } : {}),
-          ...(body.brand !== undefined
-            ? {
-                settings: settingsWithBrand(
-                  existing.settings,
-                  body.brand,
-                ) as Prisma.InputJsonValue,
-              }
+          ...(nextSettings !== undefined
+            ? { settings: nextSettings as Prisma.InputJsonValue }
             : {}),
         },
         include: SITE_INCLUDE,

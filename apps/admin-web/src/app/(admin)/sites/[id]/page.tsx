@@ -6,6 +6,7 @@ import { apiFetch, can, getSession, listSites } from "@/lib/api";
 import { getT } from "@/lib/locale";
 import { SiteDangerZone } from "./site-danger-zone";
 import { SiteForm } from "./site-form";
+import { SiteMaintenanceForm } from "./site-maintenance";
 
 /**
  * One site: its name, its brand, and whether it is published.
@@ -46,7 +47,17 @@ export default async function SitePage({ params }: { params: Promise<{ id: strin
         </p>
       </div>
 
+      {site.maintenance.enabled ? (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+          {site.maintenance.mode === "coming-soon"
+            ? t("admin.sites.maintenance.bannerComingSoon")
+            : t("admin.sites.maintenance.banner")}
+        </div>
+      ) : null}
+
       <SiteForm site={site} canUpdate={canUpdate} locales={SWITCHER_LOCALES} />
+
+      <SiteMaintenanceForm site={site} canUpdate={canUpdate} locales={SWITCHER_LOCALES} />
 
       {canUpdate ? (
         <SiteDangerZone

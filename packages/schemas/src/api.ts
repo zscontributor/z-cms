@@ -554,6 +554,191 @@ export function parseSiteBrand(settings: unknown): SiteBrand {
   return { primaryColor, logo };
 }
 
+/**
+ * Text shown to a visitor, in one language or several, keyed by locale code.
+ *
+ * A site publishes in several languages, and a maintenance notice that reads
+ * "We'll be back soon" to a Vietnamese visitor is the wrong notice. Only the
+ * languages the owner actually wrote are present; `resolveLocalizedText` picks
+ * the right one and falls back through the site's default locale.
+ */
+export type LocalizedText = Record<string, string>;
+
+const LOCALE_CODE_RE = /^[a-z]{2}(?:-[A-Za-z0-9]{2,8})*$/;
+
+function localizedText(max: number) {
+  return z.record(z.string().regex(LOCALE_CODE_RE), z.string().max(max));
+}
+
+/**
+ * One language out of a localized text: the exact locale, then its base
+ * language ("vi" for "vi-VN"), then the site's default, then anything written.
+ * Empty strings count as "not written" so a locale tab left blank in the admin
+ * falls back instead of rendering nothing.
+ */
+export function resolveLocalizedText(
+  text: LocalizedText | undefined,
+  locale: string,
+  defaultLocale?: string,
+): string {
+  if (!text) return "";
+  const base = locale.split("-")[0] ?? locale;
+  const candidates = [
+    text[locale],
+    text[base],
+    defaultLocale ? text[defaultLocale] : undefined,
+    ...Object.values(text),
+  ];
+  return candidates.find((value) => typeof value === "string" && value.trim() !== "")?.trim() ?? "";
+}
+
+/**
+ * Why a site is closed. `maintenance` is temporary and answers 503 so crawlers
+ * keep what they indexed; `coming-soon` is a site that has not launched yet and
+ * answers 200 — the notice IS the site for now, with a countdown to the launch.
+ */
+export type SiteClosureMode = "maintenance" | "coming-soon";
+
+/**
+ * A site's maintenance mode: whether the public site is closed, and what a
+ * visitor sees while it is.
+ *
+ * Lives next to `brand` in `Site.settings` — it is a property of the SITE, not
+ * of the theme: switching theme must not silently reopen a site its owner shut,
+ * and the page drawn while it is shut is deliberately theme-independent, so a
+ * broken theme can be repaired from behind it. site-runtime answers every page
+ * request with this notice and a 503 (so search engines keep the pages they
+ * already indexed and come back later) rather than a 200 they would index.
+ *
+ * `bypassKey` is what lets the owner keep looking at the real site while it is
+ * closed to everyone else: a visit to `/?zc-bypass=<key>` sets a cookie that
+ * the runtime honours. Empty means no bypass exists.
+ */
+export interface SiteMaintenance {
+  enabled: boolean;
+  /** Maintenance (temporary, 503) or coming soon (pre-launch, 200 + countdown). */
+  mode: SiteClosureMode;
+  /** Headline, per locale. Empty → the platform's own wording. */
+  title: LocalizedText;
+  /** Body text, per locale. Plain text; line breaks become paragraphs. */
+  message: LocalizedText;
+  /** URL of a logo for this page. Empty → the site's brand logo. */
+  logo: string;
+  /** URL of a full-bleed background image. Empty → none. */
+  backgroundImage: string;
+  /** Page background, hex. Drawn under (and through) the image. */
+  backgroundColor: string;
+  /** Text colour, hex. */
+  textColor: string;
+  /**
+   * When the site is expected back (maintenance) or launches (coming soon),
+   * ISO 8601. Null when unknown.
+   */
+  expectedBackAt: string | null;
+  /** Secret that lets a visitor through. Empty → nobody bypasses. */
+  bypassKey: string;
+}
+
+export const DEFAULT_SITE_MAINTENANCE: SiteMaintenance = {
+  enabled: false,
+  mode: "maintenance",
+  title: {},
+  message: {},
+  logo: "",
+  backgroundImage: "",
+  backgroundColor: "#0F172A",
+  textColor: "#FFFFFF",
+  expectedBackAt: null,
+  bypassKey: "",
+};
+
+const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
+
+/**
+ * Maintenance settings as they may be WRITTEN. Strict, like `SiteBrandSchema`:
+ * a colour that is not a colour is a rejected request, not a page no visitor
+ * can read.
+ */
+export const SiteMaintenanceSchema = z.object({
+  enabled: z.boolean().default(false),
+  mode: z.enum(["maintenance", "coming-soon"]).default("maintenance"),
+  title: localizedText(200).default({}),
+  message: localizedText(4000).default({}),
+  logo: z.string().max(2048).default(""),
+  backgroundImage: z.string().max(2048).default(""),
+  backgroundColor: z
+    .string()
+    .regex(HEX_COLOR_RE, "A six-digit hex colour, e.g. #0F172A.")
+    .default(DEFAULT_SITE_MAINTENANCE.backgroundColor),
+  textColor: z
+    .string()
+    .regex(HEX_COLOR_RE, "A six-digit hex colour, e.g. #FFFFFF.")
+    .default(DEFAULT_SITE_MAINTENANCE.textColor),
+  expectedBackAt: z.iso.datetime({ offset: true }).nullable().default(null),
+  // Long enough that guessing is not a plan; the admin generates it, nobody
+  // types it. `/^[A-Za-z0-9_-]+$/` keeps it URL-safe without encoding.
+  bypassKey: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]*$/, "Letters, digits, '-' and '_' only.")
+    .max(128)
+    .default(""),
+});
+
+/**
+ * Maintenance settings as READ back out of `Site.settings`. Tolerant where the
+ * schema above is strict, for the same reason `parseSiteBrand` is: a row this
+ * feature has never touched has no `maintenance` key at all, and must read as
+ * "not in maintenance" rather than throw on every page of the site.
+ */
+export function parseSiteMaintenance(settings: unknown): SiteMaintenance {
+  const raw = (settings as { maintenance?: unknown } | null | undefined)?.maintenance;
+  const m = (raw ?? {}) as Partial<Record<keyof SiteMaintenance, unknown>>;
+
+  const text = (value: unknown): LocalizedText => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+    const out: LocalizedText = {};
+    for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
+      if (typeof entry === "string" && LOCALE_CODE_RE.test(key)) out[key] = entry;
+    }
+    return out;
+  };
+  const url = (value: unknown): string => (typeof value === "string" ? value : "");
+  const color = (value: unknown, fallback: string): string =>
+    typeof value === "string" && HEX_COLOR_RE.test(value) ? value : fallback;
+
+  return {
+    enabled: m.enabled === true,
+    mode: m.mode === "coming-soon" ? "coming-soon" : "maintenance",
+    title: text(m.title),
+    message: text(m.message),
+    logo: url(m.logo),
+    backgroundImage: url(m.backgroundImage),
+    backgroundColor: color(m.backgroundColor, DEFAULT_SITE_MAINTENANCE.backgroundColor),
+    textColor: color(m.textColor, DEFAULT_SITE_MAINTENANCE.textColor),
+    expectedBackAt:
+      typeof m.expectedBackAt === "string" && !Number.isNaN(Date.parse(m.expectedBackAt))
+        ? m.expectedBackAt
+        : null,
+    bypassKey: typeof m.bypassKey === "string" && /^[A-Za-z0-9_-]*$/.test(m.bypassKey)
+      ? m.bypassKey
+      : "",
+  };
+}
+
+/**
+ * What site-runtime asks cms-api for before drawing any page: is this hostname's
+ * site closed, and with what notice. Internal-token guarded, so it may carry the
+ * bypass key — the runtime compares it against the visitor's cookie itself.
+ */
+export interface SiteMaintenanceStateDto extends SiteMaintenance {
+  site: {
+    name: string;
+    defaultLocale: string;
+    locales: string[];
+    brand: SiteBrand;
+  };
+}
+
 export interface SiteDto {
   id: string;
   slug: string;
@@ -562,6 +747,7 @@ export interface SiteDto {
   defaultLocale: string;
   locales: string[];
   brand: SiteBrand;
+  maintenance: SiteMaintenance;
   domains: { id: string; hostname: string; isPrimary: boolean }[];
   activeTheme: { key: string; name: string; version: string } | null;
 }

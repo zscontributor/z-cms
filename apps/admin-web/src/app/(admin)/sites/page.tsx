@@ -65,6 +65,15 @@ export default async function SitesPage() {
                     >
                       {site.status}
                     </span>
+                    {/* A closed site is still PUBLISHED — that is what makes the
+                        notice serve — so the closure needs its own mark. */}
+                    {site.maintenance.enabled ? (
+                      <span className="ml-1.5 rounded-full bg-amber-500/15 px-2 py-0.5 text-xs text-amber-800 dark:text-amber-200">
+                        {site.maintenance.mode === "coming-soon"
+                          ? t("admin.sites.maintenance.badgeComingSoon")
+                          : t("admin.sites.maintenance.badge")}
+                      </span>
+                    ) : null}
                   </td>
                   <td className="px-4 py-2.5 text-xs z-muted">
                     {site.domains.map((domain) => domain.hostname).join(", ") || "—"}

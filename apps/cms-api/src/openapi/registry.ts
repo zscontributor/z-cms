@@ -28,6 +28,7 @@ import {
   MfaVerifySchema,
   parseHostnameList,
   SiteBrandSchema,
+  SiteMaintenanceSchema,
   PublicFormDefSchema,
   PermissionSchema,
   SendTestMailSchema,
@@ -55,6 +56,7 @@ import {
   type RenderPayload,
   type SiteBackupDto,
   type SiteDto,
+  type SiteMaintenanceStateDto,
   type TotpSetupDto,
   type TranslationDto,
   type UserDto,
@@ -322,6 +324,9 @@ export const UpdateSiteSchema = z
     defaultLocale: z.string().min(2).max(10),
     locales: z.array(z.string().min(2).max(10)).min(1),
     brand: SiteBrandSchema,
+    // Closing the site to visitors, and the notice they see. Site-level like the
+    // brand: it survives a theme change, and the page it draws needs no theme.
+    maintenance: SiteMaintenanceSchema,
   })
   .partial();
 
@@ -414,6 +419,8 @@ const SiteDtoSchema = z.object({
   // has defaults, which make its OUTPUT type optional, and a DTO whose colour might
   // be undefined would make every theme guard a value the API guarantees.
   brand: SiteBrandSchema.required(),
+  // Same reasoning as `brand`: always complete on the way out.
+  maintenance: SiteMaintenanceSchema.required(),
   domains: z.array(
     z.object({ id: z.uuid(), hostname: z.string(), isPrimary: z.boolean() }),
   ),
@@ -470,6 +477,19 @@ const SiteBrandingDtoSchema = z.object({
   host: z
     .string()
     .describe("The registered spelling of the hostname asked about, e.g. \"example.com\"."),
+});
+
+/**
+ * What site-runtime's middleware asks before serving any page of a hostname.
+ * Internal-token guarded, which is why the bypass key may ride along.
+ */
+const SiteMaintenanceStateDtoSchema = SiteMaintenanceSchema.required().extend({
+  site: z.object({
+    name: z.string(),
+    defaultLocale: z.string(),
+    locales: z.array(z.string()),
+    brand: SiteBrandSchema.required(),
+  }),
 });
 
 const ContentTypeDtoSchema = z.object({
@@ -1011,6 +1031,7 @@ responses.add(AuthResultSchema, { id: "AuthResult" });
 responses.add(BlockSchema, { id: "Block" });
 responses.add(SiteDtoSchema, { id: "SiteDto" });
 responses.add(SiteBrandingDtoSchema, { id: "SiteBrandingDto" });
+responses.add(SiteMaintenanceStateDtoSchema, { id: "SiteMaintenanceStateDto" });
 responses.add(SiteBackupDtoSchema, { id: "SiteBackupDto" });
 responses.add(SiteDeletedSchema, { id: "SiteDeleted" });
 responses.add(ContentTypeDtoSchema, { id: "ContentTypeDto" });
@@ -1100,6 +1121,7 @@ export type ResponseSchemaId =
   | "UserCreated"
   | "SiteDto"
   | "SiteBrandingDto"
+  | "SiteMaintenanceStateDto"
   | "SiteBackupDto"
   | "SiteDeleted"
   | "ContentTypeDto"
@@ -1192,6 +1214,7 @@ const _noDrift: [
   Exact<z.infer<typeof UserCreatedSchema>, UserCreatedDto>,
   Exact<z.infer<typeof SiteDtoSchema>, SiteDto>,
   Exact<z.infer<typeof SiteBackupDtoSchema>, SiteBackupDto>,
+  Exact<z.infer<typeof SiteMaintenanceStateDtoSchema>, SiteMaintenanceStateDto>,
   Exact<z.infer<typeof ContentTypeDtoSchema>, ContentTypeDto>,
   Exact<z.infer<typeof ContentDtoSchema>, ContentDto>,
   Exact<z.infer<typeof TranslationDtoSchema>, TranslationDto>,
@@ -1214,5 +1237,5 @@ const _noDrift: [
   Exact<z.infer<typeof ThemeDraftDtoSchema>, ThemeDraftDto>,
   Exact<z.infer<typeof ThemeDraftSummaryDtoSchema>, ThemeDraftSummaryDto>,
   Exact<z.infer<typeof PublisherKeyDtoSchema>, PublisherKeyDto>,
-] = [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true];
+] = [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true];
 void _noDrift;

@@ -5,6 +5,7 @@ import {
   type ContentDto,
   type PreviewCollectionsRequest,
   type RenderPayload,
+  type SiteMaintenanceStateDto,
 } from "@zcmsorg/schemas";
 import { Internal, RequirePermissions, SiteId, SiteScoped } from "../auth/decorators";
 import { t } from "../common/i18n";
@@ -68,6 +69,33 @@ class RenderController {
       Math.max(1, Number(page) || 1),
       q,
     );
+  }
+
+  /**
+   * Asked by site-runtime's middleware before it serves any page: is this
+   * hostname's site in maintenance mode, and what should the visitor see.
+   *
+   * Same trust model as `resolve`. The answer carries the site's bypass key, which
+   * is exactly why it must never be public — the runtime compares it against the
+   * visitor's cookie so an owner can still see the real site while it is closed.
+   */
+  @Internal("render")
+  @Get("maintenance")
+  @ApiOperation({
+    summary: "Whether a hostname's site is in maintenance mode, and its notice",
+    description:
+      "Answers before every page render, so it is the cached hostname lookup and " +
+      "nothing more. 404 when the hostname resolves to no published site — the " +
+      "runtime then serves its usual 404. Internal-token guarded: the response " +
+      "includes the bypass key.",
+  })
+  @ApiInternal()
+  @ApiQuery({ name: "hostname", required: true, description: "The domain being served." })
+  @ApiZodResponse("SiteMaintenanceStateDto")
+  @ApiZodResponse("Error", { status: 400, description: "`hostname` is required." })
+  maintenance(@Query("hostname") hostname: string): Promise<SiteMaintenanceStateDto> {
+    if (!hostname) throw new BadRequestException(t()("errors.render.missingHostname"));
+    return this.render.maintenanceState(hostname.toLowerCase());
   }
 }
 
