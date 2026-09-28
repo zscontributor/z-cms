@@ -1699,9 +1699,19 @@ html[data-theme="dark"] .zmag__lang-menu {
     width: min(100% - 28px, 1240px);
   }
   .zmag__dateline-row {
+    position: relative;
     flex-wrap: wrap;
     padding: 8px 0;
     gap: 8px 14px;
+  }
+  /* The row wraps on a narrow phone and the switcher lands at its left edge, where
+     a list anchored to the switcher's right would open off the screen. Anchored to
+     the row instead, it hangs from the right edge of the container in either case. */
+  .zmag__lang {
+    position: static;
+  }
+  .zmag__lang-menu {
+    top: 100%;
   }
   .zmag__dateline-edition {
     display: none;
