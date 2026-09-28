@@ -1200,6 +1200,26 @@ html[data-theme="dark"] .zdefault__feature-card {
   }
   .zdefault__nav {
     min-height: 66px;
+    flex-wrap: wrap;
+    column-gap: 10px;
+  }
+  /* The search box cannot share a phone-width row with the brand, the language
+     switcher and the button — its 220px minimum pushed the whole header off the
+     screen. The actions dissolve into the nav row and search takes its own line. */
+  .zdefault__actions {
+    display: contents;
+  }
+  .zdefault__lang {
+    margin-left: auto;
+  }
+  .zdefault__search {
+    order: 1;
+    flex: 1 1 100%;
+    padding-bottom: 12px;
+  }
+  .zdefault__search input {
+    min-width: 0;
+    width: 100%;
   }
   .zdefault__section {
     padding: 78px 0;

@@ -1,7 +1,7 @@
 {
   "id": "vn.zsoft.theme.default",
   "name": "Z Default",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "kind": "theme",
   "description": "The default Z-CMS theme: a warm, product-led portal for open-source projects, products and company sites. English, Japanese and Vietnamese, with dark and light modes.",
   "changelog": {
