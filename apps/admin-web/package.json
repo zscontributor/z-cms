@@ -29,7 +29,7 @@
     "@zcmsorg/schemas": "workspace:*",
     "@zcmsorg/theme-widgets": "workspace:*",
     "dotenv": "17.2.3",
-    "next": "16.3.3",
+    "next": "16.3.8",
     "qrcode": "^1.5.4",
     "react": "19.2.7",
     "react-dom": "19.2.7",

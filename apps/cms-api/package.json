@@ -33,12 +33,12 @@
     "bcryptjs": "3.0.3",
     "helmet": "8.3.0",
     "ioredis": "5.11.1",
-    "multer": "2.3.0",
-    "nodemailer": "^9.1.1",
+    "multer": "2.4.0",
+    "nodemailer": "^10.0.13",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2",
     "sanitize-html": "2.17.7",
-    "undici": "7.28.0",
+    "undici": "7.30.0",
     "zod": "4.4.3"
   },
   "devDependencies": {
