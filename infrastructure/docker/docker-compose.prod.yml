@@ -315,7 +315,9 @@ services:
       resources:
         limits:
           cpus: "1.0"
-          memory: 768M
+          # tmpfs pages count against this limit: heap (640M) + /tmp (256M) +
+          # .next/cache (128M) + native overhead must fit, or the task is OOM-killed.
+          memory: 1280M
           pids: 128
 
   # The only service that runs untrusted marketplace code. Its own minimal,

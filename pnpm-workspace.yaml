@@ -30,6 +30,10 @@ packages:
   - "!themes/fruitquest"
   - "!themes/smartcleanup"
   - "!themes/pdfhanko"
+  - "!themes/photoslim"
+  - "!themes/idphoto"
+  - "!themes/zkey"
+  - "!themes/zexplorer"
 
 # Keep a single copy of these across the workspace so that themes/plugins
 # never bundle their own React against the site-runtime's React.
