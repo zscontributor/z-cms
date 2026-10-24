@@ -70,11 +70,11 @@ const SDK_RANGE = `^${CLI_VERSION}`;
 const CLI_RANGE = `^${CLI_VERSION}`;
 const ENGINE_RANGE = `>=${CLI_VERSION}`;
 
-const ESBUILD_RANGE = "^0.25.12";
+const ESBUILD_RANGE = "^0.28.2";
 const TYPESCRIPT_RANGE = "^5.9.3";
-const VITEST_RANGE = "^4.1.10";
-const REACT_RANGE = "^19.2.7";
-const REACT_TYPES_RANGE = "^19.2.17";
+const VITEST_RANGE = "^5.0.5";
+const REACT_RANGE = "^19.3.1";
+const REACT_TYPES_RANGE = "^19.3.0";
 
 /** A file map: relative path -> contents. */
 export type Files = Record<string, string>;
