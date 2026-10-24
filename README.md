@@ -61,7 +61,7 @@ pnpm verify   # 50 attacks: RLS (6) · sandbox escape (6) · package signing (9)
 > The rest of this section is for **contributing to Z-CMS itself** — running the
 > monorepo from source.
 
-Requires **Node 22+**, **pnpm 10+** and **Docker**. Contributors also need
+Requires **Node 24+**, **pnpm 10+** and **Docker**. Contributors also need
 **[gitleaks](https://github.com/gitleaks/gitleaks#installing)** (`brew install gitleaks`)
 for the secret-scanning git hooks — see [Git hooks and secret scanning](#git-hooks-and-secret-scanning).
 
@@ -105,7 +105,7 @@ pnpm --filter @zcmsorg/worker dev           # no port — it consumes the queue
 
 | Layer | Choice | Why |
 | --- | --- | --- |
-| API | **NestJS 11** (Node 22, TypeScript 5.9) | DI and guards make "who is this, what may they touch" structural rather than per-handler |
+| API | **NestJS 12** (Node 24, TypeScript 5.9) | DI and guards make "who is this, what may they touch" structural rather than per-handler |
 | Public site | **Next.js 16** (App Router, RSC) | one catch-all route; a page is data, not a build |
 | Admin | **Next.js 16** + **Tailwind 4** + **Phosphor Icons** | server actions, no client-side API client to keep in sync |
 | Database | **PostgreSQL 17** + **Prisma 7** | Row-Level Security is the isolation boundary |

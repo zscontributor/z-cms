@@ -6,7 +6,7 @@ change needs to be merged; the deep dives live under [`docs/`](docs/).
 
 ## Before you start
 
-- **Node 22+, pnpm 10+, Docker.** `cp .env.example .env && pnpm install && pnpm bootstrap`.
+- **Node 24+, pnpm 10+, Docker.** `cp .env.example .env && pnpm install && pnpm bootstrap`.
 - Read the [architecture overview](docs/architecture.md) and, if you are touching
   a security boundary (packages, plugins, tenancy, auth), the
   [security model](docs/security.md).

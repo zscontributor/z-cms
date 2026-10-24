@@ -46,12 +46,12 @@
     "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
-    "@types/node": "24.10.1",
-    "@vitest/coverage-v8": "4.1.11",
+    "@types/node": "24.19.2",
+    "@vitest/coverage-v8": "5.0.5",
     "@zcmsorg/package": "workspace:*",
-    "esbuild": "0.25.12",
-    "tsx": "4.20.6",
+    "esbuild": "0.28.2",
+    "tsx": "4.23.15",
     "typescript": "5.9.3",
-    "vitest": "4.1.11"
+    "vitest": "5.0.5"
   }
 }

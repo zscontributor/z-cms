@@ -3,10 +3,12 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { gzipSync } from "node:zlib";
-import { pack, type Headers } from "tar-stream";
+import { pack, type Header } from "tar-stream";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { packDirectory, unpackTo } from "../archive";
 import { PackageError } from "../types";
+
+type TarHeader = Partial<Header> & Pick<Header, "name">;
 
 /**
  * The archive is the only place where bytes from a stranger become files on our
@@ -50,11 +52,11 @@ function themeDir(name = "theme"): string {
  * a hostile publisher could upload.
  */
 async function hostileTarball(
-  entries: Array<{ header: Headers; body?: Buffer | string }>,
+  entries: Array<{ header: TarHeader; body?: Buffer | string }>,
 ): Promise<Buffer> {
   const tarball = pack();
   const chunks: Buffer[] = [];
-  tarball.on("data", (c: Buffer) => chunks.push(c));
+  tarball.on("data", (c) => chunks.push(c as Buffer));
   const finished = new Promise<void>((resolve, reject) => {
     tarball.on("end", () => resolve());
     tarball.on("error", reject);
@@ -447,7 +449,7 @@ describe("unpackTo", () => {
     // ATTACK: inode exhaustion — millions of empty files cost the attacker nothing
     // to compress and cost the host its filesystem.
     const entries = Array.from({ length: MAX_ENTRIES + 1 }, (_, i) => ({
-      header: { name: `f${i}.txt`, type: "file", size: 1 } as Headers,
+      header: { name: `f${i}.txt`, type: "file", size: 1 } as TarHeader,
       body: "x",
     }));
     const payload = await hostileTarball(entries);

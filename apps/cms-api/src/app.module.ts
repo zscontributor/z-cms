@@ -117,7 +117,9 @@ class HealthController {
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
     // Every route, including the public ones: an error from /auth/login is as
-    // much a message a human reads as one from /contents.
-    consumer.apply(LocaleMiddleware).forRoutes("*");
+    // much a message a human reads as one from /contents. `{*path}`, not "*":
+    // path-to-regexp v8 needs a named wildcard, and the braces keep the bare
+    // prefix itself matched too.
+    consumer.apply(LocaleMiddleware).forRoutes("{*path}");
   }
 }

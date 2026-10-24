@@ -69,7 +69,7 @@ services:
   # S3-compatible media storage. Swap for a managed provider (R2, S3) in a real
   # deployment by dropping this service and pointing S3_* at the provider.
   rustfs:
-    image: rustfs/rustfs:1.0.0-beta.8
+    image: rustfs/rustfs:1.0.3
     container_name: zcms-rustfs
     restart: unless-stopped
     environment:
