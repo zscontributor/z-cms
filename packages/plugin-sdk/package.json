@@ -26,10 +26,10 @@
     "@zcmsorg/schemas": "workspace:*"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "5.0.5",
+    "tsx": "4.23.15",
     "typescript": "5.9.3",
-    "tsx": "4.20.6",
-    "vitest": "4.1.11",
-    "@vitest/coverage-v8": "4.1.11"
+    "vitest": "5.0.5"
   },
   "description": "The contract for writing a Z-CMS plugin: manifest, permissions, typed actions and filters.",
   "license": "MIT",

@@ -28,16 +28,16 @@
     "@zcmsorg/schemas": "workspace:*",
     "@zcmsorg/theme-sdk": "workspace:*",
     "@zcmsorg/theme-widgets": "workspace:*",
-    "esbuild": "0.25.12"
+    "esbuild": "0.28.2"
   },
   "//deps": "theme-sdk and theme-widgets are RUNTIME dependencies even though nothing in src/ imports the SDK: the theme this package EMITS imports both, and esbuild resolves them out of this package's own node_modules (see RESOLVE_PATHS in generate.ts). As devDependencies they would vanish from the worker's --prod image and every build would fail to resolve @zcmsorg/theme-sdk — in production only.",
   "devDependencies": {
-    "@types/node": "24.10.1",
-    "@types/react": "19.2.17",
-    "@vitest/coverage-v8": "4.1.11",
-    "react": "19.2.7",
-    "react-dom": "19.2.7",
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@vitest/coverage-v8": "5.0.5",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
     "typescript": "5.9.3",
-    "vitest": "4.1.11"
+    "vitest": "5.0.5"
   }
 }

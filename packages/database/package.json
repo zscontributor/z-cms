@@ -32,20 +32,20 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
     "@zcmsorg/package": "workspace:*",
-    "@prisma/adapter-pg": "7.8.0",
-    "@prisma/client": "7.8.0",
-    "pg": "8.16.3"
+    "pg": "8.23.1"
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",
-    "@types/pg": "8.15.6",
+    "@types/pg": "8.23.1",
+    "@vitest/coverage-v8": "5.0.5",
     "bcryptjs": "^3.0.3",
-    "dotenv": "17.2.3",
-    "prisma": "7.8.0",
-    "tsx": "4.20.6",
+    "dotenv": "18.0.9",
+    "prisma": "7.10.1",
+    "tsx": "4.23.15",
     "typescript": "5.9.3",
-    "vitest": "4.1.11",
-    "@vitest/coverage-v8": "4.1.11"
+    "vitest": "5.0.5"
   }
 }

@@ -42,7 +42,7 @@ services:
   # Named volume, not a bind mount: the container runs as uid 10001 and a host
   # directory would need chown'ing before it could boot.
   rustfs:
-    image: rustfs/rustfs:1.0.0-beta.8
+    image: rustfs/rustfs:1.0.3
     container_name: zcms-rustfs
     restart: unless-stopped
     environment:

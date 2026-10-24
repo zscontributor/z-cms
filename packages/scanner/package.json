@@ -10,7 +10,9 @@
       "default": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
@@ -21,13 +23,13 @@
   },
   "dependencies": {
     "@zcmsorg/package": "workspace:*",
-    "acorn": "8.17.0"
+    "acorn": "8.19.0"
   },
   "devDependencies": {
-    "@types/node": "24.10.1",
-    "tsx": "4.20.6",
+    "@types/node": "24.19.2",
+    "@vitest/coverage-v8": "5.0.5",
+    "tsx": "4.23.15",
     "typescript": "5.9.3",
-    "vitest": "4.1.11",
-    "@vitest/coverage-v8": "4.1.11"
+    "vitest": "5.0.5"
   }
 }

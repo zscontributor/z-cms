@@ -23,16 +23,16 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "tar-stream": "3.1.7",
-    "yauzl": "3.2.1"
+    "tar-stream": "3.2.2",
+    "yauzl": "3.4.0"
   },
   "devDependencies": {
-    "@types/node": "24.10.1",
-    "@types/tar-stream": "3.1.4",
-    "@types/yauzl": "2.10.3",
-    "@vitest/coverage-v8": "4.1.11",
-    "tsx": "4.20.6",
+    "@types/node": "24.19.2",
+    "@types/tar-stream": "3.1.5",
+    "@types/yauzl": "3.4.0",
+    "@vitest/coverage-v8": "5.0.5",
+    "tsx": "4.23.15",
     "typescript": "5.9.3",
-    "vitest": "4.1.11"
+    "vitest": "5.0.5"
   }
 }

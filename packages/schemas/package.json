@@ -22,12 +22,12 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "zod": "4.4.3"
+    "zod": "4.6.7"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "4.1.11",
+    "@vitest/coverage-v8": "5.0.5",
     "typescript": "5.9.3",
-    "vitest": "4.1.11"
+    "vitest": "5.0.5"
   },
   "description": "Shared Zod contracts between the Z-CMS API and its front ends.",
   "license": "MIT",
