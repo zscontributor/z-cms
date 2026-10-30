@@ -36,6 +36,21 @@ env:
   SEED_ADMIN_PASSWORD: admin123
 
 jobs:
+  # pnpm audit: cảnh báo dependency có CVE (HIGH/CRITICAL) nhánh prod. Không chặn
+  # merge/deploy (continue-on-error); bỏ khi đã dọn sạch để thành chốt chặn.
+  audit:
+    name: pnpm audit
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm audit --prod --audit-level high
+
   # Type errors and lint are cheap; fail fast before spinning up a database.
   static:
     name: Typecheck & build
